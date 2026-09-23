@@ -1,0 +1,242 @@
+{
+  "hero": {
+    "eyebrow": "OUR EARRINGS",
+    "title": "Find the Perfect Ring",
+    "subtitle": "Get lifted with the 21 Day Facial Gua Sha Challenge!",
+    "cta": "Shop Now"
+  },
+  "promoTiles": [
+    {
+      "id": 1,
+      "title": "Add These To Your Style Roster.",
+      "subtitle": "Grab the deal right now! you can get extra 15% off this season.",
+      "cta": "Shop Now",
+      "image": "/promo-heart.jpg"
+    },
+    {
+      "id": 2,
+      "title": "Unique Engagement Rings",
+      "subtitle": "From special antique diamonds to one of-a-kind colored gemstones",
+      "cta": "Shop Now",
+      "image": "/promo-ring.jpg"
+    }
+  ],
+  "bestSellers": [
+    {
+      "id": "p-001",
+      "title": "14k Gold Bespoke Signet Ring",
+      "category": "Rings",
+      "price": 76572,
+      "oldPrice": 42265,
+      "rating": 4.9,
+      "reviews": 5,
+      "image": "/products/ring-1.jpg",
+      "alt": "14k gold signet ring with chevron pattern"
+    },
+    {
+      "id": "p-002",
+      "title": "Faded Grandeur Stud Earrings",
+      "category": "Accessories, Pearls",
+      "price": 7744,
+      "oldPrice": null,
+      "rating": 4.8,
+      "reviews": 5,
+      "image": "/products/earrings-1.jpg",
+      "alt": "Elegant stud earrings with pearls"
+    },
+    {
+      "id": "p-003",
+      "title": "Awesome Wooden Watch",
+      "category": "Earrings",
+      "price": 60585,
+      "oldPrice": null,
+      "rating": 4.7,
+      "reviews": 5,
+      "image": "/products/watch-1.jpg",
+      "alt": "Luxury wooden watch"
+    },
+    {
+      "id": "p-004",
+      "title": "Gorgeous Aluminum Necklace",
+      "category": "Earrings",
+      "price": 46228,
+      "oldPrice": null,
+      "rating": 4.9,
+      "reviews": 5,
+      "image": "/products/necklace-1.jpg",
+      "alt": "Gorgeous aluminum necklace"
+    },
+    {
+      "id": "p-005",
+      "title": "Diamond Lou Helium Ring",
+      "category": "Pearls",
+      "price": 18591,
+      "oldPrice": null,
+      "rating": 4.8,
+      "reviews": 5,
+      "image": "/products/ring-2.jpg",
+      "alt": "Diamond helium ring"
+    }
+  ],
+  "trendProducts": [
+    {
+      "id": "t-001",
+      "title": "Gorgeous Golden Blossom Sets",
+      "category": "Rings, Wedding",
+      "price": 40450,
+      "oldPrice": null,
+      "rating": 4.9,
+      "reviews": 5,
+      "badge": "Free Shipping Over ₹20,000 For Members",
+      "image": "/products/set-1.jpg"
+    },
+    {
+      "id": "t-002",
+      "title": "10K Gold Eternity Ring",
+      "category": "Diamonds, Rings",
+      "price": 79974,
+      "oldPrice": null,
+      "rating": 4.8,
+      "reviews": 5,
+      "discount": 63,
+      "image": "/products/ring-3.jpg"
+    },
+    {
+      "id": "t-003",
+      "title": "Everyday Forever Band",
+      "category": "Necklaces & Pendants",
+      "price": 36715,
+      "oldPrice": null,
+      "rating": 4.7,
+      "reviews": 5,
+      "image": "/products/band-1.jpg"
+    },
+    {
+      "id": "t-004",
+      "title": "14k Gold Crew Helium Ring",
+      "category": "Gifts Set",
+      "price": 8380,
+      "oldPrice": null,
+      "rating": 4.9,
+      "reviews": 5,
+      "image": "/products/ring-4.jpg"
+    },
+    {
+      "id": "t-005",
+      "title": "Gold Heart Locket Necklace",
+      "category": "Necklaces & Pendants",
+      "price": 24230,
+      "oldPrice": 66126,
+      "rating": 4.8,
+      "reviews": 5,
+      "image": "/products/necklace-2.jpg"
+    }
+  ],
+  "categories": [
+    { "id": 1, "name": "One-Of-A-Kinds", "image": "/categories/unique.jpg" },
+    { "id": 2, "name": "High Tide Looks", "image": "/categories/tide.jpg" },
+    { "id": 3, "name": "New Organic Döme", "image": "/categories/organic.jpg" },
+    { "id": 4, "name": "The Tiffany Icons", "image": "/categories/icons.jpg" }
+  ],
+  "features": [
+    {
+      "id": 1,
+      "title": "Complimentary Shipping",
+      "description": "We offer complimentary shipping and returns on all orders over ₹10,000.",
+      "icon": "shipping"
+    },
+    {
+      "id": 2,
+      "title": "Sreerasthu Silvers At Your Service",
+      "description": "Our client care experts are always here to help.",
+      "icon": "service"
+    },
+    {
+      "id": 3,
+      "title": "Book an Appointment",
+      "description": "We're happy to help with in-store or virtual appointments.",
+      "icon": "calendar"
+    },
+    {
+      "id": 4,
+      "title": "The Iconic Box",
+      "description": "Your Sreerasthu Silvers purchase comes wrapped in our Box packaging.",
+      "icon": "gift"
+    }
+  ],
+  "testimonials": [
+    {
+      "id": 1,
+      "title": "Golden Bracelets",
+      "quote": "Montluc claim to offer the finest diamond jewellery. I did my research, compared specifications with some of the big brands and now I will never walk into a store again.",
+      "author": "Rose Ether",
+      "role": "Fashion Designer",
+      "avatar": "/avatars/avatar-1.jpg",
+      "rating": 5
+    },
+    {
+      "id": 2,
+      "title": "Charming Golden Jewellery",
+      "quote": "I did my research, compared with some of the big brands and now Aenean pulvinar maximus. Montluc claim to offer the finest diamond jewellery you can buy direct from the maker.",
+      "author": "Fresh Design",
+      "role": "Interior Designer",
+      "avatar": "/avatars/avatar-2.jpg",
+      "rating": 5
+    },
+    {
+      "id": 3,
+      "title": "Charming Golden Jewellery",
+      "quote": "Integer nunc viverra laoreet est the is porta pretium metus aliquam eget maecenas porta is nunc viverra Aenean pulvinar maximus. Consectetur adipiscing elit.",
+      "author": "Clara Weton",
+      "role": "Seraton Suth",
+      "avatar": "/avatars/avatar-3.jpg",
+      "rating": 5
+    }
+  ],
+  "blogPosts": [
+    {
+      "id": 1,
+      "title": "Mix and Match: Jewelry Styling Tips",
+      "category": "Pearls",
+      "date": "April 16, 2025",
+      "excerpt": "Jewelry has the remarkable ability to elevate any outfit, adding a touch of glamour and personality.",
+      "image": "/blog/blog-1.jpg"
+    },
+    {
+      "id": 2,
+      "title": "Layering Necklaces Like a Pro",
+      "category": "Accessories",
+      "date": "April 16, 2025",
+      "excerpt": "Jewelry has the remarkable ability to elevate any outfit, adding a touch of glamour and personality.",
+      "image": "/blog/blog-2.jpg"
+    },
+    {
+      "id": 3,
+      "title": "Behind the Craft: Handmade Jewelry Love",
+      "category": "Diamonds",
+      "date": "April 16, 2025",
+      "excerpt": "Jewelry has the remarkable ability to elevate any outfit, adding a touch of glamour and personality.",
+      "image": "/blog/blog-3.jpg"
+    },
+    {
+      "id": 4,
+      "title": "From Classic to Modern: Our Top Picks",
+      "category": "Earrings",
+      "date": "April 16, 2025",
+      "excerpt": "Jewelry has the remarkable ability to elevate any outfit, adding a touch of glamour and personality.",
+      "image": "/blog/blog-4.jpg"
+    }
+  ],
+  "footer": {
+    "about": "Sreerasthu Silvers — timeless jewelry, ethically sourced. We believe in the power of jewelry — to tell a story, celebrate a moment, create or continue a tradition.",
+    "shopOnline": ["Rings", "Earrings", "Necklaces", "Bracelets", "Accessories"],
+    "categories": ["Jewellery Materials", "Sizing Children's Jewellery", "Delivery & Returns", "Gold Buckle", "Pearls"],
+    "information": ["Order Tracking", "Terms & Conditions", "Privacy Policy", "FAQ"],
+    "contact": {
+      "address": "Ramasomayajulu street,Ramaraopeta, Kakinada, Andhra Pradesh, India, 533001",
+      "phone": "+91 6304960489",
+      "email": "hello@sreerasthusilvers.com"
+    },
+    "social": ["facebook", "instagram", "twitter", "pinterest"]
+  }
+}

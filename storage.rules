@@ -1,0 +1,60 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Homepage banners - Admin only can write, everyone can read
+    match /homepage-banners/{allPaths=**} {
+      allow read: if true;  // Public read access
+      allow write: if request.auth != null;  // Authenticated users can upload
+      allow delete: if request.auth != null;  // Authenticated users can delete
+    }
+    
+    // Product images - Admin only can write, everyone can read
+    match /products/{allPaths=**} {
+      allow read: if true;  // Public read access
+      allow write: if request.auth != null;  // Authenticated users can upload
+      allow delete: if request.auth != null;  // Authenticated users can delete
+    }
+    
+    // User avatars - Users can write their own, everyone can read
+    match /avatars/{allPaths=**} {
+      allow read: if true;  // Public read access
+      allow write: if request.auth != null;  // Authenticated users can upload their avatar
+      allow delete: if request.auth != null;  // Users can delete their avatar
+    }
+    
+    // Blog images - Admin only can write, everyone can read
+    match /blog/{allPaths=**} {
+      allow read: if true;  // Public read access
+      allow write: if request.auth != null;  // Authenticated users can upload
+      allow delete: if request.auth != null;  // Authenticated users can delete
+    }
+    
+    // Gallery images - Admin only can write, everyone can read
+    match /gallery/{allPaths=**} {
+      allow read: if true;  // Public read access
+      allow write: if request.auth != null;  // Authenticated users can upload
+      allow delete: if request.auth != null;  // Authenticated users can delete
+    }
+    
+    // Showcase images - Admin only can write, everyone can read
+    match /showcases/{allPaths=**} {
+      allow read: if true;  // Public read access
+      allow write: if request.auth != null;  // Authenticated users can upload
+      allow delete: if request.auth != null;  // Authenticated users can delete
+    }
+    
+    // Review images & videos - Authenticated users can upload, everyone can read
+    match /reviews/{allPaths=**} {
+      allow read: if true;  // Public read access
+      allow write: if request.auth != null;  // Authenticated users can upload
+      allow delete: if request.auth != null;  // Users can delete their review media
+    }
+    
+    // Default: deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

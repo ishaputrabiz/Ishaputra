@@ -1,0 +1,640 @@
+/* Import Google Fonts - Premium Typography */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Sreerasthu Silvers Jewelry Store Design System — Premium Edition */
+@layer base {
+  :root {
+    /* Core Colors - Refined Luxury Palette */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+    
+    --cream: 40 25% 97%;
+    --cream-dark: 35 18% 93%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    /* Deep Maroon/Burgundy Accent — Signature Color */
+    --primary: 358 52% 33%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 355 45% 42%;
+    --primary-dark: 358 55% 26%;
+
+    --secondary: 40 25% 97%;
+    --secondary-foreground: 0 0% 10%;
+
+    --muted: 220 10% 94%;
+    --muted-foreground: 220 8% 46%;
+
+    --accent: 358 52% 33%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 358 52% 33%;
+
+    --radius: 0.75rem;
+
+    /* Typography */
+    --font-heading: 'Playfair Display', 'Georgia', serif;
+    --font-body: 'Poppins', system-ui, sans-serif;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.06);
+    --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.08);
+    --shadow-gold: 0 4px 16px rgba(131, 39, 41, 0.12);
+
+    /* Gradient */
+    --gradient-gold: linear-gradient(135deg, hsl(358, 52%, 33%) 0%, hsl(355, 45%, 42%) 50%, hsl(358, 52%, 33%) 100%);
+    --gradient-gold-shine: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 20 14% 8%;
+    --foreground: 30 33% 97%;
+
+    --card: 20 14% 10%;
+    --card-foreground: 30 33% 97%;
+
+    --popover: 20 14% 10%;
+    --popover-foreground: 30 33% 97%;
+
+    --primary: 38 58% 53%;
+    --primary-foreground: 0 0% 7%;
+
+    --secondary: 20 14% 15%;
+    --secondary-foreground: 30 33% 97%;
+
+    --muted: 20 14% 20%;
+    --muted-foreground: 30 15% 60%;
+
+    --accent: 38 58% 53%;
+    --accent-foreground: 0 0% 7%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 30 33% 97%;
+
+    --border: 20 14% 20%;
+    --input: 20 14% 20%;
+    --ring: 38 58% 53%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  /*
+   * Smooth scrolling across the whole site.
+   *
+   * `html` alone is not enough: which element actually scrolls varies (some
+   * pages scroll `body`, drawers and filter sheets scroll their own container),
+   * and a container without `scroll-behavior` jumps instantly. Declaring it on
+   * html, body and every scrollable box keeps anchor links, "back to top",
+   * `scrollIntoView` and carousel/scroll-into-view calls animated everywhere.
+   *
+   * Route changes deliberately opt out with `behavior: 'auto'` in
+   * ScrollToTop.tsx - restoring a saved position must be instant, not a visible
+   * animated sweep down the page.
+   */
+  html {
+    scroll-behavior: smooth;
+    overflow-x: clip;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  body {
+    scroll-behavior: smooth;
+  }
+
+  /* Inner scroll areas: smooth programmatic scrolling + iOS momentum. */
+  .overflow-y-auto,
+  .overflow-x-auto,
+  .overflow-auto,
+  .overflow-y-scroll,
+  [data-scroll-container] {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Respect the OS "reduce motion" setting. */
+  @media (prefers-reduced-motion: reduce) {
+    html,
+    body,
+    .overflow-y-auto,
+    .overflow-x-auto,
+    .overflow-auto,
+    .overflow-y-scroll,
+    [data-scroll-container] {
+      scroll-behavior: auto;
+    }
+  }
+
+  html::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  html::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  html::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  html::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground));
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Poppins', system-ui, sans-serif;
+    overflow-x: clip;
+    width: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Mobile Image Optimization */
+  @media (max-width: 1024px) {
+    img {
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      image-rendering: -webkit-optimize-contrast;
+    }
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', 'Georgia', serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  /* Button Variants */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-8 py-4 bg-foreground text-background font-medium text-sm tracking-wider uppercase rounded-full transition-all duration-300;
+    @apply hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-8 py-4 bg-transparent text-foreground font-medium text-sm tracking-wider uppercase rounded-full transition-all duration-300;
+    @apply border-2 border-primary hover:bg-primary hover:text-primary-foreground;
+  }
+
+  .btn-outline-gold {
+    @apply inline-flex items-center justify-center gap-2 px-8 py-4 bg-transparent font-medium text-sm tracking-wider uppercase rounded-full transition-all duration-300;
+    @apply border-[1.5px] border-primary text-foreground hover:bg-primary hover:text-primary-foreground;
+  }
+
+  /* Section Styles */
+  .section-padding {
+    @apply py-16 md:py-24 lg:py-32;
+  }
+
+  .container-custom {
+    @apply max-w-[1440px] mx-auto px-4 md:px-8 lg:px-16;
+  }
+
+  /* Text Styles */
+  .eyebrow {
+    @apply text-xs font-semibold tracking-[0.2em] uppercase text-primary;
+  }
+
+  .heading-xl {
+    @apply text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-heading font-medium leading-[1.02] tracking-tight;
+  }
+
+  .heading-lg {
+    @apply text-3xl md:text-4xl lg:text-5xl font-heading font-medium leading-tight;
+  }
+
+  .heading-md {
+    @apply text-2xl md:text-3xl lg:text-4xl font-heading font-medium leading-tight;
+  }
+
+  .heading-sm {
+    @apply text-xl md:text-2xl font-heading font-medium leading-snug;
+  }
+
+  .body-lg {
+    @apply text-base md:text-lg text-muted-foreground leading-relaxed;
+  }
+
+  .body-md {
+    @apply text-sm md:text-base text-muted-foreground leading-relaxed;
+  }
+
+  /* Card Styles */
+  .card-luxury {
+    @apply bg-card rounded-xl shadow-[var(--shadow-md)] overflow-hidden transition-all duration-300;
+    @apply hover:shadow-[var(--shadow-lg)] hover:-translate-y-1;
+  }
+
+  /* Gold Shimmer Effect */
+  .gold-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gold-shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--gradient-gold-shine);
+    animation: shimmer 6s infinite;
+  }
+
+  @keyframes shimmer {
+    0%, 100% {
+      left: -100%;
+    }
+    50% {
+      left: 100%;
+    }
+  }
+
+  /* Scroll Animations */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Stagger children */
+  .stagger-children > * {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  .stagger-children.visible > *:nth-child(1) { animation: fadeInUp 0.6s ease forwards 0s; }
+  .stagger-children.visible > *:nth-child(2) { animation: fadeInUp 0.6s ease forwards 0.08s; }
+  .stagger-children.visible > *:nth-child(3) { animation: fadeInUp 0.6s ease forwards 0.16s; }
+  .stagger-children.visible > *:nth-child(4) { animation: fadeInUp 0.6s ease forwards 0.24s; }
+  .stagger-children.visible > *:nth-child(5) { animation: fadeInUp 0.6s ease forwards 0.32s; }
+  .stagger-children.visible > *:nth-child(6) { animation: fadeInUp 0.6s ease forwards 0.4s; }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Gold Text Gradient */
+  .text-gold-gradient {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Marquee Animation */
+  .marquee {
+    animation: marquee 30s linear infinite;
+  }
+
+  @keyframes marquee {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Product Card Hover Effects */
+  .product-card-image {
+    @apply relative overflow-hidden rounded-xl;
+  }
+
+  .product-card-image img {
+    @apply transition-transform duration-500 ease-out;
+  }
+
+  .product-card:hover .product-card-image img {
+    @apply scale-105;
+  }
+
+  .product-card-actions {
+    @apply absolute inset-0 flex items-center justify-center gap-3 opacity-0 transition-all duration-300;
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  .product-card:hover .product-card-actions,
+  .product-card:active .product-card-actions {
+    @apply opacity-100;
+  }
+
+  @media (pointer: coarse) {
+    .product-card-actions {
+      @apply opacity-100;
+    }
+  }
+
+  /* Underline Animation */
+  .link-underline {
+    @apply relative inline-block;
+  }
+
+  .link-underline::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-full h-0.5 bg-primary origin-right transition-transform duration-300 scale-x-0;
+  }
+
+  .link-underline:hover::after {
+    @apply origin-left scale-x-100;
+  }
+
+  /* Focus States */
+  .focus-gold:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer utilities {
+  /* Hide Scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Parallax Helper */
+  .parallax-slow {
+    will-change: transform;
+    transform: translateZ(0);
+  }
+
+  /* Reduced Motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Hide scrollbar */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Custom Range Slider Styles */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  input[type="range"]::-webkit-slider-track {
+    background: #e5e7eb;
+    height: 8px;
+    border-radius: 4px;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #111827;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    background: #f9fafb;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Firefox */
+  input[type="range"]::-moz-range-track {
+    background: #e5e7eb;
+    height: 8px;
+    border-radius: 4px;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #111827;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  input[type="range"]::-moz-range-thumb:hover {
+    background: #f9fafb;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Crop zoom slider specific styles */
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    border: 3px solid #3B82F6;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    border: 3px solid #3B82F6;
+  }
+
+  input[type="range"]::-moz-range-track {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+  }
+}
+
+/* ============================================================
+   Admin dark-mode overrides
+   Inner admin pages use light-only utility classes
+   (bg-white, text-gray-900, border-gray-100, from-amber-50, etc.).
+   Remap them inside .dark .admin-panel so the whole admin UI
+   adapts to the selected theme without editing every page.
+   ============================================================ */
+.dark .admin-panel {
+  color: rgb(229 231 235); /* gray-200 */
+}
+
+/* Surface backgrounds */
+.dark .admin-panel .bg-white { background-color: rgb(17 24 39) !important; } /* gray-900 */
+.dark .admin-panel .bg-gray-50 { background-color: rgb(17 24 39) !important; }
+.dark .admin-panel .bg-gray-100 { background-color: rgb(31 41 55) !important; } /* gray-800 */
+.dark .admin-panel .bg-gray-200 { background-color: rgb(55 65 81) !important; } /* gray-700 */
+
+/* Warm amber gradient header panels -> dark amber tint */
+.dark .admin-panel .from-amber-50 { --tw-gradient-from: rgb(120 53 15 / 0.25) var(--tw-gradient-from-position) !important; --tw-gradient-to: rgb(120 53 15 / 0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+.dark .admin-panel .via-white { --tw-gradient-to: rgb(17 24 39 / 0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), rgb(17 24 39) var(--tw-gradient-via-position), var(--tw-gradient-to) !important; }
+.dark .admin-panel .to-orange-50\/30 { --tw-gradient-to: rgb(124 45 18 / 0.2) !important; }
+.dark .admin-panel .bg-amber-50 { background-color: rgb(120 53 15 / 0.4) !important; }
+.dark .admin-panel .bg-amber-100 { background-color: rgb(120 53 15 / 0.5) !important; }
+
+/* Borders */
+.dark .admin-panel .border-gray-100 { border-color: rgb(31 41 55) !important; }
+.dark .admin-panel .border-gray-200 { border-color: rgb(55 65 81) !important; }
+.dark .admin-panel .border-gray-300 { border-color: rgb(75 85 99) !important; }
+.dark .admin-panel .border-amber-200\/40 { border-color: rgb(180 83 9 / 0.35) !important; }
+.dark .admin-panel .border-\[\#F5EFE6\] { border-color: rgb(31 41 55) !important; }
+
+/* Text */
+.dark .admin-panel .text-gray-900 { color: rgb(243 244 246) !important; } /* gray-100 */
+.dark .admin-panel .text-gray-800 { color: rgb(229 231 235) !important; }
+.dark .admin-panel .text-gray-700 { color: rgb(209 213 219) !important; } /* gray-300 */
+.dark .admin-panel .text-gray-600 { color: rgb(156 163 175) !important; } /* gray-400 */
+.dark .admin-panel .text-gray-500 { color: rgb(156 163 175) !important; }
+.dark .admin-panel .text-amber-700 { color: rgb(252 211 77) !important; } /* amber-300 */
+.dark .admin-panel .text-amber-800 { color: rgb(253 224 71) !important; }
+
+/* Hover states */
+.dark .admin-panel .hover\:bg-gray-50:hover { background-color: rgb(31 41 55) !important; }
+.dark .admin-panel .hover\:bg-gray-100:hover { background-color: rgb(55 65 81) !important; }
+.dark .admin-panel .hover\:bg-amber-50:hover { background-color: rgb(120 53 15 / 0.3) !important; }
+.dark .admin-panel .hover\:text-gray-900:hover { color: rgb(243 244 246) !important; }
+
+/* Form inputs */
+.dark .admin-panel input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.dark .admin-panel textarea,
+.dark .admin-panel select {
+  background-color: rgb(17 24 39);
+  border-color: rgb(55 65 81);
+  color: rgb(243 244 246);
+}
+.dark .admin-panel input::placeholder,
+.dark .admin-panel textarea::placeholder { color: rgb(107 114 128); }
+
+/* Tables */
+.dark .admin-panel thead { background-color: rgb(17 24 39); }
+.dark .admin-panel tbody tr { border-color: rgb(31 41 55); }
+.dark .admin-panel tbody tr:hover { background-color: rgb(31 41 55 / 0.6); }
+
+/* Modal/dialog backdrops keep their look but ensure cards above stay readable */
+.dark .admin-panel .shadow-sm,
+.dark .admin-panel .shadow,
+.dark .admin-panel .shadow-md,
+.dark .admin-panel .shadow-lg { box-shadow: 0 4px 16px -4px rgb(0 0 0 / 0.5); }
+
+
+/* ── Offer ribbon (src/components/offers/OfferRibbon.tsx) ─────────────────────
+   House maroon, deepened towards the edges so the centre reads as lit. The
+   engraving is a fine diagonal line, the kind cut into a hallmarked tray,
+   kept faint enough to be felt rather than seen. */
+.offer-ribbon {
+  background:
+    radial-gradient(120% 180% at 50% 50%, #8e2a2e 0%, #6e1a20 45%, #3f0d11 100%);
+}
+.offer-ribbon__engraving {
+  background-image: repeating-linear-gradient(
+    115deg,
+    rgba(232, 197, 106, 0.07) 0 1px,
+    transparent 1px 7px
+  );
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+}
+
+/* A slow sweep of light across the code, like foil catching it. Once every few
+   seconds - enough to draw the eye to the one thing worth tapping. */
+.offer-ticket__foil {
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 244, 214, 0.55) 48%,
+    transparent 66%
+  );
+  transform: translateX(-120%);
+  animation: offer-foil 4.2s ease-in-out 1.2s infinite;
+}
+@keyframes offer-foil {
+  0%, 62% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .offer-ticket__foil { animation: none; opacity: 0; }
+}
+
+/* ── Product offer ticket (src/components/offers/ProductOfferTag.tsx) ──────── */
+.product-offer {
+  background: linear-gradient(100deg, #fdf5e4 0%, #fffaf0 55%, #fffdf8 100%);
+}
+.dark .product-offer {
+  background: linear-gradient(100deg, #2b1714 0%, #1f1715 60%, #1a1716 100%);
+}

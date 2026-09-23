@@ -1,0 +1,161 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ==========================================
+    // HELPER FUNCTIONS
+    // ==========================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Check if user is delivery boy
+    function isDeliveryBoy() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'delivery';
+    }
+    
+    // Check if user owns the resource
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // ==========================================
+    // USERS COLLECTION
+    // ==========================================
+    
+    match /users/{userId} {
+      // Admins can do anything
+      allow read, write: if isAdmin();
+      
+      // Users can read their own profile
+      allow read: if isOwner(userId);
+      
+      // Users can update their own profile (limited fields only)
+      allow update: if isOwner(userId) && 
+                      request.resource.data.role == resource.data.role && // Can't change role
+                      request.resource.data.email == resource.data.email; // Can't change email
+      
+      // Delivery boys can update specific fields only
+      allow update: if isOwner(userId) && 
+                      isDeliveryBoy() &&
+                      // Only allow updating these fields
+                      request.resource.data.keys().hasOnly([
+                        'name', 'phone', 'address', 'profileImage', 
+                        'currentOrdersCount', 'totalDeliveries', 'rating',
+                        'updatedAt', 'role', 'email', 'uid', 'vehicleType',
+                        'isActive', 'createdAt'
+                      ]);
+    }
+    
+    // ==========================================
+    // ORDERS COLLECTION
+    // ==========================================
+    
+    match /orders/{orderId} {
+      // Admins can read/write all orders
+      allow read, write: if isAdmin();
+      
+      // Users can read their own orders
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Users can create orders for themselves
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      
+      // Delivery boys can read orders assigned to them
+      allow read: if isDeliveryBoy() && resource.data.deliveryBoyId == request.auth.uid;
+      
+      // Delivery boys can update their assigned orders (limited fields)
+      allow update: if isDeliveryBoy() && 
+                      resource.data.deliveryBoyId == request.auth.uid &&
+                      // Can only update status and tracking info
+                      request.resource.data.keys().hasOnly([
+                        'status', 'trackingUrl', 'deliveryBoyId', 
+                        'updatedAt', 'tracking', 'orderId', 'userId',
+                        'items', 'total', 'createdAt', 'shippingAddress',
+                        'billingAddress', 'paymentMethod', 'userName',
+                        'userEmail', 'userPhone'
+                      ]);
+    }
+    
+    // ==========================================
+    // PRODUCTS COLLECTION
+    // ==========================================
+    
+    match /products/{productId} {
+      // Anyone can read products
+      allow read: if true;
+      
+      // Only admins can write products
+      allow write: if isAdmin();
+    }
+    
+    // ==========================================
+    // BANNERS COLLECTION
+    // ==========================================
+    
+    match /banners/{bannerId} {
+      // Anyone can read banners
+      allow read: if true;
+      
+      // Only admins can write banners
+      allow write: if isAdmin();
+    }
+    
+    // ==========================================
+    // CART COLLECTION
+    // ==========================================
+    
+    match /carts/{userId} {
+      // Users can only access their own cart
+      allow read, write: if isOwner(userId);
+    }
+    
+    // ==========================================
+    // WISHLIST COLLECTION
+    // ==========================================
+    
+    match /wishlists/{userId} {
+      // Users can only access their own wishlist
+      allow read, write: if isOwner(userId);
+    }
+    
+    // ==========================================
+    // ADDRESSES COLLECTION
+    // ==========================================
+    
+    match /addresses/{userId} {
+      // Users can only access their own addresses
+      allow read, write: if isOwner(userId);
+    }
+    
+    // ==========================================
+    // REVIEWS COLLECTION (Optional - if you add reviews)
+    // ==========================================
+    
+    match /reviews/{reviewId} {
+      // Anyone can read reviews
+      allow read: if true;
+      
+      // Authenticated users can create reviews
+      allow create: if isAuthenticated();
+      
+      // Users can update/delete their own reviews
+      allow update, delete: if isAuthenticated() && 
+                              resource.data.userId == request.auth.uid;
+    }
+    
+    // ==========================================
+    // DEFAULT: DENY ALL
+    // ==========================================
+    // Any other collections are denied by default
+  }
+}
