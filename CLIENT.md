@@ -59,6 +59,9 @@
     - Cleaned images: `client-assets/generated/products-clean/`. Their Cloudinary URLs: `client-assets/generated/cloudinary-urls.json`.
 - 2026-09-23: Sample catalog: 10 products in `src/data/sampleProducts.ts`, all marked `isSample: true`. Admin → Products has one button that switches between "Add sample products" and "Remove sample products (N)". Each sample can also be edited or deleted individually.
     - The placeholder photos have fake AI lettering on the labels. Replace them with real product photos before launch.
+- 2026-09-23: Security fix, found by an automated review. `api/send-notification.ts` and `api/whatsapp-send.ts` used to skip the admin-key check entirely when `ADMIN_NOTIFICATION_KEY` was unset, so anyone could push to all customers or send any WhatsApp text. Both now refuse when the key is missing and compare it in constant time. **Still open (Phase 4, when WhatsApp is connected):**
+    - The 15 order templates in `whatsapp-send` are public, so anyone can send them to any number at the store's cost. Require a Firebase ID token and check that `to` is that order's customer or the admin number.
+    - OTP sends have no per-phone rate limit. Add Firestore counters, e.g. 3 an hour and 10 a day.
 - 2026-09-23: New features (loyalty, scratch & win, cashback, dealer) will be built when their pages come up in Phase 3, not as a separate layer, so each is designed and built once.
 
 ## Progress

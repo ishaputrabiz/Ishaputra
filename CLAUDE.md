@@ -65,8 +65,11 @@ Commands: `npm install`, `npm run dev` (http://localhost:5173), `npm run build`,
     - In `src/pages/`: `Silver*.tsx`, `Shop*.tsx`, `AntiqueSilver*.tsx`, `RoyalSilver*.tsx`, `*Jewelry*.tsx`, `*Collections.tsx`, `JewelrySale.tsx`, `BabyItems.tsx`, `CustomOrders.tsx`, `NewArrivals.tsx` and `WalletPage.tsx`. The `/wallet` route renders `PurchaseSummary.tsx`.
 
    Before deleting each file, search to confirm nothing imports it. Run `npm run build` afterwards.
-5. **Get the client's Firebase config.** The site will not start without the `VITE_FIREBASE_*` values: `src/config/firebase.ts` throws an error if any of the 6 required ones is missing. Ask the user for the client's Firebase web config (section "Firebase" in Phase 4).
-6. Commit: `Phase 0: clean Sreerasthu copy`.
+5. **Apply the security fixes the Sreerasthu code lacks.** In `api/send-notification.ts` and `api/whatsapp-send.ts`, the admin-key check is skipped when `ADMIN_NOTIFICATION_KEY` is unset. Make both refuse when the key is missing, and compare the key with `crypto.timingSafeEqual`. Two deeper fixes belong to Phase 4:
+    - The public order templates in `whatsapp-send`: require a Firebase ID token and check the recipient.
+    - OTP sends: add a per-phone rate limit.
+6. **Get the client's Firebase config.** The site will not start without the `VITE_FIREBASE_*` values: `src/config/firebase.ts` throws an error if any of the 6 required ones is missing. Ask the user for the client's Firebase web config (section "Firebase" in Phase 4).
+7. Commit: `Phase 0: clean Sreerasthu copy`.
 
 ## Phase 1: brand text and business details
 
@@ -261,6 +264,9 @@ Everything below is server-only except the `VITE_*` vars:
 - Webhook URL: `https://<domain>/api/whatsapp-webhook`, subscribed to the `messages` field.
 - Button base URLs use the client domain.
 - A deleted template name can't be reused for 4 weeks, so get names right the first time.
+- Before going live, close two abuse holes in `api/whatsapp-send.ts`. Both let a stranger run up the store's WhatsApp bill:
+    - Order templates are public today. Require a Firebase ID token, and check that `to` is that order's customer or the admin notification number.
+    - OTP sends have no rate limit. Add a per-phone limit.
 
 | Template | Category | Variables in order | Button 0 |
 | --- | --- | --- | --- |
