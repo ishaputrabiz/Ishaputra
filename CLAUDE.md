@@ -6,7 +6,9 @@ Read this whole file before doing anything. Then read `CLIENT.md` if it exists. 
 
 This folder is a fresh copy of the **Sreerasthu Silvers** codebase, a live silver-jewellery store. It is being turned into an online store for a **different business** (the client). Anything that mentions Sreerasthu, silver, jewellery, Kakinada or the maroon/gold look is left over from the original. It must be replaced or removed.
 
-The code works in production. The job is to **rebrand, retheme and redesign the look**. It is not a rewrite of the logic.
+The code works in production. The job is to **rebrand and retheme**: logo, colours, fonts, text and content. It is not a rewrite of the logic.
+
+**Keep Sreerasthu's layouts.** The user likes them. Do not restructure pages, reorder or replace sections, or change component layouts unless the user asks for that specific change. Phase 3 only runs on request.
 
 | Part | What it is | Where |
 | --- | --- | --- |
@@ -69,6 +71,14 @@ Commands: `npm install`, `npm run dev` (http://localhost:5173), `npm run build`,
     - The public order templates in `whatsapp-send`: require a Firebase ID token and check the recipient.
     - OTP sends: add a per-phone rate limit.
 6. **Get the client's Firebase config.** The site will not start without the `VITE_FIREBASE_*` values: `src/config/firebase.ts` throws an error if any of the 6 required ones is missing. Ask the user for the client's Firebase web config (section "Firebase" in Phase 4).
+
+   **Warn the user before they look at the site.** A new, empty Firebase makes the homepage look broken, although the layout is unchanged. Most home sections read Firestore and hide when there is no data. Until `firestore.rules` is deployed, every read fails with "Missing or insufficient permissions", so the page drops from about 16 sections to 10. The fix, in order:
+    1. Deploy the rules and indexes.
+    2. Create the admin user.
+    3. Add sample products.
+    4. Add home content (banners, collections, showcases, testimonials) in the admin panel.
+
+   Do this before judging the look.
 7. Commit: `Phase 0: clean Sreerasthu copy`.
 
 ## Phase 1: brand text and business details
@@ -188,7 +198,9 @@ Changing the tokens alone does not retheme the site. About **990 `amber-*` class
 - **Review with the user.** Show the home page at 390px and 1440px, in light and dark mode. Use Playwright or a browser tool if you have one; otherwise ask the user to check.
 - Commit: `Phase 2: theme`.
 
-## Phase 3: page-by-page UI/UX
+## Phase 3: page-by-page UI/UX (only when the user asks)
+
+Skip this phase by default: the store keeps Sreerasthu's layouts with the new theme. Run it only for the pages the user names, and only as far as they ask.
 
 Work in this order:
 1. The shared shell: Header, MobileHeader, MobileBottomNav, Footer, LoadingScreen, Login, Signup
@@ -210,7 +222,7 @@ For each page:
     - The page's main actions still work: add to cart, wishlist toggle, filters, sorting, payment.
 5. Log the decisions in `CLIENT.md` and commit `Phase 3: <page>`.
 
-**The store must look unique.** It must not look like Sreerasthu: maroon and gold, Playfair Display + Poppins, a centred luxury hero, gold dividers. It must also not look like the earlier clients listed in `CLIENT.md`. To make it different, vary:
+When the user asks for a unique look, it must not look like Sreerasthu: maroon and gold, Playfair Display + Poppins, a centred luxury hero, gold dividers. It must also not look like the earlier clients listed in `CLIENT.md`. To make it different, vary:
 - the hero layout
 - the category navigation style
 - the product card's shape, image ratio and hover effect
@@ -345,7 +357,7 @@ Create this in Phase 0 and keep it current. It is the memory between sessions.
 - [ ] Phase 0: clean-up
 - [ ] Phase 1: brand text
 - [ ] Phase 2: theme
-- [ ] Phase 3: shell, home, products, product detail, checkout, wishlist, profile
+- [ ] Phase 3: only pages the user asks to redesign (default: none, keep Sreerasthu's layouts)
 - [ ] Phase 4: integrations and launch test
 
 ## Next step

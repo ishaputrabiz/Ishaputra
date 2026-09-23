@@ -23,7 +23,7 @@
 - Themes: light + dark + system (already supported by `ThemeContext`).
 - Responsive: mobile first, then tablet and desktop.
 - Avoid: generic Ayurveda look, lots of leaves, mandalas, orange gradients, yoga imagery.
-- Must not look like: Sreerasthu Silvers (maroon/gold, Playfair Display + Poppins, centred luxury hero, gold dividers).
+- **Layout: keep Sreerasthu's layouts exactly** (user decision, 2026-09-23). Change only the logo, colours, fonts, text and content. The theme must still move away from Sreerasthu's maroon/gold and Playfair Display + Poppins.
 
 ## Features
 - Keep: shop, product detail, cart, checkout, wishlist, account, coupons (exists), wallet (exists, used for cashback).
@@ -62,17 +62,19 @@
 - 2026-09-23: Security fix, found by an automated review. `api/send-notification.ts` and `api/whatsapp-send.ts` used to skip the admin-key check entirely when `ADMIN_NOTIFICATION_KEY` was unset, so anyone could push to all customers or send any WhatsApp text. Both now refuse when the key is missing and compare it in constant time. **Still open (Phase 4, when WhatsApp is connected):**
     - The 15 order templates in `whatsapp-send` are public, so anyone can send them to any number at the store's cost. Require a Firebase ID token and check that `to` is that order's customer or the admin number.
     - OTP sends have no per-phone rate limit. Add Firestore counters, e.g. 3 an hour and 10 a day.
-- 2026-09-23: New features (loyalty, scratch & win, cashback, dealer) will be built when their pages come up in Phase 3, not as a separate layer, so each is designed and built once.
+- 2026-09-23: The user likes Sreerasthu's layouts: **keep them, change only the logo and theme**. There is no page-by-page redesign unless asked. New features (loyalty, scratch & win, cashback, dealer) will be added in the existing Sreerasthu style.
+- 2026-09-23: Why the copy looked "completely changed": a screenshot comparison with the original (port 5173) showed identical layout code. The new Firebase has no rules deployed, so every read returns permission-denied and the data sections hide. The page drops from 10,601px and 16 sections to 4,669px and 10.
 
 ## Progress
 - [x] Phase 0: clean-up (secrets, `.env.local`, `dist/`, Sreerasthu data and scripts, 66 unused pages). Also done: new `.env`, Cloudinary switch, categories, sample products.
 - [ ] Phase 1: brand text (blocked on business details for the footer, policies and invoice; the brand name and tagline are known)
 - [ ] Phase 2: theme
-- [ ] Phase 3: shell, home, products, product detail, wishlist; then the new features with checkout and profile
+- [ ] Phase 3: skipped (keep Sreerasthu layouts)
+- [ ] New features: loyalty points, loyalty card, scratch & win, cashback, dealer membership (in the existing style)
 - [ ] Phase 4: integrations and launch test
 
 ## Next step
-The user completes the Firebase console steps and sends the business details. Then do Phase 1 (brand text, remove silver-rate UI) and Phase 2 (theme from the logo's copper + black/charcoal/cream).
+Deploy firestore.rules and indexes. This needs the user to run `firebase login:add` with the Ishaputra Google account. Then the user creates the admin user and adds the sample products. Then Phase 2: logo and theme (copper + black/charcoal/cream, new fonts), keeping every layout.
 
 ## Open questions
 - Business details: legal name, address, phone, email, WhatsApp, hours, GSTIN, domain, social links (blocking for Phase 1 footer, invoice and policies)

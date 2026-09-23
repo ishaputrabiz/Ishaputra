@@ -39,4 +39,4 @@ nul
 # Client source files too large for git / raw generator output
 client-assets/logo-original-16k.png
 client-assets/generated/products/
-client-assets/generated/_sheet.jpg
+client-assets/generated/_*
