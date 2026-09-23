@@ -574,7 +574,7 @@ const AdminGiftCards: React.FC = () => {
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                         expired ? 'bg-red-50 text-red-500' :
                         fullyUsed ? 'bg-gray-100 text-gray-400' :
-                        !card.isActive ? 'bg-amber-50 text-amber-500' :
+                        !card.isActive ? 'bg-highlight/10 text-highlight' :
                         'bg-pink-50 text-pink-600'
                       }`}>
                         <Gift className="w-5 h-5" />
@@ -594,7 +594,7 @@ const AdminGiftCards: React.FC = () => {
                           ) : fullyUsed ? (
                             <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full font-medium">Used Up</span>
                           ) : !card.isActive ? (
-                            <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Inactive</span>
+                            <span className="text-[10px] bg-highlight/15 text-highlight px-1.5 py-0.5 rounded-full font-medium">Inactive</span>
                           ) : (
                             <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">Active</span>
                           )}
@@ -641,7 +641,7 @@ const AdminGiftCards: React.FC = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => handleToggleActive(card)}
-                      className={`text-xs h-8 ${card.isActive ? 'text-amber-600 border-amber-200 hover:bg-amber-50' : 'text-green-600 border-green-200 hover:bg-green-50'}`}
+                      className={`text-xs h-8 ${card.isActive ? 'text-highlight border-highlight/30 hover:bg-highlight/10' : 'text-green-600 border-green-200 hover:bg-green-50'}`}
                     >
                       {card.isActive ? 'Deactivate' : 'Activate'}
                     </Button>

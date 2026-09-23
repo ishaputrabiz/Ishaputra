@@ -42,12 +42,12 @@ const STATUS_CFG: Record<StatusKey, { label: string; color: string; bg: string; 
   shipped:         { label: 'Packed',            color: 'text-orange-600', bg: 'bg-orange-50',   dot: 'bg-orange-500' },
   assigned:        { label: 'Packed',            color: 'text-orange-600', bg: 'bg-orange-50',   dot: 'bg-orange-500' },
   outForDelivery:  { label: 'Out for Delivery',  color: 'text-purple-600', bg: 'bg-purple-50',   dot: 'bg-purple-500' },
-  picked:          { label: 'Return Picked Up', color: 'text-amber-600', bg: 'bg-amber-50',   dot: 'bg-amber-500' },
+  picked:          { label: 'Return Picked Up', color: 'text-highlight', bg: 'bg-highlight/10',   dot: 'bg-highlight' },
   delivered:       { label: 'Delivered',         color: 'text-emerald-600',bg: 'bg-emerald-50',  dot: 'bg-emerald-500'},
-  cancelled:       { label: 'Cancelled',         color: 'text-rose-600',   bg: 'bg-rose-50',     dot: 'bg-rose-500'   },
-  returnRequested: { label: 'Return Requested',  color: 'text-rose-600',   bg: 'bg-rose-50',     dot: 'bg-rose-500'   },
-  returnScheduled: { label: 'Return Pickup',   color: 'text-amber-600',   bg: 'bg-amber-50',    dot: 'bg-amber-500'  },
-  returned:        { label: 'Returned',          color: 'text-rose-600',   bg: 'bg-rose-50',     dot: 'bg-rose-500'   },
+  cancelled:       { label: 'Cancelled',         color: 'text-primary',   bg: 'bg-primary/10',     dot: 'bg-primary'   },
+  returnRequested: { label: 'Return Requested',  color: 'text-primary',   bg: 'bg-primary/10',     dot: 'bg-primary'   },
+  returnScheduled: { label: 'Return Pickup',   color: 'text-highlight',   bg: 'bg-highlight/10',    dot: 'bg-highlight'  },
+  returned:        { label: 'Returned',          color: 'text-primary',   bg: 'bg-primary/10',     dot: 'bg-primary'   },
 };
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -122,10 +122,10 @@ const DeliveryDashboard = () => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-stone-50">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100">
-            <Truck className="h-7 w-7 text-amber-600" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-highlight/15">
+            <Truck className="h-7 w-7 text-highlight" />
           </div>
-          <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-amber-500" />
+          <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-highlight" />
           <p className="text-sm text-stone-400">Loading deliveries…</p>
         </div>
       </div>
@@ -161,7 +161,7 @@ const DeliveryDashboard = () => {
                 </div>
                 {avgRating !== null && (
                   <div className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5">
-                    <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
+                    <Star className="h-2.5 w-2.5 fill-highlight-soft text-highlight-soft" />
                     <span className="text-[10px] font-semibold text-white">{avgRating}</span>
                     <span className="text-[10px] text-stone-400">· {ratingCount}</span>
                   </div>
@@ -190,14 +190,14 @@ const DeliveryDashboard = () => {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
-              className="mb-4 flex items-center gap-3 rounded-2xl bg-amber-500 px-5 py-4 text-white shadow-lg shadow-amber-400/25"
+              className="mb-4 flex items-center gap-3 rounded-2xl bg-highlight px-5 py-4 text-white shadow-lg shadow-highlight/18"
             >
               <Package className="h-5 w-5 shrink-0" />
               <div>
                 <p className="text-base font-bold leading-tight">
                   {activeOrders.length} Active {activeOrders.length === 1 ? 'Delivery' : 'Deliveries'}
                 </p>
-                <p className="text-xs text-amber-100">Tap to start</p>
+                <p className="text-xs text-charcoal-foreground">Tap to start</p>
               </div>
             </motion.div>
           )}
@@ -314,9 +314,9 @@ const OrderCard = ({
       transition={{ delay: index * 0.04, duration: 0.22 }}
       className={`overflow-hidden rounded-2xl border bg-white shadow-sm ${
         isReturnPickedUp
-          ? 'border-amber-200 ring-1 ring-amber-200 shadow-amber-100/50'
+          ? 'border-highlight/30 ring-1 ring-highlight/30 shadow-highlight/8'
           : isReturnPickup
-            ? 'border-amber-200 ring-1 ring-amber-200 shadow-amber-100/50'
+            ? 'border-highlight/30 ring-1 ring-highlight/30 shadow-highlight/8'
             : isActionable
               ? 'border-purple-200 ring-1 ring-purple-200 shadow-purple-100/50'
               : 'border-stone-100'
@@ -324,7 +324,7 @@ const OrderCard = ({
     >
       {/* Urgency accent bar */}
       {(isReturnPickup || isReturnPickedUp) && (
-        <div className="h-1 bg-gradient-to-r from-amber-400 to-orange-500" />
+        <div className="h-1 bg-gradient-to-r from-highlight/70 to-primary" />
       )}
       {isActionable && !isReturnPickup && !isReturnPickedUp && (
         <div className="h-1 bg-gradient-to-r from-purple-400 to-purple-600" />
@@ -362,7 +362,7 @@ const OrderCard = ({
             className={`rounded-full px-2 py-0.5 text-xs font-bold ${
               isPaid
                 ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-amber-100 text-amber-700'
+                : 'bg-highlight/15 text-highlight'
             }`}
           >
             {isPaid ? 'Prepaid' : 'COD'}
@@ -386,9 +386,9 @@ const OrderCard = ({
             onClick={onOpen}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-semibold text-white transition-colors ${
               isReturnPickup
-                ? 'bg-amber-500 shadow-sm hover:bg-amber-600 active:bg-amber-700'
+                ? 'bg-highlight shadow-sm hover:bg-highlight active:bg-highlight'
                 : isReturnPickedUp
-                  ? 'bg-amber-600 shadow-sm hover:bg-amber-700 active:bg-amber-800'
+                  ? 'bg-highlight shadow-sm hover:bg-highlight active:bg-highlight/35'
                   : isActionable
                     ? 'bg-purple-600 shadow-sm hover:bg-purple-700 active:bg-purple-800'
                     : 'bg-stone-800 hover:bg-stone-900 active:bg-stone-950'

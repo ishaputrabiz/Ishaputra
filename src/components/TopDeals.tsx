@@ -125,7 +125,7 @@ const TopDeals = () => {
   return (
     <section className="py-6 md:py-14">
       <div className="container-custom">
-        <div className="rounded-[32px] border border-[#d4af37]/15 bg-[linear-gradient(180deg,rgba(212,175,55,0.08)_0%,rgba(255,255,255,0)_22%),linear-gradient(135deg,rgba(131,39,41,0.04)_0%,rgba(255,255,255,0)_45%)] bg-card/70 shadow-[0_30px_70px_-55px_rgba(0,0,0,0.4)] px-3 py-4 md:px-6 md:py-8">
+        <div className="rounded-[32px] border border-highlight/15 bg-[linear-gradient(180deg,hsl(var(--highlight)/0.08)_0%,rgba(255,255,255,0)_22%),linear-gradient(135deg,hsl(var(--primary)/0.04)_0%,rgba(255,255,255,0)_45%)] bg-card/70 shadow-[0_30px_70px_-55px_rgba(0,0,0,0.4)] px-3 py-4 md:px-6 md:py-8">
 
         {/* ====== MOBILE: Horizontal scroll cards ====== */}
         <div className="md:hidden">
@@ -135,7 +135,7 @@ const TopDeals = () => {
               <span className="text-[10px] uppercase tracking-[0.32em] text-primary/80 font-medium">Top Deals</span>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                 Signature savings
               </h2>
               <div className="flex items-center gap-1.5">
@@ -196,7 +196,7 @@ const TopDeals = () => {
                           <p className="text-[10px] text-muted-foreground line-through leading-tight">₹{product.oldPrice.toLocaleString()}</p>
                         )}
                         {product.discount && product.discount > 0 && (
-                          <p className="text-[10px] font-semibold text-[#b88a2a] dark:text-[#f4cf73] leading-tight">{product.discount}% Off</p>
+                          <p className="text-[10px] font-semibold text-highlight dark:text-highlight-soft leading-tight">{product.discount}% Off</p>
                         )}
                       </div>
                       <button
@@ -223,7 +223,7 @@ const TopDeals = () => {
                   Top Deals
                 </span>
               </div>
-              <h2 className="text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <h2 className="text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                 Handpicked savings
               </h2>
               <p className="text-sm text-muted-foreground mt-1 font-light">Handpicked deals on our finest pieces</p>
@@ -249,7 +249,7 @@ const TopDeals = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
               <div className="relative z-10 h-full flex flex-col justify-end p-8">
                 <span className="text-[10px] uppercase tracking-[0.25em] text-white/60 mb-2 font-light">Featured Collection</span>
-                <h2 className="text-2xl font-semibold text-white mb-1" style={{ fontFamily: "'Playfair Display', serif" }}>
+                <h2 className="text-2xl font-semibold text-white mb-1" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                   {featuredProduct.title}
                 </h2>
                 <div className="flex items-center gap-3 mb-6">

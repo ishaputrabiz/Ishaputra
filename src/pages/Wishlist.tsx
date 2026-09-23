@@ -127,11 +127,11 @@ const Wishlist = () => {
                 transition={{ duration: 0.6 }}
               >
                 <div className="mb-4">
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white" style={{ fontFamily: "var(--font-body)" }}>
                     My Wishlist
                   </h1>
                 </div>
-                <p className="text-white/90 text-lg md:text-xl mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                <p className="text-white/90 text-lg md:text-xl mb-4" style={{ fontFamily: "var(--font-body)" }}>
                   {products.length} {products.length === 1 ? 'item' : 'items'} saved for later
                 </p>
                 
@@ -191,7 +191,7 @@ const Wishlist = () => {
                   </div>
                 </div>
 
-                <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2" style={{ fontFamily: "var(--font-body)" }}>
                   My Wishlist is Empty!
                 </h2>
                 <p className="text-muted-foreground text-center mb-8 max-w-md">
@@ -344,7 +344,7 @@ const Wishlist = () => {
                 navigate(-1);
               }
             }}
-            className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#d4af37]/15 bg-white/85 px-3 py-2 text-xs font-medium text-gray-700 dark:text-zinc-300 shadow-sm backdrop-blur transition-colors hover:bg-white dark:border-[#d4af37]/20 dark:bg-zinc-900/85 dark:hover:bg-zinc-900"
+            className="mb-3 inline-flex items-center gap-2 rounded-full border border-highlight/15 bg-white/85 px-3 py-2 text-xs font-medium text-gray-700 dark:text-zinc-300 shadow-sm backdrop-blur transition-colors hover:bg-white dark:border-highlight/20 dark:bg-zinc-900/85 dark:hover:bg-zinc-900"
           >
             <ArrowLeft className="h-4 w-4" />
             Back
@@ -358,7 +358,7 @@ const Wishlist = () => {
 
         {/* Wishlist Section Title */}
         <div className="px-4 mb-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
             Wishlist
           </h2>
         </div>
@@ -387,7 +387,7 @@ const Wishlist = () => {
                 </div>
               </div>
               
-              <p className="text-gray-500 dark:text-zinc-500 dark:text-zinc-400 text-sm text-center mb-6" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              <p className="text-gray-500 dark:text-zinc-500 dark:text-zinc-400 text-sm text-center mb-6" style={{ fontFamily: "var(--font-body)" }}>
                 Please login to view your wishlist
               </p>
               <Button
@@ -420,13 +420,13 @@ const Wishlist = () => {
                 </div>
               </div>
               
-              <p className="text-gray-500 dark:text-zinc-500 dark:text-zinc-400 text-sm text-center mb-6" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              <p className="text-gray-500 dark:text-zinc-500 dark:text-zinc-400 text-sm text-center mb-6" style={{ fontFamily: "var(--font-body)" }}>
                 Your wishlist is empty. Start adding items you love!
               </p>
               <Button
                 onClick={() => navigate("/")}
                 size="sm"
-                className="gap-2 bg-[#832729] hover:bg-[#6a1f21] text-white rounded-md"
+                className="gap-2 bg-primary hover:bg-primary-dark text-white rounded-md"
               >
                 <ShoppingBag className="w-4 h-4" />
                 Start Shopping
@@ -473,7 +473,7 @@ const Wishlist = () => {
                       </button>
 
                       {product.oldPrice && product.oldPrice > product.price && (
-                        <div className="absolute top-2 left-2 bg-[#832729] text-white px-2 py-0.5 rounded text-[10px] font-semibold">
+                        <div className="absolute top-2 left-2 bg-primary text-white px-2 py-0.5 rounded text-[10px] font-semibold">
                           {Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)}% OFF
                         </div>
                       )}
@@ -483,14 +483,14 @@ const Wishlist = () => {
                     <div className="p-3">
                       <h3
                         className="mb-1 line-clamp-2 text-xs font-normal leading-relaxed text-gray-900 dark:text-zinc-100"
-                        style={{ fontFamily: "'Poppins', sans-serif" }}
+                        style={{ fontFamily: "var(--font-body)" }}
                         onClick={() => handleProductClick(product.id)}
                       >
                         {product.title}
                       </h3>
                       
                       <div className="flex items-center gap-1.5 mb-2.5">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
                           ₹{product.price.toLocaleString('en-IN')}
                         </span>
                         {product.oldPrice && product.oldPrice > product.price && (
@@ -506,8 +506,8 @@ const Wishlist = () => {
                           e.stopPropagation();
                           handleProductClick(product.id);
                         }}
-                        className="w-full py-2 px-3 bg-[#832729] rounded text-xs font-medium text-white flex items-center justify-center gap-1.5 hover:bg-[#6a1f21] transition-colors"
-                        style={{ fontFamily: "'Poppins', sans-serif" }}
+                        className="w-full py-2 px-3 bg-primary rounded text-xs font-medium text-white flex items-center justify-center gap-1.5 hover:bg-primary-dark transition-colors"
+                        style={{ fontFamily: "var(--font-body)" }}
                       >
                         <ShoppingBag className="w-3.5 h-3.5" />
                         Add to Cart

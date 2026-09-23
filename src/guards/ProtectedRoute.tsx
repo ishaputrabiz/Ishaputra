@@ -134,7 +134,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-amber-600 mx-auto" />
+          <Loader2 className="h-12 w-12 animate-spin text-highlight mx-auto" />
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -245,8 +245,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               </div>
 
               {/* Tip */}
-              <div className="mt-6 p-3 bg-amber-50 rounded-lg border border-amber-100">
-                <p className="text-sm text-amber-700 text-center">
+              <div className="mt-6 p-3 bg-highlight/10 rounded-lg border border-highlight/20">
+                <p className="text-sm text-highlight text-center">
                   💡 <span className="font-medium">Tip:</span> Didn't receive email? Check your spam folder.
                 </p>
               </div>

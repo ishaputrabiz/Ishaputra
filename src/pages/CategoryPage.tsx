@@ -134,11 +134,11 @@ const CategoryProductCard = memo(function CategoryProductCard({
         <div className="flex items-center gap-1">
           {product.reviews > 0 ? (
             <>
-              <span className="text-xs font-semibold text-amber-500">{product.rating.toFixed(1)}</span>
+              <span className="text-xs font-semibold text-highlight">{product.rating.toFixed(1)}</span>
               {[...Array(5)].map((_, i) => (
                 <Star key={i} className={`w-3 h-3 ${
-                  i < Math.floor(product.rating) ? "fill-amber-400 text-amber-400"
-                  : i < product.rating ? "fill-amber-200 text-amber-400"
+                  i < Math.floor(product.rating) ? "fill-highlight-soft text-highlight-soft"
+                  : i < product.rating ? "fill-charcoal-foreground text-highlight-soft"
                   : "fill-gray-200 text-gray-400"
                 }`} />
               ))}
@@ -162,7 +162,7 @@ const CategoryProductCard = memo(function CategoryProductCard({
             </span>
           )}
           {displayDiscount && (
-            <span className="basis-full text-xs font-semibold text-[#b88a2a] dark:text-[#f4cf73]">
+            <span className="basis-full text-xs font-semibold text-highlight dark:text-highlight-soft">
               {displayDiscount}% Off
             </span>
           )}

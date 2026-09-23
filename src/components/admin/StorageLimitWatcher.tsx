@@ -81,7 +81,7 @@ const StorageLimitWatcher = () => {
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
-            <AlertTriangle className={`h-5 w-5 ${blocked ? 'text-red-600' : 'text-amber-600'}`} />
+            <AlertTriangle className={`h-5 w-5 ${blocked ? 'text-red-600' : 'text-highlight'}`} />
             {blocked ? 'Uploads paused — free storage limit reached' : 'Free storage plan is almost used up'}
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
@@ -111,7 +111,7 @@ const StorageLimitWatcher = () => {
               close();
               navigate('/admin/storage');
             }}
-            className="bg-amber-600 hover:bg-amber-700"
+            className="bg-highlight hover:bg-highlight"
           >
             View storage
           </AlertDialogAction>

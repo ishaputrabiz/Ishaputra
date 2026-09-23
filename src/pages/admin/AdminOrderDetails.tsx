@@ -91,7 +91,7 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   cancelled: { label: 'Cancelled', className: 'bg-red-100 text-red-700 hover:bg-red-100' },
   returnRequested: { label: 'Return Requested', className: 'bg-red-100 text-red-700 hover:bg-red-100' },
   returnScheduled: { label: 'Return Scheduled', className: 'bg-red-100 text-red-700 hover:bg-red-100' },
-  picked: { label: 'Return Picked Up', className: 'bg-amber-100 text-amber-700 hover:bg-amber-100' },
+  picked: { label: 'Return Picked Up', className: 'bg-highlight/15 text-highlight hover:bg-highlight/15' },
   returned: { label: 'Returned', className: 'bg-red-100 text-red-700 hover:bg-red-100' },
   refunded: { label: 'Refunded', className: 'bg-green-100 text-green-700 hover:bg-green-100' },
   deliveryFailed: { label: 'Delivery Failed', className: 'bg-red-100 text-red-700 hover:bg-red-100' },
@@ -452,7 +452,7 @@ const AdminOrderDetails = () => {
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-highlight" />
       </div>
     );
   }
@@ -515,7 +515,7 @@ const AdminOrderDetails = () => {
           </div>
           <div>
             <p className="text-[11px] uppercase tracking-widest text-gray-400">Total</p>
-            <p className="mt-1 text-xl font-bold text-amber-600">{formatPrice(order.total)}</p>
+            <p className="mt-1 text-xl font-bold text-highlight">{formatPrice(order.total)}</p>
             <p className="text-xs text-gray-500">{order.items?.length || 0} item(s)</p>
           </div>
           <div>
@@ -525,7 +525,7 @@ const AdminOrderDetails = () => {
             </p>
             {/* Cash on Delivery was retired, but historic orders still carry it -
                 so the label follows the order rather than assuming COD. */}
-            <p className={`text-xs font-medium ${isPaid ? 'text-emerald-600' : 'text-amber-600'}`}>
+            <p className={`text-xs font-medium ${isPaid ? 'text-emerald-600' : 'text-highlight'}`}>
               {isPaid ? (isCod ? 'COD collected' : 'Paid') : isCod ? 'COD pending' : 'Payment pending'}
             </p>
             {order.paymentCollectedAt && (
@@ -544,12 +544,12 @@ const AdminOrderDetails = () => {
         </div>
 
         {statusHint && (
-          <div className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+          <div className="mt-4 rounded-lg bg-highlight/10 px-3 py-2 text-xs text-highlight dark:bg-highlight/10 dark:text-charcoal-foreground">
             <span className="font-semibold">Next:</span> {statusHint}
           </div>
         )}
         {isCod && !isPaid && normalizedStatus === 'outForDelivery' && (
-          <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
+          <div className="mt-3 rounded-lg border border-highlight/45 bg-highlight/10 px-3 py-2 text-xs font-medium text-highlight dark:border-highlight dark:bg-highlight/8 dark:text-charcoal-foreground">
             {DELIVERY_PARTNERS_ENABLED
               ? 'COD payment is still pending. The delivery partner must collect cash and mark it received before the order can be completed.'
               : 'This is a Cash on Delivery order. The payment will be recorded as collected when you mark the order Delivered.'}
@@ -627,7 +627,7 @@ const AdminOrderDetails = () => {
           )}
           <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 text-base font-bold text-gray-900 dark:border-zinc-800 dark:text-zinc-100">
             <span>Total</span>
-            <span className="text-amber-600">{formatPrice(order.total || 0)}</span>
+            <span className="text-highlight">{formatPrice(order.total || 0)}</span>
           </div>
           {order.couponCode && (
             <p className="pt-1 text-xs text-gray-500">
@@ -644,7 +644,7 @@ const AdminOrderDetails = () => {
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-zinc-100">
           <MessageSquare className="h-4 w-4" /> Order conversation
           {chatMessages.length > 0 && (
-            <span className="ml-1 inline-flex items-center justify-center rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
+            <span className="ml-1 inline-flex items-center justify-center rounded-full bg-highlight px-2 py-0.5 text-[10px] font-bold text-white">
               {chatMessages.length}
             </span>
           )}
@@ -667,7 +667,7 @@ const AdminOrderDetails = () => {
               const isSystem = m.authorType === 'system';
               const align = isAdmin ? 'justify-end' : 'justify-start';
               const bubble = isAdmin
-                ? 'bg-amber-600 text-white'
+                ? 'bg-highlight text-white'
                 : isSystem
                   ? 'border border-dashed border-gray-300 bg-white text-gray-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200'
                   : 'border border-gray-200 bg-white text-gray-800 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100';
@@ -685,7 +685,7 @@ const AdminOrderDetails = () => {
                         </span>
                       )}
                       {m.visibility === 'internal' && (
-                        <span className={`rounded-full px-1.5 py-0.5 ${isAdmin ? 'bg-white/15' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'}`}>
+                        <span className={`rounded-full px-1.5 py-0.5 ${isAdmin ? 'bg-white/15' : 'bg-highlight/15 text-highlight dark:bg-highlight/10 dark:text-charcoal-foreground'}`}>
                           internal
                         </span>
                       )}
@@ -807,7 +807,7 @@ const AdminOrderDetails = () => {
           {normalizedStatus === 'returnRequested' ? (
             <div className="space-y-2">
               {returnMeta.returnStatus !== 'approved' && (
-                <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-200">
+                <p className="rounded-lg border border-highlight/45 bg-highlight/10 px-3 py-2 text-xs font-medium text-highlight dark:bg-highlight/8 dark:border-highlight dark:text-charcoal-foreground">
                   Approve the return request above before assigning a pickup partner.
                 </p>
               )}
@@ -841,7 +841,7 @@ const AdminOrderDetails = () => {
                 the customer.
               </p>
               {assigningReturn && (
-                <div className="flex items-center gap-2 text-xs text-amber-600">
+                <div className="flex items-center gap-2 text-xs text-highlight">
                   <Loader2 className="h-3 w-3 animate-spin" /> Assigning…
                 </div>
               )}
@@ -869,7 +869,7 @@ const AdminOrderDetails = () => {
                   <p className="text-[10px] uppercase tracking-widest text-gray-400">
                     Delivery OTP
                   </p>
-                  <p className="font-mono text-lg font-bold tracking-[0.4em] text-amber-600">
+                  <p className="font-mono text-lg font-bold tracking-[0.4em] text-highlight">
                     {otp}
                   </p>
                   <p className="mt-1 text-[10px] text-gray-500">
@@ -882,7 +882,7 @@ const AdminOrderDetails = () => {
                   <p className="text-[10px] uppercase tracking-widest text-gray-400">
                     Return Pickup OTP
                   </p>
-                  <p className="font-mono text-lg font-bold tracking-[0.4em] text-amber-600">
+                  <p className="font-mono text-lg font-bold tracking-[0.4em] text-highlight">
                     {returnOtp}
                   </p>
                   <p className="mt-1 text-[10px] text-gray-500">
@@ -891,14 +891,14 @@ const AdminOrderDetails = () => {
                 </div>
               )}
               {returnStoreOtp && (normalizedStatus === 'picked' || normalizedStatus === 'deliveryFailed') && (
-                <div className="mt-3 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 dark:bg-amber-500/10 dark:border-amber-500/30">
-                  <p className="text-[10px] uppercase tracking-widest text-amber-600 dark:text-amber-400">
+                <div className="mt-3 rounded-md bg-highlight/10 border border-highlight/30 px-3 py-2 dark:bg-highlight/10 dark:border-highlight/30">
+                  <p className="text-[10px] uppercase tracking-widest text-highlight dark:text-highlight">
                     Return Store OTP
                   </p>
-                  <p className="font-mono text-2xl font-bold tracking-[0.4em] text-amber-700 dark:text-amber-300">
+                  <p className="font-mono text-2xl font-bold tracking-[0.4em] text-highlight dark:text-highlight">
                     {returnStoreOtp}
                   </p>
-                  <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-400 font-medium">
+                  <p className="mt-1 text-[10px] text-highlight dark:text-highlight font-medium">
                     Tell this OTP to the delivery partner when they arrive at the store.
                   </p>
                 </div>
@@ -933,7 +933,7 @@ const AdminOrderDetails = () => {
                 the customer.
               </p>
               {assigning && (
-                <div className="flex items-center gap-2 text-xs text-amber-600">
+                <div className="flex items-center gap-2 text-xs text-highlight">
                   <Loader2 className="h-3 w-3 animate-spin" /> Assigning…
                 </div>
               )}
@@ -1025,30 +1025,30 @@ const AdminOrderDetails = () => {
 
       {/* Return Pickup Window Setter — visible when a return is scheduled */}
       {normalizedStatus === 'returnScheduled' && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-5 shadow-sm dark:border-amber-800 dark:bg-amber-900/20">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-100">
+        <div className="rounded-2xl border border-highlight/30 bg-highlight/6 p-5 shadow-sm dark:border-highlight/60 dark:bg-highlight/5">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-highlight dark:text-charcoal-foreground">
             <Calendar className="h-4 w-4" /> Set Return Pickup Window
           </h2>
           {(order.return_window_date && order.return_window_from && order.return_window_to) ? (
-            <p className="mb-3 rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs text-amber-800 dark:bg-zinc-800 dark:border-amber-700 dark:text-amber-200">
+            <p className="mb-3 rounded-lg border border-highlight/30 bg-white px-3 py-2 text-xs text-highlight dark:bg-zinc-800 dark:border-highlight dark:text-charcoal-foreground">
               Currently scheduled: <span className="font-semibold">{order.return_window_date}</span>
               {' · '}{order.return_window_from}–{order.return_window_to}
             </p>
           ) : (
-            <p className="mb-3 rounded-lg border border-amber-300 bg-amber-100/70 px-3 py-2 text-xs font-medium text-amber-900 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-200">
+            <p className="mb-3 rounded-lg border border-highlight/45 bg-highlight/11 px-3 py-2 text-xs font-medium text-highlight dark:bg-highlight/8 dark:border-highlight dark:text-charcoal-foreground">
               The pickup partner cannot complete this return until a window is saved.
             </p>
           )}
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-semibold text-amber-800 mb-1 block">Quick templates</label>
+              <label className="text-xs font-semibold text-highlight mb-1 block">Quick templates</label>
               <div className="grid grid-cols-3 gap-1.5">
                 {FULFILLMENT_WINDOW_TEMPLATES.map((tpl) => (
                   <button
                     key={tpl.id}
                     type="button"
                     onClick={() => applyReturnTemplate(tpl.id)}
-                    className="rounded-lg border border-amber-200 bg-white px-2 py-2 text-[11px] font-semibold text-amber-800 hover:border-amber-400 hover:bg-amber-100 transition-colors dark:bg-zinc-800 dark:border-amber-700 dark:text-amber-200"
+                    className="rounded-lg border border-highlight/30 bg-white px-2 py-2 text-[11px] font-semibold text-highlight hover:border-highlight/70 hover:bg-highlight/15 transition-colors dark:bg-zinc-800 dark:border-highlight dark:text-charcoal-foreground"
                   >
                     {tpl.shortLabel}
                   </button>
@@ -1056,49 +1056,49 @@ const AdminOrderDetails = () => {
               </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-amber-800 mb-1 block">Date</label>
+              <label className="text-xs font-semibold text-highlight mb-1 block">Date</label>
               <input
                 type="date"
                 value={returnWindowDate}
                 onChange={(e) => setReturnWindowDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none dark:bg-zinc-800 dark:border-amber-600 dark:text-zinc-100"
+                className="w-full rounded-xl border border-highlight/45 bg-white px-3 py-2 text-sm focus:border-highlight focus:outline-none dark:bg-zinc-800 dark:border-highlight dark:text-zinc-100"
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-xs font-semibold text-amber-800 mb-1 block">From</label>
+                <label className="text-xs font-semibold text-highlight mb-1 block">From</label>
                 <input
                   type="time"
                   value={returnWindowFrom}
                   onChange={(e) => setReturnWindowFrom(e.target.value)}
-                  className="w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none dark:bg-zinc-800 dark:border-amber-600 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-highlight/45 bg-white px-3 py-2 text-sm focus:border-highlight focus:outline-none dark:bg-zinc-800 dark:border-highlight dark:text-zinc-100"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-amber-800 mb-1 block">To</label>
+                <label className="text-xs font-semibold text-highlight mb-1 block">To</label>
                 <input
                   type="time"
                   value={returnWindowTo}
                   onChange={(e) => setReturnWindowTo(e.target.value)}
-                  className="w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none dark:bg-zinc-800 dark:border-amber-600 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-highlight/45 bg-white px-3 py-2 text-sm focus:border-highlight focus:outline-none dark:bg-zinc-800 dark:border-highlight dark:text-zinc-100"
                 />
               </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-amber-800 mb-1 block">Note (optional)</label>
+              <label className="text-xs font-semibold text-highlight mb-1 block">Note (optional)</label>
               <textarea
                 value={returnWindowNote}
                 onChange={(e) => setReturnWindowNote(e.target.value)}
                 placeholder="e.g. Item should be packed in the original box"
                 rows={2}
-                className="w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none resize-none dark:bg-zinc-800 dark:border-amber-600 dark:text-zinc-100"
+                className="w-full rounded-xl border border-highlight/45 bg-white px-3 py-2 text-sm focus:border-highlight focus:outline-none resize-none dark:bg-zinc-800 dark:border-highlight dark:text-zinc-100"
               />
             </div>
             <Button
               onClick={handleSetReturnWindow}
               disabled={savingReturnWindow || !returnWindowDate || !returnWindowFrom || !returnWindowTo}
-              className="w-full bg-amber-600 hover:bg-amber-700 text-sm font-bold"
+              className="w-full bg-highlight hover:bg-highlight text-sm font-bold"
             >
               {savingReturnWindow ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
               Save Return Pickup Window

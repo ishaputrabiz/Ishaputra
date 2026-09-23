@@ -83,7 +83,7 @@ const inStatus = (p: Product, f: StatusFilter): boolean => {
 const statusBadge = (p: Product): { label: string; className: string } => {
   if (p.flags?.isActive && stockOf(p) > 0) return { label: 'Live', className: 'bg-green-50 text-green-600' };
   if (stockOf(p) <= 0) return { label: 'Sold out · hidden', className: 'bg-orange-50 text-orange-700' };
-  if (!hasImages(p)) return { label: 'No photo · hidden', className: 'bg-amber-50 text-amber-700' };
+  if (!hasImages(p)) return { label: 'No photo · hidden', className: 'bg-highlight/10 text-highlight' };
   return { label: 'Hidden', className: 'bg-red-50 text-red-600' };
 };
 
@@ -100,7 +100,7 @@ const FilterOption = ({ label, count }: { label: string; count: number }) => (
     <span className={count === 0 ? 'text-gray-400' : undefined}>{label}</span>
     <span
       className={`rounded-full px-1.5 py-0.5 text-[11px] font-medium tabular-nums ${
-        count === 0 ? 'bg-gray-100 text-gray-400' : 'bg-amber-50 text-amber-700'
+        count === 0 ? 'bg-gray-100 text-gray-400' : 'bg-highlight/10 text-highlight'
       }`}
     >
       {count}
@@ -377,16 +377,16 @@ const Products = () => {
   return (
     <div className="space-y-6">
       {/* Premium Page Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-amber-200/40 bg-gradient-to-br from-amber-50 via-white to-orange-50/30 p-5 shadow-sm">
-        <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
+      <div className="relative overflow-hidden rounded-2xl border border-highlight/12 bg-gradient-to-br from-highlight/10 via-white to-primary/5 p-5 shadow-sm">
+        <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-highlight/8 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-highlight/28 to-transparent" />
         <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>Products</h1>
+            <h1 className="text-2xl font-semibold text-gray-900" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Products</h1>
             <p className="text-gray-600 mt-1">Curate your silver collection — add, edit, and feature pieces</p>
           </div>
           <Link to="/admin/products/new">
-            <Button className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 shadow-md">
+            <Button className="bg-gradient-to-r from-highlight to-highlight hover:from-highlight hover:to-highlight/35 shadow-md">
               <Plus className="h-4 w-4 mr-2" />
               Add Product
             </Button>
@@ -431,7 +431,7 @@ const Products = () => {
           <Filter className="h-4 w-4 mr-2" />
           Filters
           {activeFilterCount > 0 && (
-            <span className="ml-2 inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-amber-600 text-white text-[11px] font-semibold">
+            <span className="ml-2 inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-highlight text-white text-[11px] font-semibold">
               {activeFilterCount}
             </span>
           )}
@@ -439,13 +439,13 @@ const Products = () => {
         <div className="flex border border-gray-300 rounded-md overflow-hidden">
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-2 ${viewMode === 'grid' ? 'bg-amber-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`p-2 ${viewMode === 'grid' ? 'bg-highlight text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             <LayoutGrid className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewMode('table')}
-            className={`p-2 ${viewMode === 'table' ? 'bg-amber-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`p-2 ${viewMode === 'table' ? 'bg-highlight text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             <List className="h-4 w-4" />
           </button>
@@ -493,7 +493,7 @@ const Products = () => {
               onClick={() => setStatusFilter(tab.value)}
               className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
                 on
-                  ? 'border-amber-600 bg-amber-600 text-white'
+                  ? 'border-highlight bg-highlight text-white'
                   : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -618,7 +618,7 @@ const Products = () => {
             {activeFilterCount > 0 && (
               <button
                 onClick={clearFilters}
-                className="text-xs font-medium text-amber-700 hover:underline"
+                className="text-xs font-medium text-highlight hover:underline"
               >
                 Clear filters
               </button>
@@ -630,7 +630,7 @@ const Products = () => {
       {/* Products View */}
       {loading ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-          <div className="animate-spin h-8 w-8 border-2 border-amber-600 border-t-transparent rounded-full mx-auto"></div>
+          <div className="animate-spin h-8 w-8 border-2 border-highlight border-t-transparent rounded-full mx-auto"></div>
           <p className="text-gray-600 mt-4">Loading products...</p>
         </div>
       ) : filteredProducts.length === 0 ? (
@@ -644,7 +644,7 @@ const Products = () => {
           </p>
           {!searchQuery && (
             <Link to="/admin/products/new">
-              <Button className="bg-amber-600 hover:bg-amber-700">
+              <Button className="bg-highlight hover:bg-highlight">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Product
               </Button>
@@ -698,7 +698,7 @@ const Products = () => {
                 <p className="text-xs text-gray-500 mt-1">{product.category}</p>
                 <div className="flex items-center justify-between mt-2">
                   <div>
-                    <span className="text-amber-600 font-semibold">₹{product.price}</span>
+                    <span className="text-highlight font-semibold">₹{product.price}</span>
                     {product.originalPrice && product.originalPrice > product.price && (
                       <span className="text-gray-400 text-xs line-through ml-1">₹{product.originalPrice}</span>
                     )}
@@ -740,7 +740,7 @@ const Products = () => {
                     </td>
                     <td className="px-6 py-4"><span className="text-gray-700">{product.category}</span></td>
                     <td className="px-6 py-4">
-                      <span className="text-amber-600 font-medium">₹{product.price}</span>
+                      <span className="text-highlight font-medium">₹{product.price}</span>
                       {product.originalPrice && product.originalPrice > product.price && (
                         <span className="text-gray-500 text-sm line-through ml-2">₹{product.originalPrice}</span>
                       )}

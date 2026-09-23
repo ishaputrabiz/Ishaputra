@@ -58,7 +58,7 @@ const LoadingScreen = ({ onComplete }: LoadingScreenProps) => {
       {isLoading && (
         <motion.div
           className={`fixed inset-0 z-[9999] flex items-center justify-center md:hidden ${
-            isDark ? "bg-[#0a0a0a]" : "bg-[#FBF8F3]"
+            isDark ? "bg-[#0a0a0a]" : "bg-cream"
           }`}
           initial={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 1.05 }}
@@ -69,8 +69,8 @@ const LoadingScreen = ({ onComplete }: LoadingScreenProps) => {
             className="pointer-events-none absolute inset-0"
             style={{
               background: isDark
-                ? "radial-gradient(circle at 50% 50%, rgba(212,175,55,0.08), transparent 60%)"
-                : "radial-gradient(circle at 50% 50%, rgba(212,175,55,0.12), transparent 60%)",
+                ? "radial-gradient(circle at 50% 50%, hsl(var(--highlight)/0.08), transparent 60%)"
+                : "radial-gradient(circle at 50% 50%, hsl(var(--highlight)/0.12), transparent 60%)",
             }}
           />
 
@@ -80,7 +80,7 @@ const LoadingScreen = ({ onComplete }: LoadingScreenProps) => {
             style={{
               width: 260,
               height: 260,
-              border: "1px solid rgba(212,175,55,0.35)",
+              border: "1px solid hsl(var(--highlight)/0.35)",
             }}
             initial={{ scale: 0.7, opacity: 0 }}
             animate={{ scale: [0.7, 1.15, 0.95], opacity: [0, 0.6, 0] }}
@@ -91,7 +91,7 @@ const LoadingScreen = ({ onComplete }: LoadingScreenProps) => {
             style={{
               width: 200,
               height: 200,
-              border: "1px solid rgba(212,175,55,0.25)",
+              border: "1px solid hsl(var(--highlight)/0.25)",
             }}
             initial={{ scale: 0.6, opacity: 0 }}
             animate={{ scale: [0.6, 1.1, 0.9], opacity: [0, 0.5, 0] }}
@@ -108,12 +108,12 @@ const LoadingScreen = ({ onComplete }: LoadingScreenProps) => {
             <motion.img
               src={logoSrc}
               alt="Sreerasthu Silvers"
-              className="w-44 h-auto object-contain drop-shadow-[0_8px_30px_rgba(212,175,55,0.25)]"
+              className="w-44 h-auto object-contain drop-shadow-[0_8px_30px_hsl(var(--highlight)/0.25)]"
               animate={{
                 filter: [
-                  "drop-shadow(0 0 0px rgba(212,175,55,0.0))",
-                  "drop-shadow(0 0 18px rgba(212,175,55,0.45))",
-                  "drop-shadow(0 0 0px rgba(212,175,55,0.0))",
+                  "drop-shadow(0 0 0px hsl(var(--highlight)/0.0))",
+                  "drop-shadow(0 0 18px hsl(var(--highlight)/0.45))",
+                  "drop-shadow(0 0 0px hsl(var(--highlight)/0.0))",
                 ],
               }}
               transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
@@ -124,7 +124,7 @@ const LoadingScreen = ({ onComplete }: LoadingScreenProps) => {
               className="mt-6 h-[2px] w-32 overflow-hidden rounded-full"
               style={{
                 background: isDark
-                  ? "linear-gradient(90deg, transparent, rgba(212,175,55,0.6), transparent)"
+                  ? "linear-gradient(90deg, transparent, hsl(var(--highlight)/0.6), transparent)"
                   : "linear-gradient(90deg, transparent, rgba(180,140,40,0.7), transparent)",
               }}
               initial={{ opacity: 0 }}

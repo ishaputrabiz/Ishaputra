@@ -181,7 +181,7 @@ const MobileCart = () => {
 
               {/* Product Details */}
               <div className="flex-1 min-w-0 pr-8">{/* Added padding-right for delete button space */}
-                <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100 line-clamp-1 mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100 line-clamp-1 mb-2" style={{ fontFamily: "var(--font-body)" }}>
                   {item.name}
                 </h3>
 

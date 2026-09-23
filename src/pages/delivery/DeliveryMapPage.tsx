@@ -866,8 +866,8 @@ const DeliveryMapPage = () => {
               {/* Customer Card */}
               <div className="bg-stone-50 rounded-2xl p-4 mb-3">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
-                    <User className="h-5 w-5 text-amber-600" />
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-highlight/15 to-primary/15 flex items-center justify-center">
+                    <User className="h-5 w-5 text-highlight" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-stone-800 truncate">
@@ -940,7 +940,7 @@ const DeliveryMapPage = () => {
                   <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={stopNavigation}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white font-semibold rounded-xl shadow-lg shadow-red-500/20 transition-all"
+                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-red-500 to-primary hover:from-red-600 hover:to-primary text-white font-semibold rounded-xl shadow-lg shadow-red-500/20 transition-all"
                   >
                     <X className="h-5 w-5" />
                     Stop Navigation

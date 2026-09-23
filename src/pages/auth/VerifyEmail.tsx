@@ -273,7 +273,7 @@ const VerifyEmail = () => {
         </div>
 
         {/* Tip Box */}
-        <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200 mb-5">
+        <div className="p-3 bg-highlight/10 rounded-lg border border-yellow-200 mb-5">
           <p className="text-xs text-yellow-800 text-center flex items-start justify-center gap-2">
             <span className="text-base">💡</span>
             <span>

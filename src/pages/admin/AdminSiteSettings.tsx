@@ -79,11 +79,11 @@ const Card = ({
     initial={{ opacity: 0, y: 14 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.4 }}
-    className="bg-white dark:bg-gray-900 border border-[#F5EFE6] dark:border-gray-800 rounded-2xl p-6 shadow-sm"
+    className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl p-6 shadow-sm"
   >
     <div className="flex items-center gap-3 mb-5">
       {Icon && (
-        <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/20 grid place-items-center text-amber-700 dark:text-amber-400">
+        <div className="w-9 h-9 rounded-lg bg-highlight/10 dark:bg-highlight/5 grid place-items-center text-highlight dark:text-highlight">
           <Icon className="w-4 h-4" />
         </div>
       )}
@@ -136,7 +136,7 @@ const ListInput = ({
       variant="outline"
       size="sm"
       onClick={() => onChange([...values, ''])}
-      className="text-amber-700 border-amber-200 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-950"
+      className="text-highlight border-highlight/30 hover:bg-highlight/10 dark:border-highlight/60 dark:hover:bg-highlight/20"
     >
       <Plus className="w-3.5 h-3.5 mr-1" /> Add
     </Button>
@@ -248,7 +248,7 @@ const AdminSiteSettings = () => {
   if (loading) {
     return (
       <div className="grid place-items-center py-32">
-        <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
       </div>
     );
   }
@@ -258,7 +258,7 @@ const AdminSiteSettings = () => {
       {/* Header */}
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-amber-700 dark:text-amber-400 font-medium mb-2 flex items-center gap-2">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-highlight dark:text-highlight font-medium mb-2 flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5" /> Footer & Branding
           </p>
           <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white">
@@ -271,7 +271,7 @@ const AdminSiteSettings = () => {
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="bg-amber-600 hover:bg-amber-700 text-white"
+          className="bg-highlight hover:bg-highlight text-white"
         >
           {saving ? (
             <>
@@ -355,7 +355,7 @@ const AdminSiteSettings = () => {
           className="bg-white dark:bg-gray-950"
         />
         {settings.mapEmbedUrl && (
-          <div className="mt-4 rounded-xl overflow-hidden border border-[#F5EFE6] dark:border-gray-800">
+          <div className="mt-4 rounded-xl overflow-hidden border border-cream-dark dark:border-gray-800">
             <iframe
               src={settings.mapEmbedUrl}
               width="100%"
@@ -381,9 +381,9 @@ const AdminSiteSettings = () => {
             return (
               <div
                 key={idx}
-                className="flex flex-col md:flex-row gap-2 items-stretch md:items-center p-3 rounded-xl border border-[#F5EFE6] dark:border-gray-800 bg-[#FFFBF5]/50 dark:bg-gray-950/40"
+                className="flex flex-col md:flex-row gap-2 items-stretch md:items-center p-3 rounded-xl border border-cream-dark dark:border-gray-800 bg-cream/50 dark:bg-gray-950/40"
               >
-                <div className="w-9 h-9 rounded-lg bg-white dark:bg-gray-900 grid place-items-center border border-[#F5EFE6] dark:border-gray-800 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-white dark:bg-gray-900 grid place-items-center border border-cream-dark dark:border-gray-800 text-gray-700 dark:text-gray-300 flex-shrink-0">
                   <Icon className="w-4 h-4" />
                 </div>
                 <Select
@@ -440,7 +440,7 @@ const AdminSiteSettings = () => {
                 { platform: 'instagram', url: '', active: true },
               ])
             }
-            className="text-amber-700 border-amber-200 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-950"
+            className="text-highlight border-highlight/30 hover:bg-highlight/10 dark:border-highlight/60 dark:hover:bg-highlight/20"
           >
             <Plus className="w-3.5 h-3.5 mr-1" /> Add social link
           </Button>
@@ -462,7 +462,7 @@ const AdminSiteSettings = () => {
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="bg-amber-600 hover:bg-amber-700 text-white"
+          className="bg-highlight hover:bg-highlight text-white"
         >
           {saving ? (
             <>
@@ -477,10 +477,10 @@ const AdminSiteSettings = () => {
       </div>
 
       {/* ── Mobile Sidebar Promo Banner ── */}
-      <div className="border-t border-[#F5EFE6] dark:border-gray-800 pt-8">
+      <div className="border-t border-cream-dark dark:border-gray-800 pt-8">
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-amber-700 dark:text-amber-400 font-medium mb-2 flex items-center gap-2">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-highlight dark:text-highlight font-medium mb-2 flex items-center gap-2">
               <Sparkles className="w-3.5 h-3.5" /> Mobile Sidebar
             </p>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -493,7 +493,7 @@ const AdminSiteSettings = () => {
           <Button
             onClick={handleSavePromo}
             disabled={savingPromo}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
+            className="bg-highlight hover:bg-highlight text-white"
           >
             {savingPromo ? (
               <>
@@ -550,7 +550,7 @@ const AdminSiteSettings = () => {
       </div>
 
       {/* ── Silver Rate (Admin-managed) ── */}
-      <div className="border-t border-[#F5EFE6] dark:border-gray-800 pt-8">
+      <div className="border-t border-cream-dark dark:border-gray-800 pt-8">
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
           <div>
             <p className="text-[10px] uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400 font-medium mb-2 flex items-center gap-2">
@@ -567,7 +567,7 @@ const AdminSiteSettings = () => {
           <Button
             onClick={handleSaveSilver}
             disabled={savingSilver}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
+            className="bg-highlight hover:bg-highlight text-white"
           >
             {savingSilver ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving…</>

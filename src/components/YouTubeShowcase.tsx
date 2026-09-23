@@ -139,10 +139,10 @@ const YouTubeShowcase = () => {
   const stripVideos = canScroll && videos.length > 1 ? [...videos, ...videos] : videos;
 
   return (
-    <section className="relative w-full py-14 md:py-24 bg-gradient-to-b from-background via-background to-[#fdf7eb] dark:to-zinc-950 overflow-hidden">
+    <section className="relative w-full py-14 md:py-24 bg-gradient-to-b from-background via-background to-cream dark:to-zinc-950 overflow-hidden">
       {/* gold ambient glow */}
-      <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.12)_0%,transparent_60%)] blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 right-0 w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(131,39,41,0.10)_0%,transparent_60%)] blur-3xl" />
+      <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-[radial-gradient(circle,hsl(var(--highlight)/0.12)_0%,transparent_60%)] blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 right-0 w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,hsl(var(--primary)/0.10)_0%,transparent_60%)] blur-3xl" />
 
       <div className="container-custom relative">
         {/* header */}
@@ -153,7 +153,7 @@ const YouTubeShowcase = () => {
             </p>
             <h2
               className="text-2xl md:text-4xl font-medium tracking-tight text-foreground"
-              style={{ fontFamily: "'Playfair Display', serif" }}
+              style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
             >
               The Sreerasthu Film Reel
             </h2>
@@ -182,7 +182,7 @@ const YouTubeShowcase = () => {
               featured.aspectRatio === "9:16" ? "max-w-[22rem] md:max-w-[26rem]" : "max-w-[72rem]"
             }`}
           >
-            <div className="absolute -inset-[2px] rounded-[26px] bg-gradient-to-br from-[#d4af37] via-[#f5d76e] to-[#a07a1f] opacity-90 blur-[1px]" />
+            <div className="absolute -inset-[2px] rounded-[26px] bg-gradient-to-br from-highlight via-highlight-soft to-highlight opacity-90 blur-[1px]" />
             <div className="relative shadow-[0_30px_70px_-30px_rgba(0,0,0,0.55)] rounded-[24px] overflow-hidden">
               <InlinePlayer
                 video={featured}
@@ -212,7 +212,7 @@ const YouTubeShowcase = () => {
                 <div className="absolute left-0 right-0 bottom-0 p-5 md:p-8 text-left z-10 pointer-events-none">
                   <h3
                     className="text-white text-lg md:text-2xl font-medium leading-tight"
-                    style={{ fontFamily: "'Playfair Display', serif" }}
+                    style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
                   >
                     {featured.title}
                   </h3>
@@ -288,7 +288,7 @@ const YouTubeShowcase = () => {
                         : "w-[82vw] max-w-[340px] md:w-[320px]"
                     } ${
                       isFeaturedActive
-                        ? "border-primary shadow-[0_18px_36px_-18px_rgba(212,175,55,0.6)]"
+                        ? "border-primary shadow-[0_18px_36px_-18px_hsl(var(--highlight)/0.6)]"
                         : "border-transparent shadow-md hover:shadow-xl"
                     }`}
                   >
@@ -304,7 +304,7 @@ const YouTubeShowcase = () => {
                         rounded=""
                       />
                       {!isPlaying && v.featured && (
-                        <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/95 text-white text-[9px] uppercase tracking-[0.2em] font-semibold shadow">
+                        <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-highlight/95 text-white text-[9px] uppercase tracking-[0.2em] font-semibold shadow">
                           ★ Featured
                         </span>
                       )}
@@ -317,7 +317,7 @@ const YouTubeShowcase = () => {
                     <div className="p-3">
                       <p
                         className="text-sm font-medium leading-snug line-clamp-2 text-foreground"
-                        style={{ fontFamily: "'Playfair Display', serif" }}
+                        style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
                       >
                         {v.title}
                       </p>
@@ -344,7 +344,7 @@ const YouTubeShowcase = () => {
                 <p className="text-[10px] uppercase tracking-[0.28em] text-white/60">Video Story</p>
                 <h3
                   className="mt-2 text-lg font-medium text-white sm:text-2xl"
-                  style={{ fontFamily: "'Playfair Display', serif" }}
+                  style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
                 >
                   {selectedVideo.title}
                 </h3>

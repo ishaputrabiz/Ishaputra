@@ -15,11 +15,11 @@ import { SmartImage } from "@/components/ui/smart-image";
 import { assertUploadableImage, describeUploadError, IMAGE_ACCEPT } from "@/services/mediaStorage";
 
 const TINTS: { label: string; value: string }[] = [
-  { label: 'Maroon', value: 'from-[#3a1d20]/85 via-[#3a1d20]/35 to-transparent' },
+  { label: 'Maroon', value: 'from-charcoal/85 via-charcoal/35 to-transparent' },
   { label: 'Charcoal', value: 'from-[#1f2937]/80 via-[#1f2937]/30 to-transparent' },
-  { label: 'Sienna', value: 'from-[#3b2417]/80 via-[#3b2417]/30 to-transparent' },
-  { label: 'Cocoa', value: 'from-[#3a2418]/85 via-[#3a2418]/30 to-transparent' },
-  { label: 'Espresso', value: 'from-[#2a1810]/88 via-[#2a1810]/35 to-transparent' },
+  { label: 'Sienna', value: 'from-charcoal/80 via-charcoal/30 to-transparent' },
+  { label: 'Cocoa', value: 'from-charcoal/85 via-charcoal/30 to-transparent' },
+  { label: 'Espresso', value: 'from-charcoal/88 via-charcoal/35 to-transparent' },
 ];
 
 interface DraftCollection {
@@ -165,7 +165,7 @@ const AdminHomeCollections = () => {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-amber-700 dark:text-amber-400 font-medium mb-2 flex items-center gap-2">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-highlight dark:text-highlight font-medium mb-2 flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5" /> Content & Media
           </p>
           <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white">
@@ -177,7 +177,7 @@ const AdminHomeCollections = () => {
         </div>
         <button
           onClick={openNew}
-          className="inline-flex items-center gap-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 text-sm font-medium shadow-sm"
+          className="inline-flex items-center gap-2 rounded-full bg-highlight hover:bg-highlight text-white px-5 py-2.5 text-sm font-medium shadow-sm"
         >
           <Plus className="w-4 h-4" /> Add Collection
         </button>
@@ -185,7 +185,7 @@ const AdminHomeCollections = () => {
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+          <Loader2 className="w-8 h-8 animate-spin text-highlight" />
         </div>
       ) : items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-12 text-center">
@@ -196,7 +196,7 @@ const AdminHomeCollections = () => {
             type="button"
             onClick={importDefaults}
             disabled={importingDefaults}
-            className="mt-5 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-5 py-2.5 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 disabled:cursor-default disabled:opacity-60 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300"
+            className="mt-5 inline-flex items-center gap-2 rounded-full border border-highlight/30 bg-highlight/10 px-5 py-2.5 text-sm font-medium text-highlight transition-colors hover:bg-highlight/15 disabled:cursor-default disabled:opacity-60 dark:border-highlight/20 dark:bg-highlight/5 dark:text-highlight"
           >
             {importingDefaults ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             Import Current Collections
@@ -216,7 +216,7 @@ const AdminHomeCollections = () => {
                 <div className={`absolute inset-0 bg-gradient-to-t ${item.tint || TINTS[0].value}`} />
                 <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                   <p className="text-[10px] uppercase tracking-[0.25em] opacity-80">{item.eyebrow}</p>
-                  <h3 className="text-lg font-semibold leading-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  <h3 className="text-lg font-semibold leading-tight" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                     {item.title}
                   </h3>
                   {item.subtitle && <p className="text-xs opacity-80 mt-1 line-clamp-2">{item.subtitle}</p>}
@@ -235,7 +235,7 @@ const AdminHomeCollections = () => {
                   </button>
                   <button
                     onClick={() => openEdit(item)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-highlight hover:bg-highlight text-white text-xs font-medium transition-colors"
                     title="Edit collection"
                   >
                     <Edit2 className="w-3.5 h-3.5" /> Edit
@@ -345,7 +345,7 @@ const AdminHomeCollections = () => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 px-5 py-2 text-sm bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white rounded-lg"
+                  className="inline-flex items-center gap-2 px-5 py-2 text-sm bg-highlight hover:bg-highlight disabled:opacity-60 text-white rounded-lg"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {draft.id ? 'Save changes' : 'Create collection'}
@@ -371,7 +371,7 @@ const AdminHomeCollections = () => {
           color: white;
           border-color: rgb(55 65 81);
         }
-        .form-input:focus { outline: none; border-color: rgb(217 119 6); box-shadow: 0 0 0 3px rgba(217,119,6,0.15); }
+        .form-input:focus { outline: none; border-color: rgb(217 119 6); box-shadow: 0 0 0 3px hsl(var(--highlight)/0.15); }
       `}</style>
     </div>
   );

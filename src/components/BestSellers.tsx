@@ -99,11 +99,11 @@ const BestSellers = () => {
 
   return (
     <section ref={ref} className="relative py-6 md:py-16">
-      <div className="pointer-events-none absolute inset-x-0 top-10 h-32 bg-[radial-gradient(circle,rgba(212,175,55,0.18)_0%,rgba(212,175,55,0)_72%)] blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-0 top-10 h-32 bg-[radial-gradient(circle,hsl(var(--highlight)/0.18)_0%,hsl(var(--highlight)/0)_72%)] blur-3xl" />
       <div className="container-custom">
-        <div className="relative overflow-hidden rounded-[34px] border border-[#ead9ba]/80 bg-[linear-gradient(180deg,rgba(255,252,247,0.96)_0%,rgba(255,247,236,0.95)_55%,rgba(255,255,255,0.98)_100%)] px-4 py-5 shadow-[0_30px_90px_-65px_rgba(114,77,31,0.45)] dark:border-[#d4af37]/20 dark:bg-[linear-gradient(180deg,rgba(20,16,10,0.96)_0%,rgba(28,20,16,0.96)_55%,rgba(13,12,11,0.98)_100%)] dark:shadow-[0_38px_110px_-70px_rgba(0,0,0,0.88)] md:px-7 md:py-8">
-          <div className="pointer-events-none absolute -right-8 top-0 h-32 w-32 rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.28)_0%,rgba(212,175,55,0)_72%)] blur-2xl dark:bg-[radial-gradient(circle,rgba(212,175,55,0.18)_0%,rgba(212,175,55,0)_72%)]" />
-          <div className="pointer-events-none absolute left-12 bottom-0 h-28 w-40 rounded-full bg-[radial-gradient(circle,rgba(131,39,41,0.12)_0%,rgba(131,39,41,0)_75%)] blur-2xl dark:bg-[radial-gradient(circle,rgba(96,165,250,0.15)_0%,rgba(96,165,250,0)_75%)]" />
+        <div className="relative overflow-hidden rounded-[34px] border border-cream-dark/80 bg-[linear-gradient(180deg,rgba(255,252,247,0.96)_0%,rgba(255,247,236,0.95)_55%,rgba(255,255,255,0.98)_100%)] px-4 py-5 shadow-[0_30px_90px_-65px_hsl(var(--highlight)/0.45)] dark:border-highlight/20 dark:bg-[linear-gradient(180deg,rgba(20,16,10,0.96)_0%,rgba(28,20,16,0.96)_55%,rgba(13,12,11,0.98)_100%)] dark:shadow-[0_38px_110px_-70px_rgba(0,0,0,0.88)] md:px-7 md:py-8">
+          <div className="pointer-events-none absolute -right-8 top-0 h-32 w-32 rounded-full bg-[radial-gradient(circle,hsl(var(--highlight)/0.28)_0%,hsl(var(--highlight)/0)_72%)] blur-2xl dark:bg-[radial-gradient(circle,hsl(var(--highlight)/0.18)_0%,hsl(var(--highlight)/0)_72%)]" />
+          <div className="pointer-events-none absolute left-12 bottom-0 h-28 w-40 rounded-full bg-[radial-gradient(circle,hsl(var(--primary)/0.12)_0%,hsl(var(--primary)/0)_75%)] blur-2xl dark:bg-[radial-gradient(circle,rgba(96,165,250,0.15)_0%,rgba(96,165,250,0)_75%)]" />
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -116,7 +116,7 @@ const BestSellers = () => {
               <span className="h-px w-8 bg-primary/50" />
               <span className="text-[10px] uppercase tracking-[0.32em] text-primary/80 font-medium">Best Sellers</span>
             </div>
-            <h2 className="text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+            <h2 className="text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
               Most loved right now
             </h2>
             <p className="text-sm text-muted-foreground mt-1 font-light">Our most loved pieces, chosen by you</p>
@@ -135,7 +135,7 @@ const BestSellers = () => {
             <span className="text-[10px] uppercase tracking-[0.32em] text-primary/80 font-medium">Best Sellers</span>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+            <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
               Signature Collection
             </h2>
             <div className="flex items-center gap-1.5">
@@ -196,7 +196,7 @@ const BestSellers = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5 }}
                     onClick={() => navigate(`/product/${products[0].id}`)}
-                    className="relative mb-3 cursor-pointer overflow-hidden rounded-[26px] border border-[#d4af37]/30 bg-gradient-to-br from-[#fff7e6] via-[#fffaf0] to-[#fdf2d4] shadow-[0_18px_48px_-26px_rgba(212,175,55,0.55)] dark:border-[#d4af37]/25 dark:from-[#1a140a] dark:via-[#1d1610] dark:to-[#15110a] dark:shadow-[0_18px_48px_-26px_rgba(0,0,0,0.85)]"
+                    className="relative mb-3 cursor-pointer overflow-hidden rounded-[26px] border border-highlight/30 bg-gradient-to-br from-cream via-cream to-cream shadow-[0_18px_48px_-26px_hsl(var(--highlight)/0.55)] dark:border-highlight/25 dark:from-charcoal dark:via-charcoal dark:to-charcoal dark:shadow-[0_18px_48px_-26px_rgba(0,0,0,0.85)]"
                   >
                     <div className="flex">
                       <div className="relative w-[44%] overflow-hidden">
@@ -204,14 +204,14 @@ const BestSellers = () => {
                           src={products[0].image}
                           alt={products[0].title}
                           className="w-full h-full object-cover aspect-[4/5]" preset="detail" />
-                        <span className="absolute top-2 left-2 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[8px] font-bold tracking-wide text-black shadow-sm" style={{ background: 'linear-gradient(135deg, #f4d57a 0%, #d4af37 50%, #b8941f 100%)' }}>
+                        <span className="absolute top-2 left-2 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[8px] font-bold tracking-wide text-black shadow-sm" style={{ background: 'linear-gradient(135deg, hsl(var(--highlight-soft)) 0%, hsl(var(--highlight)) 50%, hsl(var(--highlight)) 100%)' }}>
                           ★ #1 BEST
                         </span>
                       </div>
                       <div className="flex-1 p-4 flex flex-col justify-between">
                         <div>
                           <p className="text-[9px] uppercase tracking-[0.28em] text-primary/80 font-semibold mb-1.5">Most Loved</p>
-                          <h3 className="text-base font-semibold text-foreground line-clamp-2 mb-2 leading-snug" style={{ fontFamily: "'Playfair Display', serif" }}>
+                          <h3 className="text-base font-semibold text-foreground line-clamp-2 mb-2 leading-snug" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                             {products[0].title}
                           </h3>
                           <div className="flex items-baseline gap-2 mb-3">
@@ -258,7 +258,7 @@ const BestSellers = () => {
                         viewport={{ once: true }}
                         transition={{ delay: Math.min(idx, 4) * 0.05, duration: 0.4 }}
                         onClick={() => navigate(`/product/${product.id}`)}
-                        className="group cursor-pointer flex-shrink-0 w-[150px] flex flex-col overflow-hidden rounded-[20px] border border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,249,240,0.98)_100%)] shadow-[0_12px_28px_-22px_rgba(114,77,31,0.45)] transition-all duration-300 active:scale-[0.98] dark:border-[#d4af37]/15 dark:bg-[linear-gradient(180deg,rgba(28,22,16,0.98)_0%,rgba(16,14,12,0.98)_100%)] dark:shadow-[0_14px_28px_-20px_rgba(0,0,0,0.7)]"
+                        className="group cursor-pointer flex-shrink-0 w-[150px] flex flex-col overflow-hidden rounded-[20px] border border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,249,240,0.98)_100%)] shadow-[0_12px_28px_-22px_hsl(var(--highlight)/0.45)] transition-all duration-300 active:scale-[0.98] dark:border-highlight/15 dark:bg-[linear-gradient(180deg,rgba(28,22,16,0.98)_0%,rgba(16,14,12,0.98)_100%)] dark:shadow-[0_14px_28px_-20px_rgba(0,0,0,0.7)]"
                       >
                         <div className="relative aspect-square overflow-hidden bg-muted">
                           <SmartImage
@@ -266,7 +266,7 @@ const BestSellers = () => {
                             alt={product.title}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" preset="card" />
                           {rank <= 5 && (
-                            <span className="absolute top-2 left-2 inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold text-black shadow-sm" style={{ background: 'linear-gradient(135deg, #f4d57a 0%, #d4af37 50%, #b8941f 100%)' }}>
+                            <span className="absolute top-2 left-2 inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold text-black shadow-sm" style={{ background: 'linear-gradient(135deg, hsl(var(--highlight-soft)) 0%, hsl(var(--highlight)) 50%, hsl(var(--highlight)) 100%)' }}>
                               #{rank}
                             </span>
                           )}
@@ -291,7 +291,7 @@ const BestSellers = () => {
                                 )}
                               </div>
                               {product.discount && product.discount > 0 && (
-                                <p className="text-[9px] font-semibold text-[#b88a2a] dark:text-[#f4cf73]">{product.discount}% Off</p>
+                                <p className="text-[9px] font-semibold text-highlight dark:text-highlight-soft">{product.discount}% Off</p>
                               )}
                             </div>
                             <button
@@ -329,7 +329,7 @@ const BestSellers = () => {
                 <p className="text-sm text-muted-foreground">Our most loved pieces will appear here. Check back shortly!</p>
               </div>
             ) : (
-              <div className="group/best-sellers relative overflow-hidden rounded-[28px] border border-border/60 bg-background/70 py-2 dark:border-[#d4af37]/12 dark:bg-white/[0.03]">
+              <div className="group/best-sellers relative overflow-hidden rounded-[28px] border border-border/60 bg-background/70 py-2 dark:border-highlight/12 dark:bg-white/[0.03]">
                 <div
                   ref={desktopBSRef}
                   className="overflow-x-auto scrollbar-hide px-2 py-2"
@@ -354,7 +354,7 @@ const BestSellers = () => {
 
                               {showRankBadge && (
                                 <div className="absolute top-2.5 left-2.5 z-10">
-                                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-bold tracking-tight text-black" style={{ background: 'linear-gradient(135deg, #f4d57a 0%, #d4af37 50%, #b8941f 100%)', boxShadow: '0 2px 8px rgba(212, 175, 55, 0.35)' }}>
+                                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-bold tracking-tight text-black" style={{ background: 'linear-gradient(135deg, hsl(var(--highlight-soft)) 0%, hsl(var(--highlight)) 50%, hsl(var(--highlight)) 100%)', boxShadow: '0 2px 8px hsl(var(--highlight)/0.35)' }}>
                                     #{sourceIndex + 1}
                                   </span>
                                 </div>
@@ -394,7 +394,7 @@ const BestSellers = () => {
                                       )}
                                     </div>
                                     {product.discount && product.discount > 0 && (
-                                      <p className="text-xs font-semibold text-[#b88a2a] dark:text-[#f4cf73]">
+                                      <p className="text-xs font-semibold text-highlight dark:text-highlight-soft">
                                         {product.discount}% Off
                                       </p>
                                     )}

@@ -126,10 +126,10 @@ const AdminNotifications = () => {
 
   return (
     <div className="space-y-6">
-      <header className="bg-gradient-to-br from-amber-50 via-white to-orange-50/30 border border-amber-200/40 rounded-2xl p-6 shadow-sm">
+      <header className="bg-gradient-to-br from-highlight/10 via-white to-primary/5 border border-highlight/12 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-amber-100">
-            <Bell className="h-6 w-6 text-amber-700" />
+          <div className="p-3 rounded-xl bg-highlight/15">
+            <Bell className="h-6 w-6 text-highlight" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Marketing Center</h1>
@@ -332,7 +332,7 @@ const ComposeTab = ({
         {pushEnabled && (
           <section className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm space-y-3">
             <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <Bell className="h-4 w-4 text-amber-600" /> Push content
+              <Bell className="h-4 w-4 text-highlight" /> Push content
             </h2>
             <Field label="Title" required>
               <input
@@ -384,7 +384,7 @@ const ComposeTab = ({
               <MessageCircle className="h-4 w-4 text-emerald-600" /> WhatsApp template
             </h2>
             {templates.length === 0 ? (
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <p className="text-xs text-highlight bg-highlight/10 border border-highlight/30 rounded-lg px-3 py-2">
                 No templates registered yet. Add one from the <strong>Templates</strong> tab —
                 the template name and language must already be approved in Meta WhatsApp Manager.
               </p>
@@ -447,7 +447,7 @@ const ComposeTab = ({
           <button
             onClick={handleSend}
             disabled={sending}
-            className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-300 text-white font-medium px-5 py-2.5 rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 bg-highlight hover:bg-highlight disabled:bg-gray-300 text-white font-medium px-5 py-2.5 rounded-lg transition-colors"
           >
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {sending ? 'Sending…' : 'Send broadcast'}
@@ -498,7 +498,7 @@ const ComposeTab = ({
       <aside className="space-y-6">
         <section className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <Users className="h-4 w-4 text-amber-700" />
+            <Users className="h-4 w-4 text-highlight" />
             <h3 className="font-semibold text-gray-900 text-sm">Audience</h3>
           </div>
           <div className="space-y-2">
@@ -513,7 +513,7 @@ const ComposeTab = ({
                   value={opt.id}
                   checked={audience === opt.id}
                   onChange={() => setAudience(opt.id)}
-                  className="mt-1 accent-amber-600"
+                  className="mt-1 accent-highlight"
                 />
                 <span>
                   <span className="font-medium">{opt.label}</span>
@@ -626,7 +626,7 @@ const SelectedCustomersPicker = ({
             <button
               key={r.uid}
               onClick={() => addUser(r)}
-              className="w-full text-left px-3 py-2 text-xs hover:bg-amber-50 flex items-center justify-between border-b last:border-b-0 border-gray-100"
+              className="w-full text-left px-3 py-2 text-xs hover:bg-highlight/10 flex items-center justify-between border-b last:border-b-0 border-gray-100"
             >
               <span>
                 <span className="block font-medium text-gray-900">{r.name || r.email || r.uid}</span>
@@ -634,7 +634,7 @@ const SelectedCustomersPicker = ({
                   {r.email} {r.phone ? `· ${r.phone}` : ''}
                 </span>
               </span>
-              <Plus className="h-3.5 w-3.5 text-amber-600" />
+              <Plus className="h-3.5 w-3.5 text-highlight" />
             </button>
           ))}
         </div>
@@ -645,7 +645,7 @@ const SelectedCustomersPicker = ({
         {selected.map((s) => (
           <span
             key={s.uid}
-            className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-900 rounded-full px-2 py-1 text-[11px]"
+            className="inline-flex items-center gap-1 bg-highlight/10 border border-highlight/30 text-highlight rounded-full px-2 py-1 text-[11px]"
           >
             {s.name || s.email || s.uid.slice(0, 6)}
             <button onClick={() => removeUser(s.uid)} className="hover:text-red-700">
@@ -717,7 +717,7 @@ const HistoryTab = () => {
         </thead>
         <tbody className="divide-y divide-gray-100">
           {rows.map((r) => (
-            <tr key={r.id} className="hover:bg-amber-50/30">
+            <tr key={r.id} className="hover:bg-highlight/5">
               <td className="px-4 py-2 text-gray-700">
                 <div>{formatDate(r.createdAt)}</div>
                 <div className="text-[10px] text-gray-400">{r.actorEmail || ''}</div>
@@ -758,7 +758,7 @@ const HistoryTab = () => {
 
 const StatusPill = ({ status }: { status: CampaignRow['status'] }) => {
   const map = {
-    sending: { cls: 'bg-amber-100 text-amber-800', icon: <Clock className="h-3 w-3" /> },
+    sending: { cls: 'bg-highlight/15 text-highlight', icon: <Clock className="h-3 w-3" /> },
     completed: {
       cls: 'bg-green-100 text-green-800',
       icon: <CheckCircle2 className="h-3 w-3" />,
@@ -875,7 +875,7 @@ const TemplatesTab = ({ templates }: { templates: WhatsAppTemplate[] }) => {
         <button
           onClick={handleAdd}
           disabled={saving || !name.trim()}
-          className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-300 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+          className="inline-flex items-center gap-2 bg-highlight hover:bg-highlight disabled:bg-gray-300 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           Save template
@@ -949,8 +949,8 @@ const ChannelToggle = ({
   accent: 'amber' | 'emerald';
 }) => {
   const accentBg =
-    accent === 'amber' ? 'bg-amber-50 border-amber-300' : 'bg-emerald-50 border-emerald-300';
-  const accentText = accent === 'amber' ? 'text-amber-700' : 'text-emerald-700';
+    accent === 'amber' ? 'bg-highlight/10 border-highlight/45' : 'bg-emerald-50 border-emerald-300';
+  const accentText = accent === 'amber' ? 'text-highlight' : 'text-emerald-700';
   return (
     <button
       type="button"

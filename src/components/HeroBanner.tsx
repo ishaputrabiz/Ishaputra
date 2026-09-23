@@ -180,7 +180,7 @@ const HeroBanner = () => {
           </div>
           <h2
             className="text-2xl md:text-3xl font-semibold text-foreground"
-            style={{ fontFamily: "'Playfair Display', serif" }}
+            style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
           >
             Welcome to Sreerasthu Silvers
           </h2>

@@ -104,7 +104,7 @@ const FeaturedSection = () => {
         <p className="text-[10px] uppercase tracking-[0.24em] text-white/70 mb-1 font-light">
           {compact ? `Spotlight 0${idx + 1}` : `Featured 0${idx + 1}`}
         </p>
-        <h3 className={`${compact ? "text-lg lg:text-xl" : "text-xl"} font-semibold text-white mb-2 line-clamp-2`} style={{ fontFamily: "'Playfair Display', serif" }}>
+        <h3 className={`${compact ? "text-lg lg:text-xl" : "text-xl"} font-semibold text-white mb-2 line-clamp-2`} style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
           {product.title}
         </h3>
         <div className="flex items-center justify-between gap-2">
@@ -127,11 +127,11 @@ const FeaturedSection = () => {
 
   return (
     <section className="relative py-6 md:py-16">
-      <div className="pointer-events-none absolute inset-x-0 top-10 h-36 bg-[radial-gradient(circle,rgba(212,175,55,0.14)_0%,rgba(212,175,55,0)_72%)] blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-0 top-10 h-36 bg-[radial-gradient(circle,hsl(var(--highlight)/0.14)_0%,hsl(var(--highlight)/0)_72%)] blur-3xl" />
       <div className="container-custom">
-        <div className="relative overflow-hidden rounded-[36px] border border-[#ead9ba]/80 bg-[linear-gradient(180deg,rgba(255,253,248,0.98)_0%,rgba(255,255,255,0.98)_42%,rgba(255,246,232,0.95)_100%)] px-4 py-5 shadow-[0_34px_100px_-70px_rgba(114,77,31,0.55)] dark:border-[#d4af37]/20 dark:bg-[linear-gradient(180deg,rgba(18,17,15,0.98)_0%,rgba(24,20,17,0.98)_42%,rgba(12,12,11,0.98)_100%)] dark:shadow-[0_40px_120px_-74px_rgba(0,0,0,0.9)] md:px-7 md:py-8">
-          <div className="pointer-events-none absolute -left-8 top-8 h-28 w-28 rounded-full bg-[radial-gradient(circle,rgba(131,39,41,0.12)_0%,rgba(131,39,41,0)_75%)] blur-2xl dark:bg-[radial-gradient(circle,rgba(96,165,250,0.12)_0%,rgba(96,165,250,0)_75%)]" />
-          <div className="pointer-events-none absolute right-0 top-0 h-36 w-36 rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.24)_0%,rgba(212,175,55,0)_72%)] blur-2xl dark:bg-[radial-gradient(circle,rgba(212,175,55,0.18)_0%,rgba(212,175,55,0)_72%)]" />
+        <div className="relative overflow-hidden rounded-[36px] border border-cream-dark/80 bg-[linear-gradient(180deg,rgba(255,253,248,0.98)_0%,rgba(255,255,255,0.98)_42%,rgba(255,246,232,0.95)_100%)] px-4 py-5 shadow-[0_34px_100px_-70px_hsl(var(--highlight)/0.55)] dark:border-highlight/20 dark:bg-[linear-gradient(180deg,rgba(18,17,15,0.98)_0%,rgba(24,20,17,0.98)_42%,rgba(12,12,11,0.98)_100%)] dark:shadow-[0_40px_120px_-74px_rgba(0,0,0,0.9)] md:px-7 md:py-8">
+          <div className="pointer-events-none absolute -left-8 top-8 h-28 w-28 rounded-full bg-[radial-gradient(circle,hsl(var(--primary)/0.12)_0%,hsl(var(--primary)/0)_75%)] blur-2xl dark:bg-[radial-gradient(circle,rgba(96,165,250,0.12)_0%,rgba(96,165,250,0)_75%)]" />
+          <div className="pointer-events-none absolute right-0 top-0 h-36 w-36 rounded-full bg-[radial-gradient(circle,hsl(var(--highlight)/0.24)_0%,hsl(var(--highlight)/0)_72%)] blur-2xl dark:bg-[radial-gradient(circle,hsl(var(--highlight)/0.18)_0%,hsl(var(--highlight)/0)_72%)]" />
         {/* Mobile */}
         <div className="md:hidden">
           <div className="mb-4 px-1">
@@ -140,7 +140,7 @@ const FeaturedSection = () => {
               <span className="text-[10px] uppercase tracking-[0.32em] text-primary/80 font-medium">Featured</span>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                 The spotlight edit
               </h2>
               <button onClick={() => navigate('/products?tag=featured')} className="text-xs font-medium text-primary tracking-wide">
@@ -164,7 +164,7 @@ const FeaturedSection = () => {
                 <span className="inline-flex rounded-full border border-white/20 bg-white/10 backdrop-blur px-3 py-1 text-[10px] uppercase tracking-[0.26em] text-white/80 mb-3">
                   Editor's Pick
                 </span>
-                <h3 className="text-2xl font-semibold mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+                <h3 className="text-2xl font-semibold mb-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                   {featuredProduct.title}
                 </h3>
                 <div className="flex items-center gap-2">
@@ -187,7 +187,7 @@ const FeaturedSection = () => {
                   className="cursor-pointer"
                   onClick={() => navigate(`/product/${product.id}`)}
                 >
-                  <div className="overflow-hidden rounded-[24px] border border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(255,249,240,0.98)_100%)] shadow-[0_18px_42px_-28px_rgba(114,77,31,0.48)] dark:border-[#d4af37]/12 dark:bg-[linear-gradient(180deg,rgba(30,25,19,0.98)_0%,rgba(17,15,13,0.98)_100%)] dark:shadow-[0_24px_48px_-34px_rgba(0,0,0,0.82)]">
+                  <div className="overflow-hidden rounded-[24px] border border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(255,249,240,0.98)_100%)] shadow-[0_18px_42px_-28px_hsl(var(--highlight)/0.48)] dark:border-highlight/12 dark:bg-[linear-gradient(180deg,rgba(30,25,19,0.98)_0%,rgba(17,15,13,0.98)_100%)] dark:shadow-[0_24px_48px_-34px_rgba(0,0,0,0.82)]">
                     <div className="aspect-[4/4.5] overflow-hidden bg-muted relative">
                       <SmartImage src={product.image} alt={product.title} className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" preset="card" />
                       <button
@@ -222,7 +222,7 @@ const FeaturedSection = () => {
             <div className="flex items-end gap-4">
               <div>
                 <span className="text-[10px] uppercase tracking-[0.3em] text-primary font-medium">Editor's Picks</span>
-                <h2 className="text-3xl lg:text-4xl font-semibold text-foreground mt-1" style={{ fontFamily: "'Playfair Display', serif" }}>
+                <h2 className="text-3xl lg:text-4xl font-semibold text-foreground mt-1" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                   Featured
                 </h2>
               </div>
@@ -260,7 +260,7 @@ const FeaturedSection = () => {
                   <span className="inline-flex rounded-full border border-white/20 bg-white/10 backdrop-blur px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white/80 mb-4">
                     Featured
                   </span>
-                  <h3 className="text-3xl font-semibold mb-3 line-clamp-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  <h3 className="text-3xl font-semibold mb-3 line-clamp-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                     {featuredProduct.title}
                   </h3>
                   <div className="flex items-center gap-3 mb-6">

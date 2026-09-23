@@ -253,10 +253,10 @@ const ShoppingCart = () => {
                       className="w-32 h-32 object-contain"
                     />
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  <h3 className="text-xl font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-body)" }}>
                     Please Login to View Cart
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-8 max-w-[260px] leading-relaxed" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  <p className="text-sm text-muted-foreground mb-8 max-w-[260px] leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
                     Sign in to access your saved items and continue shopping.
                   </p>
                   <button
@@ -288,7 +288,7 @@ const ShoppingCart = () => {
                   className="flex flex-col items-center justify-center h-full text-center px-8 py-16"
                 >
                   <div className="relative mb-8">
-                    <div className="w-28 h-28 bg-gradient-to-br from-orange-50 to-amber-50 rounded-full flex items-center justify-center">
+                    <div className="w-28 h-28 bg-gradient-to-br from-primary/10 to-highlight/10 rounded-full flex items-center justify-center">
                       <ShoppingBag className="w-12 h-12 text-orange-300" strokeWidth={1.5} />
                     </div>
                     <motion.div
@@ -297,7 +297,7 @@ const ShoppingCart = () => {
                       transition={{ duration: 2, repeat: Infinity }}
                     />
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  <h3 className="text-xl font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                     Your cart is empty
                   </h3>
                   <p className="text-sm text-muted-foreground mb-8 max-w-[260px] leading-relaxed">
@@ -416,7 +416,7 @@ const ShoppingCart = () => {
                   {/* ─── ORDER SUMMARY (scrolls with items) ─── */}
                   <div className="bg-background px-6 py-6 space-y-5 pb-24 md:pb-6">
                     {/* Order Summary Heading */}
-                    <h3 className="text-lg font-bold text-foreground" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    <h3 className="text-lg font-bold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                       Order Summary
                     </h3>
 

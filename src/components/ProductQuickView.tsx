@@ -126,7 +126,7 @@ const ProductQuickView = ({ product, isOpen, onClose }: ProductQuickViewProps) =
                   </div>
 
                 {/* Product Details */}
-                <div className="p-6 md:p-8 flex flex-col" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                <div className="p-6 md:p-8 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
                   {/* Title */}
                   <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-2">
                     {product.title}

@@ -185,7 +185,7 @@ const CategoryIconNav = () => {
                 transition={{ delay: index * 0.04 }}
                 className={`group flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 min-w-fit flex-shrink-0 transition-all duration-200 ${
                   isActive
-                    ? "border-primary/30 bg-primary/10 text-primary shadow-[0_8px_18px_-14px_rgba(131,39,41,0.65)]"
+                    ? "border-primary/30 bg-primary/10 text-primary shadow-[0_8px_18px_-14px_hsl(var(--primary)/0.65)]"
                     : "border-border/70 bg-background text-muted-foreground"
                 }`}
               >

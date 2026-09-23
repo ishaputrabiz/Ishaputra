@@ -34,7 +34,7 @@ const Profile = () => {
   ];
 
   const accountSettings = [
-    { id: 'plus', label: 'Venkat Plus', icon: Sparkles, color: 'text-yellow-600' },
+    { id: 'plus', label: 'Venkat Plus', icon: Sparkles, color: 'text-highlight' },
     { id: 'profile', label: 'Edit Profile', icon: User, color: 'text-blue-600' },
     { id: 'cards', label: 'Saved Credit / Debit & Gift Cards', icon: CreditCard, color: 'text-purple-600' },
     { id: 'addresses', label: 'Saved Addresses', icon: MapPin, color: 'text-red-600' },
@@ -44,7 +44,7 @@ const Profile = () => {
   ];
 
   const myActivity = [
-    { id: 'reviews', label: 'Reviews', icon: Star, color: 'text-yellow-600' },
+    { id: 'reviews', label: 'Reviews', icon: Star, color: 'text-highlight' },
     { id: 'questions', label: 'Questions & Answers', icon: MessageCircle, color: 'text-blue-600' },
   ];
 
@@ -102,7 +102,7 @@ const Profile = () => {
               <p className="text-xs mb-2 opacity-80">EXCLUSIVE OFFER</p>
               <h3 className="text-xl font-bold mb-1">Premium Silver</h3>
               <h3 className="text-xl font-bold mb-3">Collection</h3>
-              <p className="text-2xl font-bold text-yellow-400 mb-2">From ₹2,999*</p>
+              <p className="text-2xl font-bold text-highlight-soft mb-2">From ₹2,999*</p>
               <p className="text-xs opacity-80">Pure 925 Sterling Silver</p>
             </div>
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>

@@ -111,15 +111,15 @@ const Footer = () => {
   return (
     <footer className="relative bg-[#0e0e0e] dark:bg-card text-white overflow-hidden">
       {/* Decorative gold glow */}
-      <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-[640px] h-[640px] rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.18)_0%,transparent_60%)] blur-2xl" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#d4af37]/60 to-transparent" />
+      <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-[640px] h-[640px] rounded-full bg-[radial-gradient(circle,hsl(var(--highlight)/0.18)_0%,transparent_60%)] blur-2xl" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-highlight/60 to-transparent" />
 
       {/* ── Newsletter strip ── */}
       <div className="relative border-b border-white/10">
         <div className="container-custom py-10 md:py-12">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.3em] text-[#d4af37] mb-3 font-medium">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-highlight mb-3 font-medium">
                 The Sreerasthu Circle
               </p>
               <h3 className="text-2xl md:text-3xl font-serif font-medium leading-tight">
@@ -128,7 +128,7 @@ const Footer = () => {
             </div>
             <form
               onSubmit={handleNewsletterSubmit}
-              className="flex w-full max-w-lg md:ml-auto rounded-full bg-white/5 backdrop-blur border border-white/10 p-1.5 focus-within:border-[#d4af37]/60 transition-colors overflow-hidden"
+              className="flex w-full max-w-lg md:ml-auto rounded-full bg-white/5 backdrop-blur border border-white/10 p-1.5 focus-within:border-highlight/60 transition-colors overflow-hidden"
             >
               <input
                 type="email"
@@ -141,7 +141,7 @@ const Footer = () => {
               <button
                 type="submit"
                 disabled={newsletterLoading}
-                className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full bg-[#d4af37] hover:bg-[#c5a02f] disabled:opacity-60 text-black px-4 md:px-6 py-2.5 text-xs font-semibold tracking-wide transition-colors"
+                className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full bg-highlight hover:bg-highlight disabled:opacity-60 text-black px-4 md:px-6 py-2.5 text-xs font-semibold tracking-wide transition-colors"
               >
                 <span className="hidden sm:inline">{newsletterLoading ? 'Subscribing…' : 'Subscribe'}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -172,7 +172,7 @@ const Footer = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={SOCIAL_LABELS[s.platform]}
-                      className="group relative w-10 h-10 rounded-full grid place-items-center bg-white/5 border border-white/10 hover:border-[#d4af37] hover:bg-[#d4af37] hover:text-black transition-all"
+                      className="group relative w-10 h-10 rounded-full grid place-items-center bg-white/5 border border-white/10 hover:border-highlight hover:bg-highlight hover:text-black transition-all"
                     >
                       <Icon className="w-4 h-4" />
                     </a>
@@ -190,7 +190,7 @@ const Footer = () => {
                 <li key={name}>
                   <Link
                     to={`/shop/${toSlug(name)}`}
-                    className="text-sm text-white/50 hover:text-[#d4af37] transition-colors font-light"
+                    className="text-sm text-white/50 hover:text-highlight transition-colors font-light"
                   >
                     {name}
                   </Link>
@@ -207,7 +207,7 @@ const Footer = () => {
                 <li key={name}>
                   <Link
                     to={buildCategoryHref(name)}
-                    className="text-sm text-white/50 hover:text-[#d4af37] transition-colors font-light"
+                    className="text-sm text-white/50 hover:text-highlight transition-colors font-light"
                   >
                     {name}
                   </Link>
@@ -229,7 +229,7 @@ const Footer = () => {
                 <li key={link.name}>
                   <Link
                     to={link.path}
-                    className="text-sm text-white/50 hover:text-[#d4af37] transition-colors font-light"
+                    className="text-sm text-white/50 hover:text-highlight transition-colors font-light"
                   >
                     {link.name}
                   </Link>
@@ -244,7 +244,7 @@ const Footer = () => {
             <ul className="space-y-3 text-sm text-white/55 font-light">
               {settings.addressLines?.length > 0 && (
                 <li className="flex gap-2.5">
-                  <MapPin className="w-4 h-4 text-[#d4af37] flex-shrink-0 mt-0.5" />
+                  <MapPin className="w-4 h-4 text-highlight flex-shrink-0 mt-0.5" />
                   <span>
                     {settings.addressLines.map((line, i) => (
                       <span key={i} className="block leading-snug">{line}</span>
@@ -254,7 +254,7 @@ const Footer = () => {
               )}
               {settings.phones?.[0] && (
                 <li className="flex gap-2.5">
-                  <Phone className="w-4 h-4 text-[#d4af37] flex-shrink-0 mt-0.5" />
+                  <Phone className="w-4 h-4 text-highlight flex-shrink-0 mt-0.5" />
                   <a
                     href={`tel:${settings.phones[0].replace(/\s+/g, "")}`}
                     className="hover:text-white transition-colors break-all"
@@ -265,7 +265,7 @@ const Footer = () => {
               )}
               {settings.emails?.[0] && (
                 <li className="flex gap-2.5">
-                  <Mail className="w-4 h-4 text-[#d4af37] flex-shrink-0 mt-0.5" />
+                  <Mail className="w-4 h-4 text-highlight flex-shrink-0 mt-0.5" />
                   <a
                     href={`mailto:${settings.emails[0]}`}
                     className="hover:text-white transition-colors break-all"
@@ -276,7 +276,7 @@ const Footer = () => {
               )}
               {settings.businessHours && (
                 <li className="flex gap-2.5">
-                  <Clock className="w-4 h-4 text-[#d4af37] flex-shrink-0 mt-0.5" />
+                  <Clock className="w-4 h-4 text-highlight flex-shrink-0 mt-0.5" />
                   <span>{settings.businessHours}</span>
                 </li>
               )}
@@ -317,7 +317,7 @@ const Footer = () => {
               href="https://www.thedreamteamservices.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white/65 hover:text-[#d4af37] transition-colors font-normal whitespace-nowrap"
+              className="text-white/65 hover:text-highlight transition-colors font-normal whitespace-nowrap"
             >
               DREAM TEAM SERVICES
             </a>

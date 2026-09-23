@@ -93,7 +93,7 @@ const OrderStatusStepper = ({ status, isReturnPickedState = false }: { status: s
   const activeDot = isReturnFlow ? 'bg-emerald-500' : 'bg-blue-500';
 
   return (
-    <div className="flex items-start justify-between relative" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="flex items-start justify-between relative" style={{ fontFamily: "var(--font-body)" }}>
       {/* Progress Line Background */}
       <div className="absolute top-4 left-6 right-6 h-0.5 bg-gray-200 dark:bg-zinc-800 dark:bg-zinc-700 z-0" />
       
@@ -110,7 +110,7 @@ const OrderStatusStepper = ({ status, isReturnPickedState = false }: { status: s
         const isCurrent = !isCancelled && index === currentIndex;
         
         return (
-          <div key={step.key} className="flex flex-col items-center relative z-10" style={{ width: `${100 / steps.length}%`, fontFamily: "'Poppins', sans-serif" }}>
+          <div key={step.key} className="flex flex-col items-center relative z-10" style={{ width: `${100 / steps.length}%`, fontFamily: "var(--font-body)" }}>
             {/* Step Circle */}
             <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
               isCancelled 
@@ -599,7 +599,7 @@ const OrderDetailsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,rgba(212,175,55,0.05)_0%,rgba(255,255,255,1)_20%),linear-gradient(135deg,rgba(131,39,41,0.03)_0%,rgba(255,255,255,1)_55%)] dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="min-h-screen bg-[linear-gradient(180deg,hsl(var(--highlight)/0.05)_0%,rgba(255,255,255,1)_20%),linear-gradient(135deg,hsl(var(--primary)/0.03)_0%,rgba(255,255,255,1)_55%)] dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "var(--font-body)" }}>
       {/* Desktop Header + Nav */}
       <div className="hidden lg:block">
         <Header />
@@ -613,7 +613,7 @@ const OrderDetailsPage = () => {
       
       {/* Page Header */}
       <div className="mx-auto max-w-4xl px-4 pt-4">
-        <div className="flex items-center gap-3 rounded-[28px] border border-[#d4af37]/15 bg-white/88 px-4 py-4 shadow-[0_30px_80px_-60px_rgba(0,0,0,0.5)] backdrop-blur dark:border-[#d4af37]/20 dark:bg-zinc-900/88 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.9)]">
+        <div className="flex items-center gap-3 rounded-[28px] border border-highlight/15 bg-white/88 px-4 py-4 shadow-[0_30px_80px_-60px_rgba(0,0,0,0.5)] backdrop-blur dark:border-highlight/20 dark:bg-zinc-900/88 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.9)]">
           <button
             onClick={() => {
               if (window.innerWidth >= 1024) { navigate('/account'); return; }
@@ -625,10 +625,10 @@ const OrderDetailsPage = () => {
           </button>
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="h-px w-6 bg-[#d4af37]/50" />
-              <span className="text-[10px] uppercase tracking-[0.3em] text-[#832729] font-medium">Order</span>
+              <span className="h-px w-6 bg-highlight/50" />
+              <span className="text-[10px] uppercase tracking-[0.3em] text-primary font-medium">Order</span>
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>Order Details</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Order Details</h2>
             <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400">ORD-{order.orderId}</p>
           </div>
         </div>
@@ -637,7 +637,7 @@ const OrderDetailsPage = () => {
       {/* Content */}
       <div className="mx-auto max-w-4xl space-y-3 px-4 pb-24 pt-4">
         {/* Tracking ID Banner */}
-        <div className="rounded-[24px] border border-[#d4af37]/12 bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,rgba(212,175,55,0.10)_100%)] px-4 py-3 shadow-[0_20px_45px_-38px_rgba(0,0,0,0.45)] dark:border-[#d4af37]/18 dark:bg-[linear-gradient(135deg,rgba(37,99,235,0.14)_0%,rgba(146,64,14,0.12)_100%)]">
+        <div className="rounded-[24px] border border-highlight/12 bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,hsl(var(--highlight)/0.10)_100%)] px-4 py-3 shadow-[0_20px_45px_-38px_rgba(0,0,0,0.45)] dark:border-highlight/18 dark:bg-[linear-gradient(135deg,rgba(37,99,235,0.14)_0%,rgba(146,64,14,0.12)_100%)]">
           <p className="text-sm text-blue-700 dark:text-blue-200">
             Order can be tracked by <span className="font-semibold">ORD-{order.orderId}</span>
             {order.trackingId && (
@@ -647,16 +647,16 @@ const OrderDetailsPage = () => {
         </div>
 
         {/* Product Card */}
-        <div className="rounded-[24px] border border-[#d4af37]/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-[#d4af37]/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
           <div className="flex gap-4">
-            <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-[#d4af37]/10 bg-gray-50 dark:bg-zinc-900 dark:bg-zinc-800/70">
+            <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-highlight/10 bg-gray-50 dark:bg-zinc-900 dark:bg-zinc-800/70">
               <SmartImage 
                 src={order.items[0]?.image} 
                 alt={order.items[0]?.name} 
                 className="w-full h-full object-cover" preset="thumb" />
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
                 {order.items.length > 1 
                   ? `${order.items[0]?.name} +${order.items.length - 1} more`
                   : order.items[0]?.name
@@ -669,7 +669,7 @@ const OrderDetailsPage = () => {
 
         {/* Order Status Timeline (hidden for returned / refunded orders) */}
         {order.status !== 'returned' && order.status !== 'refunded' && (
-          <div className="rounded-[24px] border border-[#d4af37]/12 bg-white/92 px-4 py-5 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-[#d4af37]/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+          <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-5 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
             <OrderStatusStepper status={order.status} isReturnPickedState={order.status === 'picked' && !!(order as any).returnScheduledAt} />
           </div>
         )}
@@ -699,14 +699,14 @@ const OrderDetailsPage = () => {
         )}
 
         {/* Current Status Card */}
-        <div className="rounded-[24px] border border-[#d4af37]/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-[#d4af37]/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
           <div className="flex gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
               order.status === 'delivered' ? 'bg-emerald-100' :
               order.status === 'cancelled' ? 'bg-red-100' :
-              order.status === 'returnRequested' ? 'bg-amber-100' :
+              order.status === 'returnRequested' ? 'bg-highlight/15' :
               order.status === 'returnScheduled' ? 'bg-emerald-100' :
-              (order.status === 'picked' && !!(order as any).returnScheduledAt) ? 'bg-amber-100' :
+              (order.status === 'picked' && !!(order as any).returnScheduledAt) ? 'bg-highlight/15' :
               order.status === 'returned' ? 'bg-gray-100 dark:bg-zinc-800' :
               order.status === 'refunded' ? 'bg-green-100 dark:bg-green-900/30' :
               'bg-blue-100'
@@ -716,11 +716,11 @@ const OrderDetailsPage = () => {
               ) : order.status === 'cancelled' ? (
                 <XCircle className="w-5 h-5 text-red-600" />
               ) : order.status === 'returnRequested' ? (
-                <ReturnIcon className="w-5 h-5 text-amber-600" />
+                <ReturnIcon className="w-5 h-5 text-highlight" />
               ) : order.status === 'returnScheduled' ? (
                 <ReturnIcon className="w-5 h-5 text-emerald-600" />
               ) : (order.status === 'picked' && !!(order as any).returnScheduledAt) ? (
-                <Truck className="w-5 h-5 text-amber-600" />
+                <Truck className="w-5 h-5 text-highlight" />
               ) : order.status === 'returned' ? (
                 <CheckCircle2 className="w-5 h-5 text-gray-600 dark:text-zinc-400" />
               ) : order.status === 'refunded' ? (
@@ -730,7 +730,7 @@ const OrderDetailsPage = () => {
               )}
             </div>
             <div className="flex-1">
-              <h4 className="text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              <h4 className="text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
                 {order.status === 'picked' && !!(order as any).returnScheduledAt ? 'Return Pickup' : getStatusLabel(order.status)}
               </h4>
               {order.carrier && (
@@ -739,7 +739,7 @@ const OrderDetailsPage = () => {
                   {order.carrier}
                 </p>
               )}
-              <p className="mt-1 text-xs text-gray-600 dark:text-zinc-400 dark:text-zinc-300" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              <p className="mt-1 text-xs text-gray-600 dark:text-zinc-400 dark:text-zinc-300" style={{ fontFamily: "var(--font-body)" }}>
                 {order.status === 'pending' && 'Your order has been placed successfully'}
                 {order.status === 'processing' && 'Package is being prepared for shipment'}
                 {(order.status === 'packed' || order.status === 'shipped' || order.status === 'assigned') && 'Your order is packed and ready for dispatch'}
@@ -763,10 +763,10 @@ const OrderDetailsPage = () => {
 
         {/* OTP Delivery Verification - Shown when out for delivery */}
         {order.status === 'outForDelivery' && order.delivery_otp && (
-          <div className="rounded-[24px] border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 px-5 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] dark:border-amber-500/40 dark:from-amber-500/10 dark:to-orange-500/10">
-            <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-300">Delivery OTP</p>
-            <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">Share this OTP with your delivery partner at the door</p>
-            <p className="mt-2 font-mono text-3xl font-extrabold tracking-[0.5em] text-amber-700 dark:text-amber-300">{order.delivery_otp}</p>
+          <div className="rounded-[24px] border-2 border-highlight/45 bg-gradient-to-br from-highlight/10 to-primary/10 px-5 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] dark:border-highlight/40 dark:from-highlight/10 dark:to-primary/10">
+            <p className="text-xs font-semibold uppercase tracking-widest text-highlight dark:text-highlight">Delivery OTP</p>
+            <p className="mt-1 text-xs text-highlight dark:text-charcoal-foreground">Share this OTP with your delivery partner at the door</p>
+            <p className="mt-2 font-mono text-3xl font-extrabold tracking-[0.5em] text-highlight dark:text-highlight">{order.delivery_otp}</p>
             {(order.delivery_partner_name || order.delivery_boy_name) && (
               <div className="mt-3 flex items-center justify-between rounded-xl bg-white/70 px-3 py-2 dark:bg-zinc-900/60">
                 <div>
@@ -836,7 +836,7 @@ const OrderDetailsPage = () => {
 
         {/* Delivery Failed notice */}
         {order.status === 'deliveryFailed' && (
-          <div className="rounded-[24px] border border-red-200 bg-gradient-to-br from-red-50 to-orange-50 px-5 py-4 shadow-[0_20px_45px_-38px_rgba(0,0,0,0.30)] dark:border-red-500/30 dark:from-red-500/10 dark:to-orange-500/10">
+          <div className="rounded-[24px] border border-red-200 bg-gradient-to-br from-red-50 to-primary/10 px-5 py-4 shadow-[0_20px_45px_-38px_rgba(0,0,0,0.30)] dark:border-red-500/30 dark:from-red-500/10 dark:to-primary/10">
             <p className="text-xs font-semibold uppercase tracking-widest text-red-700 dark:text-red-300">Delivery Attempted</p>
             <p className="mt-2 text-sm font-medium text-red-900 dark:text-red-100">We couldn't reach you for delivery.</p>
             <p className="mt-1 text-xs text-red-700 dark:text-red-300">Your item is being returned to our store. Our team will contact you to reschedule the delivery.</p>
@@ -847,8 +847,8 @@ const OrderDetailsPage = () => {
         {order.status !== 'delivered' && order.status !== 'cancelled' && 
          order.status !== 'returnRequested' && order.status !== 'returnScheduled' && 
          order.status !== 'returned' && order.status !== 'refunded' && order.status !== 'deliveryFailed' && (
-          <div className="rounded-[24px] border border-[#d4af37]/12 bg-[linear-gradient(135deg,rgba(251,191,36,0.12)_0%,rgba(212,175,55,0.08)_100%)] px-4 py-3 shadow-[0_20px_45px_-38px_rgba(0,0,0,0.45)]">
-            <p className="text-sm text-amber-800">
+          <div className="rounded-[24px] border border-highlight/12 bg-[linear-gradient(135deg,hsl(var(--highlight-soft)/0.12)_0%,hsl(var(--highlight)/0.08)_100%)] px-4 py-3 shadow-[0_20px_45px_-38px_rgba(0,0,0,0.45)]">
+            <p className="text-sm text-highlight">
               {(order.status === 'shipped' || order.status === 'outForDelivery' || order.status === 'picked')
                 ? "Yayy! your item is on the way. It will reach you soon."
                 : "Your order is being processed. We'll notify you once it's shipped."
@@ -858,7 +858,7 @@ const OrderDetailsPage = () => {
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 rounded-[24px] border border-[#d4af37]/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-[#d4af37]/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="flex gap-3 rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
           {/* Cancel Button - Only for pending/processing orders */}
           {(order.status === 'pending' || order.status === 'processing') && (
             <button
@@ -875,7 +875,7 @@ const OrderDetailsPage = () => {
             <button
               onClick={handleCancelReturn}
               disabled={cancellingReturn}
-              className="flex-1 py-2.5 px-4 bg-amber-50 border border-amber-200 rounded-lg text-sm font-medium text-amber-700 flex items-center justify-center gap-2 hover:bg-amber-100 transition-colors disabled:opacity-50"
+              className="flex-1 py-2.5 px-4 bg-highlight/10 border border-highlight/30 rounded-lg text-sm font-medium text-highlight flex items-center justify-center gap-2 hover:bg-highlight/15 transition-colors disabled:opacity-50"
             >
               {cancellingReturn ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
               Cancel Return
@@ -903,16 +903,16 @@ const OrderDetailsPage = () => {
           </button>
         </div>
 
-        <div ref={conversationSectionRef} className="rounded-[24px] border border-[#d4af37]/12 bg-white/92 p-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-[#d4af37]/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div ref={conversationSectionRef} className="rounded-[24px] border border-highlight/12 bg-white/92 p-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
           <button
             onClick={() => setConversationOpen(!conversationOpen)}
             className="flex w-full items-start justify-between gap-3 text-left"
           >
             <div>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
                 Order conversation
                 {conversationMessages.length > 0 && (
-                  <span className="ml-2 inline-flex items-center justify-center rounded-full bg-[#832729] px-2 py-0.5 text-[10px] font-bold text-white">
+                  <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">
                     {conversationMessages.length}
                   </span>
                 )}
@@ -933,7 +933,7 @@ const OrderDetailsPage = () => {
               <div className="mt-4 flex items-center justify-end">
                 <button
                   onClick={() => navigate('/customer-support')}
-                  className="shrink-0 rounded-full border border-[#d4af37]/15 bg-[#fffaf1] px-3 py-1.5 text-xs font-medium text-[#832729] hover:bg-[#fff4de] dark:bg-amber-950/20 dark:text-amber-200 dark:hover:bg-amber-950/30"
+                  className="shrink-0 rounded-full border border-highlight/15 bg-cream px-3 py-1.5 text-xs font-medium text-primary hover:bg-cream dark:bg-highlight/5 dark:text-charcoal-foreground dark:hover:bg-highlight/6"
                 >
                   More support
                 </button>
@@ -941,7 +941,7 @@ const OrderDetailsPage = () => {
 
               <div className="mt-3 space-y-3">
                 {conversationMessages.length === 0 ? (
-                  <div className="rounded-[20px] border border-dashed border-[#d4af37]/18 bg-[#fffdf8] px-4 py-6 text-center text-sm text-gray-500 dark:bg-zinc-950/80 dark:text-zinc-400">
+                  <div className="rounded-[20px] border border-dashed border-highlight/18 bg-cream px-4 py-6 text-center text-sm text-gray-500 dark:bg-zinc-950/80 dark:text-zinc-400">
                     No order messages yet. Start the conversation below and the admin team will reply here.
                   </div>
                 ) : (
@@ -953,15 +953,15 @@ const OrderDetailsPage = () => {
                         <div
                           className={`max-w-[88%] rounded-[22px] px-4 py-3 shadow-sm ${
                             isCustomerMessage
-                              ? 'bg-[#832729] text-white'
-                              : 'border border-[#d4af37]/12 bg-[#fffaf1] text-gray-800 dark:bg-amber-950/20 dark:text-zinc-100'
+                              ? 'bg-primary text-white'
+                              : 'border border-highlight/12 bg-cream text-gray-800 dark:bg-highlight/5 dark:text-zinc-100'
                           }`}
                         >
                           <div className={`flex flex-wrap items-center gap-2 text-[11px] ${isCustomerMessage ? 'text-white/75' : 'text-gray-500 dark:text-zinc-400'}`}>
                             <span className="font-semibold">{message.authorName || (isCustomerMessage ? 'You' : 'Support team')}</span>
                             <span>{formatDate(message.createdAt as any)}</span>
                             {message.channel !== 'chat' && (
-                              <span className={`rounded-full px-2 py-0.5 ${isCustomerMessage ? 'bg-white/10 text-white/80' : 'bg-white dark:bg-zinc-900 text-[#832729]'}`}>
+                              <span className={`rounded-full px-2 py-0.5 ${isCustomerMessage ? 'bg-white/10 text-white/80' : 'bg-white dark:bg-zinc-900 text-primary'}`}>
                                 {message.channel}
                               </span>
                             )}
@@ -976,12 +976,12 @@ const OrderDetailsPage = () => {
                 )}
               </div>
 
-              <div className="mt-4 rounded-[22px] border border-[#d4af37]/12 bg-[#fffdf8] p-3 dark:bg-zinc-950/80">
+              <div className="mt-4 rounded-[22px] border border-highlight/12 bg-cream p-3 dark:bg-zinc-950/80">
                 <Textarea
                   ref={conversationInputRef}
                   value={chatDraft}
                   onChange={(event) => setChatDraft(event.target.value)}
-                  className="min-h-[118px] resize-none border-0 bg-white/80 dark:bg-zinc-900/80 focus-visible:ring-1 focus-visible:ring-[#d4af37] dark:bg-zinc-900/70 dark:text-zinc-100"
+                  className="min-h-[118px] resize-none border-0 bg-white/80 dark:bg-zinc-900/80 focus-visible:ring-1 focus-visible:ring-highlight dark:bg-zinc-900/70 dark:text-zinc-100"
                   placeholder="Write your order-related message here. Mention delivery timing, product questions, or any issue with this order."
                 />
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -989,7 +989,7 @@ const OrderDetailsPage = () => {
                   <button
                     onClick={sendOrderChatMessage}
                     disabled={sendingChatMessage || !chatDraft.trim()}
-                    className="inline-flex items-center justify-center gap-2 rounded-full bg-[#832729] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#6d2022] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {sendingChatMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
                     {sendingChatMessage ? 'Sending...' : 'Send reply'}
@@ -1002,7 +1002,7 @@ const OrderDetailsPage = () => {
 
         {/* Track Package Button */}
         {order.trackingUrl && (
-          <div className="rounded-[24px] border border-[#d4af37]/12 bg-white/92 px-4 py-3 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-[#d4af37]/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+          <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-3 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
             <a
               href={order.trackingUrl}
               target="_blank"
@@ -1017,11 +1017,11 @@ const OrderDetailsPage = () => {
         )}
 
         {/* Delivery Details Section */}
-        <div className="overflow-hidden rounded-[24px] border border-[#d4af37]/12 bg-white/92 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-[#d4af37]/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
-          <h3 className="border-b border-[#d4af37]/10 px-4 py-3 text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>Delivery details</h3>
+        <div className="overflow-hidden rounded-[24px] border border-highlight/12 bg-white/92 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+          <h3 className="border-b border-highlight/10 px-4 py-3 text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Delivery details</h3>
           
           {/* Delivery Address */}
-          <div className="px-4 py-3 flex items-center gap-3 border-b border-[#d4af37]/10">
+          <div className="px-4 py-3 flex items-center gap-3 border-b border-highlight/10">
             <div className="w-10 h-10 bg-gray-100 dark:bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0">
               <Home className="w-5 h-5 text-gray-600 dark:text-zinc-400" />
             </div>
@@ -1051,14 +1051,14 @@ const OrderDetailsPage = () => {
 
         {/* Rate Delivery Boy - Only for delivered orders with a delivery boy assigned */}
         {order.status === 'delivered' && order.deliveryBoyId && (
-          <div className="bg-white/92 rounded-[24px] border border-[#d4af37]/12 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur overflow-hidden">
-            <h3 className="px-4 py-3 text-base font-semibold text-gray-900 dark:text-zinc-100 border-b border-[#d4af37]/10" style={{ fontFamily: "'Poppins', sans-serif" }}>Rate your delivery</h3>
+          <div className="bg-white/92 rounded-[24px] border border-highlight/12 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur overflow-hidden">
+            <h3 className="px-4 py-3 text-base font-semibold text-gray-900 dark:text-zinc-100 border-b border-highlight/10" style={{ fontFamily: "var(--font-body)" }}>Rate your delivery</h3>
             <div className="px-4 py-4">
               {hasRated ? (
                 <div className="flex flex-col items-center py-4 gap-2">
                   <div className="flex items-center gap-1">
                     {[1,2,3,4,5].map(n => (
-                      <Star key={n} className={`h-6 w-6 ${n <= deliveryRating ? 'text-yellow-400 fill-current' : 'text-gray-200 fill-current'}`} />
+                      <Star key={n} className={`h-6 w-6 ${n <= deliveryRating ? 'text-highlight-soft fill-current' : 'text-gray-200 fill-current'}`} />
                     ))}
                   </div>
                   <p className="text-sm font-medium text-gray-700 dark:text-zinc-300">Rating submitted!</p>
@@ -1070,7 +1070,7 @@ const OrderDetailsPage = () => {
                   <div className="flex items-center gap-2 mb-3">
                     {[1,2,3,4,5].map(n => (
                       <button key={n} onClick={() => setDeliveryRating(n)}>
-                        <Star className={`h-8 w-8 transition-colors ${n <= deliveryRating ? 'text-yellow-400 fill-current' : 'text-gray-200 fill-current hover:text-yellow-300'}`} />
+                        <Star className={`h-8 w-8 transition-colors ${n <= deliveryRating ? 'text-highlight-soft fill-current' : 'text-gray-200 fill-current hover:text-highlight-soft'}`} />
                       </button>
                     ))}
                   </div>
@@ -1097,12 +1097,12 @@ const OrderDetailsPage = () => {
 
         {/* Write a Review - for all delivered orders */}
         {order.status === 'delivered' && (
-          <div className="bg-white/92 rounded-[24px] border border-[#d4af37]/12 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur overflow-hidden">
-            <h3 className="px-4 py-3 text-base font-semibold text-gray-900 dark:text-zinc-100 border-b border-[#d4af37]/10" style={{ fontFamily: "'Poppins', sans-serif" }}>Rate the product</h3>
+          <div className="bg-white/92 rounded-[24px] border border-highlight/12 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur overflow-hidden">
+            <h3 className="px-4 py-3 text-base font-semibold text-gray-900 dark:text-zinc-100 border-b border-highlight/10" style={{ fontFamily: "var(--font-body)" }}>Rate the product</h3>
             <div className="px-4 py-4">
               {checkingReview ? (
                 <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+                  <Loader2 className="h-5 w-5 animate-spin text-highlight" />
                 </div>
               ) : hasReviewedProduct ? (
                 <div className="flex flex-col items-center py-4 gap-2">
@@ -1126,7 +1126,7 @@ const OrderDetailsPage = () => {
                         productImage: order.items[0]?.image,
                       }
                     })}
-                    className="w-full py-2.5 bg-[#832729] text-white text-sm font-semibold rounded-xl hover:bg-[#6d2022] transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
                   >
                     <Star className="h-4 w-4" />
                     Write a Review
@@ -1138,7 +1138,7 @@ const OrderDetailsPage = () => {
         )}
 
         {/* Price Details Section */}        <div className="bg-white dark:bg-zinc-900 mt-2 border-t border-b border-gray-100 dark:border-zinc-800">
-          <h3 className="px-4 py-3 text-base font-semibold text-gray-900 dark:text-zinc-100 border-b border-gray-100 dark:border-zinc-800" style={{ fontFamily: "'Poppins', sans-serif" }}>Price details</h3>
+          <h3 className="px-4 py-3 text-base font-semibold text-gray-900 dark:text-zinc-100 border-b border-gray-100 dark:border-zinc-800" style={{ fontFamily: "var(--font-body)" }}>Price details</h3>
           
           <div className="px-4 py-3 space-y-3">
             <div className="flex justify-between text-sm">
@@ -1217,7 +1217,7 @@ const OrderDetailsPage = () => {
               width: '380px',
               padding: '24px',
               backgroundColor: '#ffffff',
-              fontFamily: "'Poppins', sans-serif",
+              fontFamily: "var(--font-body)",
             }}
           >
             {/* Header */}
@@ -1337,7 +1337,7 @@ const OrderDetailsPage = () => {
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               className="bg-white dark:bg-zinc-900 w-full rounded-t-3xl p-6 pb-8"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-body)" }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -1489,7 +1489,7 @@ const OrderDetailsPage = () => {
               >
                 <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-zinc-300" />
               </button>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>Request Return</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Request Return</h3>
             </div>
 
             {/* Return Reasons Grid - Step 1 */}
@@ -1507,25 +1507,25 @@ const OrderDetailsPage = () => {
                       className="w-full h-full object-cover" preset="thumb" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2" style={{ fontFamily: "var(--font-body)" }}>
                       {order.items[0]?.name}
                     </h4>
-                    <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400 mt-0.5" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400 mt-0.5" style={{ fontFamily: "var(--font-body)" }}>
                       Quantity: {order.items[0]?.quantity}
                     </p>
-                    <p className="text-base font-bold text-gray-900 dark:text-zinc-100 mt-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    <p className="text-base font-bold text-gray-900 dark:text-zinc-100 mt-1" style={{ fontFamily: "var(--font-body)" }}>
                       ₹{order.items[0]?.price?.toLocaleString()}
                     </p>
                   </div>
                 </div>
                 {order.items.length > 1 && (
-                  <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400 mt-2 text-center" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400 mt-2 text-center" style={{ fontFamily: "var(--font-body)" }}>
                     +{order.items.length - 1} more items will be included in this return
                   </p>
                 )}
               </div>
 
-              <h4 className="text-base font-semibold text-gray-900 dark:text-zinc-100 mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>Reason for return</h4>
+              <h4 className="text-base font-semibold text-gray-900 dark:text-zinc-100 mb-4" style={{ fontFamily: "var(--font-body)" }}>Reason for return</h4>
               
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -1575,7 +1575,7 @@ const OrderDetailsPage = () => {
                     <SmartImage src={item.image} alt={item.description} className="w-16 h-16 mb-2 object-contain dark:brightness-75 dark:opacity-80" preset="thumb" />
                     <span className={`text-xs text-center leading-tight ${
                       returnReason === item.reason ? 'text-gray-900 dark:text-zinc-100 font-medium' : 'text-gray-600 dark:text-zinc-400'
-                    }`} style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    }`} style={{ fontFamily: "var(--font-body)" }}>
                       {item.description}
                     </span>
                   </button>
@@ -1594,7 +1594,7 @@ const OrderDetailsPage = () => {
                 <span className="text-2xl">✏️</span>
                 <span className={`text-sm ${
                   returnReason === 'Other reason' ? 'text-gray-900 dark:text-zinc-100 font-medium' : 'text-gray-600 dark:text-zinc-400'
-                }`} style={{ fontFamily: "'Poppins', sans-serif" }}>
+                }`} style={{ fontFamily: "var(--font-body)" }}>
                   Other reason
                 </span>
               </button>
@@ -1609,10 +1609,10 @@ const OrderDetailsPage = () => {
                     rows={4}
                     maxLength={200}
                     className="w-full px-4 py-3 border-2 border-gray-300 dark:border-zinc-700 rounded-xl focus:outline-none focus:border-gray-900 bg-gray-50 dark:bg-zinc-900/50 text-gray-900 dark:text-zinc-100 placeholder-gray-500 resize-none"
-                    style={{ fontFamily: "'Poppins', sans-serif" }}
+                    style={{ fontFamily: "var(--font-body)" }}
                     autoFocus
                   />
-                  <p className="text-xs text-gray-700 dark:text-zinc-300 mt-1 ml-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  <p className="text-xs text-gray-700 dark:text-zinc-300 mt-1 ml-1" style={{ fontFamily: "var(--font-body)" }}>
                     {customReturnReason.length}/200 characters
                   </p>
                 </div>
@@ -1629,7 +1629,7 @@ const OrderDetailsPage = () => {
                     ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 cursor-not-allowed'
                     : 'bg-gray-900 dark:bg-zinc-100 text-white hover:bg-gray-800 dark:bg-zinc-100'
                 }`}
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-body)" }}
               >
                 Continue
               </button>
@@ -1653,19 +1653,19 @@ const OrderDetailsPage = () => {
                             className="w-full h-full object-cover" preset="thumb" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2" style={{ fontFamily: "var(--font-body)" }}>
                             {order.items[0]?.name}
                           </h4>
-                          <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400 mt-0.5" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                          <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400 mt-0.5" style={{ fontFamily: "var(--font-body)" }}>
                             Quantity: {order.items[0]?.quantity}
                           </p>
-                          <p className="text-base font-bold text-gray-900 dark:text-zinc-100 mt-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                          <p className="text-base font-bold text-gray-900 dark:text-zinc-100 mt-1" style={{ fontFamily: "var(--font-body)" }}>
                             ₹{order.items[0]?.price?.toLocaleString()}
                           </p>
                         </div>
                       </div>
                       {order.items.length > 1 && (
-                        <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400 mt-2 text-center" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400 mt-2 text-center" style={{ fontFamily: "var(--font-body)" }}>
                           +{order.items.length - 1} more items will be included in this return
                         </p>
                       )}
@@ -1675,14 +1675,14 @@ const OrderDetailsPage = () => {
 
                     {/* Replacement Info */}
                     <div>
-                      <h4 className="text-base font-medium text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                      <h4 className="text-base font-medium text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>
                         Return Type
                       </h4>
                       <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
                           Product Replacement
                         </p>
-                        <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1" style={{ fontFamily: "var(--font-body)" }}>
                           Your product will be replaced with the same item after quality check
                         </p>
                       </div>
@@ -1692,21 +1692,21 @@ const OrderDetailsPage = () => {
 
                     {/* Pick up and delivery */}
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>
                         Pick up and delivery
                       </h4>
                       <div className="p-4 bg-gray-50 dark:bg-zinc-900/50 rounded-lg">
-                        <p className="text-sm font-medium text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <p className="text-sm font-medium text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
                           {order.shippingAddress?.fullName || 'N/A'}
                         </p>
-                        <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1" style={{ fontFamily: "var(--font-body)" }}>
                           📱 {order.shippingAddress?.mobile || 'N/A'}
                         </p>
-                        <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1" style={{ fontFamily: "var(--font-body)" }}>
                           {order.shippingAddress?.address}, { order.shippingAddress?.locality && `${order.shippingAddress.locality}, `}{order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.pincode}
                         </p>
                         {order.shippingAddress?.landmark && (
-                          <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                          <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1" style={{ fontFamily: "var(--font-body)" }}>
                             Landmark: {order.shippingAddress.landmark}
                           </p>
                         )}
@@ -1725,7 +1725,7 @@ const OrderDetailsPage = () => {
                         ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 cursor-not-allowed'
                         : 'bg-gray-900 dark:bg-zinc-100 text-white hover:bg-gray-800 dark:bg-zinc-100'
                     }`}
-                    style={{ fontFamily: "'Poppins', sans-serif" }}
+                    style={{ fontFamily: "var(--font-body)" }}
                   >
                     {isSubmitting ? 'Submitting...' : 'Submit Return Request'}
                   </button>

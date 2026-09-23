@@ -155,7 +155,7 @@ const VideoCallRequestModal = ({
                 <div className="flex flex-col gap-2 pt-1">
                   <Button
                     onClick={() => { handleClose(); navigate('/my-video-calls'); }}
-                    className="bg-amber-600 hover:bg-amber-700 text-white w-full gap-2"
+                    className="bg-highlight hover:bg-highlight text-white w-full gap-2"
                   >
                     <Video className="w-4 h-4" />
                     Track My Video Calls
@@ -171,7 +171,7 @@ const VideoCallRequestModal = ({
                 {/* Header */}
                 <div className="mb-5">
                   <div className="flex items-center gap-2 mb-1">
-                    <Video className="w-5 h-5 text-amber-600" />
+                    <Video className="w-5 h-5 text-highlight" />
                     <h3 className="text-lg font-semibold">Book a Demo Video Call</h3>
                   </div>
                   {productTitle && (
@@ -298,7 +298,7 @@ const VideoCallRequestModal = ({
                     )}
 
                     {tab === 'instant' && (
-                      <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900 rounded-lg px-3 py-2">
+                      <p className="text-xs text-muted-foreground bg-highlight/10 dark:bg-highlight/6 border border-highlight/20 dark:border-highlight/50 rounded-lg px-3 py-2">
                         Our jewellery expert will call you as soon as possible during business hours (10am–7pm).
                       </p>
                     )}
@@ -306,7 +306,7 @@ const VideoCallRequestModal = ({
                     <Button
                       onClick={handleSubmit}
                       disabled={submitting}
-                      className="w-full bg-amber-600 hover:bg-amber-700 text-white rounded-full"
+                      className="w-full bg-highlight hover:bg-highlight text-white rounded-full"
                     >
                       {submitting ? (
                         <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending…</>

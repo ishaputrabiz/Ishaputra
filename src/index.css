@@ -1,113 +1,147 @@
-/* Import Google Fonts - Premium Typography */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+/* Fonts: Archivo (headings, set wide via --font-heading-stretch) + Manrope (body) */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&family=Manrope:wght@300..800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Sreerasthu Silvers Jewelry Store Design System — Premium Edition */
+/*
+ * Ishaputra Botanicals design system.
+ * Rust copper is the signature colour (primary), bronze from the logo is the
+ * highlight, and surfaces are warm cream (light) or near-black charcoal (dark).
+ * Every colour below is HSL without hsl(), so Tailwind opacity modifiers work.
+ */
 @layer base {
   :root {
-    /* Core Colors - Refined Luxury Palette */
-    --background: 0 0% 100%;
-    --foreground: 0 0% 10%;
-    
-    --cream: 40 25% 97%;
-    --cream-dark: 35 18% 93%;
-    
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --background: 38 38% 94%;
+    --foreground: 30 10% 8%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --cream: 38 38% 94%;
+    --cream-dark: 37 34% 88%;
 
-    /* Deep Maroon/Burgundy Accent — Signature Color */
-    --primary: 358 52% 33%;
+    --card: 40 50% 98%;
+    --card-foreground: 30 10% 8%;
+
+    --popover: 40 50% 98%;
+    --popover-foreground: 30 10% 8%;
+
+    /* Rust copper - signature colour */
+    --primary: 20 58% 41%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 355 45% 42%;
-    --primary-dark: 358 55% 26%;
+    --primary-light: 20 49% 48%;
+    --primary-dark: 19 61% 31%;
 
-    --secondary: 40 25% 97%;
-    --secondary-foreground: 0 0% 10%;
+    --secondary: 37 32% 90%;
+    --secondary-foreground: 30 10% 8%;
 
-    --muted: 220 10% 94%;
-    --muted-foreground: 220 8% 46%;
+    --muted: 37 30% 89%;
+    --muted-foreground: 30 7% 37%;
 
-    --accent: 358 52% 33%;
+    --accent: 20 58% 41%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    /* Bronze from the logo - replaces the old gold. Deep enough for small text on cream. */
+    --highlight: 36 46% 38%;
+    --highlight-foreground: 0 0% 100%;
+    /* Light bronze in both modes: for gold-on-dark text (footer, bands, image overlays) */
+    --highlight-soft: 36 48% 59%;
+
+    /* Charcoal bands (testimonials, footer, offer ribbon) in both modes */
+    --charcoal: 40 6% 10%;
+    --charcoal-foreground: 39 35% 92%;
+
+    --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 358 52% 33%;
+    --border: 37 25% 84%;
+    --input: 37 25% 84%;
+    --ring: 20 58% 41%;
 
     --radius: 0.75rem;
 
     /* Typography */
-    --font-heading: 'Playfair Display', 'Georgia', serif;
-    --font-body: 'Poppins', system-ui, sans-serif;
+    --font-heading: 'Archivo', system-ui, sans-serif;
+    --font-heading-stretch: 112%;
+    --font-body: 'Manrope', system-ui, sans-serif;
 
-    /* Shadows */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.06);
-    --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.08);
-    --shadow-gold: 0 4px 16px rgba(131, 39, 41, 0.12);
+    /* Shadows (names kept from the original theme; values are Ishaputra's) */
+    --shadow-sm: 0 1px 3px rgba(20, 16, 12, 0.05), 0 1px 2px rgba(20, 16, 12, 0.04);
+    --shadow-md: 0 4px 12px rgba(20, 16, 12, 0.06);
+    --shadow-lg: 0 8px 24px rgba(20, 16, 12, 0.08);
+    --shadow-xl: 0 16px 40px rgba(20, 16, 12, 0.1);
+    --shadow-gold: 0 4px 16px hsl(20 58% 41% / 0.14);
 
-    /* Gradient */
-    --gradient-gold: linear-gradient(135deg, hsl(358, 52%, 33%) 0%, hsl(355, 45%, 42%) 50%, hsl(358, 52%, 33%) 100%);
-    --gradient-gold-shine: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
+    /* Copper sheen (name kept from the original theme) */
+    --gradient-gold: linear-gradient(135deg, hsl(19 61% 31%) 0%, hsl(20 58% 41%) 50%, hsl(20 49% 48%) 100%);
+    --gradient-gold-shine: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.14) 50%, transparent 100%);
 
-    /* Sidebar */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Film grain overlay strength (see body::after) */
+    --grain-opacity: 0.045;
+
+    --sidebar-background: 38 38% 96%;
+    --sidebar-foreground: 30 10% 20%;
+    --sidebar-primary: 30 10% 8%;
+    --sidebar-primary-foreground: 39 35% 92%;
+    --sidebar-accent: 37 32% 90%;
+    --sidebar-accent-foreground: 30 10% 8%;
+    --sidebar-border: 37 25% 84%;
+    --sidebar-ring: 20 58% 41%;
   }
 
   .dark {
-    --background: 20 14% 8%;
-    --foreground: 30 33% 97%;
+    --background: 30 8% 5%;
+    --foreground: 39 35% 92%;
 
-    --card: 20 14% 10%;
-    --card-foreground: 30 33% 97%;
+    --cream: 40 6% 10%;
+    --cream-dark: 36 8% 12%;
 
-    --popover: 20 14% 10%;
-    --popover-foreground: 30 33% 97%;
+    --card: 40 7% 8%;
+    --card-foreground: 39 35% 92%;
 
-    --primary: 38 58% 53%;
-    --primary-foreground: 0 0% 7%;
+    --popover: 40 7% 8%;
+    --popover-foreground: 39 35% 92%;
 
-    --secondary: 20 14% 15%;
-    --secondary-foreground: 30 33% 97%;
+    --primary: 23 56% 52%;
+    --primary-foreground: 30 8% 5%;
+    --primary-light: 23 63% 61%;
+    --primary-dark: 22 56% 42%;
 
-    --muted: 20 14% 20%;
-    --muted-foreground: 30 15% 60%;
+    --secondary: 30 7% 11%;
+    --secondary-foreground: 39 35% 92%;
 
-    --accent: 38 58% 53%;
-    --accent-foreground: 0 0% 7%;
+    --muted: 36 7% 14%;
+    --muted-foreground: 35 9% 62%;
 
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 30 33% 97%;
+    --accent: 23 56% 52%;
+    --accent-foreground: 30 8% 5%;
 
-    --border: 20 14% 20%;
-    --input: 20 14% 20%;
-    --ring: 38 58% 53%;
+    --highlight: 36 48% 59%;
+    --highlight-foreground: 30 8% 5%;
+    --highlight-soft: 36 48% 59%;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --charcoal: 40 6% 10%;
+    --charcoal-foreground: 39 35% 92%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 39 35% 92%;
+
+    --border: 30 7% 16%;
+    --input: 30 7% 16%;
+    --ring: 23 56% 52%;
+
+    --shadow-gold: 0 4px 18px hsl(23 56% 52% / 0.18);
+    --gradient-gold: linear-gradient(135deg, hsl(22 56% 42%) 0%, hsl(23 56% 52%) 50%, hsl(23 63% 61%) 100%);
+
+    --grain-opacity: 0.06;
+
+    --sidebar-background: 40 7% 7%;
+    --sidebar-foreground: 39 35% 88%;
+    --sidebar-primary: 23 56% 52%;
+    --sidebar-primary-foreground: 30 8% 5%;
+    --sidebar-accent: 30 7% 13%;
+    --sidebar-accent-foreground: 39 35% 92%;
+    --sidebar-border: 30 7% 16%;
+    --sidebar-ring: 23 56% 52%;
   }
 }
 
@@ -182,7 +216,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Poppins', system-ui, sans-serif;
+    font-family: var(--font-body);
     overflow-x: clip;
     width: 100%;
     -webkit-font-smoothing: antialiased;
@@ -201,8 +235,25 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', 'Georgia', serif;
-    letter-spacing: -0.01em;
+    font-family: var(--font-heading);
+    font-stretch: var(--font-heading-stretch);
+    letter-spacing: -0.02em;
+  }
+
+  /* Soft film grain over the whole site (brief: "soft grain"). Fixed, tiled, never catches clicks. */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 160px 160px;
+  }
+
+  .font-heading, .font-serif {
+    font-stretch: var(--font-heading-stretch);
   }
 }
 
@@ -594,17 +645,16 @@
 
 
 /* ── Offer ribbon (src/components/offers/OfferRibbon.tsx) ─────────────────────
-   House maroon, deepened towards the edges so the centre reads as lit. The
-   engraving is a fine diagonal line, the kind cut into a hallmarked tray,
-   kept faint enough to be felt rather than seen. */
+   Charcoal with a warm copper glow at the centre. The engraving is a fine
+   bronze diagonal, kept faint enough to be felt rather than seen. */
 .offer-ribbon {
   background:
-    radial-gradient(120% 180% at 50% 50%, #8e2a2e 0%, #6e1a20 45%, #3f0d11 100%);
+    radial-gradient(120% 180% at 50% 50%, hsl(22 34% 17%) 0%, hsl(30 10% 10%) 48%, hsl(30 8% 5%) 100%);
 }
 .offer-ribbon__engraving {
   background-image: repeating-linear-gradient(
     115deg,
-    rgba(232, 197, 106, 0.07) 0 1px,
+    hsl(36 48% 59% / 0.08) 0 1px,
     transparent 1px 7px
   );
   mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
@@ -617,7 +667,7 @@
   background: linear-gradient(
     105deg,
     transparent 30%,
-    rgba(255, 244, 214, 0.55) 48%,
+    rgba(255, 236, 214, 0.5) 48%,
     transparent 66%
   );
   transform: translateX(-120%);
@@ -633,8 +683,8 @@
 
 /* ── Product offer ticket (src/components/offers/ProductOfferTag.tsx) ──────── */
 .product-offer {
-  background: linear-gradient(100deg, #fdf5e4 0%, #fffaf0 55%, #fffdf8 100%);
+  background: linear-gradient(100deg, hsl(26 55% 93%) 0%, hsl(36 45% 95%) 55%, hsl(40 50% 98%) 100%);
 }
 .dark .product-offer {
-  background: linear-gradient(100deg, #2b1714 0%, #1f1715 60%, #1a1716 100%);
+  background: linear-gradient(100deg, hsl(22 30% 13%) 0%, hsl(30 10% 10%) 60%, hsl(30 8% 8%) 100%);
 }

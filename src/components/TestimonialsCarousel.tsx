@@ -43,7 +43,7 @@ const Stars = ({ rating }: { rating: number }) => (
     {[...Array(5)].map((_, i) => (
       <Star
         key={i}
-        className={`w-3.5 h-3.5 ${i < rating ? "fill-[#e8c56a] text-[#e8c56a]" : "fill-white/10 text-white/10"}`}
+        className={`w-3.5 h-3.5 ${i < rating ? "fill-highlight-soft text-highlight-soft" : "fill-white/10 text-white/10"}`}
       />
     ))}
   </div>
@@ -89,15 +89,15 @@ const TestimonialsCarousel = () => {
   return (
     <section
       ref={ref}
-      className="relative overflow-hidden bg-[#2a1216] py-16 md:py-24"
+      className="relative overflow-hidden bg-charcoal py-16 md:py-24"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
       {/* gold light from the top-left, deep shadow bottom-right */}
-      <div className="pointer-events-none absolute -left-40 -top-40 h-[560px] w-[560px] rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.22)_0%,transparent_62%)] blur-2xl" />
+      <div className="pointer-events-none absolute -left-40 -top-40 h-[560px] w-[560px] rounded-full bg-[radial-gradient(circle,hsl(var(--highlight)/0.22)_0%,transparent_62%)] blur-2xl" />
       <div className="pointer-events-none absolute -bottom-52 -right-24 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle,rgba(0,0,0,0.55)_0%,transparent_65%)] blur-2xl" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#d4af37]/60 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#d4af37]/40 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-highlight/60 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-highlight/40 to-transparent" />
 
       <div className="container-custom relative">
         <motion.div
@@ -106,8 +106,8 @@ const TestimonialsCarousel = () => {
           transition={{ duration: 0.6 }}
           className="mb-10 md:mb-14"
         >
-          <span className="flex items-center gap-2 text-[10px] uppercase tracking-[0.32em] text-[#d4af37]">
-            <span className="h-px w-8 bg-[#d4af37]/60" /> Testimonials
+          <span className="flex items-center gap-2 text-[10px] uppercase tracking-[0.32em] text-highlight">
+            <span className="h-px w-8 bg-highlight/60" /> Testimonials
           </span>
           <h2 className="mt-3 font-serif text-3xl leading-tight text-white md:text-[2.75rem]">
             What our clients say
@@ -127,7 +127,7 @@ const TestimonialsCarousel = () => {
           >
             <span
               aria-hidden
-              className="pointer-events-none absolute -top-16 -left-5 z-0 select-none font-serif text-[9rem] leading-none text-[#d4af37]/12 md:-top-24 md:-left-8 md:text-[13rem]"
+              className="pointer-events-none absolute -top-16 -left-5 z-0 select-none font-serif text-[9rem] leading-none text-highlight/12 md:-top-24 md:-left-8 md:text-[13rem]"
             >
               &ldquo;
             </span>
@@ -159,10 +159,10 @@ const TestimonialsCarousel = () => {
                       src={photo}
                       alt={active.author}
                       preset="thumb"
-                      className="h-12 w-12 rounded-full object-cover ring-1 ring-[#d4af37]/50"
+                      className="h-12 w-12 rounded-full object-cover ring-1 ring-highlight/50"
                     />
                   ) : (
-                    <span className="grid h-12 w-12 place-items-center rounded-full border border-[#d4af37]/45 bg-[#d4af37]/10 font-serif text-lg text-[#e8c56a]">
+                    <span className="grid h-12 w-12 place-items-center rounded-full border border-highlight/45 bg-highlight/10 font-serif text-lg text-highlight-soft">
                       {initialOf(active.author)}
                     </span>
                   )}
@@ -180,7 +180,7 @@ const TestimonialsCarousel = () => {
                   type="button"
                   onClick={() => go(-1)}
                   aria-label="Previous testimonial"
-                  className="grid h-9 w-9 place-items-center rounded-full border border-white/15 text-white/70 transition hover:border-[#d4af37]/60 hover:text-[#e8c56a]"
+                  className="grid h-9 w-9 place-items-center rounded-full border border-white/15 text-white/70 transition hover:border-highlight/60 hover:text-highlight-soft"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -188,7 +188,7 @@ const TestimonialsCarousel = () => {
                   type="button"
                   onClick={() => go(1)}
                   aria-label="Next testimonial"
-                  className="grid h-9 w-9 place-items-center rounded-full border border-white/15 text-white/70 transition hover:border-[#d4af37]/60 hover:text-[#e8c56a]"
+                  className="grid h-9 w-9 place-items-center rounded-full border border-white/15 text-white/70 transition hover:border-highlight/60 hover:text-highlight-soft"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -202,7 +202,7 @@ const TestimonialsCarousel = () => {
                       aria-label={`Testimonial ${i + 1}`}
                       onClick={() => setIndex(i)}
                       className={`h-1 rounded-full transition-all duration-300 ${
-                        i === index ? "w-7 bg-[#d4af37]" : "w-1.5 bg-white/25 hover:bg-white/50"
+                        i === index ? "w-7 bg-highlight" : "w-1.5 bg-white/25 hover:bg-white/50"
                       }`}
                     />
                   ))}
@@ -221,8 +221,8 @@ const TestimonialsCarousel = () => {
             transition={{ duration: 0.7, delay: 0.2 }}
             className="lg:col-span-5"
           >
-            <div className="rounded-[26px] border border-[#d4af37]/20 bg-white/[0.03] p-6 backdrop-blur-sm md:p-8">
-              <p className="text-[10px] uppercase tracking-[0.3em] text-[#d4af37]/80">Why they come back</p>
+            <div className="rounded-[26px] border border-highlight/20 bg-white/[0.03] p-6 backdrop-blur-sm md:p-8">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-highlight/80">Why they come back</p>
               <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-7">
                 {PROMISES.map((p) => (
                   <div key={p.label}>

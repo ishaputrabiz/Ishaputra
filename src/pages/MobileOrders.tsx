@@ -98,7 +98,7 @@ const MobileOrders = () => {
   // Get status badge class - sophisticated palette
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20';
+      case 'pending': return 'bg-highlight/10 dark:bg-highlight/10 text-highlight dark:text-highlight border border-highlight/30 dark:border-highlight/20';
       case 'processing': return 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20';
       case 'packed':
       case 'shipped':
@@ -107,7 +107,7 @@ const MobileOrders = () => {
       case 'picked': return 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20';
       case 'delivered': return 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20';
       case 'cancelled': return 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20';
-      case 'returnRequested': return 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20';
+      case 'returnRequested': return 'bg-highlight/10 dark:bg-highlight/10 text-highlight dark:text-highlight border border-highlight/30 dark:border-highlight/20';
       case 'returnScheduled': return 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20';
       case 'returned': return 'bg-gray-50 dark:bg-gray-500/10 text-gray-700 dark:text-gray-400 dark:text-zinc-500 border border-gray-200 dark:border-gray-500/20';
       case 'refunded': return 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/20';
@@ -156,7 +156,7 @@ const MobileOrders = () => {
   };
 
     return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,rgba(212,175,55,0.05)_0%,rgba(255,255,255,1)_20%),linear-gradient(135deg,rgba(131,39,41,0.03)_0%,rgba(255,255,255,1)_55%)] pb-20 dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="min-h-screen bg-[linear-gradient(180deg,hsl(var(--highlight)/0.05)_0%,rgba(255,255,255,1)_20%),linear-gradient(135deg,hsl(var(--primary)/0.03)_0%,rgba(255,255,255,1)_55%)] pb-20 dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "var(--font-body)" }}>
       {/* Desktop Header + Nav */}
       <div className="hidden lg:block">
         <Header />
@@ -170,7 +170,7 @@ const MobileOrders = () => {
       
       {/* Page Header */}
       <div className="mx-auto max-w-3xl px-4 pt-4">
-        <div className="rounded-[28px] border border-[#d4af37]/15 bg-white/88 px-4 py-4 shadow-[0_30px_80px_-60px_rgba(0,0,0,0.5)] backdrop-blur dark:border-[#d4af37]/20 dark:bg-zinc-900/88 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.88)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+        <div className="rounded-[28px] border border-highlight/15 bg-white/88 px-4 py-4 shadow-[0_30px_80px_-60px_rgba(0,0,0,0.5)] backdrop-blur dark:border-highlight/20 dark:bg-zinc-900/88 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.88)]" style={{ fontFamily: "var(--font-body)" }}>
           <div className="flex items-center">
             <button
               onClick={() => navigate('/account')}
@@ -180,10 +180,10 @@ const MobileOrders = () => {
             </button>
             <div className="ml-3">
               <div className="flex items-center gap-2 mb-1">
-                <span className="h-px w-6 bg-[#d4af37]/50" />
-                <span className="text-[10px] uppercase tracking-[0.3em] text-[#832729] font-medium">Orders</span>
+                <span className="h-px w-6 bg-highlight/50" />
+                <span className="text-[10px] uppercase tracking-[0.3em] text-primary font-medium">Orders</span>
               </div>
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>My Orders</h1>
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>My Orders</h1>
               <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400">{orders.length} total orders · {orders.filter((o) => ['pending', 'processing', 'packed', 'shipped', 'assigned', 'outForDelivery', 'picked'].includes(o.status)).length} active</p>
             </div>
           </div>
@@ -191,13 +191,13 @@ const MobileOrders = () => {
       </div>
 
       {/* Order Tabs */}
-      <div className="mx-auto max-w-3xl px-4 pt-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
-        <div className="flex gap-2 rounded-2xl border border-[#d4af37]/12 bg-white/85 dark:bg-zinc-900/85 p-1 shadow-[0_20px_45px_-36px_rgba(0,0,0,0.45)] dark:border-[#d4af37]/18 dark:bg-zinc-900/82 dark:shadow-[0_20px_45px_-36px_rgba(0,0,0,0.88)]">
+      <div className="mx-auto max-w-3xl px-4 pt-4" style={{ fontFamily: "var(--font-body)" }}>
+        <div className="flex gap-2 rounded-2xl border border-highlight/12 bg-white/85 dark:bg-zinc-900/85 p-1 shadow-[0_20px_45px_-36px_rgba(0,0,0,0.45)] dark:border-highlight/18 dark:bg-zinc-900/82 dark:shadow-[0_20px_45px_-36px_rgba(0,0,0,0.88)]">
           <button
             onClick={() => setSelectedOrderTab('current')}
             className={`flex-1 rounded-xl px-3 py-2.5 text-xs font-medium transition-colors ${
               selectedOrderTab === 'current'
-                ? 'bg-[#fff6e6] text-[#832729] shadow-sm dark:bg-amber-950/30 dark:text-amber-200'
+                ? 'bg-cream text-primary shadow-sm dark:bg-highlight/6 dark:text-charcoal-foreground'
                 : 'text-gray-600 dark:text-zinc-400'
             }`}
           >
@@ -207,7 +207,7 @@ const MobileOrders = () => {
             onClick={() => setSelectedOrderTab('all')}
             className={`flex-1 rounded-xl px-3 py-2.5 text-xs font-medium transition-colors ${
               selectedOrderTab === 'all'
-                ? 'bg-[#fff6e6] text-[#832729] shadow-sm dark:bg-amber-950/30 dark:text-amber-200'
+                ? 'bg-cream text-primary shadow-sm dark:bg-highlight/6 dark:text-charcoal-foreground'
                 : 'text-gray-600 dark:text-zinc-400'
             }`}
           >
@@ -217,15 +217,15 @@ const MobileOrders = () => {
       </div>
 
       {/* Orders List */}
-      <div className="mx-auto max-w-3xl p-4 space-y-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="mx-auto max-w-3xl p-4 space-y-4" style={{ fontFamily: "var(--font-body)" }}>
         {ordersLoading ? (
           <div className="flex justify-center items-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
           </div>
         ) : filteredOrders.length === 0 ? (
-          <div className="rounded-[28px] border border-[#d4af37]/12 bg-white/88 px-5 py-12 text-center shadow-[0_30px_80px_-60px_rgba(0,0,0,0.45)] dark:border-[#d4af37]/18 dark:bg-zinc-900/88 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.88)]">
-            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[linear-gradient(135deg,rgba(212,175,55,0.18)_0%,rgba(131,39,41,0.08)_100%)]">
-              <Package className="w-8 h-8 text-[#832729]" />
+          <div className="rounded-[28px] border border-highlight/12 bg-white/88 px-5 py-12 text-center shadow-[0_30px_80px_-60px_rgba(0,0,0,0.45)] dark:border-highlight/18 dark:bg-zinc-900/88 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.88)]">
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[linear-gradient(135deg,hsl(var(--highlight)/0.18)_0%,hsl(var(--primary)/0.08)_100%)]">
+              <Package className="w-8 h-8 text-primary" />
             </div>
             <h3 className="mb-1 text-base font-semibold text-gray-800 dark:text-zinc-200 dark:text-zinc-100">No orders yet!</h3>
             <p className="mb-6 text-sm text-gray-500 dark:text-zinc-500 dark:text-zinc-400">
@@ -242,7 +242,7 @@ const MobileOrders = () => {
           filteredOrders.map((order) => (
             <div 
               key={order.id} 
-              className="cursor-pointer rounded-[24px] border border-[#d4af37]/12 bg-white/92 p-3 backdrop-blur transition-all hover:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] dark:border-[#d4af37]/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.85)]"
+              className="cursor-pointer rounded-[24px] border border-highlight/12 bg-white/92 p-3 backdrop-blur transition-all hover:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.85)]"
               onClick={() => {
                 navigate(`/account/orders/${order.id}`);
               }}
@@ -251,11 +251,11 @@ const MobileOrders = () => {
               <div className="space-y-3">
                 {order.items.map((item, idx) => (
                   <div key={idx} className="flex gap-3">
-                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-[#d4af37]/10 bg-gray-50 dark:bg-zinc-900 dark:bg-zinc-800/70">
+                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-highlight/10 bg-gray-50 dark:bg-zinc-900 dark:bg-zinc-800/70">
                       <SmartImage src={item.image} alt={item.name} className="w-full h-full object-cover" preset="thumb" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="mb-1 text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>{item.name}</h4>
+                      <h4 className="mb-1 text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>{item.name}</h4>
                       <p className="text-xs text-gray-600 dark:text-zinc-400 dark:text-zinc-300">Price: {formatPrice(item.price)}</p>
                       <p className="text-xs text-gray-600 dark:text-zinc-400 dark:text-zinc-300">Quantity: {item.quantity}</p>
                       <div className="flex items-center gap-2 mt-1">
@@ -272,7 +272,7 @@ const MobileOrders = () => {
 
               {/* OTP Display for Out for Delivery Orders */}
               {order.status === 'outForDelivery' && order.delivery_otp && (
-                <div className="mt-3 pt-3 border-t border-[#d4af37]/12">
+                <div className="mt-3 pt-3 border-t border-highlight/12">
                   <p className="text-xs font-semibold text-gray-900 dark:text-zinc-100">Delivery OTP</p>
                   <p className="mt-0.5 text-xs text-gray-600 dark:text-zinc-400 dark:text-zinc-300">Share this OTP with your delivery partner</p>
                   <p className="mt-1 text-sm font-bold text-gray-900 dark:text-zinc-100">{order.delivery_otp}</p>
@@ -281,7 +281,7 @@ const MobileOrders = () => {
 
               {/* Refund receipt link */}
               {order.status === 'refunded' && order.refundReceiptUrl && (
-                <div className="mt-3 pt-3 border-t border-[#d4af37]/12">
+                <div className="mt-3 pt-3 border-t border-highlight/12">
                   <a
                     href={order.refundReceiptUrl}
                     target="_blank"
@@ -294,9 +294,9 @@ const MobileOrders = () => {
                 </div>
               )}
 
-              <div className="mt-3 flex items-center justify-between border-t border-[#d4af37]/12 pt-3 text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400">
+              <div className="mt-3 flex items-center justify-between border-t border-highlight/12 pt-3 text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400">
                 <span>Order #{order.id.slice(-6).toUpperCase()}</span>
-                <span className="inline-flex items-center gap-1 font-medium text-[#832729]">
+                <span className="inline-flex items-center gap-1 font-medium text-primary">
                   View details <ArrowLeft className="w-3 h-3 rotate-180" />
                 </span>
               </div>
@@ -348,7 +348,7 @@ const OrderStatusStepper = ({ status }: { status: string }) => {
   const activeDot = isReturnFlow ? 'bg-emerald-500' : 'bg-blue-500';
 
   return (
-    <div className="flex items-start justify-between relative" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="flex items-start justify-between relative" style={{ fontFamily: "var(--font-body)" }}>
       {/* Progress Line Background */}
       <div className="absolute top-4 left-6 right-6 h-0.5 bg-gray-200 dark:bg-zinc-800 dark:bg-zinc-700 z-0" />
       
@@ -365,7 +365,7 @@ const OrderStatusStepper = ({ status }: { status: string }) => {
         const isCurrent = !isCancelled && index === currentIndex;
         
         return (
-          <div key={step.key} className="flex flex-col items-center relative z-10" style={{ width: `${100 / steps.length}%`, fontFamily: "'Poppins', sans-serif" }}>
+          <div key={step.key} className="flex flex-col items-center relative z-10" style={{ width: `${100 / steps.length}%`, fontFamily: "var(--font-body)" }}>
             {/* Step Circle */}
             <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
               isCancelled 

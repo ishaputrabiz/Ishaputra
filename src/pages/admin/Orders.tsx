@@ -38,7 +38,7 @@ const Orders = () => {
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-50 text-yellow-600';
+        return 'bg-highlight/10 text-highlight';
       case 'confirmed':
         return 'bg-blue-50 text-blue-600';
       case 'shipped':
@@ -55,11 +55,11 @@ const Orders = () => {
   return (
     <div className="space-y-6">
       {/* Premium Page Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-amber-200/40 bg-gradient-to-br from-amber-50 via-white to-orange-50/30 p-5 shadow-sm">
-        <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
+      <div className="relative overflow-hidden rounded-2xl border border-highlight/12 bg-gradient-to-br from-highlight/10 via-white to-primary/5 p-5 shadow-sm">
+        <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-highlight/8 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-highlight/28 to-transparent" />
         <div className="relative">
-          <h1 className="text-2xl font-semibold text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>Orders</h1>
+          <h1 className="text-2xl font-semibold text-gray-900" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Orders</h1>
           <p className="text-gray-600 mt-1">Track and fulfil customer orders in real time</p>
         </div>
       </div>
@@ -68,7 +68,7 @@ const Orders = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Orders', value: '0', color: 'text-gray-900' },
-          { label: 'Pending', value: '0', color: 'text-yellow-600' },
+          { label: 'Pending', value: '0', color: 'text-highlight' },
           { label: 'Shipped', value: '0', color: 'text-purple-600' },
           { label: 'Delivered', value: '0', color: 'text-green-600' },
         ].map((stat, index) => (
@@ -105,7 +105,7 @@ const Orders = () => {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="p-8 text-center">
-            <div className="animate-spin h-8 w-8 border-2 border-amber-600 border-t-transparent rounded-full mx-auto"></div>
+            <div className="animate-spin h-8 w-8 border-2 border-highlight border-t-transparent rounded-full mx-auto"></div>
             <p className="text-gray-600 mt-4">Loading orders...</p>
           </div>
         ) : orders.length > 0 ? (
@@ -140,7 +140,7 @@ const Orders = () => {
                 {orders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
-                      <span className="text-amber-600 font-medium">
+                      <span className="text-highlight font-medium">
                         #{order.orderNumber}
                       </span>
                     </td>

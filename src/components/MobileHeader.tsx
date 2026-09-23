@@ -77,7 +77,7 @@ const MobileHeader = () => {
           >
             <ShoppingBag className="w-[22px] h-[22px] text-foreground/80" strokeWidth={1.5} />
             {user && totalItems > 0 && (
-              <span className="absolute top-0.5 right-0 min-w-[16px] h-[16px] bg-[#832729] text-white text-[9px] rounded-full flex items-center justify-center font-bold px-1">
+              <span className="absolute top-0.5 right-0 min-w-[16px] h-[16px] bg-primary text-white text-[9px] rounded-full flex items-center justify-center font-bold px-1">
                 {totalItems}
               </span>
             )}

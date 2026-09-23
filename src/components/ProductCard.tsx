@@ -143,28 +143,28 @@ const ProductCard = ({ product, index = 0, onQuickView }: ProductCardProps) => {
       {/* Product Info */}
       <div className="space-y-0.5 lg:space-y-1.5">
         {/* Category */}
-        <span className="text-[10px] lg:text-xs uppercase tracking-wider font-medium" style={{ color: '#D4AF37' }}>
+        <span className="text-[10px] lg:text-xs uppercase tracking-wider font-medium" style={{ color: 'hsl(var(--highlight))' }}>
           {product.category}
         </span>
 
         {/* Title - Single Line with Ellipsis */}
-        <h4 className="font-medium text-xs lg:text-base leading-snug text-foreground truncate" style={{ fontFamily: "'Poppins', sans-serif" }}>
+        <h4 className="font-medium text-xs lg:text-base leading-snug text-foreground truncate" style={{ fontFamily: "var(--font-body)" }}>
           {product.title}
         </h4>
 
         {/* Rating with review count */}
         <div className="flex items-center gap-1">
           {(product.reviews ?? 0) > 0 && (
-            <span className="text-[10px] lg:text-xs font-semibold text-amber-500">{product.rating.toFixed(1)}</span>
+            <span className="text-[10px] lg:text-xs font-semibold text-highlight">{product.rating.toFixed(1)}</span>
           )}
           {[...Array(5)].map((_, i) => (
             <Star
               key={i}
               className={`w-3 h-3 lg:w-3.5 lg:h-3.5 ${
                 i < Math.floor(product.rating)
-                  ? "fill-yellow-400 text-yellow-400"
+                  ? "fill-highlight-soft text-highlight-soft"
                   : i < product.rating
-                  ? "fill-yellow-200 text-yellow-400"
+                  ? "fill-charcoal-foreground text-highlight-soft"
                   : "fill-gray-200 text-gray-400"
               }`}
             />
@@ -183,7 +183,7 @@ const ProductCard = ({ product, index = 0, onQuickView }: ProductCardProps) => {
             </span>
           )}
           {displayDiscount && (
-            <span className="basis-full lg:basis-auto text-[10px] lg:text-xs font-semibold text-[#b88a2a] dark:text-[#f4cf73]">{displayDiscount}% Off</span>
+            <span className="basis-full lg:basis-auto text-[10px] lg:text-xs font-semibold text-highlight dark:text-highlight-soft">{displayDiscount}% Off</span>
           )}
         </div>
 

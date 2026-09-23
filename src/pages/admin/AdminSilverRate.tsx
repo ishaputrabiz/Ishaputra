@@ -81,10 +81,10 @@ const AdminSilverRate = () => {
         <motion.div
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 mb-6"
+          className="flex items-center gap-3 bg-highlight/10 dark:bg-highlight/5 border border-highlight/30 dark:border-highlight/60 rounded-xl px-4 py-3 mb-6"
         >
-          <TrendingUp className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0" />
-          <p className="text-sm text-amber-800 dark:text-amber-300">
+          <TrendingUp className="w-4 h-4 text-highlight dark:text-highlight shrink-0" />
+          <p className="text-sm text-highlight dark:text-highlight">
             Customers currently see: <span className="font-bold">₹{currentSaved.toFixed(2)}/g</span>
             {' · '}10g = ₹{(currentSaved * 10).toFixed(2)}
             {' · '}1kg = ₹{(currentSaved * 1000).toLocaleString('en-IN')}
@@ -97,10 +97,10 @@ const AdminSilverRate = () => {
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white dark:bg-gray-900 border border-[#F5EFE6] dark:border-gray-800 rounded-2xl p-6 shadow-sm"
+        className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl p-6 shadow-sm"
       >
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/20 grid place-items-center text-amber-700 dark:text-amber-400">
+          <div className="w-9 h-9 rounded-lg bg-highlight/10 dark:bg-highlight/5 grid place-items-center text-highlight dark:text-highlight">
             <Coins className="w-4 h-4" />
           </div>
           <div>
@@ -132,13 +132,13 @@ const AdminSilverRate = () => {
           {/* Auto-calculated values */}
           {silverPricePerGram > 0 && (
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#FBF8F3] dark:bg-gray-800 rounded-xl px-4 py-3">
+              <div className="bg-cream dark:bg-gray-800 rounded-xl px-4 py-3">
                 <p className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">10 grams</p>
                 <p className="text-lg font-bold text-gray-900 dark:text-white">
                   ₹{(silverPricePerGram * 10).toFixed(2)}
                 </p>
               </div>
-              <div className="bg-[#FBF8F3] dark:bg-gray-800 rounded-xl px-4 py-3">
+              <div className="bg-cream dark:bg-gray-800 rounded-xl px-4 py-3">
                 <p className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">1 kilogram</p>
                 <p className="text-lg font-bold text-gray-900 dark:text-white">
                   ₹{(silverPricePerGram * 1000).toLocaleString('en-IN')}
@@ -150,7 +150,7 @@ const AdminSilverRate = () => {
           <Button
             onClick={handleSave}
             disabled={saving || loading}
-            className={`w-full mt-2 ${changed ? 'bg-amber-600 hover:bg-amber-700 ring-2 ring-amber-400' : 'bg-amber-600 hover:bg-amber-700'} text-white`}
+            className={`w-full mt-2 ${changed ? 'bg-highlight hover:bg-highlight ring-2 ring-highlight/70' : 'bg-highlight hover:bg-highlight'} text-white`}
           >
             {saving ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving…</>
@@ -159,7 +159,7 @@ const AdminSilverRate = () => {
             )}
           </Button>
           {changed && (
-            <p className="text-xs text-center text-amber-600 dark:text-amber-400">
+            <p className="text-xs text-center text-highlight dark:text-highlight">
               ⚠ Unsaved — current customer rate is ₹{currentSaved?.toFixed(2)}
             </p>
           )}

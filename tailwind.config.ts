@@ -13,12 +13,14 @@ export default {
       },
     },
     extend: {
+      // Fonts come from --font-heading / --font-body in src/index.css. `poppins` and
+      // `serif` are kept as class names so existing markup follows the theme.
       fontFamily: {
-        heading: ['Playfair Display', 'Georgia', 'serif'],
-        body: ['Poppins', 'system-ui', 'sans-serif'],
-        poppins: ['Poppins', 'system-ui', 'sans-serif'],
-        sans: ['Poppins', 'system-ui', 'sans-serif'],
-        serif: ['Playfair Display', 'Georgia', 'serif'],
+        heading: ['var(--font-heading)'],
+        body: ['var(--font-body)'],
+        poppins: ['var(--font-body)'],
+        sans: ['var(--font-body)'],
+        serif: ['var(--font-heading)'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -29,6 +31,15 @@ export default {
         cream: {
           DEFAULT: "hsl(var(--cream))",
           dark: "hsl(var(--cream-dark))",
+        },
+        highlight: {
+          DEFAULT: "hsl(var(--highlight) / <alpha-value>)",
+          foreground: "hsl(var(--highlight-foreground) / <alpha-value>)",
+          soft: "hsl(var(--highlight-soft) / <alpha-value>)",
+        },
+        charcoal: {
+          DEFAULT: "hsl(var(--charcoal) / <alpha-value>)",
+          foreground: "hsl(var(--charcoal-foreground) / <alpha-value>)",
         },
         primary: {
           DEFAULT: "hsl(var(--primary))",

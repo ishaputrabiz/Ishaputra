@@ -50,13 +50,13 @@ interface Customer {
 }
 
 const statusColors: Record<string, string> = {
-  pending: 'bg-amber-50 text-amber-700 border border-amber-200',
+  pending: 'bg-highlight/10 text-highlight border border-highlight/30',
   processing: 'bg-orange-50 text-orange-700 border border-orange-200',
   shipped: 'bg-blue-50 text-blue-700 border border-blue-200',
   outForDelivery: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
   delivered: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
   cancelled: 'bg-red-50 text-red-700 border border-red-200',
-  returnRequested: 'bg-amber-50 text-amber-700 border border-amber-200',
+  returnRequested: 'bg-highlight/10 text-highlight border border-highlight/30',
   returned: 'bg-gray-50 text-gray-700 border border-gray-200',
 };
 
@@ -235,7 +235,7 @@ const AdminCustomers: React.FC = () => {
   const totalRevenue = active.reduce((s, c) => s + c.totalSpent, 0);
 
   const CheckIcon = ({ checked }: { checked: boolean }) => (
-    <span className={`inline-flex w-5 h-5 rounded border-2 items-center justify-center flex-shrink-0 transition-colors ${checked ? 'bg-amber-500 border-amber-500' : 'border-gray-300'}`}>
+    <span className={`inline-flex w-5 h-5 rounded border-2 items-center justify-center flex-shrink-0 transition-colors ${checked ? 'bg-highlight border-highlight' : 'border-gray-300'}`}>
       {checked && <span className="text-white text-xs font-bold leading-none">✓</span>}
     </span>
   );
@@ -251,8 +251,8 @@ const AdminCustomers: React.FC = () => {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center">
-            <UsersIcon className="h-6 w-6 text-amber-600" />
+          <div className="w-12 h-12 rounded-full bg-highlight/10 flex items-center justify-center">
+            <UsersIcon className="h-6 w-6 text-highlight" />
           </div>
           <div>
             <p className="text-sm text-gray-500">Total Customers</p>
@@ -288,7 +288,7 @@ const AdminCustomers: React.FC = () => {
           >
             <UsersIcon className="h-4 w-4 inline mr-1.5" />
             Customers
-            <span className="ml-1.5 text-xs bg-amber-100 text-amber-700 rounded-full px-1.5 py-0.5">{active.length}</span>
+            <span className="ml-1.5 text-xs bg-highlight/15 text-highlight rounded-full px-1.5 py-0.5">{active.length}</span>
           </button>
           <button
             onClick={() => { setActiveTab('trash'); setSelectedIds(new Set()); }}
@@ -322,11 +322,11 @@ const AdminCustomers: React.FC = () => {
       <AnimatePresence>
         {selectedIds.size > 0 && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">
-            <span className="text-sm font-medium text-amber-800">{selectedIds.size} selected</span>
+            className="bg-highlight/10 border border-highlight/30 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-medium text-highlight">{selectedIds.size} selected</span>
             <div className="flex items-center gap-2 ml-auto">
               <Button variant="ghost" size="sm" onClick={toggleSelectAll}
-                className="text-amber-700 hover:bg-amber-100 text-xs">
+                className="text-highlight hover:bg-highlight/15 text-xs">
                 {selectedIds.size === list.length ? 'Deselect All' : 'Select All'}
               </Button>
               {isTrash ? (
@@ -356,7 +356,7 @@ const AdminCustomers: React.FC = () => {
 
       {/* Trash notice */}
       {isTrash && trashed.length > 0 && (
-        <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+        <div className="flex items-start gap-2.5 bg-highlight/10 border border-highlight/30 rounded-xl px-4 py-3 text-sm text-highlight">
           <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
           <span>Customers in trash are permanently deleted after 30 days. Restore to prevent data loss.</span>
         </div>
@@ -365,7 +365,7 @@ const AdminCustomers: React.FC = () => {
       {/* Content */}
       {loading ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <div className="animate-spin h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full mx-auto mb-4" />
+          <div className="animate-spin h-8 w-8 border-2 border-highlight border-t-transparent rounded-full mx-auto mb-4" />
           <p className="text-gray-500">Loading customers...</p>
         </div>
       ) : list.length === 0 ? (
@@ -380,14 +380,14 @@ const AdminCustomers: React.FC = () => {
             const daysLeft = isTrash ? getDaysRemaining(customer.trashedAt) : 30;
             return (
               <motion.div key={customer.uid} layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                className={`bg-white border rounded-xl overflow-hidden transition-all group relative ${sel ? 'border-amber-400 ring-2 ring-amber-100' : 'border-gray-200 hover:border-amber-300 hover:shadow-sm'}`}>
+                className={`bg-white border rounded-xl overflow-hidden transition-all group relative ${sel ? 'border-highlight/70 ring-2 ring-highlight/20' : 'border-gray-200 hover:border-highlight/45 hover:shadow-sm'}`}>
                 <button className="absolute top-3 left-3 z-10" onClick={e => { e.stopPropagation(); toggleSelect(customer.uid); }}>
                   <CheckIcon checked={sel} />
                 </button>
                 <div className="p-5 pt-4 cursor-pointer" onClick={() => navigate(`/admin/customers/${customer.uid}`)}>
                   <div className="flex flex-col items-center text-center mt-4">
-                    <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mb-3">
-                      <span className="text-amber-700 font-bold text-xl">{(customer.name || customer.username || 'U').charAt(0).toUpperCase()}</span>
+                    <div className="w-14 h-14 rounded-full bg-highlight/15 flex items-center justify-center mb-3">
+                      <span className="text-highlight font-bold text-xl">{(customer.name || customer.username || 'U').charAt(0).toUpperCase()}</span>
                     </div>
                     <p className="font-semibold text-gray-900 truncate w-full">{customer.name || customer.username}</p>
                     <p className="text-xs text-gray-500 truncate w-full mt-0.5">{customer.email}</p>
@@ -404,7 +404,7 @@ const AdminCustomers: React.FC = () => {
                     </div>
                   </div>
                   {isTrash && (
-                    <div className={`mt-3 flex items-center justify-center gap-1 text-xs rounded-lg py-1.5 ${daysLeft <= 7 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-700'}`}>
+                    <div className={`mt-3 flex items-center justify-center gap-1 text-xs rounded-lg py-1.5 ${daysLeft <= 7 ? 'bg-red-50 text-red-600' : 'bg-highlight/10 text-highlight'}`}>
                       <Clock className="h-3 w-3" />{daysLeft > 0 ? `${daysLeft} days left` : 'Expires today'}
                     </div>
                   )}
@@ -440,11 +440,11 @@ const AdminCustomers: React.FC = () => {
             const daysLeft = isTrash ? getDaysRemaining(customer.trashedAt) : 30;
             return (
               <div key={customer.uid}
-                className={`flex items-center gap-4 px-5 py-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors group ${sel ? 'bg-amber-50/50' : ''}`}>
+                className={`flex items-center gap-4 px-5 py-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors group ${sel ? 'bg-highlight/5' : ''}`}>
                 <button onClick={() => toggleSelect(customer.uid)} className="flex-shrink-0"><CheckIcon checked={sel} /></button>
                 <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/admin/customers/${customer.uid}`)}>
-                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-amber-700 font-semibold text-sm">{(customer.name || customer.username || 'U').charAt(0).toUpperCase()}</span>
+                  <div className="w-10 h-10 rounded-full bg-highlight/15 flex items-center justify-center flex-shrink-0">
+                    <span className="text-highlight font-semibold text-sm">{(customer.name || customer.username || 'U').charAt(0).toUpperCase()}</span>
                   </div>
                   <div className="min-w-0">
                     <p className="font-medium text-gray-900 truncate">{customer.name || customer.username}</p>
@@ -458,7 +458,7 @@ const AdminCustomers: React.FC = () => {
                   <div className="text-center"><p className="text-sm font-semibold text-gray-900">{customer.orders.length}</p><p className="text-xs text-gray-500">Orders</p></div>
                   <div className="text-center"><p className="text-sm font-semibold text-gray-900">{formatPrice(customer.totalSpent)}</p><p className="text-xs text-gray-500">Spent</p></div>
                   {isTrash ? (
-                    <div className={`text-xs font-medium px-2 py-1 rounded-lg ${daysLeft <= 7 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-700'}`}>
+                    <div className={`text-xs font-medium px-2 py-1 rounded-lg ${daysLeft <= 7 ? 'bg-red-50 text-red-600' : 'bg-highlight/10 text-highlight'}`}>
                       <Clock className="h-3 w-3 inline mr-1" />{daysLeft > 0 ? `${daysLeft}d` : 'Today'}
                     </div>
                   ) : (
@@ -498,8 +498,8 @@ const AdminCustomers: React.FC = () => {
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
-                    <span className="text-amber-700 font-bold text-2xl">{(selectedProfile.name || selectedProfile.username || 'U').charAt(0).toUpperCase()}</span>
+                  <div className="w-16 h-16 rounded-full bg-highlight/15 flex items-center justify-center">
+                    <span className="text-highlight font-bold text-2xl">{(selectedProfile.name || selectedProfile.username || 'U').charAt(0).toUpperCase()}</span>
                   </div>
                   <div>
                     <p className="text-xl font-semibold text-gray-900">{selectedProfile.name || selectedProfile.username}</p>
@@ -518,10 +518,10 @@ const AdminCustomers: React.FC = () => {
                     <p className="text-sm font-bold text-emerald-900">{formatPrice(selectedProfile.totalSpent)}</p>
                     <p className="text-xs text-emerald-600">Spent</p>
                   </div>
-                  <div className="bg-amber-50 rounded-xl p-3 text-center">
-                    <Calendar className="h-4 w-4 text-amber-600 mx-auto mb-1" />
-                    <p className="text-xs font-bold text-amber-900">{formatDate(selectedProfile.createdAt)}</p>
-                    <p className="text-xs text-amber-600">Joined</p>
+                  <div className="bg-highlight/10 rounded-xl p-3 text-center">
+                    <Calendar className="h-4 w-4 text-highlight mx-auto mb-1" />
+                    <p className="text-xs font-bold text-highlight">{formatDate(selectedProfile.createdAt)}</p>
+                    <p className="text-xs text-highlight">Joined</p>
                   </div>
                 </div>
                 <div>
@@ -540,7 +540,7 @@ const AdminCustomers: React.FC = () => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-medium text-amber-700">#{order.orderNumber || order.id.slice(0, 8).toUpperCase()}</span>
+                              <span className="text-sm font-medium text-highlight">#{order.orderNumber || order.id.slice(0, 8).toUpperCase()}</span>
                               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColors[order.status] || 'bg-gray-100 text-gray-600'}`}>
                                 {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace(/([A-Z])/g, ' $1')}
                               </span>
@@ -593,7 +593,7 @@ const AdminCustomers: React.FC = () => {
             <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               disabled={submitting}
-              className={deleteConfirm?.type === 'permanent' || deleteConfirm?.type === 'batch-permanent' ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'}
+              className={deleteConfirm?.type === 'permanent' || deleteConfirm?.type === 'batch-permanent' ? 'bg-red-600 hover:bg-red-700' : 'bg-highlight hover:bg-highlight'}
               onClick={() => {
                 if (deleteConfirm?.type === 'soft' && deleteConfirm.customer) softDelete(deleteConfirm.customer);
                 else if (deleteConfirm?.type === 'permanent' && deleteConfirm.customer) permDelete(deleteConfirm.customer);

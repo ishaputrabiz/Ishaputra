@@ -23,7 +23,7 @@ import { SmartImage } from "@/components/ui/smart-image";
 // Loyalty Tier Configuration
 const LOYALTY_TIERS = [
   { name: 'Silver Member', min: 0, max: 50000, icon: Award, color: 'text-gray-600', bgColor: 'bg-gradient-to-br from-gray-50 to-gray-100', borderColor: 'border-gray-300', badgeBg: 'bg-gray-500' },
-  { name: 'Gold Member', min: 50000, max: 100000, icon: Crown, color: 'text-yellow-600', bgColor: 'bg-gradient-to-br from-yellow-50 to-amber-100', borderColor: 'border-yellow-400', badgeBg: 'bg-gradient-to-r from-yellow-500 to-amber-500' },
+  { name: 'Gold Member', min: 50000, max: 100000, icon: Crown, color: 'text-highlight', bgColor: 'bg-gradient-to-br from-yellow-50 to-highlight/15', borderColor: 'border-yellow-400', badgeBg: 'bg-gradient-to-r from-yellow-500 to-highlight' },
   { name: 'Platinum Member', min: 100000, max: 175000, icon: Diamond, color: 'text-blue-600', bgColor: 'bg-gradient-to-br from-blue-50 to-indigo-100', borderColor: 'border-blue-400', badgeBg: 'bg-gradient-to-r from-blue-500 to-indigo-600' },
   { name: 'Premium Member', min: 175000, max: 300000, icon: Crown, color: 'text-purple-600', bgColor: 'bg-gradient-to-br from-purple-50 to-pink-100', borderColor: 'border-purple-400', badgeBg: 'bg-gradient-to-r from-purple-600 to-pink-600', isPremium: true },
 ];
@@ -218,7 +218,7 @@ const PurchaseSummary: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900" style={{ fontFamily: "var(--font-body)" }}>
       <div className="hidden lg:block"><Header /></div>
 
       {/* Desktop Back Button */}
@@ -259,7 +259,7 @@ const PurchaseSummary: React.FC = () => {
               <div className="relative">
                 {currentTier.isPremium && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
-                    <Crown className="w-5 h-5 text-yellow-500 fill-yellow-400 drop-shadow-lg" />
+                    <Crown className="w-5 h-5 text-highlight fill-highlight-soft drop-shadow-lg" />
                   </div>
                 )}
                 <div className={`w-12 h-12 ${currentTier.badgeBg} rounded-full flex items-center justify-center text-white border-2 ${currentTier.borderColor} shadow-md`}>
@@ -309,7 +309,7 @@ const PurchaseSummary: React.FC = () => {
                         }`}>
                           {tier.isPremium && isCurrentTier && (
                             <div className="absolute -top-2 left-1/2 -translate-x-1/2">
-                              <Crown className="w-4 h-4 text-yellow-500 fill-yellow-400 drop-shadow" />
+                              <Crown className="w-4 h-4 text-highlight fill-highlight-soft drop-shadow" />
                             </div>
                           )}
                           <TierBadgeIcon className="w-5 h-5" />
@@ -332,7 +332,7 @@ const PurchaseSummary: React.FC = () => {
                 </p>
               ) : (
                 <div className="flex items-center justify-center gap-2 bg-white/60 backdrop-blur rounded-lg p-2 border border-purple-200">
-                  <Sparkles className="w-4 h-4 text-yellow-500" />
+                  <Sparkles className="w-4 h-4 text-highlight" />
                   <p className="text-xs text-gray-700 dark:text-zinc-300 font-medium">
                     You've reached the highest tier!
                   </p>
@@ -384,7 +384,7 @@ const PurchaseSummary: React.FC = () => {
             </div>
             
             <div className="text-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white mx-auto mb-2 shadow-md">
+              <div className="w-12 h-12 bg-gradient-to-br from-highlight/70 to-primary rounded-lg flex items-center justify-center text-white mx-auto mb-2 shadow-md">
                 <Clock className="w-6 h-6" />
               </div>
               <p className="text-2xl font-bold text-gray-900 dark:text-zinc-100">{stats.pendingCount}</p>
@@ -392,7 +392,7 @@ const PurchaseSummary: React.FC = () => {
             </div>
             
             <div className="text-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-rose-500 rounded-lg flex items-center justify-center text-white mx-auto mb-2 shadow-md">
+              <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-primary rounded-lg flex items-center justify-center text-white mx-auto mb-2 shadow-md">
                 <XCircle className="w-6 h-6" />
               </div>
               <p className="text-2xl font-bold text-gray-900 dark:text-zinc-100">{stats.cancelledCount}</p>
@@ -422,7 +422,7 @@ const PurchaseSummary: React.FC = () => {
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center text-white shadow-md">
+              <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-primary rounded-lg flex items-center justify-center text-white shadow-md">
                 <Gift className="w-5 h-5" />
               </div>
               <div>

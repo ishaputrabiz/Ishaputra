@@ -498,7 +498,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
 
           {/* Header */}
           <div className="text-center mb-5">
-            <h1 className="text-xl md:text-2xl font-bold text-foreground mb-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground mb-1" style={{ fontFamily: "var(--font-body)" }}>
               {activeTab === 'delivery' 
                 ? 'Delivery Partner Login' 
                 : (isSignUp ? 'Create Account' : 'Welcome Back')}
@@ -990,7 +990,7 @@ const AccountPage = () => {
   ];
 
   const accountSettings = [
-    { id: 'plus', label: 'Premium Plus', icon: Sparkles, color: 'text-yellow-600', path: '/premium' },
+    { id: 'plus', label: 'Premium Plus', icon: Sparkles, color: 'text-highlight', path: '/premium' },
     { id: 'profile', label: 'Edit Profile', icon: User, color: 'text-blue-600', path: '/account/profile' },
     { id: 'cards', label: 'Saved Credit / Debit & Gift Cards', icon: CreditCard, color: 'text-purple-600', path: '/account/cards' },
     { id: 'addresses', label: 'Saved Addresses', icon: MapPin, color: 'text-red-600', path: '/account/addresses' },
@@ -1001,7 +1001,7 @@ const AccountPage = () => {
   ];
 
   const myActivity = [
-    { id: 'reviews', label: 'Reviews', icon: Star, color: 'text-yellow-600' },
+    { id: 'reviews', label: 'Reviews', icon: Star, color: 'text-highlight' },
     { id: 'questions', label: 'Questions & Answers', icon: MessageCircle, color: 'text-blue-600' },
   ];
 
@@ -1024,7 +1024,7 @@ const AccountPage = () => {
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
       case 'pending':
-        return 'text-amber-600';
+        return 'text-highlight';
       case 'processing':
         return 'text-blue-600';
       case 'packed':
@@ -1047,7 +1047,7 @@ const AccountPage = () => {
   const getStatusBadgeClass = (status: Order['status']) => {
     switch (status) {
       case 'pending':
-        return 'bg-amber-50 text-amber-700 border border-amber-200';
+        return 'bg-highlight/10 text-highlight border border-highlight/30';
       case 'processing':
         return 'bg-blue-50 text-blue-700 border border-blue-200';
       case 'packed':
@@ -1062,7 +1062,7 @@ const AccountPage = () => {
       case 'cancelled':
         return 'bg-red-50 text-red-700 border border-red-200';
       case 'returnRequested':
-        return 'bg-amber-50 text-amber-700 border border-amber-200';
+        return 'bg-highlight/10 text-highlight border border-highlight/30';
       case 'returnScheduled':
         return 'bg-purple-50 text-purple-700 border border-purple-200';
       case 'returned':
@@ -1237,7 +1237,7 @@ const AccountPage = () => {
   if (isMobile) {
     return (
       <>
-        <div className="min-h-screen pt-2 bg-muted pb-20" style={{ fontFamily: "'Poppins', sans-serif" }}>
+        <div className="min-h-screen pt-2 bg-muted pb-20" style={{ fontFamily: "var(--font-body)" }}>
           <div className="px-4 py-2" style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
             {/* Drawer-style top bar */}
             <div className="flex items-center justify-between py-2">
@@ -1320,7 +1320,7 @@ const AccountPage = () => {
                 className="w-full flex items-center gap-4 px-5 py-4 hover:bg-muted transition-colors border-b border-border/50 text-left"
               >
                 {resolvedTheme === 'dark' ? (
-                  <Sun className="w-[22px] h-[22px] text-amber-500" strokeWidth={1.6} />
+                  <Sun className="w-[22px] h-[22px] text-highlight" strokeWidth={1.6} />
                 ) : (
                   <Moon className="w-[22px] h-[22px] text-indigo-500" strokeWidth={1.6} />
                 )}
@@ -1337,8 +1337,8 @@ const AccountPage = () => {
                 onClick={handleLogout}
                 className="w-full flex items-center gap-4 px-5 py-4 hover:bg-muted transition-colors text-left"
               >
-                <LogOut className="w-[22px] h-[22px] text-rose-500" strokeWidth={1.4} />
-                <span className="text-[15px] font-medium text-rose-600 dark:text-rose-400 flex-1 tracking-wide">Log Out</span>
+                <LogOut className="w-[22px] h-[22px] text-primary" strokeWidth={1.4} />
+                <span className="text-[15px] font-medium text-primary dark:text-primary flex-1 tracking-wide">Log Out</span>
                 <ChevronRight className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
               </button>
             </div>
@@ -1355,7 +1355,7 @@ const AccountPage = () => {
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               className="fixed inset-0 bg-card z-50 overflow-y-auto"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-body)" }}
             >
               {/* Header */}
               <div className="sticky top-0 bg-card border-b border-border px-4 py-3 flex items-center gap-3 z-10">
@@ -1379,7 +1379,7 @@ const AccountPage = () => {
                   </span>
                   {/* Status message for return flow */}
                   {selectedOrder.status === 'returnRequested' && (
-                    <p className="text-sm text-amber-700 mt-2">Return request submitted. Waiting for approval.</p>
+                    <p className="text-sm text-highlight mt-2">Return request submitted. Waiting for approval.</p>
                   )}
                   {selectedOrder.status === 'returnScheduled' && (
                     <p className="text-sm text-emerald-700 mt-2">Return approved! Your pickup partner is on the way.</p>
@@ -1432,7 +1432,7 @@ const AccountPage = () => {
 
                 {/* Delivery Failed card */}
                 {selectedOrder.status === 'deliveryFailed' && (
-                  <div className="rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-orange-50 px-4 py-3 dark:border-red-500/30 dark:from-red-500/10 dark:to-orange-500/10">
+                  <div className="rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-primary/10 px-4 py-3 dark:border-red-500/30 dark:from-red-500/10 dark:to-primary/10">
                     <p className="text-xs font-semibold uppercase tracking-widest text-red-700 dark:text-red-300">Delivery Attempted</p>
                     <p className="mt-1 text-sm font-medium text-red-900 dark:text-red-100">We couldn't reach you for delivery.</p>
                     <p className="mt-1 text-xs text-red-700 dark:text-red-300">Your item is being returned to our store. Our team will contact you to reschedule the delivery.</p>
@@ -1569,7 +1569,7 @@ const AccountPage = () => {
     <>
       <Header />
       <CategoryIconNav />
-      <div className="pt-6 bg-muted" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="pt-6 bg-muted" style={{ fontFamily: "var(--font-body)" }}>
         <div className="container mx-auto px-6 pb-8">
           <div className="grid grid-cols-12 gap-6 -mt-4">
             {/* Sidebar */}
@@ -1655,7 +1655,7 @@ const AccountPage = () => {
                         <div 
                           key={order.id} 
                           className="border border-border rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow bg-muted"
-                          style={{ fontFamily: "'Poppins', sans-serif" }}
+                          style={{ fontFamily: "var(--font-body)" }}
                           onClick={() => {
                             navigate(`/account/orders/${order.id}`);
                           }}
@@ -1765,7 +1765,7 @@ const AccountPage = () => {
       {/* Order Details Modal - Desktop */}
       {showOrderModal && selectedOrder && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+          <div className="bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" style={{ fontFamily: "var(--font-body)" }}>
             <div className="sticky top-0 bg-card border-b border-border p-6 flex justify-between items-center">
               <h3 className="text-2xl font-bold text-foreground">Order Details</h3>
               <button 
@@ -1798,25 +1798,25 @@ const AccountPage = () => {
                 {/* Return Status Message */}
                 {(selectedOrder.status === 'returnRequested' || selectedOrder.status === 'returnScheduled' || selectedOrder.status === 'returned') && (
                   <div className={`p-4 rounded-xl border ${
-                    selectedOrder.status === 'returnRequested' ? 'bg-amber-50 border-amber-200' :
+                    selectedOrder.status === 'returnRequested' ? 'bg-highlight/10 border-highlight/30' :
                     selectedOrder.status === 'returnScheduled' ? 'bg-emerald-50 border-emerald-200' :
                     'bg-gray-50 border-gray-200'
                   }`}>
                     <div className="flex items-start gap-3">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        selectedOrder.status === 'returnRequested' ? 'bg-amber-100' :
+                        selectedOrder.status === 'returnRequested' ? 'bg-highlight/15' :
                         selectedOrder.status === 'returnScheduled' ? 'bg-emerald-100' :
                         'bg-gray-100'
                       }`}>
                         <ReturnIcon className={`w-5 h-5 ${
-                          selectedOrder.status === 'returnRequested' ? 'text-amber-600' :
+                          selectedOrder.status === 'returnRequested' ? 'text-highlight' :
                           selectedOrder.status === 'returnScheduled' ? 'text-emerald-600' :
                           'text-gray-600'
                         }`} />
                       </div>
                       <div>
                         <h5 className={`font-semibold ${
-                          selectedOrder.status === 'returnRequested' ? 'text-amber-800' :
+                          selectedOrder.status === 'returnRequested' ? 'text-highlight' :
                           selectedOrder.status === 'returnScheduled' ? 'text-emerald-800' :
                           'text-gray-800'
                         }`}>
@@ -1825,7 +1825,7 @@ const AccountPage = () => {
                           {selectedOrder.status === 'returned' && 'Return Complete'}
                         </h5>
                         <p className={`text-sm mt-1 ${
-                          selectedOrder.status === 'returnRequested' ? 'text-amber-700' :
+                          selectedOrder.status === 'returnRequested' ? 'text-highlight' :
                           selectedOrder.status === 'returnScheduled' ? 'text-emerald-700' :
                           'text-gray-600'
                         }`}>
@@ -1943,7 +1943,7 @@ const AccountPage = () => {
                     <button
                       onClick={handleCancelReturn}
                       disabled={cancellingReturn}
-                      className="flex-1 py-3 px-4 border-2 border-amber-200 bg-amber-50 rounded-lg text-sm font-semibold text-amber-700 flex items-center justify-center gap-2 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                      className="flex-1 py-3 px-4 border-2 border-highlight/30 bg-highlight/10 rounded-lg text-sm font-semibold text-highlight flex items-center justify-center gap-2 hover:bg-highlight/15 transition-colors disabled:opacity-50"
                     >
                       <Ban className="w-4 h-4" />
                       Cancel Return
@@ -2134,8 +2134,8 @@ const AccountPage = () => {
                 ))}
               </div>
 
-              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-xs text-amber-800">
+              <div className="mt-4 p-3 bg-highlight/10 border border-highlight/30 rounded-lg">
+                <p className="text-xs text-highlight">
                   <Clock className="w-4 h-4 inline mr-1" />
                   Returns are accepted within 7 days of delivery. Our team will review your request within 24-48 hours.
                 </p>

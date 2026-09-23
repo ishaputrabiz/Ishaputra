@@ -130,11 +130,11 @@ const SlotCard = ({ config, banner }: { config: SlotConfig; banner?: HomeBanner 
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="bg-white dark:bg-gray-900 border border-[#F5EFE6] dark:border-gray-800 rounded-2xl p-6 shadow-sm"
+      className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl p-6 shadow-sm"
     >
       <div className="flex items-start justify-between gap-3 mb-5 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-900/20 grid place-items-center text-amber-700 dark:text-amber-400">
+          <div className="w-10 h-10 rounded-lg bg-highlight/10 dark:bg-highlight/5 grid place-items-center text-highlight dark:text-highlight">
             <Layers className="w-4 h-4" />
           </div>
           <div>
@@ -155,7 +155,7 @@ const SlotCard = ({ config, banner }: { config: SlotConfig; banner?: HomeBanner 
           <p className="text-[11px] text-gray-400 mb-2">{config.ratioHint}</p>
           <div
             onClick={() => fileRef.current?.click()}
-            className="relative aspect-[16/10] rounded-xl border-2 border-dashed border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/10 grid place-items-center cursor-pointer hover:border-amber-400 transition-colors overflow-hidden"
+            className="relative aspect-[16/10] rounded-xl border-2 border-dashed border-highlight/30 dark:border-highlight/20 bg-highlight/5 dark:bg-highlight/5 grid place-items-center cursor-pointer hover:border-highlight/70 transition-colors overflow-hidden"
           >
             {draft.imageUrl ? (
               <SmartImage
@@ -259,7 +259,7 @@ const SlotCard = ({ config, banner }: { config: SlotConfig; banner?: HomeBanner 
       </div>
 
       <div className="mt-6 flex justify-end">
-        <Button onClick={handleSave} disabled={saving} className="bg-amber-600 hover:bg-amber-700 text-white">
+        <Button onClick={handleSave} disabled={saving} className="bg-highlight hover:bg-highlight text-white">
           {saving ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving…
@@ -290,7 +290,7 @@ const AdminHomeBanners = () => {
   if (loading) {
     return (
       <div className="grid place-items-center py-32">
-        <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
       </div>
     );
   }
@@ -298,7 +298,7 @@ const AdminHomeBanners = () => {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <p className="text-[10px] uppercase tracking-[0.3em] text-amber-700 dark:text-amber-400 font-medium mb-2 flex items-center gap-2">
+        <p className="text-[10px] uppercase tracking-[0.3em] text-highlight dark:text-highlight font-medium mb-2 flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5" /> Showcase
         </p>
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white">

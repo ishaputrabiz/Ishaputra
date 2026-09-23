@@ -90,7 +90,7 @@ const TrendProductSection = () => {
         {/* Mobile */}
         <div className="md:hidden">
           <div className="flex items-center justify-between mb-4 px-1">
-            <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+            <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
               Trending Now
             </h2>
             <div className="flex items-center gap-1.5">
@@ -147,7 +147,7 @@ const TrendProductSection = () => {
                           <p className="text-[10px] text-muted-foreground line-through leading-tight">₹{product.oldPrice.toLocaleString()}</p>
                         )}
                         {product.discount && product.discount > 0 && (
-                          <p className="text-[10px] font-semibold text-[#b88a2a] dark:text-[#f4cf73] leading-tight">{product.discount}% Off</p>
+                          <p className="text-[10px] font-semibold text-highlight dark:text-highlight-soft leading-tight">{product.discount}% Off</p>
                         )}
                       </div>
                       <button
@@ -175,7 +175,7 @@ const TrendProductSection = () => {
                 </span>
                 <span className="text-[10px] uppercase tracking-[0.3em] text-primary font-medium">Live</span>
               </div>
-              <h2 className="text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <h2 className="text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                 Trending Now
               </h2>
               <p className="text-sm text-muted-foreground mt-1 font-light">What's hot and trending in silver</p>
@@ -253,7 +253,7 @@ const TrendProductSection = () => {
                             Top Trending
                           </span>
                         )}
-                        <h3 className={`font-semibold text-white line-clamp-2 ${idx === 0 ? 'text-xl mb-2' : 'text-sm mb-1'}`} style={{ fontFamily: "'Playfair Display', serif" }}>
+                        <h3 className={`font-semibold text-white line-clamp-2 ${idx === 0 ? 'text-xl mb-2' : 'text-sm mb-1'}`} style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                           {product.title}
                         </h3>
                         <div className="flex items-center justify-between gap-2">

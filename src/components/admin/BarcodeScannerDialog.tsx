@@ -155,7 +155,7 @@ export const BarcodeScannerDialog = ({
       <DialogContent className="sm:max-w-md bg-white dark:bg-gray-900">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Camera className="w-4 h-4 text-amber-600" /> {title}
+            <Camera className="w-4 h-4 text-highlight" /> {title}
           </DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
@@ -172,10 +172,10 @@ export const BarcodeScannerDialog = ({
           */}
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="relative h-3/5 aspect-square">
-              <span className="absolute -left-0.5 -top-0.5 h-7 w-7 rounded-tl-lg border-l-4 border-t-4 border-amber-400" />
-              <span className="absolute -right-0.5 -top-0.5 h-7 w-7 rounded-tr-lg border-r-4 border-t-4 border-amber-400" />
-              <span className="absolute -bottom-0.5 -left-0.5 h-7 w-7 rounded-bl-lg border-b-4 border-l-4 border-amber-400" />
-              <span className="absolute -bottom-0.5 -right-0.5 h-7 w-7 rounded-br-lg border-b-4 border-r-4 border-amber-400" />
+              <span className="absolute -left-0.5 -top-0.5 h-7 w-7 rounded-tl-lg border-l-4 border-t-4 border-highlight/70" />
+              <span className="absolute -right-0.5 -top-0.5 h-7 w-7 rounded-tr-lg border-r-4 border-t-4 border-highlight/70" />
+              <span className="absolute -bottom-0.5 -left-0.5 h-7 w-7 rounded-bl-lg border-b-4 border-l-4 border-highlight/70" />
+              <span className="absolute -bottom-0.5 -right-0.5 h-7 w-7 rounded-br-lg border-b-4 border-r-4 border-highlight/70" />
             </div>
           </div>
           {starting && (
@@ -187,7 +187,7 @@ export const BarcodeScannerDialog = ({
         </div>
 
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Usb className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+          <Usb className="h-3.5 w-3.5 shrink-0 text-highlight" />
           A USB scanner works here too — just scan, no setup needed.
         </p>
 

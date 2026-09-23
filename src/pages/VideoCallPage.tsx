@@ -364,10 +364,10 @@ const VideoCallPage = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex items-center gap-2 bg-amber-500/20 border border-amber-400/30 rounded-full px-4 py-1.5 backdrop-blur-sm"
+              className="flex items-center gap-2 bg-highlight/20 border border-highlight/21 rounded-full px-4 py-1.5 backdrop-blur-sm"
             >
-              <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" />
-              <span className="text-xs text-amber-300 font-medium">Connecting…</span>
+              <Loader2 className="w-3.5 h-3.5 text-highlight-soft animate-spin" />
+              <span className="text-xs text-highlight-soft font-medium">Connecting…</span>
             </motion.div>
           )}
           {status === 'ended' && (
@@ -396,10 +396,10 @@ const VideoCallPage = () => {
             <div className="text-center">
               {/* Pulsing rings */}
               <div className="relative w-28 h-28 mx-auto mb-6">
-                <span className="absolute inset-0 rounded-full border-2 border-amber-400/30 animate-ping" />
-                <span className="absolute inset-3 rounded-full border-2 border-amber-400/40 animate-ping [animation-delay:300ms]" />
-                <span className="absolute inset-6 rounded-full border-2 border-amber-400/60 animate-ping [animation-delay:600ms]" />
-                <div className="absolute inset-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-xl shadow-amber-900/50">
+                <span className="absolute inset-0 rounded-full border-2 border-highlight/21 animate-ping" />
+                <span className="absolute inset-3 rounded-full border-2 border-highlight/28 animate-ping [animation-delay:300ms]" />
+                <span className="absolute inset-6 rounded-full border-2 border-highlight/42 animate-ping [animation-delay:600ms]" />
+                <div className="absolute inset-8 rounded-full bg-gradient-to-br from-highlight/70 to-highlight flex items-center justify-center shadow-xl shadow-highlight/13">
                   <img src="/white_logo.png" alt="Sreerasthu Silvers" className="w-8 h-8 object-contain" />
                 </div>
               </div>
@@ -415,7 +415,7 @@ const VideoCallPage = () => {
             animate={{ opacity: 1 }}
             className="absolute inset-0 z-10 flex items-center justify-center"
           >
-            <div className="mx-6 bg-[#1a0a0a]/90 border border-red-500/30 rounded-3xl px-6 py-8 text-center max-w-xs shadow-2xl backdrop-blur-sm">
+            <div className="mx-6 bg-charcoal/90 border border-red-500/30 rounded-3xl px-6 py-8 text-center max-w-xs shadow-2xl backdrop-blur-sm">
               <div className="w-14 h-14 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
                 <PhoneOff className="w-7 h-7 text-red-400" />
               </div>
@@ -452,7 +452,7 @@ const VideoCallPage = () => {
             </div>
           )}
           {/* Amber border accent */}
-          <div className="absolute -inset-0.5 rounded-2xl border border-amber-400/20 pointer-events-none" />
+          <div className="absolute -inset-0.5 rounded-2xl border border-highlight/14 pointer-events-none" />
         </div>
       </div>
 

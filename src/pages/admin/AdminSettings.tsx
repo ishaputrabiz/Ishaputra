@@ -70,7 +70,7 @@ const AdminSettings = () => {
               <Label className="text-gray-700">WhatsApp Number</Label>
               <Input value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} placeholder="WhatsApp number" className="mt-2 bg-gray-100 border-gray-300 text-gray-900" />
             </div>
-            <Button type="submit" className="bg-amber-600 hover:bg-amber-700 text-white" disabled={saving}>
+            <Button type="submit" className="bg-highlight hover:bg-highlight text-white" disabled={saving}>
               {saving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

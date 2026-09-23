@@ -405,10 +405,10 @@ const AdminDeliveryBoys = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-600 dark:text-zinc-400 text-sm">On Duty</p>
-              <p className="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">{stats.onDuty}</p>
+              <p className="text-3xl font-bold text-highlight dark:text-highlight mt-1">{stats.onDuty}</p>
             </div>
-            <div className="bg-amber-100 dark:bg-amber-900/30 p-3 rounded-full">
-              <Truck className="h-6 w-6 text-amber-600 dark:text-amber-300" />
+            <div className="bg-highlight/15 dark:bg-highlight/8 p-3 rounded-full">
+              <Truck className="h-6 w-6 text-highlight dark:text-highlight" />
             </div>
           </div>
         </motion.div>
@@ -529,10 +529,10 @@ const AdminDeliveryBoys = () => {
                   <SmartImage
                     src={deliveryBoy.profileImage}
                     alt={deliveryBoy.name}
-                    className="h-14 w-14 rounded-full object-cover ring-2 ring-[#d4af37]/40 shadow-sm" preset="thumb" />
+                    className="h-14 w-14 rounded-full object-cover ring-2 ring-highlight/40 shadow-sm" preset="thumb" />
                 ) : (
-                  <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[#d4af37]/20 to-[#832729]/10 dark:from-amber-900/30 dark:to-amber-800/20 flex items-center justify-center ring-2 ring-[#d4af37]/40">
-                    <span className="text-[#832729] dark:text-amber-300 font-semibold text-lg">
+                  <div className="h-14 w-14 rounded-full bg-gradient-to-br from-highlight/20 to-primary/10 dark:from-highlight/8 dark:to-highlight/7 flex items-center justify-center ring-2 ring-highlight/40">
+                    <span className="text-primary dark:text-highlight font-semibold text-lg">
                       {deliveryBoy.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
@@ -565,7 +565,7 @@ const AdminDeliveryBoys = () => {
               {/* Stat tiles */}
               <div className="grid grid-cols-3 gap-2 mt-4">
                 <div className="bg-gray-50 dark:bg-zinc-800/60 rounded-lg p-2 text-center">
-                  <div className="flex items-center justify-center gap-1 text-amber-500">
+                  <div className="flex items-center justify-center gap-1 text-highlight">
                     <Star className="h-3 w-3 fill-current" />
                     <span className="text-xs font-semibold text-gray-900 dark:text-zinc-100">
                       {deliveryBoy.rating.toFixed(1)}
@@ -603,7 +603,7 @@ const AdminDeliveryBoys = () => {
               <div className="pt-4 mt-4 border-t border-gray-100 dark:border-zinc-800 space-y-2">
                 <button
                   onClick={() => navigate(`/admin/delivery-boys/${deliveryBoy.id}`)}
-                  className="w-full py-2 text-xs font-medium text-white bg-gradient-to-r from-[#832729] to-[#a83336] rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 shadow-sm"
+                  className="w-full py-2 text-xs font-medium text-white bg-gradient-to-r from-primary to-primary rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 shadow-sm"
                 >
                   <UserCheck className="h-3.5 w-3.5" />
                   View Full Profile
@@ -619,7 +619,7 @@ const AdminDeliveryBoys = () => {
                     onClick={() => handleToggleStatus(deliveryBoy)}
                     className={`p-1.5 rounded-lg transition-colors ${
                       deliveryBoy.isActive
-                        ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                        ? 'bg-highlight/10 dark:bg-highlight/5 text-highlight dark:text-highlight hover:bg-highlight/15 dark:hover:bg-highlight/10'
                         : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/40'
                     }`}
                     title={deliveryBoy.isActive ? 'Deactivate' : 'Activate'}
@@ -670,7 +670,7 @@ const AdminDeliveryBoys = () => {
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900 dark:text-zinc-100">{deliveryBoy.name}</div>
                           <div className="text-sm text-gray-500 dark:text-zinc-400 flex items-center mt-1">
-                            <Star className="h-3 w-3 text-yellow-400 mr-1 fill-current" />
+                            <Star className="h-3 w-3 text-highlight-soft mr-1 fill-current" />
                             {deliveryBoy.rating.toFixed(1)} ({deliveryBoy.totalDeliveries} deliveries)
                           </div>
                         </div>
@@ -698,7 +698,7 @@ const AdminDeliveryBoys = () => {
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/delivery-boys/${deliveryBoy.id}`)} className="text-indigo-600 dark:text-indigo-300 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"><UserCheck className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(deliveryBoy)} className="text-blue-600 dark:text-blue-300 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30"><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleToggleStatus(deliveryBoy)} className={deliveryBoy.isActive ? 'text-amber-600 dark:text-amber-300 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/30' : 'text-green-600 dark:text-green-300 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/30'}>
+                        <Button variant="ghost" size="sm" onClick={() => handleToggleStatus(deliveryBoy)} className={deliveryBoy.isActive ? 'text-highlight dark:text-highlight hover:text-highlight hover:bg-highlight/10 dark:hover:bg-highlight/8' : 'text-green-600 dark:text-green-300 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/30'}>
                           {deliveryBoy.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => { setSelectedDeliveryBoy(deliveryBoy); setShowDeleteDialog(true); }} className="text-red-600 dark:text-red-300 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="h-4 w-4" /></Button>
@@ -989,7 +989,7 @@ const AdminDeliveryBoys = () => {
                     <h3 className="text-lg font-semibold text-gray-900">{profileDeliveryBoy.name}</h3>
                     <p className="text-sm text-gray-500 capitalize">{profileDeliveryBoy.vehicleType}</p>
                     <div className="flex items-center gap-1 mt-1">
-                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                      <Star className="h-4 w-4 text-highlight-soft fill-current" />
                       <span className="text-sm font-medium text-gray-700">{profileDeliveryBoy.rating.toFixed(1)}</span>
                       <span className="text-xs text-gray-400">({profileDeliveryBoy.totalDeliveries} deliveries)</span>
                     </div>
@@ -1009,8 +1009,8 @@ const AdminDeliveryBoys = () => {
                     <p className="text-xl font-bold text-blue-600">{profileDeliveryBoy.totalDeliveries}</p>
                     <p className="text-xs text-gray-500 mt-0.5">Deliveries</p>
                   </div>
-                  <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                    <p className="text-xl font-bold text-yellow-600">{profileDeliveryBoy.rating.toFixed(1)}</p>
+                  <div className="text-center p-3 bg-highlight/10 rounded-lg">
+                    <p className="text-xl font-bold text-highlight">{profileDeliveryBoy.rating.toFixed(1)}</p>
                     <p className="text-xs text-gray-500 mt-0.5">Avg Rating</p>
                   </div>
                   <div className="text-center p-3 bg-green-50 rounded-lg">
@@ -1063,7 +1063,7 @@ const AdminDeliveryBoys = () => {
                     {/* Customer Ratings */}
                     <div className="px-6 py-4">
                       <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <Star className="h-4 w-4 text-yellow-400" />
+                        <Star className="h-4 w-4 text-highlight-soft" />
                         Customer Ratings ({profileRatings.length})
                       </h4>
                       {profileRatings.length === 0 ? (
@@ -1074,7 +1074,7 @@ const AdminDeliveryBoys = () => {
                             <div key={r.id} className="p-3 border border-gray-100 rounded-lg">
                               <div className="flex items-center gap-1 mb-1">
                                 {[1,2,3,4,5].map(n => (
-                                  <Star key={n} className={`h-3.5 w-3.5 ${n <= r.rating ? 'text-yellow-400 fill-current' : 'text-gray-200'}`} />
+                                  <Star key={n} className={`h-3.5 w-3.5 ${n <= r.rating ? 'text-highlight-soft fill-current' : 'text-gray-200'}`} />
                                 ))}
                                 <span className="text-xs text-gray-400 ml-1">
                                   {r.createdAt?.seconds

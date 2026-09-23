@@ -142,7 +142,7 @@ const MobileCategories = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 pb-20" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 pb-20" style={{ fontFamily: "var(--font-body)" }}>
       {/* Header */}
       <div className="sticky top-0 bg-white dark:bg-zinc-900 z-40 px-4 py-3 flex items-center justify-between border-b border-gray-100 dark:border-zinc-800">
         <div className="flex items-center gap-3">
@@ -152,7 +152,7 @@ const MobileCategories = () => {
           >
             <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-zinc-300" />
           </button>
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>Top Categories</h1>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Top Categories</h1>
         </div>
         <img 
           src={logo} 
@@ -189,7 +189,7 @@ const MobileCategories = () => {
                 selectedCategory.id === category.id
                   ? 'text-red-600'
                   : 'text-gray-600'
-              }`} style={{ fontFamily: "'Poppins', sans-serif" }}>
+              }`} style={{ fontFamily: "var(--font-body)" }}>
                 {category.name.length > 10 ? category.name.slice(0, 10) + '...' : category.name}
               </span>
             </button>
@@ -199,7 +199,7 @@ const MobileCategories = () => {
         {/* Right Content - Subcategories */}
         <div className="flex-1 p-4">
           {/* Category Title */}
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100 mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>{selectedCategory.name}</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100 mb-4" style={{ fontFamily: "var(--font-body)" }}>{selectedCategory.name}</h2>
 
           {/* Subcategory Grid */}
           <div className="grid grid-cols-3 gap-3">
@@ -218,7 +218,7 @@ const MobileCategories = () => {
                     alt={subcategory.name}
                     className="w-full h-full object-cover" preset="card" />
                 </div>
-                <span className="text-xs text-gray-700 dark:text-zinc-300 text-center font-medium truncate w-full" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                <span className="text-xs text-gray-700 dark:text-zinc-300 text-center font-medium truncate w-full" style={{ fontFamily: "var(--font-body)" }}>
                   {subcategory.name.length > 12 ? subcategory.name.slice(0, 12) + '...' : subcategory.name}
                 </span>
               </motion.button>

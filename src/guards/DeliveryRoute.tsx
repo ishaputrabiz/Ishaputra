@@ -27,7 +27,7 @@ const DeliveryRoute: React.FC<DeliveryRouteProps> = ({ children }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <Loader2 className="h-12 w-12 animate-spin text-amber-500 mx-auto" />
+          <Loader2 className="h-12 w-12 animate-spin text-highlight mx-auto" />
           <p className="mt-4 text-gray-400">Verifying delivery access...</p>
         </motion.div>
       </div>
@@ -59,7 +59,7 @@ const DeliveryRoute: React.FC<DeliveryRouteProps> = ({ children }) => {
           <div className="space-y-3">
             <a
               href="/"
-              className="block w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+              className="block w-full bg-highlight hover:bg-highlight text-white font-medium py-3 px-6 rounded-lg transition-colors"
             >
               Go to Homepage
             </a>

@@ -770,7 +770,7 @@ const ProductForm = () => {
   if (fetchingProduct) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-highlight" />
       </div>
     );
   }
@@ -809,7 +809,7 @@ const ProductForm = () => {
           <Button
             type="submit"
             form="product-form"
-            className="bg-amber-600 hover:bg-amber-700 text-white"
+            className="bg-highlight hover:bg-highlight text-white"
             disabled={loading}
           >
             {loading ? (
@@ -860,7 +860,7 @@ const ProductForm = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    className="border-amber-300 text-amber-700 hover:bg-amber-50 shrink-0"
+                    className="border-highlight/45 text-highlight hover:bg-highlight/10 shrink-0"
                     onClick={() => setScannerOpen(true)}
                   >
                     <ScanLine className="h-4 w-4 mr-2" />
@@ -977,11 +977,11 @@ const ProductForm = () => {
                     </p>
                   </div>
                 ) : imageUploadMode === 'upload' ? (
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:border-amber-600 transition-colors">
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:border-highlight transition-colors">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       {uploadingImages ? (
                         <>
-                          <Loader2 className="h-8 w-8 animate-spin text-amber-600 mb-2" />
+                          <Loader2 className="h-8 w-8 animate-spin text-highlight mb-2" />
                           <p className="text-sm text-gray-600">Uploading... {uploadProgress}%</p>
                         </>
                       ) : (
@@ -1036,14 +1036,14 @@ const ProductForm = () => {
                           className="relative group cursor-move"
                         >
                           <div className="w-full aspect-square bg-gray-200 rounded-lg overflow-hidden ring-1 ring-gray-200">
-                            <SmartImage src={url} alt={'Product ' + (index + 1)} className={'w-full h-full object-cover ' + (thumbnail === url ? 'ring-2 ring-amber-500' : '')} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} preset="card" />
+                            <SmartImage src={url} alt={'Product ' + (index + 1)} className={'w-full h-full object-cover ' + (thumbnail === url ? 'ring-2 ring-highlight' : '')} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} preset="card" />
                           </div>
                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-                            <button type="button" onClick={() => setThumbnail(url)} className="p-1.5 bg-amber-600 hover:bg-amber-700 rounded text-white" title="Set as thumbnail"><ImageIcon className="h-4 w-4" /></button>
+                            <button type="button" onClick={() => setThumbnail(url)} className="p-1.5 bg-highlight hover:bg-highlight rounded text-white" title="Set as thumbnail"><ImageIcon className="h-4 w-4" /></button>
                             <button type="button" onClick={() => handleRemoveImage(url)} className="p-1.5 bg-red-500 hover:bg-red-600 rounded text-white" title="Remove"><X className="h-4 w-4" /></button>
                           </div>
                           <span className="absolute top-1 right-1 bg-black/70 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">#{index + 1}</span>
-                          {thumbnail === url && <span className="absolute top-1 left-1 bg-amber-600 text-white text-[10px] font-medium px-1.5 py-0.5 rounded">THUMB</span>}
+                          {thumbnail === url && <span className="absolute top-1 left-1 bg-highlight text-white text-[10px] font-medium px-1.5 py-0.5 rounded">THUMB</span>}
                         </div>
                       ))}
                     </div>
@@ -1100,7 +1100,7 @@ const ProductForm = () => {
             <CardContent className="space-y-4">
 
               {/* ── Silver Rate Calculator (optional) ── */}
-              <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50/60 p-4 space-y-3">
+              <div className="rounded-xl border border-dashed border-highlight/45 bg-highlight/6 p-4 space-y-3">
                 {/* Entire header row is clickable to toggle */}
                 <div
                   className="flex items-center justify-between gap-3 cursor-pointer select-none flex-wrap"
@@ -1113,11 +1113,11 @@ const ProductForm = () => {
                   }}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <Calculator className="h-4 w-4 text-amber-600 shrink-0" />
+                    <Calculator className="h-4 w-4 text-highlight shrink-0" />
                     <span className="text-sm font-semibold text-gray-800 truncate">Silver Rate Calculator</span>
                     <span className={`text-xs rounded-full px-2 py-0.5 border transition-colors shrink-0 ${
                       silverPricing.enabled
-                        ? 'text-amber-700 bg-amber-100 border-amber-300 font-medium'
+                        ? 'text-highlight bg-highlight/15 border-highlight/45 font-medium'
                         : 'text-gray-500 bg-white border-gray-200'
                     }`}>
                       {silverPricing.enabled ? 'Enabled' : 'Optional'}
@@ -1145,12 +1145,12 @@ const ProductForm = () => {
                 {silverPricing.enabled && (
                   <div className="space-y-4 pt-1">
                     {/* Silver rate display — live Firestore listener */}
-                    <div className="flex items-center gap-2 bg-white border border-amber-200 rounded-lg px-3 py-2">
-                      <Info className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    <div className="flex items-center gap-2 bg-white border border-highlight/30 rounded-lg px-3 py-2">
+                      <Info className="h-3.5 w-3.5 text-highlight shrink-0" />
                       <span className="text-xs text-gray-600 flex-1">
                         Current silver rate:{' '}
                         {silverRate > 0 ? (
-                          <strong className="text-amber-700">₹{silverRate.toFixed(2)} / gram</strong>
+                          <strong className="text-highlight">₹{silverRate.toFixed(2)} / gram</strong>
                         ) : (
                           <span className="text-red-500">Not set — go to Silver Rate page first</span>
                         )}
@@ -1177,11 +1177,11 @@ const ProductForm = () => {
                           placeholder="e.g., 12"
                           min="0"
                           step="0.01"
-                          className={'mt-1.5 bg-white border-amber-200 text-gray-900 text-sm' + invalidRing(!!fieldErrors.weightGrams)}
+                          className={'mt-1.5 bg-white border-highlight/30 text-gray-900 text-sm' + invalidRing(!!fieldErrors.weightGrams)}
                         />
                         <FieldError message={fieldErrors.weightGrams || fieldErrors.silverRate} />
                         {silverRate > 0 && silverPricing.weightGrams && (
-                          <p className="text-xs text-amber-600 mt-1">
+                          <p className="text-xs text-highlight mt-1">
                             Silver cost: ₹{(parseFloat(silverPricing.weightGrams || '0') * silverRate).toFixed(2)}
                           </p>
                         )}
@@ -1197,10 +1197,10 @@ const ProductForm = () => {
                           min="0"
                           max="100"
                           step="0.1"
-                          className="mt-1.5 bg-white border-amber-200 text-gray-900 text-sm"
+                          className="mt-1.5 bg-white border-highlight/30 text-gray-900 text-sm"
                         />
                         {silverRate > 0 && silverPricing.weightGrams && silverPricing.wastagePercent && (
-                          <p className="text-xs text-amber-600 mt-1">
+                          <p className="text-xs text-highlight mt-1">
                             Wastage: ₹{(parseFloat(silverPricing.weightGrams || '0') * silverRate * (parseFloat(silverPricing.wastagePercent || '0') / 100)).toFixed(2)}
                           </p>
                         )}
@@ -1215,7 +1215,7 @@ const ProductForm = () => {
                           placeholder="e.g., 50"
                           min="0"
                           step="1"
-                          className="mt-1.5 bg-white border-amber-200 text-gray-900 text-sm"
+                          className="mt-1.5 bg-white border-highlight/30 text-gray-900 text-sm"
                         />
                       </div>
                     </div>
@@ -1230,7 +1230,7 @@ const ProductForm = () => {
                       const z = making;
                       const total = Math.ceil(x + y + z);
                       return (
-                        <div className="bg-white border border-amber-200 rounded-lg p-3 text-xs space-y-1.5">
+                        <div className="bg-white border border-highlight/30 rounded-lg p-3 text-xs space-y-1.5">
                           <div className="flex justify-between text-gray-600">
                             <span>Silver cost ({grams}g × ₹{silverRate}/g)</span>
                             <span className="font-medium text-gray-800">₹{x.toFixed(2)}</span>
@@ -1243,7 +1243,7 @@ const ProductForm = () => {
                             <span>Making charges</span>
                             <span className="font-medium text-gray-800">₹{z.toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between border-t border-amber-200 pt-1.5 font-semibold text-amber-700">
+                          <div className="flex justify-between border-t border-highlight/30 pt-1.5 font-semibold text-highlight">
                             <span>Original Price (x + y + z)</span>
                             <span>₹{total.toLocaleString('en-IN')}</span>
                           </div>
@@ -1256,19 +1256,19 @@ const ProductForm = () => {
 
               {/* ── Standard pricing fields ── */}
               {silverPricing.enabled ? (
-                <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+                <div className="rounded-lg bg-highlight/10 border border-highlight/30 px-4 py-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-amber-800">Price (live)</span>
+                    <span className="text-sm font-semibold text-highlight">Price (live)</span>
                     {formData.price ? (
-                      <span className="text-lg font-bold text-amber-900">
+                      <span className="text-lg font-bold text-highlight">
                         ₹{parseFloat(formData.price).toLocaleString('en-IN')}
-                        <span className="ml-2 text-xs font-normal text-amber-600">at ₹{silverRate}/g</span>
+                        <span className="ml-2 text-xs font-normal text-highlight">at ₹{silverRate}/g</span>
                       </span>
                     ) : (
-                      <span className="text-sm text-amber-600">Fill calculator inputs above</span>
+                      <span className="text-sm text-highlight">Fill calculator inputs above</span>
                     )}
                   </div>
-                  <p className="text-xs text-amber-600 mt-1">Customers always see the price recomputed at the current live silver rate.</p>
+                  <p className="text-xs text-highlight mt-1">Customers always see the price recomputed at the current live silver rate.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1343,7 +1343,7 @@ const ProductForm = () => {
                     </Select>
                   </div>
                   {silverPricing.enabled && (
-                    <p className="text-xs text-amber-600 mt-1">Auto-synced from Silver Rate Calculator</p>
+                    <p className="text-xs text-highlight mt-1">Auto-synced from Silver Rate Calculator</p>
                   )}
                 </div>
               </div>
@@ -1389,7 +1389,7 @@ const ProductForm = () => {
           <Card className="bg-white border-gray-200">
             <CardHeader>
               <CardTitle className="text-gray-900 flex items-center gap-2">
-                <Truck className="h-4 w-4 text-amber-600" /> Delivery
+                <Truck className="h-4 w-4 text-highlight" /> Delivery
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1479,14 +1479,14 @@ const ProductForm = () => {
                 <Switch checked={formData.isActive} onCheckedChange={(checked) => { setStatusNote(null); setFormData((prev) => ({ ...prev, isActive: checked })); }} />
               </div>
               {!formData.isActive && inactiveReason && !statusNote && (
-                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <p className="rounded-lg bg-highlight/10 px-3 py-2 text-xs text-highlight">
                   {inactiveReason === 'outOfStock'
                     ? 'Hidden automatically because it sold out. Add stock and it goes live again.'
                     : 'Hidden because it had no photos. Add a photo, then switch Active on.'}
                 </p>
               )}
               {statusNote && (
-                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{statusNote}</p>
+                <p className="rounded-lg bg-highlight/10 px-3 py-2 text-xs text-highlight">{statusNote}</p>
               )}
               <div className="flex items-center justify-between">
                 <Label className="text-gray-700">Featured</Label>
@@ -1520,7 +1520,7 @@ const ProductForm = () => {
         {/* Actions */}
         <div className="lg:col-span-3">
           <div className="flex gap-3">
-            <Button type="submit" className="bg-amber-600 hover:bg-amber-700 text-white px-8" disabled={loading}>
+            <Button type="submit" className="bg-highlight hover:bg-highlight text-white px-8" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

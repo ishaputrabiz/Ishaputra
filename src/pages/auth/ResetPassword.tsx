@@ -163,7 +163,7 @@ const ResetPassword = () => {
         <Header />
         <div className="flex items-center justify-center py-20 px-4">
           <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin text-amber-600 mx-auto mb-4" />
+            <Loader2 className="h-12 w-12 animate-spin text-highlight mx-auto mb-4" />
             <p className="text-gray-600 dark:text-zinc-400">Verifying reset link...</p>
           </div>
         </div>
@@ -187,7 +187,7 @@ const ResetPassword = () => {
               <p className="text-gray-600 dark:text-zinc-400 mb-6">{error}</p>
               <Button
                 onClick={() => navigate('/forgot-password')}
-                className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                className="w-full bg-highlight hover:bg-highlight text-white"
               >
                 Request New Reset Link
               </Button>
@@ -232,7 +232,7 @@ const ResetPassword = () => {
               </p>
               <Button
                 onClick={() => navigate('/account')}
-                className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                className="w-full bg-highlight hover:bg-highlight text-white"
               >
                 Sign In Now
               </Button>
@@ -253,8 +253,8 @@ const ResetPassword = () => {
           <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl p-8">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="bg-amber-100 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-                <Lock className="h-10 w-10 text-amber-600" />
+              <div className="bg-highlight/15 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                <Lock className="h-10 w-10 text-highlight" />
               </div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-2">Reset Your Password</h1>
               <p className="text-gray-600 dark:text-zinc-400">
@@ -361,7 +361,7 @@ const ResetPassword = () => {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 h-12 font-semibold"
+                className="w-full bg-highlight hover:bg-highlight text-white py-3 h-12 font-semibold"
                 disabled={loading || !passwordStrength || !passwordStrength.meetsMinimum}
               >
                 {loading ? (

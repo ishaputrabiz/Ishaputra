@@ -144,7 +144,7 @@ const AdminVideoCalls = () => {
         key={req.id}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-gray-900 border border-[#F5EFE6] dark:border-gray-800 rounded-2xl p-5 shadow-sm"
+        className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl p-5 shadow-sm"
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-3">
@@ -290,8 +290,8 @@ const AdminVideoCalls = () => {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
-          <Video className="w-5 h-5 text-amber-600" />
+        <div className="w-10 h-10 rounded-full bg-highlight/15 dark:bg-highlight/25 flex items-center justify-center">
+          <Video className="w-5 h-5 text-highlight" />
         </div>
         <div>
           <h1 className="text-xl font-bold text-foreground">Video Call Requests</h1>
@@ -319,7 +319,7 @@ const AdminVideoCalls = () => {
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
+          <Loader2 className="w-6 h-6 animate-spin text-highlight" />
         </div>
       ) : items.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">

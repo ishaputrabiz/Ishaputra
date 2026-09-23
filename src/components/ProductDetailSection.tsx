@@ -49,7 +49,7 @@ const ProductDetailSection = () => {
             transition={{ duration: 0.6 }}
             className="relative"
           >
-            <div className="relative bg-[#f5ebe0] rounded-lg overflow-hidden aspect-square">
+            <div className="relative bg-cream rounded-lg overflow-hidden aspect-square">
               {/* Subtle gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-primary/5" />
               

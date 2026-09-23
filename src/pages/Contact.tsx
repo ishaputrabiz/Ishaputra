@@ -48,7 +48,7 @@ const Contact = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="text-5xl md:text-6xl font-light tracking-wide mb-4"
-            style={{ fontFamily: "'Poppins', sans-serif" }}
+            style={{ fontFamily: "var(--font-body)" }}
           >
             Contact
           </motion.h1>
@@ -74,7 +74,7 @@ const Contact = () => {
         >
           <h2
             className="text-4xl md:text-5xl font-light text-foreground mb-6"
-            style={{ fontFamily: "'Poppins', sans-serif" }}
+            style={{ fontFamily: "var(--font-body)" }}
           >
             Get In Touch
           </h2>
@@ -96,7 +96,7 @@ const Contact = () => {
           >
             <div className="flex items-start gap-4 mb-4">
               <MapPin className="w-6 h-6 text-foreground mt-1" />
-              <h3 className="text-2xl font-normal text-foreground" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              <h3 className="text-2xl font-normal text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                 Address:
               </h3>
             </div>
@@ -116,7 +116,7 @@ const Contact = () => {
           >
             <div className="flex items-start gap-4 mb-4">
               <Phone className="w-6 h-6 text-foreground mt-1" />
-              <h3 className="text-2xl font-normal text-foreground" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              <h3 className="text-2xl font-normal text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                 Contact Us
               </h3>
             </div>
@@ -137,7 +137,7 @@ const Contact = () => {
           >
             <div className="flex items-start gap-4 mb-4">
               <Clock className="w-6 h-6 text-foreground mt-1" />
-              <h3 className="text-2xl font-normal text-foreground" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              <h3 className="text-2xl font-normal text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                 Hour Of Operation
               </h3>
             </div>
@@ -152,7 +152,7 @@ const Contact = () => {
         <div className="max-w-7xl mx-auto">
           <h2
             className="text-4xl md:text-5xl font-light text-foreground text-center mb-12"
-            style={{ fontFamily: "'Poppins', sans-serif" }}
+            style={{ fontFamily: "var(--font-body)" }}
           >
             Send a Message
           </h2>

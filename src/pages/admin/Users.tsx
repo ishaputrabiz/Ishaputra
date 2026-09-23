@@ -95,7 +95,7 @@ const Users = () => {
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-6">
           <p className="text-gray-600 text-sm">Active Users</p>
-          <p className="text-3xl font-bold text-amber-600 mt-2">{users.length}</p>
+          <p className="text-3xl font-bold text-highlight mt-2">{users.length}</p>
         </div>
       </div>
 
@@ -123,7 +123,7 @@ const Users = () => {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="p-8 text-center">
-            <div className="animate-spin h-8 w-8 border-2 border-amber-600 border-t-transparent rounded-full mx-auto"></div>
+            <div className="animate-spin h-8 w-8 border-2 border-highlight border-t-transparent rounded-full mx-auto"></div>
             <p className="text-gray-600 mt-4">Loading users...</p>
           </div>
         ) : filteredUsers.length > 0 ? (
@@ -153,8 +153,8 @@ const Users = () => {
                   <tr key={user.uid} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center">
-                          <span className="text-amber-600 font-medium">
+                        <div className="w-10 h-10 bg-highlight/10 rounded-full flex items-center justify-center">
+                          <span className="text-highlight font-medium">
                             {user.username?.charAt(0).toUpperCase() || 'U'}
                           </span>
                         </div>

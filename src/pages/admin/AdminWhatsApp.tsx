@@ -252,7 +252,7 @@ const AdminWhatsApp = () => {
                         className={`mt-2 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full ${
                           open
                             ? 'bg-[#d9fdd3] text-[#128c7e]'
-                            : 'bg-[#fff3cd] text-[#8a6d1f]'
+                            : 'bg-[#fff3cd] text-highlight'
                         }`}
                       >
                         <Clock className="h-2.5 w-2.5" />
@@ -313,7 +313,7 @@ const AdminWhatsApp = () => {
                 className={`hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full ${
                   windowOpen
                     ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-amber-100 text-amber-800'
+                    : 'bg-highlight/15 text-highlight'
                 }`}
               >
                 <Clock className="h-3 w-3" />
@@ -514,7 +514,7 @@ const ReplyComposer = ({
       </div>
 
       {!windowOpen && (
-        <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 flex items-start gap-1">
+        <div className="text-[11px] text-highlight bg-highlight/10 border border-highlight/30 rounded px-2 py-1 flex items-start gap-1">
           <AlertTriangle className="h-3 w-3 mt-0.5" />
           <span>
             Free-form window closed. Meta requires an approved template until the customer

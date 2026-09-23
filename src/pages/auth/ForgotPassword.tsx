@@ -167,7 +167,7 @@ const ForgotPassword = () => {
                 </Button>
 
                 <Link to="/account">
-                  <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white">
+                  <Button className="w-full bg-highlight hover:bg-highlight text-white">
                     Back to Sign In
                   </Button>
                 </Link>
@@ -177,8 +177,8 @@ const ForgotPassword = () => {
               <>
                 {/* Header */}
                 <div className="text-center mb-8">
-                  <div className="bg-amber-100 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-                    <Mail className="h-10 w-10 text-amber-600" />
+                  <div className="bg-highlight/15 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                    <Mail className="h-10 w-10 text-highlight" />
                   </div>
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-2">Forgot Password?</h1>
                   <p className="text-gray-600 dark:text-zinc-400">
@@ -196,7 +196,7 @@ const ForgotPassword = () => {
 
                 {/* Rate Limit Warning */}
                 {attemptCount.current >= 2 && !rateLimited && (
-                  <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-6 flex gap-3">
+                  <div className="bg-highlight/10 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-6 flex gap-3">
                     <Info className="h-5 w-5 flex-shrink-0" />
                     <span className="text-sm">
                       You have {MAX_RESET_ATTEMPTS - attemptCount.current} attempt(s) remaining.
@@ -226,7 +226,7 @@ const ForgotPassword = () => {
 
                   <Button
                     type="submit"
-                    className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 h-12 font-semibold"
+                    className="w-full bg-highlight hover:bg-highlight text-white py-3 h-12 font-semibold"
                     disabled={loading || rateLimited}
                   >
                     {loading ? (
@@ -253,7 +253,7 @@ const ForgotPassword = () => {
                 {/* Back to Login */}
                 <Link 
                   to="/account"
-                  className="flex items-center justify-center gap-2 mt-6 text-gray-600 dark:text-zinc-400 hover:text-amber-600 transition-colors font-medium"
+                  className="flex items-center justify-center gap-2 mt-6 text-gray-600 dark:text-zinc-400 hover:text-highlight transition-colors font-medium"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back to Sign In

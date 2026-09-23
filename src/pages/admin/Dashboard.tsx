@@ -148,16 +148,16 @@ const Dashboard = () => {
   return (
     <div className="space-y-5">
       {/* Premium Page Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-amber-200/40 bg-gradient-to-br from-amber-50 via-white to-orange-50/30 p-5 shadow-sm">
-        <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
+      <div className="relative overflow-hidden rounded-2xl border border-highlight/12 bg-gradient-to-br from-highlight/10 via-white to-primary/5 p-5 shadow-sm">
+        <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-highlight/8 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-highlight/28 to-transparent" />
         <div className="relative flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-serif font-semibold text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>Dashboard</h1>
-            <p className="text-gray-600 text-sm mt-1">Welcome back — here's what's happening at <span className="text-amber-700 font-medium">Sreerasthu Silvers</span> today.</p>
+            <h1 className="text-2xl font-serif font-semibold text-gray-900" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Dashboard</h1>
+            <p className="text-gray-600 text-sm mt-1">Welcome back — here's what's happening at <span className="text-highlight font-medium">Sreerasthu Silvers</span> today.</p>
           </div>
           <Link to="/admin/products/new">
-            <Button className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 shadow-md">
+            <Button className="bg-gradient-to-r from-highlight to-highlight hover:from-highlight hover:to-highlight/35 shadow-md">
               <Plus className="h-4 w-4 mr-2" />
               Add Product
             </Button>
@@ -166,18 +166,18 @@ const Dashboard = () => {
       </div>
 
       {/* Silver Rate Quick Card */}
-      <Card className="border-amber-200/60 bg-gradient-to-r from-amber-50/80 to-yellow-50/40">
+      <Card className="border-highlight/18 bg-gradient-to-r from-highlight/8 to-yellow-50/40">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <div className="bg-amber-100 p-2 rounded-lg shrink-0">
-                <Coins className="h-4 w-4 text-amber-600" />
+              <div className="bg-highlight/15 p-2 rounded-lg shrink-0">
+                <Coins className="h-4 w-4 text-highlight" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-medium text-amber-700 uppercase tracking-wider">Silver Rate (Live)</p>
+                <p className="text-xs font-medium text-highlight uppercase tracking-wider">Silver Rate (Live)</p>
                 {silverSaved !== null && (
                   <p className="text-xs text-gray-500">
-                    Current: <span className="font-semibold text-amber-700">₹{silverSaved}/g</span>
+                    Current: <span className="font-semibold text-highlight">₹{silverSaved}/g</span>
                     <span className="ml-2 text-gray-400">→ 10g: ₹{(silverSaved * 10).toLocaleString('en-IN')} · 1kg: ₹{(silverSaved * 1000).toLocaleString('en-IN')}</span>
                   </p>
                 )}
@@ -191,7 +191,7 @@ const Dashboard = () => {
                   min={1}
                   value={silverInput}
                   onChange={(e) => setSilverInput(e.target.value)}
-                  className="pl-6 w-28 h-8 text-sm border-amber-200 focus:border-amber-400"
+                  className="pl-6 w-28 h-8 text-sm border-highlight/30 focus:border-highlight/70"
                   placeholder="price/g"
                 />
               </div>
@@ -199,7 +199,7 @@ const Dashboard = () => {
                 size="sm"
                 disabled={!silverChanged || silverSaving}
                 onClick={handleSilverSave}
-                className="h-8 bg-amber-600 hover:bg-amber-700 text-white shrink-0"
+                className="h-8 bg-highlight hover:bg-highlight text-white shrink-0"
               >
                 {silverSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 <span className="ml-1.5 hidden sm:inline">{silverSaving ? 'Saving…' : 'Save Rate'}</span>
@@ -217,7 +217,7 @@ const Dashboard = () => {
             className="group relative overflow-hidden bg-white border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
             onClick={() => stat.link && navigate(stat.link)}
           >
-            <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-amber-400 to-amber-600 scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top" />
+            <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-highlight/70 to-highlight scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top" />
             <CardContent className="p-4">
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-gray-600 text-xs font-medium uppercase tracking-wider">{stat.title}</h3>
@@ -240,7 +240,7 @@ const Dashboard = () => {
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-gray-900 text-base">Recent Products</CardTitle>
             <Link to="/admin/products">
-              <Button variant="ghost" size="sm" className="text-amber-500 hover:text-amber-400">
+              <Button variant="ghost" size="sm" className="text-highlight hover:text-highlight-soft">
                 View All
               </Button>
             </Link>
@@ -271,7 +271,7 @@ const Dashboard = () => {
                       <p className="text-gray-500 text-xs">{product.category}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-amber-600 text-sm font-medium">₹{product.price}</p>
+                      <p className="text-highlight text-sm font-medium">₹{product.price}</p>
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                           product.flags?.isActive
@@ -290,7 +290,7 @@ const Dashboard = () => {
                 <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600">No products yet</p>
                 <Link to="/admin/products/new">
-                  <Button className="mt-4 bg-amber-600 hover:bg-amber-700" size="sm">
+                  <Button className="mt-4 bg-highlight hover:bg-highlight" size="sm">
                     Add First Product
                   </Button>
                 </Link>

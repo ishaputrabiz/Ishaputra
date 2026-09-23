@@ -813,12 +813,12 @@ const ProductDetail = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
                 className="flex flex-col"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-body)" }}
               >
                 {/* Title */}
                 <h1 
                   className="text-base md:text-2xl lg:text-3xl font-medium text-foreground mb-3"
-                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                  style={{ fontFamily: "var(--font-body)" }}
                 >
                   {product.title}
                 </h1>
@@ -896,7 +896,7 @@ const ProductDetail = () => {
                 {product.specifications && (product.specifications.material || product.specifications.purity || product.specifications.dimensions) && (
                   <div className="grid grid-cols-3 gap-2 md:gap-3 mb-6">
                     {product.specifications.dimensions && (
-                      <div className="border-2 border-[#C4A962] dark:border-[#C4A962]/60 rounded-lg p-3 text-center">
+                      <div className="border-2 border-highlight dark:border-highlight/60 rounded-lg p-3 text-center">
                         <p className="text-xs text-muted-foreground mb-1">Size</p>
                         <p className="text-sm md:text-base font-medium text-foreground">
                           {product.specifications.dimensions}
@@ -904,7 +904,7 @@ const ProductDetail = () => {
                       </div>
                     )}
                     {product.specifications.material && (
-                      <div className="border-2 border-[#C4A962] dark:border-[#C4A962]/60 rounded-lg p-3 text-center">
+                      <div className="border-2 border-highlight dark:border-highlight/60 rounded-lg p-3 text-center">
                         <p className="text-xs text-muted-foreground mb-1">Metal</p>
                         <p className="text-sm md:text-base font-medium text-foreground">
                           {product.specifications.material}
@@ -912,7 +912,7 @@ const ProductDetail = () => {
                       </div>
                     )}
                     {product.specifications.purity && (
-                      <div className="border-2 border-[#C4A962] dark:border-[#C4A962]/60 rounded-lg p-3 text-center">
+                      <div className="border-2 border-highlight dark:border-highlight/60 rounded-lg p-3 text-center">
                         <p className="text-xs text-muted-foreground mb-1">Purity</p>
                         <p className="text-sm md:text-base font-medium text-foreground">
                           {product.specifications.purity}
@@ -997,7 +997,7 @@ const ProductDetail = () => {
                       setShowVideoCallModal(true);
                     }}
                     whileTap={{ scale: 0.97 }}
-                    className="flex-1 min-w-0 px-3 sm:px-5 py-3 font-medium text-xs sm:text-sm rounded-full border-2 border-amber-500 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-all flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap"
+                    className="flex-1 min-w-0 px-3 sm:px-5 py-3 font-medium text-xs sm:text-sm rounded-full border-2 border-highlight text-highlight dark:text-highlight hover:bg-highlight/10 dark:hover:bg-highlight/6 transition-all flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap"
                   >
                     <Video className="w-4 h-4 shrink-0" />
                     <span className="hidden sm:inline">Book a Demo Video Call</span>
@@ -1087,7 +1087,7 @@ const ProductDetail = () => {
                               {/* Native Share (mobile) */}
                               {typeof navigator !== 'undefined' && navigator.share && (
                                 <button onClick={() => handleShare('native')} className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-muted transition-colors">
-                                  <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center">
+                                  <div className="w-10 h-10 rounded-full bg-highlight flex items-center justify-center">
                                     <Share2 className="w-5 h-5 text-white" />
                                   </div>
                                   <span className="text-[10px] text-muted-foreground">More</span>
@@ -1141,7 +1141,7 @@ const ProductDetail = () => {
                           productImage: product.image,
                         }
                       })}
-                      className="w-full py-2 bg-transparent border-2 border-[#D4AF37] text-[#D4AF37] rounded-full font-medium hover:bg-[#D4AF37]/10 transition-colors flex items-center justify-center gap-2 mb-4 text-sm"
+                      className="w-full py-2 bg-transparent border-2 border-highlight text-highlight rounded-full font-medium hover:bg-highlight/10 transition-colors flex items-center justify-center gap-2 mb-4 text-sm"
                     >
                       <PenLine size={16} />
                       Write a Review
@@ -1224,7 +1224,7 @@ const ProductDetail = () => {
                                   disabled={!!votes.voted}
                                   className={`flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded-md border ${
                                     votes.voted === 'up'
-                                      ? 'border-yellow-400 text-yellow-500'
+                                      ? 'border-yellow-400 text-highlight'
                                       : 'border-transparent hover:text-foreground'
                                   }`}
                                 >
@@ -1262,7 +1262,7 @@ const ProductDetail = () => {
           <div className="container-custom">
             <h2
               className="text-xl md:text-3xl font-semibold text-left mb-6 md:mb-8"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-body)" }}
             >
               You May Also Like
             </h2>

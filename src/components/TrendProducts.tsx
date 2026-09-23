@@ -110,7 +110,7 @@ const TrendProducts = () => {
     canDesktopNAScroll && products.length > 1 ? [...products, ...products] : products;
 
   return (
-    <section ref={ref} className="py-4 md:py-12 bg-[linear-gradient(180deg,rgba(212,175,55,0.04)_0%,rgba(131,39,41,0.02)_100%)] dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]">
+    <section ref={ref} className="py-4 md:py-12 bg-[linear-gradient(180deg,hsl(var(--highlight)/0.04)_0%,hsl(var(--primary)/0.02)_100%)] dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]">
       <div className="container-custom">
         {/* Header */}
         <motion.div
@@ -205,7 +205,7 @@ const TrendProducts = () => {
                       className="absolute inset-0 w-full h-full object-cover" preset="detail" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
                     <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/25 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-white">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-highlight/40 animate-pulse" />
                       Just In
                     </div>
                     <button
@@ -215,7 +215,7 @@ const TrendProducts = () => {
                       <Heart className={`w-4 h-4 ${isInWishlist(displayProducts[0].id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
                     </button>
                     <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <h3 className="text-white text-lg font-semibold leading-tight mb-1.5 line-clamp-1" style={{ fontFamily: "'Playfair Display', serif" }}>
+                      <h3 className="text-white text-lg font-semibold leading-tight mb-1.5 line-clamp-1" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                         {displayProducts[0].title}
                       </h3>
                       <div className="flex items-center justify-between">
@@ -249,13 +249,13 @@ const TrendProducts = () => {
                       className="w-[148px] flex-shrink-0 cursor-pointer"
                       onClick={() => navigate(`/product/${product.id}`)}
                     >
-                      <div className="flex h-full flex-col overflow-hidden rounded-[20px] border border-border/70 bg-card shadow-[0_12px_28px_-22px_rgba(114,77,31,0.4)] dark:border-[#d4af37]/15 dark:shadow-[0_14px_28px_-20px_rgba(0,0,0,0.7)]">
+                      <div className="flex h-full flex-col overflow-hidden rounded-[20px] border border-border/70 bg-card shadow-[0_12px_28px_-22px_hsl(var(--highlight)/0.4)] dark:border-highlight/15 dark:shadow-[0_14px_28px_-20px_rgba(0,0,0,0.7)]">
                         <div className="aspect-square overflow-hidden bg-secondary/50 dark:bg-muted relative">
                           <SmartImage
                             src={product.image}
                             alt={product.title}
                             className="w-full h-full object-cover" preset="card" />
-                          <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.18em] dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/70">
+                          <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-highlight/10 text-highlight border border-highlight/30 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.18em] dark:bg-highlight/8 dark:text-highlight dark:border-highlight/42">
                             New
                           </span>
                           <button
@@ -279,7 +279,7 @@ const TrendProducts = () => {
                                 )}
                               </div>
                               {product.discount && product.discount > 0 && (
-                                <p className="text-[9px] font-semibold text-[#b88a2a] dark:text-[#f4cf73]">{product.discount}% Off</p>
+                                <p className="text-[9px] font-semibold text-highlight dark:text-highlight-soft">{product.discount}% Off</p>
                               )}
                             </div>
                             <button
@@ -317,7 +317,7 @@ const TrendProducts = () => {
                 <p className="text-sm text-muted-foreground">Fresh designs are on their way. Stay tuned!</p>
               </div>
             ) : (
-              <div className="group/new-arrivals relative overflow-hidden rounded-[28px] border border-border/60 bg-background/70 py-2 dark:border-[#d4af37]/12 dark:bg-white/[0.03]">
+              <div className="group/new-arrivals relative overflow-hidden rounded-[28px] border border-border/60 bg-background/70 py-2 dark:border-highlight/12 dark:bg-white/[0.03]">
                 <div
                   ref={desktopNARef}
                   className="overflow-x-auto scrollbar-hide px-2 py-2"
@@ -352,12 +352,12 @@ const TrendProducts = () => {
 
                           <div className="flex flex-grow flex-col p-4">
                             <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.22em] text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/40 dark:text-amber-300">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-highlight/30 bg-highlight/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.22em] text-highlight dark:border-highlight/42 dark:bg-highlight/8 dark:text-highlight">
                                 <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
                                 New
                               </span>
                               {product.discount && product.discount > 0 && (
-                                <span className="inline-flex rounded-full border border-[#d4af37]/30 bg-[#d4af37]/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#b88a2a] dark:border-[#f4cf73]/30 dark:bg-[#f4cf73]/10 dark:text-[#f4cf73]">
+                                <span className="inline-flex rounded-full border border-highlight/30 bg-highlight/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-highlight dark:border-highlight-soft/30 dark:bg-highlight-soft/10 dark:text-highlight-soft">
                                   {product.discount}% Off
                                 </span>
                               )}

@@ -365,7 +365,7 @@ const DeliveryOrderDetails = () => {
   if (loading || !order) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-stone-50">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-highlight" />
       </div>
     );
   }
@@ -513,7 +513,7 @@ const DeliveryOrderDetails = () => {
           </div>
           <span
             className={`rounded-full px-3 py-1 text-xs font-bold shrink-0 ${
-              isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+              isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-highlight/15 text-highlight'
             }`}
           >
             {isPaid ? (isCod ? 'COD Collected' : 'Prepaid') : 'COD Due'} · {formatCurrency(order.total)}
@@ -527,8 +527,8 @@ const DeliveryOrderDetails = () => {
         <div className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
           {/* Name + avatar */}
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-50">
-              <User className="h-6 w-6 text-amber-600" />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-highlight/10">
+              <User className="h-6 w-6 text-highlight" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-stone-900 text-base">{fullName}</p>
@@ -634,16 +634,16 @@ const DeliveryOrderDetails = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="rounded-2xl border border-amber-200 bg-amber-50 p-5"
+            className="rounded-2xl border border-highlight/30 bg-highlight/10 p-5"
           >
             <div className="flex items-center gap-3 mb-3">
-              <ShieldCheck className="h-6 w-6 text-amber-600 shrink-0" />
+              <ShieldCheck className="h-6 w-6 text-highlight shrink-0" />
               <div>
-                <p className="font-bold text-base text-amber-700">Return Picked Up!</p>
-                <p className="text-sm text-amber-600">OTP verified · Item collected from customer</p>
+                <p className="font-bold text-base text-highlight">Return Picked Up!</p>
+                <p className="text-sm text-highlight">OTP verified · Item collected from customer</p>
               </div>
             </div>
-            <p className="text-sm text-amber-700 leading-relaxed">
+            <p className="text-sm text-highlight leading-relaxed">
               Please bring the item back to the store and slide below to confirm.
             </p>
           </motion.div>
@@ -695,12 +695,12 @@ const DeliveryOrderDetails = () => {
         )}
 
         {paymentPending && canDeliver && !isReturnPickedUp && !isDeliveryFailed && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-widest text-amber-700">Cash On Delivery</p>
-            <p className="mt-1 text-sm font-semibold text-amber-900">
+          <div className="rounded-2xl border border-highlight/30 bg-highlight/10 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-highlight">Cash On Delivery</p>
+            <p className="mt-1 text-sm font-semibold text-highlight">
               Collect {formatCurrency(order.total)} from the customer before asking for the OTP.
             </p>
-            <p className="mt-1 text-xs text-amber-700">
+            <p className="mt-1 text-xs text-highlight">
               Once cash is received, mark it collected below. Delivery completion is blocked until you do that.
             </p>
           </div>
@@ -717,7 +717,7 @@ const DeliveryOrderDetails = () => {
                   <button
                     onClick={handleMarkPaymentCollected}
                     disabled={collectingPayment}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 py-4 text-base font-bold text-white shadow-lg shadow-amber-500/30 hover:from-amber-600 hover:to-orange-600 disabled:opacity-60"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-highlight to-primary py-4 text-base font-bold text-white shadow-lg shadow-highlight/30 hover:from-highlight hover:to-primary disabled:opacity-60"
                   >
                     {collectingPayment ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
                     {collectingPayment ? 'Saving Payment…' : `Mark ${formatCurrency(order.total)} as Collected`}
@@ -770,29 +770,29 @@ const DeliveryOrderDetails = () => {
 
       {/* ── Sticky Slide-to-Pickup (return) bar ── */}
       {canPickupReturn && (
-        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-amber-200 bg-white/95 px-4 pb-safe py-4 shadow-[0_-8px_30px_rgba(0,0,0,0.07)] backdrop-blur">
+        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-highlight/30 bg-white/95 px-4 pb-safe py-4 shadow-[0_-8px_30px_rgba(0,0,0,0.07)] backdrop-blur">
           <div className="mx-auto max-w-xl">
             {hasReturnWindow ? (
               <>
                 <SlideToDeliver
                   onConfirm={openReturnOtp}
                   label="Slide to Confirm Pickup →"
-                  trackClassName="bg-gradient-to-r from-amber-500 to-orange-500 shadow-lg shadow-amber-500/30"
-                  fillClassName="bg-amber-700/35"
-                  knobIconClassName="text-amber-600"
+                  trackClassName="bg-gradient-to-r from-highlight to-primary shadow-lg shadow-highlight/30"
+                  fillClassName="bg-highlight/35"
+                  knobIconClassName="text-highlight"
                   KnobIcon={Package}
                 />
                 <p className="mt-2 text-center text-xs text-stone-400">
                   Slide to verify the customer’s 4-digit Return OTP and confirm pickup.
                 </p>
-                <p className="mt-1 text-center text-[11px] font-medium text-amber-700">
+                <p className="mt-1 text-center text-[11px] font-medium text-highlight">
                   Window: {order.return_window_date} · {order.return_window_from}–{order.return_window_to}
                 </p>
               </>
             ) : (
               <button
                 onClick={openReturnWindow}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-amber-400 bg-amber-50 py-4 text-base font-bold text-amber-800 hover:bg-amber-100 transition-all"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-highlight/70 bg-highlight/10 py-4 text-base font-bold text-highlight hover:bg-highlight/15 transition-all"
               >
                 <Calendar className="h-5 w-5" />
                 Schedule a return pickup window first
@@ -801,7 +801,7 @@ const DeliveryOrderDetails = () => {
             <div className="mt-3">
               <button
                 onClick={openReturnWindow}
-                className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 py-2.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-highlight/45 bg-highlight/10 py-2.5 text-xs font-semibold text-highlight hover:bg-highlight/15 transition-colors"
               >
                 <Calendar className="h-4 w-4" />
                 {hasReturnWindow ? 'Edit Return Pickup Window' : 'Set Return Pickup Window'}
@@ -813,11 +813,11 @@ const DeliveryOrderDetails = () => {
 
       {/* ── Sticky Return to Store OTP bar ── */}
       {(isReturnPickedUp || isDeliveryFailed) && (
-        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-amber-200 bg-white/95 px-4 pb-safe py-4 shadow-[0_-8px_30px_rgba(0,0,0,0.07)] backdrop-blur">
+        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-highlight/30 bg-white/95 px-4 pb-safe py-4 shadow-[0_-8px_30px_rgba(0,0,0,0.07)] backdrop-blur">
           <div className="mx-auto max-w-xl">
             <button
               onClick={() => setReturnStoreOtpOpen(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 py-4 text-base font-bold text-white shadow-lg shadow-amber-600/30 hover:from-amber-700 hover:to-orange-700 active:scale-[0.98] transition-all"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-highlight to-primary py-4 text-base font-bold text-white shadow-lg shadow-highlight/30 hover:from-highlight hover:to-primary active:scale-[0.98] transition-all"
             >
               <ShieldCheck className="h-5 w-5" />
               Enter Store OTP to Confirm Return
@@ -858,13 +858,13 @@ const DeliveryOrderDetails = () => {
               autoFocus
               className={`w-full rounded-xl border-2 bg-white dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500 px-4 py-4 text-center text-3xl font-bold tracking-[0.6em] focus:outline-none transition-colors ${
                 otpError
-                  ? 'border-rose-300 focus:border-rose-400'
-                  : 'border-amber-300 focus:border-amber-500'
+                  ? 'border-primary/45 focus:border-primary/70'
+                  : 'border-highlight/45 focus:border-highlight'
               }`}
             />
 
             {otpError && (
-              <p className="text-center text-sm font-medium text-rose-600">{otpError}</p>
+              <p className="text-center text-sm font-medium text-primary">{otpError}</p>
             )}
 
             <Button
@@ -888,7 +888,7 @@ const DeliveryOrderDetails = () => {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
-              <ShieldCheck className="h-5 w-5 text-amber-600" />
+              <ShieldCheck className="h-5 w-5 text-highlight" />
               Enter Return Pickup OTP
             </DialogTitle>
           </DialogHeader>
@@ -912,19 +912,19 @@ const DeliveryOrderDetails = () => {
               autoFocus
               className={`w-full rounded-xl border-2 bg-white dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500 px-4 py-4 text-center text-3xl font-bold tracking-[0.6em] focus:outline-none transition-colors ${
                 returnOtpError
-                  ? 'border-rose-300 focus:border-rose-400'
-                  : 'border-amber-300 focus:border-amber-500'
+                  ? 'border-primary/45 focus:border-primary/70'
+                  : 'border-highlight/45 focus:border-highlight'
               }`}
             />
 
             {returnOtpError && (
-              <p className="text-center text-sm font-medium text-rose-600">{returnOtpError}</p>
+              <p className="text-center text-sm font-medium text-primary">{returnOtpError}</p>
             )}
 
             <Button
               onClick={handleVerifyReturn}
               disabled={returnVerifying || returnOtpInput.length !== 4}
-              className="h-12 w-full bg-amber-600 text-base font-bold hover:bg-amber-700"
+              className="h-12 w-full bg-highlight text-base font-bold hover:bg-highlight"
             >
               {returnVerifying ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -942,7 +942,7 @@ const DeliveryOrderDetails = () => {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
-              <ShieldCheck className="h-5 w-5 text-amber-600" />
+              <ShieldCheck className="h-5 w-5 text-highlight" />
               Enter Store OTP
             </DialogTitle>
           </DialogHeader>
@@ -966,19 +966,19 @@ const DeliveryOrderDetails = () => {
               autoFocus
               className={`w-full rounded-xl border-2 bg-white dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500 px-4 py-4 text-center text-3xl font-bold tracking-[0.6em] focus:outline-none transition-colors ${
                 returnStoreOtpError
-                  ? 'border-rose-300 focus:border-rose-400'
-                  : 'border-amber-300 focus:border-amber-500'
+                  ? 'border-primary/45 focus:border-primary/70'
+                  : 'border-highlight/45 focus:border-highlight'
               }`}
             />
 
             {returnStoreOtpError && (
-              <p className="text-center text-sm font-medium text-rose-600">{returnStoreOtpError}</p>
+              <p className="text-center text-sm font-medium text-primary">{returnStoreOtpError}</p>
             )}
 
             <Button
               onClick={handleVerifyReturnStore}
               disabled={returnStoreVerifying || returnStoreOtpInput.length !== 4}
-              className="h-12 w-full bg-amber-600 text-base font-bold hover:bg-amber-700"
+              className="h-12 w-full bg-highlight text-base font-bold hover:bg-highlight"
             >
               {returnStoreVerifying ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -1022,7 +1022,7 @@ const DeliveryOrderDetails = () => {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
-              <Calendar className={`h-5 w-5 ${windowKind === 'return' ? 'text-amber-600' : 'text-purple-600'}`} />
+              <Calendar className={`h-5 w-5 ${windowKind === 'return' ? 'text-highlight' : 'text-purple-600'}`} />
               {windowKind === 'return' ? 'Set Return Pickup Window' : 'Set Delivery Window'}
             </DialogTitle>
           </DialogHeader>
@@ -1092,7 +1092,7 @@ const DeliveryOrderDetails = () => {
               disabled={savingWindow || !windowDate || !windowFrom || !windowTo}
               className={`h-11 w-full text-sm font-bold ${
                 windowKind === 'return'
-                  ? 'bg-amber-600 hover:bg-amber-700'
+                  ? 'bg-highlight hover:bg-highlight'
                   : 'bg-purple-600 hover:bg-purple-700'
               }`}
             >

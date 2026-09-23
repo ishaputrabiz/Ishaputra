@@ -549,7 +549,7 @@ const SecurityPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "var(--font-body)" }}>
       <Header />
 
       {/* Back Button */}
@@ -693,12 +693,12 @@ const SecurityPage: React.FC = () => {
             </div>
 
             {/* 2FA — Real WhatsApp OTP flow */}
-            <div className={`rounded-xl p-4 mt-6 border ${settings?.twoFactorEnabled ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+            <div className={`rounded-xl p-4 mt-6 border ${settings?.twoFactorEnabled ? 'bg-green-50 border-green-200' : 'bg-highlight/10 border-highlight/30'}`}>
               <div className="flex items-start gap-3">
-                <Fingerprint className={`w-5 h-5 flex-shrink-0 mt-0.5 ${settings?.twoFactorEnabled ? 'text-green-600' : 'text-amber-600'}`} />
+                <Fingerprint className={`w-5 h-5 flex-shrink-0 mt-0.5 ${settings?.twoFactorEnabled ? 'text-green-600' : 'text-highlight'}`} />
                 <div className="flex-1">
                   <div className="flex items-center justify-between gap-3">
-                    <p className={`text-sm font-medium ${settings?.twoFactorEnabled ? 'text-green-900' : 'text-amber-900'}`}>
+                    <p className={`text-sm font-medium ${settings?.twoFactorEnabled ? 'text-green-900' : 'text-highlight'}`}>
                       Two-Factor Authentication
                       {settings?.twoFactorEnabled && (
                         <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-600 text-white">
@@ -721,13 +721,13 @@ const SecurityPage: React.FC = () => {
                       <Button
                         size="sm"
                         onClick={() => setTwoFaPanelOpen((v) => !v)}
-                        className="bg-amber-600 hover:bg-amber-700 text-white"
+                        className="bg-highlight hover:bg-highlight text-white"
                       >
                         {twoFaPanelOpen ? 'Cancel' : 'Enable'}
                       </Button>
                     )}
                   </div>
-                  <p className={`text-xs mt-1 ${settings?.twoFactorEnabled ? 'text-green-700' : 'text-amber-700'}`}>
+                  <p className={`text-xs mt-1 ${settings?.twoFactorEnabled ? 'text-green-700' : 'text-highlight'}`}>
                     {settings?.twoFactorEnabled
                       ? 'A WhatsApp code is required on every new sign-in to keep your account safe.'
                       : 'Add an extra layer of security by verifying logins with a one-time code on WhatsApp.'}
@@ -736,10 +736,10 @@ const SecurityPage: React.FC = () => {
               </div>
 
               {twoFaPanelOpen && !settings?.twoFactorEnabled && (
-                <div className="mt-4 space-y-3 rounded-lg border border-amber-200 bg-white dark:bg-zinc-900 p-4 dark:border-amber-800/70 dark:bg-zinc-950/90">
+                <div className="mt-4 space-y-3 rounded-lg border border-highlight/30 bg-white dark:bg-zinc-900 p-4 dark:border-highlight/42 dark:bg-zinc-950/90">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-zinc-300 mb-1">WhatsApp number</label>
-                    <div className="flex flex-col sm:flex-row rounded-lg border border-gray-200 dark:border-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-amber-300">
+                    <div className="flex flex-col sm:flex-row rounded-lg border border-gray-200 dark:border-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-highlight/45">
                       <span className="px-3 py-2 bg-gray-50 dark:bg-zinc-900/50 text-sm text-gray-600 dark:text-zinc-400 border-b sm:border-b-0 sm:border-r border-gray-200 dark:border-zinc-800">+91</span>
                       <input
                         type="tel"
@@ -760,7 +760,7 @@ const SecurityPage: React.FC = () => {
                           type="button"
                           onClick={twoFaOtp.sendOtp}
                           disabled={twoFaOtp.isBusy || twoFaOtp.isVerified || twoFaPhone.length !== 10}
-                          className="px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed border-t sm:border-t-0 sm:border-l border-gray-200 dark:border-zinc-800"
+                          className="px-3 py-2 text-xs font-semibold text-highlight hover:bg-highlight/10 disabled:opacity-40 disabled:cursor-not-allowed border-t sm:border-t-0 sm:border-l border-gray-200 dark:border-zinc-800"
                         >
                           {twoFaOtp.phase === 'sending' ? 'Sending…' : twoFaOtp.phase === 'sent' || twoFaOtp.phase === 'verified' ? 'Resend' : 'Send code'}
                         </button>
@@ -783,14 +783,14 @@ const SecurityPage: React.FC = () => {
                           onChange={(e) => twoFaOtp.setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                           placeholder="123456"
                           disabled={twoFaOtp.isVerified}
-                          className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-zinc-800 outline-none focus:ring-2 focus:ring-amber-300 tracking-[0.4em] font-mono disabled:bg-gray-50 dark:bg-zinc-900/50"
+                          className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-zinc-800 outline-none focus:ring-2 focus:ring-highlight/45 tracking-[0.4em] font-mono disabled:bg-gray-50 dark:bg-zinc-900/50"
                         />
                         <Button
                           type="button"
                           size="sm"
                           onClick={twoFaOtp.confirmOtp}
                           disabled={twoFaOtp.isBusy || twoFaOtp.isVerified || twoFaOtp.otpCode.length !== 6}
-                          className="bg-amber-600 hover:bg-amber-700 text-white"
+                          className="bg-highlight hover:bg-highlight text-white"
                         >
                           {twoFaOtp.phase === 'verifying' ? <Loader2 className="w-4 h-4 animate-spin" /> : twoFaOtp.isVerified ? <Check className="w-4 h-4" /> : 'Verify'}
                         </Button>
@@ -940,8 +940,8 @@ const SecurityPage: React.FC = () => {
                   </div>
 
                   {/* Google sign-in notice */}
-                  <div className="mt-5 p-3 bg-amber-50 border border-amber-100 rounded-xl">
-                    <p className="text-xs text-amber-800 flex items-start gap-2">
+                  <div className="mt-5 p-3 bg-highlight/10 border border-highlight/20 rounded-xl">
+                    <p className="text-xs text-highlight flex items-start gap-2">
                       <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
                       <span>
                         <strong>Signed up with Google?</strong> Your password is managed by Google.
@@ -981,7 +981,7 @@ const SecurityPage: React.FC = () => {
                       <div className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white dark:border-zinc-800 ${
                         entry.status === 'success' ? 'bg-green-100 text-green-600' :
                         entry.status === 'failed' ? 'bg-red-100 text-red-600' :
-                        'bg-amber-100 text-amber-600'
+                        'bg-highlight/15 text-highlight'
                       }`}>
                         {entry.status === 'success' ? <CheckCircle2 className="w-4 h-4" /> :
                          entry.status === 'failed' ? <XCircle className="w-4 h-4" /> :
@@ -1099,7 +1099,7 @@ const SecurityPage: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-gray-50">
                   <span className="text-sm text-gray-600 dark:text-zinc-400">Email Verified</span>
-                  <span className={`text-sm font-medium flex items-center gap-1 ${user?.emailVerified ? 'text-green-600' : 'text-amber-600'}`}>
+                  <span className={`text-sm font-medium flex items-center gap-1 ${user?.emailVerified ? 'text-green-600' : 'text-highlight'}`}>
                     {user?.emailVerified ? <><CheckCircle2 className="w-4 h-4" /> Verified</> : <><AlertCircle className="w-4 h-4" /> Not Verified</>}
                   </span>
                 </div>

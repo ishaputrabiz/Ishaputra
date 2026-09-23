@@ -269,7 +269,7 @@ const Header = () => {
                       className="w-[22px] h-[22px] rounded-full object-cover ring-1 ring-border"
                       referrerPolicy="no-referrer" preset="thumb" />
                   ) : (
-                    <div className="w-[22px] h-[22px] rounded-full bg-[#832729] flex items-center justify-center">
+                    <div className="w-[22px] h-[22px] rounded-full bg-primary flex items-center justify-center">
                       <span className="text-white font-semibold text-[9px]">
                         {(userProfile?.name || userProfile?.username || 'U').charAt(0).toUpperCase()}
                       </span>
@@ -289,7 +289,7 @@ const Header = () => {
                 <div className="relative">
                   <ShoppingBag className="w-[20px] h-[20px] text-foreground/80 group-hover:text-primary transition-colors" strokeWidth={1.5} />
                   {user && totalItems > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-[#832729] text-white text-[9px] rounded-full flex items-center justify-center font-bold px-1 shadow-sm">
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-primary text-white text-[9px] rounded-full flex items-center justify-center font-bold px-1 shadow-sm">
                       {totalItems}
                     </span>
                   )}

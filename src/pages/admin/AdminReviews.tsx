@@ -130,7 +130,7 @@ const AdminReviews = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-[#8B7355]" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -145,7 +145,7 @@ const AdminReviews = () => {
           <p className="text-sm text-gray-500 mb-1">Total Reviews</p>
           <p className="text-2xl font-bold">{stats.total}</p>
         </div>
-        <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-200">
+        <div className="bg-highlight/10 rounded-xl p-4 border border-yellow-200">
           <p className="text-sm text-yellow-700 mb-1">Pending</p>
           <p className="text-2xl font-bold text-yellow-800">{stats.pending}</p>
         </div>
@@ -168,7 +168,7 @@ const AdminReviews = () => {
             placeholder="Search by user, product, or review text..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B7355]"
+            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-muted-foreground"
           />
         </div>
         <div className="flex gap-2">
@@ -178,7 +178,7 @@ const AdminReviews = () => {
               onClick={() => setStatusFilter(status)}
               className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
                 statusFilter === status
-                  ? 'bg-[#8B7355] text-white'
+                  ? 'bg-muted-foreground text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -186,10 +186,10 @@ const AdminReviews = () => {
             </button>
           ))}
           <div className="flex border border-gray-200 rounded-md overflow-hidden ml-2">
-            <button onClick={() => setViewMode('grid')} className={`p-2 ${viewMode === 'grid' ? 'bg-[#8B7355] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+            <button onClick={() => setViewMode('grid')} className={`p-2 ${viewMode === 'grid' ? 'bg-muted-foreground text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
               <LayoutGrid className="h-4 w-4" />
             </button>
-            <button onClick={() => setViewMode('table')} className={`p-2 ${viewMode === 'table' ? 'bg-[#8B7355] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+            <button onClick={() => setViewMode('table')} className={`p-2 ${viewMode === 'table' ? 'bg-muted-foreground text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
               <List className="h-4 w-4" />
             </button>
           </div>
@@ -224,7 +224,7 @@ const AdminReviews = () => {
                   <p className="text-sm text-gray-600 font-medium mb-1 truncate">{review.productName}</p>
                   <div className="flex items-center gap-1 mb-2">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} size={14} className={i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'} />
+                      <Star key={i} size={14} className={i < review.rating ? 'fill-highlight-soft text-highlight-soft' : 'text-gray-300'} />
                     ))}
                   </div>
                   <p className="text-sm text-gray-600 mb-3 line-clamp-2">{review.reviewText}</p>
@@ -293,7 +293,7 @@ const AdminReviews = () => {
                           <Star
                             key={i}
                             size={14}
-                            className={i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+                            className={i < review.rating ? 'fill-highlight-soft text-highlight-soft' : 'text-gray-300'}
                           />
                         ))}
                       </div>
@@ -383,7 +383,7 @@ const AdminReviews = () => {
                     <Star
                       key={i}
                       size={14}
-                      className={i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+                      className={i < review.rating ? 'fill-highlight-soft text-highlight-soft' : 'text-gray-300'}
                     />
                   ))}
                 </div>
@@ -474,7 +474,7 @@ const AdminReviews = () => {
                     <Star
                       key={i}
                       size={24}
-                      className={i < selectedReview.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+                      className={i < selectedReview.rating ? 'fill-highlight-soft text-highlight-soft' : 'text-gray-300'}
                     />
                   ))}
                   <span className="ml-2 text-lg font-semibold">{selectedReview.rating}/5</span>

@@ -162,7 +162,7 @@ const VideoForm = ({
               onClick={() => setAspectRatio('16:9')}
               className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
                 aspectRatio === '16:9'
-                  ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+                  ? 'border-highlight bg-highlight/10 text-highlight dark:bg-highlight/5 dark:text-highlight'
                   : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
               }`}
             >
@@ -174,7 +174,7 @@ const VideoForm = ({
               onClick={() => setAspectRatio('9:16')}
               className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
                 aspectRatio === '9:16'
-                  ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+                  ? 'border-highlight bg-highlight/10 text-highlight dark:bg-highlight/5 dark:text-highlight'
                   : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
               }`}
             >
@@ -201,7 +201,7 @@ const VideoForm = ({
       </div>
 
       <DialogFooter className="pt-2">
-        <Button onClick={handleSave} disabled={saving} className="bg-amber-600 hover:bg-amber-700 text-white">
+        <Button onClick={handleSave} disabled={saving} className="bg-highlight hover:bg-highlight text-white">
           {saving ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving…
@@ -254,7 +254,7 @@ const AdminVideos = () => {
   if (loading) {
     return (
       <div className="grid place-items-center py-32">
-        <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
       </div>
     );
   }
@@ -263,7 +263,7 @@ const AdminVideos = () => {
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-amber-700 dark:text-amber-400 font-medium mb-2 flex items-center gap-2">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-highlight dark:text-highlight font-medium mb-2 flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5" /> YouTube Showcase
           </p>
           <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white">
@@ -275,7 +275,7 @@ const AdminVideos = () => {
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-amber-600 hover:bg-amber-700 text-white">
+            <Button className="bg-highlight hover:bg-highlight text-white">
               <Plus className="w-4 h-4 mr-2" /> Add video
             </Button>
           </DialogTrigger>
@@ -289,7 +289,7 @@ const AdminVideos = () => {
       </div>
 
       {videos.length === 0 ? (
-        <div className="bg-white dark:bg-gray-900 border border-dashed border-[#F5EFE6] dark:border-gray-800 rounded-2xl p-16 text-center">
+        <div className="bg-white dark:bg-gray-900 border border-dashed border-cream-dark dark:border-gray-800 rounded-2xl p-16 text-center">
           <YoutubeIcon className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
           <p className="text-gray-500">No videos yet. Add your first YouTube video above.</p>
         </div>
@@ -301,7 +301,7 @@ const AdminVideos = () => {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              className="bg-white dark:bg-gray-900 border border-[#F5EFE6] dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm"
+              className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm"
             >
               <div className="aspect-video relative bg-black">
                 <img
@@ -310,7 +310,7 @@ const AdminVideos = () => {
                   className="w-full h-full object-cover"
                 />
                 {v.featured && (
-                  <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] uppercase tracking-wider font-semibold shadow">
+                  <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-highlight text-white text-[10px] uppercase tracking-wider font-semibold shadow">
                     ★ Featured
                   </span>
                 )}
@@ -339,7 +339,7 @@ const AdminVideos = () => {
                     href={v.youtubeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-amber-700 hover:underline"
+                    className="inline-flex items-center gap-1 text-highlight hover:underline"
                   >
                     Open <ExternalLink className="w-3 h-3" />
                   </a>

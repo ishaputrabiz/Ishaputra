@@ -142,7 +142,7 @@ const CancelOrderPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 pb-20" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 pb-20" style={{ fontFamily: "var(--font-body)" }}>
       {/* Top Site Navigation */}
       <Header />
       
@@ -285,7 +285,7 @@ const CancelOrderPage = () => {
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               className="fixed bottom-0 left-0 right-0 z-[70] bg-white dark:bg-zinc-900 rounded-t-3xl max-h-[85vh] overflow-hidden"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-body)" }}
             >
               <div className="p-4 border-b border-gray-200 dark:border-zinc-800">
                 <div className="flex items-center justify-between">

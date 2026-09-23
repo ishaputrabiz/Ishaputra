@@ -147,7 +147,7 @@ const SlideToPayButton = ({ amount, onComplete }: { amount: string; onComplete: 
       {/* Text */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center text-white font-semibold text-base pointer-events-none"
-        style={{ opacity: textOpacity, fontFamily: "'Poppins', sans-serif" }}
+        style={{ opacity: textOpacity, fontFamily: "var(--font-body)" }}
       >
         {amount === 'Place Order' ? 'Slide to Place Order' : `Slide to Pay | ${amount}`}
       </motion.div>
@@ -155,7 +155,7 @@ const SlideToPayButton = ({ amount, onComplete }: { amount: string; onComplete: 
       {/* Check mark on complete */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center text-white font-semibold text-base pointer-events-none"
-        style={{ opacity: checkOpacity, fontFamily: "'Poppins', sans-serif" }}
+        style={{ opacity: checkOpacity, fontFamily: "var(--font-body)" }}
       >
         {amount === 'Place Order' ? '✓ Placing Order...' : '✓ Processing...'}
       </motion.div>
@@ -602,7 +602,7 @@ const MobileCheckout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 flex flex-col pb-24" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 flex flex-col pb-24" style={{ fontFamily: "var(--font-body)" }}>
       {/* ─── Header with gradient ─── */}
       <div className="bg-white dark:bg-zinc-900 sticky top-0 z-50 shadow-sm">
         {/* Top bar */}
@@ -640,11 +640,11 @@ const MobileCheckout = () => {
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               className="fixed bottom-0 left-0 right-0 z-[70] bg-white dark:bg-zinc-900 rounded-t-3xl max-h-[85vh] overflow-hidden"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-body)" }}
             >
               <div className="p-4 border-b border-gray-200 dark:border-zinc-800">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
                     Select Delivery Address
                   </h3>
                   <div className="flex items-center gap-2">
@@ -1006,12 +1006,12 @@ const MobileCheckout = () => {
                 <div className="w-24 h-24 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center mb-5">
                   <ShoppingBag className="w-10 h-10 text-gray-400 dark:text-zinc-500" strokeWidth={1.5} />
                 </div>
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-zinc-100 mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>Your cart is empty</h2>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-zinc-100 mb-2" style={{ fontFamily: "var(--font-body)" }}>Your cart is empty</h2>
                 <p className="text-sm text-gray-500 dark:text-zinc-400 mb-6">Add some beautiful silver jewellery to get started</p>
                 <button
                   onClick={() => navigate('/')}
-                  className="px-6 py-3 bg-[#832729] text-white text-sm font-semibold rounded-full shadow-sm active:scale-95 transition-transform"
-                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                  className="px-6 py-3 bg-primary text-white text-sm font-semibold rounded-full shadow-sm active:scale-95 transition-transform"
+                  style={{ fontFamily: "var(--font-body)" }}
                 >
                   Shop Now
                 </button>
@@ -1020,7 +1020,7 @@ const MobileCheckout = () => {
             {/* Cart Items */}
             {items.length > 0 && (<>
             <div className="px-4 pt-4 pb-2 space-y-3">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>Your Cart</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Your Cart</h2>
               <UnavailableItemsNotice items={items} unavailable={unavailable} onRemove={removeFromCart} />
             </div>
             <div className="mx-4 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden mb-4">
@@ -1042,13 +1042,13 @@ const MobileCheckout = () => {
                           <SmartImage src={item.image} alt={item.name} className="w-full h-full object-cover" preset="thumb" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-base font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2 leading-snug" style={{ fontFamily: "'Poppins', sans-serif" }}>{item.name}</h4>
+                          <h4 className="text-base font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2 leading-snug" style={{ fontFamily: "var(--font-body)" }}>{item.name}</h4>
                           <UnavailableTag reason={unavailable[item.id]} />
                           <div className="mt-1.5">
-                            <span className="text-base font-bold text-gray-900 dark:text-zinc-100 whitespace-nowrap" style={{ fontFamily: "'Poppins', sans-serif" }}>{formatPrice(item.price)}</span>
+                            <span className="text-base font-bold text-gray-900 dark:text-zinc-100 whitespace-nowrap" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(item.price)}</span>
                             {origPrice && (
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                <span className="text-xs text-gray-400 dark:text-zinc-500 line-through whitespace-nowrap" style={{ fontFamily: "'Poppins', sans-serif" }}>{formatPrice(origPrice)}</span>
+                                <span className="text-xs text-gray-400 dark:text-zinc-500 line-through whitespace-nowrap" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(origPrice)}</span>
                                 <span className="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full whitespace-nowrap">{Math.round((1 - item.price / origPrice) * 100)}% OFF</span>
                               </div>
                             )}
@@ -1061,7 +1061,7 @@ const MobileCheckout = () => {
                               <Minus className="w-3 h-3 text-gray-900 dark:text-zinc-100" strokeWidth={2.5} />
                             </button>
                             <div className="w-7 h-7 flex items-center justify-center bg-gray-900 dark:bg-zinc-100 rounded-full">
-                              <span className="text-xs font-bold text-white dark:text-zinc-900" style={{ fontFamily: "'Poppins', sans-serif" }}>{item.quantity}</span>
+                              <span className="text-xs font-bold text-white dark:text-zinc-900" style={{ fontFamily: "var(--font-body)" }}>{item.quantity}</span>
                             </div>
                             <button
                               onClick={() => updateQuantity(item.id, item.quantity + 1)}
@@ -1079,9 +1079,9 @@ const MobileCheckout = () => {
                             <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
                           </button>
                           <div className="text-right">
-                            <p className="text-sm font-bold text-gray-900 dark:text-zinc-100 whitespace-nowrap" style={{ fontFamily: "'Poppins', sans-serif" }}>{formatPrice(item.price * item.quantity)}</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-zinc-100 whitespace-nowrap" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(item.price * item.quantity)}</p>
                             {item.quantity > 1 && (
-                              <p className="text-[10px] text-gray-400 dark:text-zinc-500 whitespace-nowrap" style={{ fontFamily: "'Poppins', sans-serif" }}>{item.quantity} × {formatPrice(item.price)}</p>
+                              <p className="text-[10px] text-gray-400 dark:text-zinc-500 whitespace-nowrap" style={{ fontFamily: "var(--font-body)" }}>{item.quantity} × {formatPrice(item.price)}</p>
                             )}
                           </div>
                         </div>
@@ -1098,8 +1098,8 @@ const MobileCheckout = () => {
                 onClick={() => navigate('/')}
                 className="w-full flex items-center justify-center gap-2 py-3 bg-white dark:bg-zinc-900 border border-dashed border-gray-200 dark:border-zinc-700 rounded-2xl hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
               >
-                <span className="text-sm text-gray-500 dark:text-zinc-400" style={{ fontFamily: "'Poppins', sans-serif" }}>Missed something?</span>
-                <span className="text-sm font-semibold text-green-600" style={{ fontFamily: "'Poppins', sans-serif" }}>Add more items</span>
+                <span className="text-sm text-gray-500 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>Missed something?</span>
+                <span className="text-sm font-semibold text-green-600" style={{ fontFamily: "var(--font-body)" }}>Add more items</span>
               </button>
             </div>
 
@@ -1118,7 +1118,7 @@ const MobileCheckout = () => {
                         <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center">
                           <Tag className="w-3.5 h-3.5 text-gray-700 dark:text-zinc-300" />
                         </div>
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
                           Available Offers ({activeOffers.length})
                         </h3>
                       </div>
@@ -1141,10 +1141,10 @@ const MobileCheckout = () => {
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-bold text-green-700 dark:text-green-400 tracking-wide" style={{ fontFamily: "'Poppins', sans-serif" }}>{c.code}</span>
+                                    <span className="text-xs font-bold text-green-700 dark:text-green-400 tracking-wide" style={{ fontFamily: "var(--font-body)" }}>{c.code}</span>
                                     <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 rounded-full">{value}</span>
                                   </div>
-                                  <p className="text-[11px] text-gray-600 dark:text-zinc-400 mt-0.5 leading-relaxed" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                                  <p className="text-[11px] text-gray-600 dark:text-zinc-400 mt-0.5 leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
                                     {c.description || `Save ${value.toLowerCase()}`}{min}
                                   </p>
                                 </div>
@@ -1152,7 +1152,7 @@ const MobileCheckout = () => {
                                   onClick={() => { if (!isApplied) pricing.applyCoupon(c.code); }}
                                   disabled={isApplied || pricing.couponLoading}
                                   className={`flex-shrink-0 h-8 px-3 rounded-lg text-xs font-bold transition-colors ${isApplied ? 'bg-green-600 text-white' : 'bg-gray-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-gray-800 dark:hover:bg-white'}`}
-                                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                                  style={{ fontFamily: "var(--font-body)" }}
                                 >
                                   {isApplied ? '✓ Applied' : pricing.couponLoading ? 'Checking…' : 'APPLY'}
                                 </button>
@@ -1164,7 +1164,7 @@ const MobileCheckout = () => {
                           <button
                             onClick={() => setShowAllOffers((prev) => !prev)}
                             className="text-xs font-semibold text-green-600 hover:text-green-700 mt-1"
-                            style={{ fontFamily: "'Poppins', sans-serif" }}
+                            style={{ fontFamily: "var(--font-body)" }}
                           >
                             {showAllOffers ? 'Show Less' : `Show ${activeOffers.length - 2} More`}
                           </button>
@@ -1179,20 +1179,20 @@ const MobileCheckout = () => {
             {/* Coupon Section */}
             <div className="mx-4 mb-4">
               <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-4">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>Apply Coupon</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>Apply Coupon</h3>
                 {pricing.appliedCoupon ? (
                   <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <Tag className="w-4 h-4 text-green-600" />
                       <div>
-                        <span className="text-sm font-bold text-green-700 dark:text-green-400" style={{ fontFamily: "'Poppins', sans-serif" }}>{pricing.appliedCoupon.code}</span>
-                        <p className="text-xs text-green-600 dark:text-green-500" style={{ fontFamily: "'Poppins', sans-serif" }}>− {formatPrice(discount)} saved</p>
+                        <span className="text-sm font-bold text-green-700 dark:text-green-400" style={{ fontFamily: "var(--font-body)" }}>{pricing.appliedCoupon.code}</span>
+                        <p className="text-xs text-green-600 dark:text-green-500" style={{ fontFamily: "var(--font-body)" }}>− {formatPrice(discount)} saved</p>
                       </div>
                     </div>
                     <button
                       onClick={() => pricing.removeCoupon()}
                       className="text-xs text-red-500 font-medium hover:text-red-700 transition-colors"
-                      style={{ fontFamily: "'Poppins', sans-serif" }}
+                      style={{ fontFamily: "var(--font-body)" }}
                     >Remove</button>
                   </div>
                 ) : (
@@ -1203,21 +1203,21 @@ const MobileCheckout = () => {
                       onChange={e => setCouponInput(e.target.value.toUpperCase())}
                       placeholder="Enter coupon code"
                       className="flex-1 min-w-0 h-10 px-3 text-sm bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/20 dark:focus:ring-zinc-100/20 text-gray-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-500"
-                      style={{ fontFamily: "'Poppins', sans-serif" }}
+                      style={{ fontFamily: "var(--font-body)" }}
                       onKeyDown={e => { if (e.key === 'Enter' && couponInput.trim()) handleApplyCoupon(); }}
                     />
                     <button
                       onClick={handleApplyCoupon}
                       disabled={pricing.couponLoading || !couponInput.trim()}
                       className="h-10 px-4 text-sm font-semibold text-white bg-gray-900 dark:bg-zinc-100 dark:text-zinc-900 rounded-xl disabled:opacity-50 transition-colors flex-shrink-0 whitespace-nowrap"
-                      style={{ fontFamily: "'Poppins', sans-serif" }}
+                      style={{ fontFamily: "var(--font-body)" }}
                     >
                       {pricing.couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
                     </button>
                   </div>
                 )}
                 {pricing.couponError && !pricing.appliedCoupon && (
-                  <p className="text-xs text-red-500 mt-2" style={{ fontFamily: "'Poppins', sans-serif" }}>{pricing.couponError}</p>
+                  <p className="text-xs text-red-500 mt-2" style={{ fontFamily: "var(--font-body)" }}>{pricing.couponError}</p>
                 )}
               </div>
             </div>
@@ -1225,32 +1225,32 @@ const MobileCheckout = () => {
             {/* Bill Summary */}
             <div className="mx-4 mb-4">
               <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-4">
-                <h3 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>Bill Summary</h3>
+                <h3 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>Bill Summary</h3>
                 <div className="space-y-2.5">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "'Poppins', sans-serif" }}>Item Total</span>
-                    <span className="text-gray-900 dark:text-zinc-100 font-medium" style={{ fontFamily: "'Poppins', sans-serif" }}>{formatPrice(subtotal)}</span>
+                    <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>Item Total</span>
+                    <span className="text-gray-900 dark:text-zinc-100 font-medium" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "'Poppins', sans-serif" }}>Delivery Fee</span>
-                    <span className={`font-medium ${deliveryCharge === 0 ? 'text-green-600' : 'text-gray-900 dark:text-zinc-100'}`} style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>Delivery Fee</span>
+                    <span className={`font-medium ${deliveryCharge === 0 ? 'text-green-600' : 'text-gray-900 dark:text-zinc-100'}`} style={{ fontFamily: "var(--font-body)" }}>
                       {deliveryCharge === 0 ? 'FREE' : formatPrice(deliveryCharge)}
                     </span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-green-600" style={{ fontFamily: "'Poppins', sans-serif" }}>Coupon Discount</span>
-                      <span className="text-green-600 font-medium" style={{ fontFamily: "'Poppins', sans-serif" }}>− {formatPrice(discount)}</span>
+                      <span className="text-green-600" style={{ fontFamily: "var(--font-body)" }}>Coupon Discount</span>
+                      <span className="text-green-600 font-medium" style={{ fontFamily: "var(--font-body)" }}>− {formatPrice(discount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "'Poppins', sans-serif" }}>{gstLabel}</span>
-                    <span className="text-gray-900 dark:text-zinc-100 font-medium" style={{ fontFamily: "'Poppins', sans-serif" }}>{formatPrice(taxAmount)}</span>
+                    <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>{gstLabel}</span>
+                    <span className="text-gray-900 dark:text-zinc-100 font-medium" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(taxAmount)}</span>
                   </div>
                   <div className="h-px bg-gray-200 dark:bg-zinc-800 my-2" />
                   <div className="flex justify-between items-center">
-                    <span className="text-base font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>To Pay</span>
-                    <span className="text-lg font-bold text-green-600" style={{ fontFamily: "'Poppins', sans-serif" }}>{formatPrice(total)}</span>
+                    <span className="text-base font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>To Pay</span>
+                    <span className="text-lg font-bold text-green-600" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(total)}</span>
                   </div>
                 </div>
               </div>
@@ -1273,22 +1273,22 @@ const MobileCheckout = () => {
               {selectedAddress ? (
                 <>
                   <div className="flex items-center gap-1">
-                    <span className="text-gray-900 dark:text-zinc-100 font-semibold text-sm" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    <span className="text-gray-900 dark:text-zinc-100 font-semibold text-sm" style={{ fontFamily: "var(--font-body)" }}>
                       {selectedAddress.fullName.toUpperCase()}
                     </span>
                     <ChevronDown className="w-3.5 h-3.5 text-gray-600 dark:text-zinc-400" />
                   </div>
-                  <p className="text-gray-600 dark:text-zinc-400 text-xs truncate" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  <p className="text-gray-600 dark:text-zinc-400 text-xs truncate" style={{ fontFamily: "var(--font-body)" }}>
                     {selectedAddress.address}, {selectedAddress.city}
                   </p>
                 </>
               ) : (
                 <>
                   <div className="flex items-center gap-1">
-                    <span className="text-gray-900 dark:text-zinc-100 font-semibold text-sm" style={{ fontFamily: "'Poppins', sans-serif" }}>ADD ADDRESS</span>
+                    <span className="text-gray-900 dark:text-zinc-100 font-semibold text-sm" style={{ fontFamily: "var(--font-body)" }}>ADD ADDRESS</span>
                     <Plus className="w-3.5 h-3.5 text-gray-600 dark:text-zinc-400" />
                   </div>
-                  <p className="text-gray-600 dark:text-zinc-400 text-xs" style={{ fontFamily: "'Poppins', sans-serif" }}>Tap to add your delivery address</p>
+                  <p className="text-gray-600 dark:text-zinc-400 text-xs" style={{ fontFamily: "var(--font-body)" }}>Tap to add your delivery address</p>
                 </>
               )}
             </div>
@@ -1313,16 +1313,16 @@ const MobileCheckout = () => {
             </div>
             {/* Count + total */}
             <div className="flex-1 min-w-0">
-              <p className="text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              <p className="text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
                 {totalItems} item{totalItems !== 1 ? 's' : ''}
               </p>
-              <p className="text-sm text-gray-500 dark:text-zinc-400" style={{ fontFamily: "'Poppins', sans-serif" }}>Total: {formatPrice(total)}</p>
+              <p className="text-sm text-gray-500 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>Total: {formatPrice(total)}</p>
             </div>
             {/* Edit cart link */}
             <button
               onClick={() => setCurrentStep(1)}
               className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex-shrink-0"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-body)" }}
             >
               Edit
             </button>
@@ -1332,31 +1332,31 @@ const MobileCheckout = () => {
         {/* Bill Summary */}
         <div className="mx-4 mb-4">
           <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden p-4">
-            <h3 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>Bill Summary</h3>
+            <h3 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>Bill Summary</h3>
             
             <div className="space-y-2.5">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "'Poppins', sans-serif" }}>Item Total</span>
-                <span className="text-gray-900 dark:text-zinc-100 font-medium" style={{ fontFamily: "'Poppins', sans-serif" }}>{formatPrice(subtotal)}</span>
+                <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>Item Total</span>
+                <span className="text-gray-900 dark:text-zinc-100 font-medium" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(subtotal)}</span>
               </div>
               
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "'Poppins', sans-serif" }}>Delivery Fee</span>
-                <span className={`font-medium ${deliveryCharge === 0 ? 'text-green-600' : 'text-gray-900'}`} style={{ fontFamily: "'Poppins', sans-serif" }}>
+                <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>Delivery Fee</span>
+                <span className={`font-medium ${deliveryCharge === 0 ? 'text-green-600' : 'text-gray-900'}`} style={{ fontFamily: "var(--font-body)" }}>
                   {deliveryCharge === 0 ? 'FREE' : formatPrice(deliveryCharge)}
                 </span>
               </div>
               
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "'Poppins', sans-serif" }}>{gstLabel}</span>
-                <span className="text-gray-900 dark:text-zinc-100 font-medium" style={{ fontFamily: "'Poppins', sans-serif" }}>{formatPrice(taxAmount)}</span>
+                <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>{gstLabel}</span>
+                <span className="text-gray-900 dark:text-zinc-100 font-medium" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(taxAmount)}</span>
               </div>
 
               <div className="h-px bg-gray-200 dark:bg-zinc-800 my-2" />
 
               <div className="flex justify-between items-center">
-                <span className="text-base font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>To Pay</span>
-                <span className="text-lg font-bold text-green-600" style={{ fontFamily: "'Poppins', sans-serif" }}>{formatPrice(total)}</span>
+                <span className="text-base font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>To Pay</span>
+                <span className="text-lg font-bold text-green-600" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(total)}</span>
               </div>
             </div>
           </div>
@@ -1366,8 +1366,8 @@ const MobileCheckout = () => {
         {suggestedProducts.length > 0 && (
           <div className="mb-4">
             <div className="px-4 flex items-center gap-2 mb-3">
-              <Sparkles className="w-5 h-5 text-amber-500" />
-              <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>Your last minute add-ons</h3>
+              <Sparkles className="w-5 h-5 text-highlight" />
+              <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Your last minute add-ons</h3>
             </div>
 
             {/* Horizontal scroll products */}
@@ -1385,7 +1385,7 @@ const MobileCheckout = () => {
                       alt={product.title}
                       className="w-full h-full object-cover" preset="card" />
                     {product.discount && (
-                      <div className="absolute top-2 left-2 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                      <div className="absolute top-2 left-2 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ fontFamily: "var(--font-body)" }}>
                         {product.discount}%<br />OFF
                       </div>
                     )}
@@ -1409,13 +1409,13 @@ const MobileCheckout = () => {
 
                   {/* Info */}
                   <div className="p-2.5">
-                    <h4 className="text-xs font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2 leading-tight min-h-[28px]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    <h4 className="text-xs font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2 leading-tight min-h-[28px]" style={{ fontFamily: "var(--font-body)" }}>
                       {product.title}
                     </h4>
                     <div className="mt-1.5 flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>{formatPrice(product.price)}</span>
+                      <span className="text-xs font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(product.price)}</span>
                       {product.oldPrice && (
-                        <span className="text-[10px] text-gray-400 dark:text-zinc-500 line-through" style={{ fontFamily: "'Poppins', sans-serif" }}>{formatPrice(product.oldPrice)}</span>
+                        <span className="text-[10px] text-gray-400 dark:text-zinc-500 line-through" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(product.oldPrice)}</span>
                       )}
                     </div>
                   </div>
@@ -1434,7 +1434,7 @@ const MobileCheckout = () => {
             items.length > 0 && <button
               onClick={() => setCurrentStep(2)}
               className="w-full h-14 bg-gray-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-semibold text-sm rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              style={{ fontFamily: "var(--font-body)" }}
             >
               Proceed to Checkout
               <ChevronRight className="w-4 h-4" />
@@ -1464,11 +1464,11 @@ const MobileCheckout = () => {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed inset-0 z-[80] bg-[linear-gradient(180deg,rgba(212,175,55,0.08)_0%,rgba(255,255,255,1)_18%),linear-gradient(135deg,rgba(131,39,41,0.04)_0%,rgba(255,255,255,1)_52%)] dark:bg-zinc-950"
-            style={{ fontFamily: "'Poppins', sans-serif" }}
+            className="fixed inset-0 z-[80] bg-[linear-gradient(180deg,hsl(var(--highlight)/0.08)_0%,rgba(255,255,255,1)_18%),linear-gradient(135deg,hsl(var(--primary)/0.04)_0%,rgba(255,255,255,1)_52%)] dark:bg-zinc-950"
+            style={{ fontFamily: "var(--font-body)" }}
           >
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-white/85 dark:bg-zinc-900/85 backdrop-blur border-b border-[#d4af37]/15 px-4 py-3">
+            <div className="sticky top-0 z-10 bg-white/85 dark:bg-zinc-900/85 backdrop-blur border-b border-highlight/15 px-4 py-3">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { setShowPaymentDetails(false); setSlideResetKey(k => k + 1); }}
@@ -1594,7 +1594,7 @@ const MobileCheckout = () => {
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3, type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 left-0 right-0 bg-white/88 dark:bg-zinc-900/88 backdrop-blur border-t border-[#d4af37]/15 p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]"
+              className="fixed bottom-0 left-0 right-0 bg-white/88 dark:bg-zinc-900/88 backdrop-blur border-t border-highlight/15 p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]"
             >
               {isPlacingOrder ? (
                 <div className="h-14 rounded-full flex items-center justify-center bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold">
@@ -1627,7 +1627,7 @@ const MobileCheckout = () => {
               <motion.div
                 key={i}
                 className="absolute w-2 h-2 rounded-full"
-                style={{ backgroundColor: i % 2 === 0 ? '#d4af37' : '#f5f5f5' }}
+                style={{ backgroundColor: i % 2 === 0 ? 'hsl(var(--highlight))' : '#f5f5f5' }}
                 initial={{ opacity: 0, x: 0, y: 0, scale: 0 }}
                 animate={{
                   opacity: [0, 1, 0],
@@ -1643,14 +1643,14 @@ const MobileCheckout = () => {
               initial={{ scale: 0, rotate: -90 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: 'spring', stiffness: 200, damping: 18, delay: 0.1 }}
-              className="w-36 h-36 rounded-full border-[6px] border-amber-400 flex items-center justify-center"
-              style={{ boxShadow: '0 0 40px 8px rgba(212,175,55,0.5)' }}
+              className="w-36 h-36 rounded-full border-[6px] border-highlight/70 flex items-center justify-center"
+              style={{ boxShadow: '0 0 40px 8px hsl(var(--highlight)/0.5)' }}
             >
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.5, type: 'spring', stiffness: 250, damping: 15 }}
-                className="w-24 h-24 rounded-full bg-amber-400 flex items-center justify-center"
+                className="w-24 h-24 rounded-full bg-highlight/70 flex items-center justify-center"
               >
                 <svg className="w-14 h-14 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <motion.path
@@ -1670,7 +1670,7 @@ const MobileCheckout = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.9 }}
               className="text-white text-2xl font-bold mt-6 text-center px-6"
-              style={{ fontFamily: "'Poppins', sans-serif", textShadow: '0 2px 12px rgba(212,175,55,0.6)' }}
+              style={{ fontFamily: "var(--font-body)", textShadow: '0 2px 12px hsl(var(--highlight)/0.6)' }}
             >
               Order Placed Successfully!
             </motion.h2>
@@ -1678,8 +1678,8 @@ const MobileCheckout = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.1 }}
-              className="text-amber-300 text-sm mt-2 text-center px-8"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              className="text-highlight-soft text-sm mt-2 text-center px-8"
+              style={{ fontFamily: "var(--font-body)" }}
             >
               Thank you for your purchase 🎉
             </motion.p>
@@ -1696,7 +1696,7 @@ const MobileCheckout = () => {
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             className="fixed inset-0 z-[90] bg-white dark:bg-zinc-900 overflow-y-auto"
-            style={{ fontFamily: "'Poppins', sans-serif" }}
+            style={{ fontFamily: "var(--font-body)" }}
           >
             {/* Header */}
             <div className="sticky top-0 z-10 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800">
@@ -1708,7 +1708,7 @@ const MobileCheckout = () => {
                 >
                   <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-zinc-300" />
                 </button>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>Order Placed</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Order Placed</h2>
               </div>
             </div>
 
@@ -1755,7 +1755,7 @@ const MobileCheckout = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
                 className="text-xl font-bold text-teal-600 text-center mb-3"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-body)" }}
               >
                 Order Placed Successfully!
               </motion.h3>
@@ -1764,19 +1764,19 @@ const MobileCheckout = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
                 className="text-sm text-gray-600 dark:text-zinc-400 text-center mb-6"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-body)" }}
               >
                 Payment is successfully processed and your Order is on the way.
               </motion.p>
 
               {/* Order Details */}
               <div className="mb-6">
-                <h4 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>Order Placed</h4>
+                <h4 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>Order Placed</h4>
                 <div className="bg-gray-50 dark:bg-zinc-900 rounded-lg p-4 space-y-2">
-                  <p className="text-sm text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  <p className="text-sm text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
                     Your order # is: <span className="font-bold">{orderId}</span>
                   </p>
-                  <p className="text-xs text-gray-600 dark:text-zinc-400" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  <p className="text-xs text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>
                     Payment is successfully processed and your Order is on the way.
                   </p>
                 </div>
@@ -1785,8 +1785,8 @@ const MobileCheckout = () => {
               {/* Shipping Address */}
               {selectedAddress && (
                 <div className="mb-6">
-                  <h4 className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>This order will be shipped to:</h4>
-                  <p className="text-xs text-gray-600 dark:text-zinc-400 leading-relaxed" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2" style={{ fontFamily: "var(--font-body)" }}>This order will be shipped to:</h4>
+                  <p className="text-xs text-gray-600 dark:text-zinc-400 leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
                     {selectedAddress.address}
                     {selectedAddress.locality && `, ${selectedAddress.locality}`},<br />
                     {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pinCode}
@@ -1796,13 +1796,13 @@ const MobileCheckout = () => {
 
               {/* Payment Method */}
               <div className="mb-6">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>Payment Method</h4>
-                <p className="text-xs text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>{selectedPaymentMethod}</p>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2" style={{ fontFamily: "var(--font-body)" }}>Payment Method</h4>
+                <p className="text-xs text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>{selectedPaymentMethod}</p>
               </div>
 
               {/* Order Summary */}
               <div className="mb-6">
-                <h4 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>Order Summary</h4>
+                <h4 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>Order Summary</h4>
                 <div className="space-y-3">
                   {/* First Item */}
                   {orderedItems.length > 0 && (
@@ -1811,8 +1811,8 @@ const MobileCheckout = () => {
                         <SmartImage src={orderedItems[0].image} alt={orderedItems[0].name} className="w-full h-full object-cover" preset="thumb" />
                       </div>
                       <div className="flex-1">
-                        <h5 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2 mb-1" style={{ fontFamily: "'Poppins', sans-serif" }}>{orderedItems[0].name}</h5>
-                        <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium" style={{ fontFamily: "'Poppins', sans-serif" }}>Qty: {orderedItems[0].quantity}</p>
+                        <h5 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2 mb-1" style={{ fontFamily: "var(--font-body)" }}>{orderedItems[0].name}</h5>
+                        <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium" style={{ fontFamily: "var(--font-body)" }}>Qty: {orderedItems[0].quantity}</p>
                       </div>
                     </div>
                   )}
@@ -1835,8 +1835,8 @@ const MobileCheckout = () => {
                                   <SmartImage src={item.image} alt={item.name} className="w-full h-full object-cover" preset="thumb" />
                                 </div>
                                 <div className="flex-1">
-                                  <h5 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2 mb-1" style={{ fontFamily: "'Poppins', sans-serif" }}>{item.name}</h5>
-                                  <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium" style={{ fontFamily: "'Poppins', sans-serif" }}>Qty: {item.quantity}</p>
+                                  <h5 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2 mb-1" style={{ fontFamily: "var(--font-body)" }}>{item.name}</h5>
+                                  <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium" style={{ fontFamily: "var(--font-body)" }}>Qty: {item.quantity}</p>
                                 </div>
                               </div>
                             ))}
@@ -1849,7 +1849,7 @@ const MobileCheckout = () => {
                         onClick={() => setShowAllItems(!showAllItems)}
                         className="w-full flex items-center justify-center gap-2 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       >
-                        <span className="text-sm font-medium" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <span className="text-sm font-medium" style={{ fontFamily: "var(--font-body)" }}>
                           {showAllItems ? 'Show Less' : `+ ${orderedItems.length - 1} more item${orderedItems.length > 2 ? 's' : ''}`}
                         </span>
                         <ChevronDown className={`w-4 h-4 transition-transform ${showAllItems ? 'rotate-180' : ''}`} />
@@ -1868,7 +1868,7 @@ const MobileCheckout = () => {
                 }}
                 variant="outline"
                 className="flex-1 h-12 border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-zinc-100 font-semibold text-sm rounded-lg"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-body)" }}
               >
                 TRACK ORDER
               </Button>
@@ -1881,7 +1881,7 @@ const MobileCheckout = () => {
                   }
                 }}
                 className="flex-1 h-12 bg-transparent hover:bg-green-50 active:bg-green-100 text-green-600 font-semibold text-sm rounded-lg border-2 border-green-500 transition-all hover:scale-105 active:scale-95"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-body)" }}
               >
                 DONE
               </Button>
@@ -2291,19 +2291,19 @@ const Checkout = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="container mx-auto px-4 py-8 max-w-6xl" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="container mx-auto px-4 py-8 max-w-6xl" style={{ fontFamily: "var(--font-body)" }}>
         {/* Back Button */}
         <button
           onClick={handleBack}
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
-          style={{ fontFamily: "'Poppins', sans-serif" }}
+          style={{ fontFamily: "var(--font-body)" }}
         >
           <ArrowLeft className="w-5 h-5" />
           <span>Back to Cart</span>
         </button>
 
         {/* Secure badge */}
-        <div className="flex items-center justify-end mb-8" style={{ fontFamily: "'Poppins', sans-serif" }}>
+        <div className="flex items-center justify-end mb-8" style={{ fontFamily: "var(--font-body)" }}>
           <div className="flex items-center gap-2 text-sm">
             <Shield className="w-4 h-4 text-green-600" />
             <span className="font-medium text-green-600">100% SECURE</span>
@@ -2318,19 +2318,19 @@ const Checkout = () => {
               {selectedAddress ? (
                 <>
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-body)" }}>
                       Deliver to: {selectedAddress.fullName}, {selectedAddress.pinCode}
                     </h2>
                     <Button
                       variant="outline"
                       onClick={handleOpenAddressSelector}
-                      className="text-yellow-600 border-yellow-600 hover:bg-yellow-50 font-semibold uppercase"
-                      style={{ fontFamily: "'Poppins', sans-serif" }}
+                      className="text-highlight border-yellow-600 hover:bg-highlight/10 font-semibold uppercase"
+                      style={{ fontFamily: "var(--font-body)" }}
                     >
                       CHANGE ADDRESS
                     </Button>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                  <p className="text-sm text-muted-foreground mb-1" style={{ fontFamily: "var(--font-body)" }}>
                     {selectedAddress.address}
                     {selectedAddress.locality && `, ${selectedAddress.locality}`}
                     <br />
@@ -2371,7 +2371,7 @@ const Checkout = () => {
                       exit={{ opacity: 0, scale: 0.95 }}
                       onClick={(e) => e.stopPropagation()}
                       className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden mx-4"
-                      style={{ fontFamily: "'Poppins', sans-serif" }}
+                      style={{ fontFamily: "var(--font-body)" }}
                     >
                     {/* Header */}
                     <div className="p-6 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between">
@@ -2650,7 +2650,7 @@ const Checkout = () => {
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
                     <Tag className="w-4 h-4" />
                   </div>
-                  <h2 className="text-lg font-semibold" style={{ fontFamily: "'Poppins', sans-serif" }}>Available Offers</h2>
+                  <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-body)" }}>Available Offers</h2>
                 </div>
                 <ChevronDown
                   className={`w-5 h-5 transition-transform ${showOffers ? 'rotate-180' : ''}`}
@@ -2690,7 +2690,7 @@ const Checkout = () => {
                     <Button
                       variant="link"
                       className="text-primary p-0 h-auto font-semibold"
-                      style={{ fontFamily: "'Poppins', sans-serif" }}
+                      style={{ fontFamily: "var(--font-body)" }}
                       onClick={() => setShowAllOffers((prev) => !prev)}
                     >
                       {showAllOffers ? 'Show Less' : `Show ${offers.length - 2} More`}
@@ -2709,10 +2709,10 @@ const Checkout = () => {
                 </div>
               )}
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-body)" }}>
                   {items.length}/{items.length} ITEMS SELECTED
                 </h2>
-                <div className="flex gap-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                <div className="flex gap-4" style={{ fontFamily: "var(--font-body)" }}>
                   {/*
                     Both of these empty the WHOLE cart. They used to do it on a
                     single click with no confirmation, so one mis-click on the
@@ -2751,7 +2751,7 @@ const Checkout = () => {
                         alt={item.name}
                         className="w-full h-full object-cover" preset="thumb" />
                     </div>
-                    <div className="flex-1" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    <div className="flex-1" style={{ fontFamily: "var(--font-body)" }}>
                       <h3 className="font-medium mb-1">{item.name}</h3>
                       <UnavailableTag reason={unavailable[item.id]} />
                       {item.category && (
@@ -2824,7 +2824,7 @@ const Checkout = () => {
                           it was the last one.
                         */}
                         {typeof item.stock === 'number' && item.stock > 0 && item.stock <= 5 && (
-                          <span className="text-sm text-amber-600">
+                          <span className="text-sm text-highlight">
                             {item.stock === 1 ? 'Last one left' : `Only ${item.stock} left`}
                           </span>
                         )}
@@ -2851,7 +2851,7 @@ const Checkout = () => {
             <div className="bg-card border border-border rounded-lg p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Tag className="w-5 h-5" />
-                <h3 className="font-semibold" style={{ fontFamily: "'Poppins', sans-serif" }}>Apply Coupons</h3>
+                <h3 className="font-semibold" style={{ fontFamily: "var(--font-body)" }}>Apply Coupons</h3>
               </div>
               {pricing.appliedCoupon ? (
                 <div className="flex items-center justify-between p-3 rounded-lg bg-green-50 border border-green-200">
@@ -2869,12 +2869,12 @@ const Checkout = () => {
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                       className="flex-1 font-mono"
-                      style={{ fontFamily: "'Poppins', sans-serif" }}
+                      style={{ fontFamily: "var(--font-body)" }}
                     />
                     <Button
                       variant="outline"
                       className="text-primary border-primary min-w-[104px]"
-                      style={{ fontFamily: "'Poppins', sans-serif" }}
+                      style={{ fontFamily: "var(--font-body)" }}
                       disabled={pricing.couponLoading || !couponCode.trim()}
                       onClick={async () => {
                         const r = await pricing.applyCoupon(couponCode);
@@ -2904,7 +2904,7 @@ const Checkout = () => {
 
             {/* Price Details */}
             <div className="bg-card border border-border rounded-lg p-6 sticky top-4">
-              <h3 className="font-semibold mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>PRICE DETAILS ({items.length} Item{items.length > 1 ? 's' : ''})</h3>
+              <h3 className="font-semibold mb-4" style={{ fontFamily: "var(--font-body)" }}>PRICE DETAILS ({items.length} Item{items.length > 1 ? 's' : ''})</h3>
               
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
@@ -2960,7 +2960,7 @@ const Checkout = () => {
 
               <Button
                 className="w-full mt-6 bg-foreground text-background hover:bg-foreground/90 py-6 text-base font-semibold rounded-md"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-body)" }}
                 onClick={() => {
                   if (!selectedAddress) {
                     toast({
@@ -2977,7 +2977,7 @@ const Checkout = () => {
               </Button>
 
               {/* Trust Badges */}
-              <div className="mt-4 pt-4 border-t border-border" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              <div className="mt-4 pt-4 border-t border-border" style={{ fontFamily: "var(--font-body)" }}>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                   <Shield className="w-4 h-4 text-green-600" />
                   <span>100% Secure Checkout</span>
@@ -3013,7 +3013,7 @@ const Checkout = () => {
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="fixed inset-0 z-[90] flex items-center justify-center p-8"
             >
-              <div className="w-full max-w-md max-h-[92vh] overflow-y-auto rounded-3xl bg-white dark:bg-zinc-950 shadow-[0_40px_120px_-50px_rgba(0,0,0,0.8)] ring-1 ring-black/5 dark:ring-white/10" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              <div className="w-full max-w-md max-h-[92vh] overflow-y-auto rounded-3xl bg-white dark:bg-zinc-950 shadow-[0_40px_120px_-50px_rgba(0,0,0,0.8)] ring-1 ring-black/5 dark:ring-white/10" style={{ fontFamily: "var(--font-body)" }}>
                 {/* Header */}
                 <div className="sticky top-0 z-10 bg-white/95 dark:bg-zinc-950/95 backdrop-blur border-b border-gray-100 dark:border-zinc-800 px-6 py-4">
                   <div className="flex items-center justify-between">
@@ -3050,7 +3050,7 @@ const Checkout = () => {
                     {items.length > 2 && (
                       <button
                         onClick={() => setShowAllItems((v) => !v)}
-                        className="text-xs font-semibold text-[#832729] dark:text-amber-400 hover:underline"
+                        className="text-xs font-semibold text-primary dark:text-highlight hover:underline"
                       >
                         {showAllItems ? 'Show less' : `+ ${items.length - 2} more item${items.length > 3 ? 's' : ''}`}
                       </button>
@@ -3064,8 +3064,8 @@ const Checkout = () => {
                     <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-zinc-400 mb-2.5">Payment Method</h3>
                     <div className="space-y-2.5">
                       {/* Razorpay */}
-                      <label className={`flex items-center gap-3 p-3.5 rounded-2xl cursor-pointer transition-all ${selectedPaymentMethod === 'Razorpay' ? 'border-2 border-[#832729] bg-[#832729]/5 dark:bg-amber-400/5 dark:border-amber-400' : 'border border-gray-200 dark:border-zinc-800 hover:border-gray-300 dark:hover:border-zinc-700'}`}>
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${selectedPaymentMethod === 'Razorpay' ? 'bg-[#832729] dark:bg-amber-400' : 'bg-gray-100 dark:bg-zinc-800'}`}>
+                      <label className={`flex items-center gap-3 p-3.5 rounded-2xl cursor-pointer transition-all ${selectedPaymentMethod === 'Razorpay' ? 'border-2 border-primary bg-primary/5 dark:bg-highlight/5 dark:border-highlight/70' : 'border border-gray-200 dark:border-zinc-800 hover:border-gray-300 dark:hover:border-zinc-700'}`}>
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${selectedPaymentMethod === 'Razorpay' ? 'bg-primary dark:bg-highlight/70' : 'bg-gray-100 dark:bg-zinc-800'}`}>
                           <CreditCard className={`w-5 h-5 ${selectedPaymentMethod === 'Razorpay' ? 'text-white dark:text-zinc-900' : 'text-gray-600 dark:text-zinc-400'}`} />
                         </div>
                         <div className="flex-1">
@@ -3078,7 +3078,7 @@ const Checkout = () => {
                           value="Razorpay"
                           checked={selectedPaymentMethod === 'Razorpay'}
                           onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                          className="w-5 h-5 accent-[#832729] dark:accent-amber-400"
+                          className="w-5 h-5 accent-primary dark:accent-highlight"
                         />
                       </label>
                     </div>
@@ -3121,7 +3121,7 @@ const Checkout = () => {
                   <Button
                     onClick={handlePlaceOrder}
                     disabled={isPlacingOrder}
-                    className="w-full h-12 bg-[#832729] hover:bg-[#6f2123] text-white font-semibold text-sm rounded-xl shadow-lg shadow-[#832729]/25"
+                    className="w-full h-12 bg-primary hover:bg-primary-dark text-white font-semibold text-sm rounded-xl shadow-lg shadow-primary/25"
                   >
                     {isPlacingOrder ? (
                       <>
@@ -3163,7 +3163,7 @@ const Checkout = () => {
               <motion.div
                 key={i}
                 className="absolute w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: i % 2 === 0 ? '#d4af37' : '#f5f5f5' }}
+                style={{ backgroundColor: i % 2 === 0 ? 'hsl(var(--highlight))' : '#f5f5f5' }}
                 initial={{ opacity: 0, x: 0, y: 0, scale: 0 }}
                 animate={{
                   opacity: [0, 1, 0],
@@ -3178,14 +3178,14 @@ const Checkout = () => {
               initial={{ scale: 0, rotate: -90 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: 'spring', stiffness: 200, damping: 18, delay: 0.1 }}
-              className="w-44 h-44 rounded-full border-[7px] border-amber-400 flex items-center justify-center"
-              style={{ boxShadow: '0 0 60px 12px rgba(212,175,55,0.5)' }}
+              className="w-44 h-44 rounded-full border-[7px] border-highlight/70 flex items-center justify-center"
+              style={{ boxShadow: '0 0 60px 12px hsl(var(--highlight)/0.5)' }}
             >
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.5, type: 'spring', stiffness: 250, damping: 15 }}
-                className="w-32 h-32 rounded-full bg-amber-400 flex items-center justify-center"
+                className="w-32 h-32 rounded-full bg-highlight/70 flex items-center justify-center"
               >
                 <svg className="w-18 h-18 text-white" style={{ width: 72, height: 72 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <motion.path
@@ -3205,7 +3205,7 @@ const Checkout = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.9 }}
               className="text-white text-3xl font-bold mt-8 text-center px-8"
-              style={{ fontFamily: "'Poppins', sans-serif", textShadow: '0 2px 16px rgba(212,175,55,0.7)' }}
+              style={{ fontFamily: "var(--font-body)", textShadow: '0 2px 16px hsl(var(--highlight)/0.7)' }}
             >
               Order Placed Successfully!
             </motion.h2>
@@ -3213,8 +3213,8 @@ const Checkout = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.1 }}
-              className="text-amber-300 text-base mt-2 text-center"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              className="text-highlight-soft text-base mt-2 text-center"
+              style={{ fontFamily: "var(--font-body)" }}
             >
               Thank you for your purchase 🎉
             </motion.p>
@@ -3240,7 +3240,7 @@ const Checkout = () => {
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="fixed inset-0 z-[90] flex items-center justify-center p-8"
             >
-              <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ fontFamily: "var(--font-body)" }}>
                 {/* Header */}
                 <div className="sticky top-0 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 px-6 py-4 rounded-t-2xl">
                   <div className="flex items-center justify-between">

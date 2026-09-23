@@ -170,7 +170,7 @@ const Signup = () => {
                   </Label>
                 </div>
                 {phone && sameForWhatsApp && (
-                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3 space-y-3">
+                  <div className="mt-3 rounded-xl border border-highlight/30 bg-highlight/6 p-3 space-y-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-xs text-gray-600 dark:text-zinc-400">
                         Verify this number on WhatsApp so order updates can reach you there.
@@ -281,11 +281,11 @@ const Signup = () => {
                 />
                 <Label htmlFor="terms" className="text-sm text-gray-600 dark:text-zinc-400 cursor-pointer leading-tight">
                   I agree to the{' '}
-                  <Link to="/terms" className="text-amber-600 hover:text-amber-700">
+                  <Link to="/terms" className="text-highlight hover:text-highlight">
                     Terms of Service
                   </Link>{' '}
                   and{' '}
-                  <Link to="/privacy" className="text-amber-600 hover:text-amber-700">
+                  <Link to="/privacy" className="text-highlight hover:text-highlight">
                     Privacy Policy
                   </Link>
                 </Label>
@@ -293,7 +293,7 @@ const Signup = () => {
 
               <Button
                 type="submit"
-                className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3"
+                className="w-full bg-highlight hover:bg-highlight text-white py-3"
                 disabled={loading || whatsappOtp.isBusy}
               >
                 {loading ? (
@@ -321,7 +321,7 @@ const Signup = () => {
             <Link to="/login">
               <Button
                 variant="outline"
-                className="w-full border-amber-600 text-amber-600 hover:bg-amber-50"
+                className="w-full border-highlight text-highlight hover:bg-highlight/10"
               >
                 Sign In
               </Button>

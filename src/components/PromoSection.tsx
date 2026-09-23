@@ -40,7 +40,7 @@ const PromoSection = () => {
           ctaLabel: i.ctaLabel || "Explore",
           ctaLink: i.ctaLink || "/",
           imageUrl: i.imageUrl,
-          tint: i.tint || "from-[#2a1810]/85 via-[#2a1810]/30 to-transparent",
+          tint: i.tint || "from-charcoal/85 via-charcoal/30 to-transparent",
         }))
       : DEFAULT_HOME_COLLECTIONS.map((i) => ({
           eyebrow: i.eyebrow || "Curated",
@@ -49,7 +49,7 @@ const PromoSection = () => {
           ctaLabel: i.ctaLabel || "Explore",
           ctaLink: i.ctaLink || "/",
           imageUrl: i.imageUrl,
-          tint: i.tint || "from-[#2a1810]/85 via-[#2a1810]/30 to-transparent",
+          tint: i.tint || "from-charcoal/85 via-charcoal/30 to-transparent",
         }));
   const cards = sourceCards;
   const { scrollerRef, scrollByPage, canScroll } = useAutoScroll({
@@ -64,7 +64,7 @@ const PromoSection = () => {
   return (
     <section ref={ref} className="relative w-full py-12 md:py-20">
       {/* ambient gold/maroon glow */}
-      <div className="pointer-events-none absolute inset-x-0 top-10 h-48 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.14)_0%,rgba(212,175,55,0)_70%)] blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-0 top-10 h-48 bg-[radial-gradient(ellipse_at_center,hsl(var(--highlight)/0.14)_0%,hsl(var(--highlight)/0)_70%)] blur-3xl" />
 
       <div className="container-custom">
         {/* Header */}
@@ -82,7 +82,7 @@ const PromoSection = () => {
             </div>
             <h2
               className="text-2xl md:text-4xl font-semibold text-foreground"
-              style={{ fontFamily: "'Playfair Display', serif" }}
+              style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
             >
               Our Collections
             </h2>
@@ -145,7 +145,7 @@ const PromoSection = () => {
 
                 {/* gold corner accent */}
                 <div className="absolute top-4 right-4 flex items-center gap-1.5 rounded-full bg-white/15 dark:bg-white/10 backdrop-blur-md border border-white/25 px-2.5 py-1 text-[9px] uppercase tracking-[0.22em] text-white font-semibold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-300 shadow-[0_0_6px_rgba(255,200,80,0.9)]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-highlight/40 shadow-[0_0_6px_hsl(var(--highlight-soft)/0.9)]" />
                   Curated
                 </div>
 
@@ -155,7 +155,7 @@ const PromoSection = () => {
                   </span>
                   <h3
                     className="text-white text-xl md:text-2xl lg:text-[26px] font-semibold leading-tight mb-2"
-                    style={{ fontFamily: "'Playfair Display', serif" }}
+                    style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
                   >
                     {card.title}
                   </h3>

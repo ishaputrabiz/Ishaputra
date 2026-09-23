@@ -44,25 +44,25 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen w-full grid lg:grid-cols-2 bg-[#0d0a07] text-white overflow-hidden">
+    <div className="min-h-screen w-full grid lg:grid-cols-2 bg-charcoal text-white overflow-hidden">
       {/* LEFT — Brand panel */}
-      <div className="relative hidden lg:flex flex-col justify-between p-12 bg-gradient-to-br from-[#1a0f0c] via-[#2a1810] to-[#0d0a07] overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-[480px] h-[480px] rounded-full bg-amber-500/20 blur-[120px]" />
-        <div className="absolute bottom-[-160px] right-[-160px] w-[520px] h-[520px] rounded-full bg-[#832729]/30 blur-[140px]" />
+      <div className="relative hidden lg:flex flex-col justify-between p-12 bg-gradient-to-br from-charcoal via-charcoal to-charcoal overflow-hidden">
+        <div className="absolute -top-40 -left-40 w-[480px] h-[480px] rounded-full bg-highlight/20 blur-[120px]" />
+        <div className="absolute bottom-[-160px] right-[-160px] w-[520px] h-[520px] rounded-full bg-primary/30 blur-[140px]" />
         <div className="absolute inset-0 opacity-[0.05]"
           style={{
             backgroundImage:
-              'linear-gradient(to right, #d4af37 1px, transparent 1px), linear-gradient(to bottom, #d4af37 1px, transparent 1px)',
+              'linear-gradient(to right, hsl(var(--highlight)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--highlight)) 1px, transparent 1px)',
             backgroundSize: '64px 64px',
           }} />
 
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-900/40">
-              <span className="font-bold text-[#1a0f0c]" style={{ fontFamily: "'Playfair Display', serif" }}>S</span>
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-highlight/70 to-highlight flex items-center justify-center shadow-lg shadow-highlight/10">
+              <span className="font-bold text-charcoal" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>S</span>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-[0.4em] text-amber-300/70">Sreerasthu</p>
+              <p className="text-[10px] uppercase tracking-[0.4em] text-highlight-soft/70">Sreerasthu</p>
               <p className="text-sm font-medium text-white/90">Silvers & Jewellery</p>
             </div>
           </div>
@@ -74,16 +74,16 @@ const AdminLogin = () => {
           transition={{ duration: 0.7 }}
           className="relative z-10 max-w-md"
         >
-          <p className="text-amber-400/80 text-xs uppercase tracking-[0.4em] mb-5 inline-flex items-center gap-2">
+          <p className="text-highlight-soft/80 text-xs uppercase tracking-[0.4em] mb-5 inline-flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5" /> Admin Console
           </p>
           <h1
             className="text-5xl xl:text-6xl leading-[1.05] font-light text-white"
-            style={{ fontFamily: "'Playfair Display', serif" }}
+            style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
           >
-            Crafted with <span className="italic text-amber-300">elegance.</span>
+            Crafted with <span className="italic text-highlight-soft">elegance.</span>
             <br />
-            Managed with <span className="italic text-amber-300">precision.</span>
+            Managed with <span className="italic text-highlight-soft">precision.</span>
           </h1>
           <p className="text-white/60 mt-6 text-sm leading-relaxed">
             Welcome to the Sreerasthu Silvers control room — orchestrate your collections,
@@ -92,14 +92,14 @@ const AdminLogin = () => {
         </motion.div>
 
         <div className="relative z-10 flex items-center gap-2 text-xs text-white/40">
-          <ShieldCheck className="w-4 h-4 text-amber-400/70" />
+          <ShieldCheck className="w-4 h-4 text-highlight-soft/70" />
           <span>Restricted access · All sessions are audited.</span>
         </div>
       </div>
 
       {/* RIGHT — Login card */}
-      <div className="relative flex items-center justify-center p-6 sm:p-12 bg-[#0d0a07]">
-        <div className="lg:hidden absolute -top-40 left-1/2 -translate-x-1/2 w-[420px] h-[420px] rounded-full bg-amber-500/20 blur-[120px]" />
+      <div className="relative flex items-center justify-center p-6 sm:p-12 bg-charcoal">
+        <div className="lg:hidden absolute -top-40 left-1/2 -translate-x-1/2 w-[420px] h-[420px] rounded-full bg-highlight/20 blur-[120px]" />
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -107,13 +107,13 @@ const AdminLogin = () => {
           transition={{ duration: 0.55 }}
           className="relative w-full max-w-md"
         >
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur-2xl shadow-[0_30px_80px_-30px_rgba(212,175,55,0.35)] p-8 sm:p-10">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur-2xl shadow-[0_30px_80px_-30px_hsl(var(--highlight)/0.35)] p-8 sm:p-10">
             <div className="flex flex-col items-center text-center mb-8">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-900/30 mb-5">
-                <ShieldCheck className="w-7 h-7 text-[#1a0f0c]" />
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-highlight/70 to-highlight flex items-center justify-center shadow-lg shadow-highlight/8 mb-5">
+                <ShieldCheck className="w-7 h-7 text-charcoal" />
               </div>
-              <p className="text-[10px] uppercase tracking-[0.4em] text-amber-400/70 mb-1.5">Sign in</p>
-              <h2 className="text-3xl text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <p className="text-[10px] uppercase tracking-[0.4em] text-highlight-soft/70 mb-1.5">Sign in</p>
+              <h2 className="text-3xl text-white" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                 Admin Console
               </h2>
               <p className="text-white/50 text-sm mt-2">Use your authorized credentials to continue.</p>
@@ -154,7 +154,7 @@ const AdminLogin = () => {
                   type="button"
                   tabIndex={-1}
                   onClick={() => setShowPassword((s) => !s)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-amber-300 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-highlight-soft transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -163,7 +163,7 @@ const AdminLogin = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#1a0f0c] font-semibold py-3.5 text-sm tracking-wide transition-all shadow-lg shadow-amber-900/30 disabled:opacity-60"
+                className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-highlight to-highlight hover:from-highlight/70 hover:to-highlight text-charcoal font-semibold py-3.5 text-sm tracking-wide transition-all shadow-lg shadow-highlight/8 disabled:opacity-60"
               >
                 <span className="relative z-10 inline-flex items-center justify-center gap-2">
                   {loading ? (
@@ -188,7 +188,7 @@ const AdminLogin = () => {
           <div className="mt-6 text-center">
             <a
               href="/"
-              className="inline-flex items-center gap-2 text-white/50 hover:text-amber-300 text-sm transition-colors"
+              className="inline-flex items-center gap-2 text-white/50 hover:text-highlight-soft text-sm transition-colors"
             >
               <ArrowLeft className="w-4 h-4" /> Back to website
             </a>
@@ -215,7 +215,7 @@ const FloatingInput = ({
   return (
     <div className="relative">
       {icon && (
-        <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${active ? 'text-amber-400' : 'text-white/40'}`}>
+        <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${active ? 'text-highlight-soft' : 'text-white/40'}`}>
           {icon}
         </div>
       )}
@@ -228,14 +228,14 @@ const FloatingInput = ({
         onBlur={() => setFocused(false)}
         onChange={(e) => onChange(e.target.value)}
         required
-        className="peer w-full rounded-xl border border-white/10 bg-white/[0.03] pl-11 pr-11 pt-5 pb-2 text-sm text-white placeholder-transparent focus:outline-none focus:border-amber-400/60 focus:bg-white/[0.06] transition-colors disabled:opacity-50"
+        className="peer w-full rounded-xl border border-white/10 bg-white/[0.03] pl-11 pr-11 pt-5 pb-2 text-sm text-white placeholder-transparent focus:outline-none focus:border-highlight/42 focus:bg-white/[0.06] transition-colors disabled:opacity-50"
         placeholder={label}
       />
       <label
         htmlFor={id}
         className={`pointer-events-none absolute left-11 transition-all ${
           active
-            ? 'top-1.5 text-[10px] uppercase tracking-[0.2em] text-amber-300/80'
+            ? 'top-1.5 text-[10px] uppercase tracking-[0.2em] text-highlight-soft/80'
             : 'top-1/2 -translate-y-1/2 text-sm text-white/40'
         }`}
       >

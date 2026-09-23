@@ -45,7 +45,7 @@ const FeatureIcons = () => {
             </span>
             <span className="h-px w-8 bg-primary/50" />
           </div>
-          <h3 className="text-2xl lg:text-3xl font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h3 className="text-2xl lg:text-3xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
             Crafted around you
           </h3>
         </div>

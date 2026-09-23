@@ -49,13 +49,13 @@ interface CustomerWishlistItem extends UIProduct {
 }
 
 const statusColors: Record<string, string> = {
-  pending: 'bg-amber-50 text-amber-700 border border-amber-200',
+  pending: 'bg-highlight/10 text-highlight border border-highlight/30',
   processing: 'bg-orange-50 text-orange-700 border border-orange-200',
   shipped: 'bg-blue-50 text-blue-700 border border-blue-200',
   outForDelivery: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
   delivered: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
   cancelled: 'bg-red-50 text-red-700 border border-red-200',
-  returnRequested: 'bg-amber-50 text-amber-700 border border-amber-200',
+  returnRequested: 'bg-highlight/10 text-highlight border border-highlight/30',
   returned: 'bg-gray-50 text-gray-700 border border-gray-200',
 };
 
@@ -150,7 +150,7 @@ const AdminCustomerDetails = () => {
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-highlight border-t-transparent" />
       </div>
     );
   }
@@ -170,13 +170,13 @@ const AdminCustomerDetails = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-amber-200/40 bg-gradient-to-br from-amber-50 via-white to-orange-50/30 p-6 shadow-sm md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 rounded-2xl border border-highlight/12 bg-gradient-to-br from-highlight/10 via-white to-primary/5 p-6 shadow-sm md:flex-row md:items-center md:justify-between">
         <div className="flex items-start gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-2xl font-bold text-amber-700">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-highlight/15 text-2xl font-bold text-highlight">
             {(customer.name || customer.username || 'U').charAt(0).toUpperCase()}
           </div>
           <div>
-            <button onClick={() => navigate('/admin/customers')} className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-amber-700 hover:text-amber-800">
+            <button onClick={() => navigate('/admin/customers')} className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-highlight hover:text-highlight">
               <ChevronLeft className="h-4 w-4" />
               Back to Customers
             </button>
@@ -211,7 +211,7 @@ const AdminCustomerDetails = () => {
         </div>
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-amber-50 p-3 text-amber-600"><Package className="h-5 w-5" /></div>
+            <div className="rounded-xl bg-highlight/10 p-3 text-highlight"><Package className="h-5 w-5" /></div>
             <div>
               <p className="text-sm text-gray-500">Account Status</p>
               <p className="text-2xl font-bold capitalize text-gray-900">{customer.status || 'active'}</p>
@@ -220,7 +220,7 @@ const AdminCustomerDetails = () => {
         </div>
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-rose-50 p-3 text-rose-600"><Heart className="h-5 w-5" /></div>
+            <div className="rounded-xl bg-primary/10 p-3 text-primary"><Heart className="h-5 w-5" /></div>
             <div>
               <p className="text-sm text-gray-500">Wishlist Items</p>
               <p className="text-2xl font-bold text-gray-900">{customer.wishlistItems.length}</p>
@@ -246,7 +246,7 @@ const AdminCustomerDetails = () => {
                 <div key={order.id} className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 md:flex-row md:items-center md:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-amber-700">#{order.orderNumber || order.id.slice(0, 8).toUpperCase()}</span>
+                      <span className="text-sm font-semibold text-highlight">#{order.orderNumber || order.id.slice(0, 8).toUpperCase()}</span>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[order.status] || 'bg-gray-100 text-gray-600'}`}>
                         {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace(/([A-Z])/g, ' $1')}
                       </span>
@@ -281,7 +281,7 @@ const AdminCustomerDetails = () => {
 
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-rose-50 p-3 text-rose-600"><Heart className="h-5 w-5" /></div>
+              <div className="rounded-xl bg-primary/10 p-3 text-primary"><Heart className="h-5 w-5" /></div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Wishlist Follow-up</h2>
                 <p className="text-sm text-gray-500">Synced products this customer saved while signed in.</p>

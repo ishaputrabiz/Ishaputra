@@ -253,7 +253,7 @@ const AdminOrders = () => {
   const getStatusBadgeClass = (status: Order['status']) => {
     switch (status) {
       case 'pending':
-        return 'bg-amber-50 text-amber-700 border border-amber-200';
+        return 'bg-highlight/10 text-highlight border border-highlight/30';
       case 'processing':
         return 'bg-blue-50 text-blue-700 border border-blue-200';
       case 'packed':
@@ -268,7 +268,7 @@ const AdminOrders = () => {
       case 'cancelled':
         return 'bg-red-50 text-red-700 border border-red-200';
       case 'returnRequested':
-        return 'bg-amber-50 text-amber-700 border border-amber-200';
+        return 'bg-highlight/10 text-highlight border border-highlight/30';
       case 'returnScheduled':
         return 'bg-purple-50 text-purple-700 border border-purple-200';
       case 'returned':
@@ -349,7 +349,7 @@ const AdminOrders = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="min-h-screen bg-gray-50" style={{ fontFamily: "var(--font-body)" }}>
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-6 py-6">
           {/* Header */}
@@ -444,7 +444,7 @@ const AdminOrders = () => {
                 tabIndex={0}
                 onClick={() => navigate(`/admin/orders/${order.id}`)}
                 onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/admin/orders/${order.id}`); }}
-                className="group bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg hover:border-amber-300 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                className="group bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg hover:border-highlight/45 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-highlight/28"
               >
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-semibold text-gray-900">ORD-{order.orderId}</span>
@@ -485,7 +485,7 @@ const AdminOrders = () => {
                   )}
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <span className="text-[11px] uppercase tracking-wider text-gray-400 group-hover:text-amber-600 transition-colors">Open details →</span>
+                  <span className="text-[11px] uppercase tracking-wider text-gray-400 group-hover:text-highlight transition-colors">Open details →</span>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.id); }}
                     className="p-1.5 text-red-500 hover:text-white hover:bg-red-500 rounded-md transition-colors"
@@ -536,7 +536,7 @@ const AdminOrders = () => {
                     <tr
                       key={order.id}
                       onClick={() => navigate(`/admin/orders/${order.id}`)}
-                      className="border-b border-gray-100 hover:bg-amber-50/40 cursor-pointer"
+                      className="border-b border-gray-100 hover:bg-highlight/5 cursor-pointer"
                     >
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">
@@ -639,7 +639,7 @@ const AdminOrders = () => {
               className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 overflow-hidden"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-amber-600 to-amber-500 px-6 py-5">
+              <div className="bg-gradient-to-r from-highlight to-highlight px-6 py-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -647,7 +647,7 @@ const AdminOrders = () => {
                     </div>
                     <div>
                       <h2 className="text-xl font-bold text-white">Manage Tracking</h2>
-                      <p className="text-amber-100 text-sm">Order #{selectedOrder.orderId}</p>
+                      <p className="text-charcoal-foreground text-sm">Order #{selectedOrder.orderId}</p>
                     </div>
                   </div>
                   <button
@@ -694,18 +694,18 @@ const AdminOrders = () => {
 
                 {/* Return Request Information - Show when return is requested */}
                 {(selectedOrder.status === 'returnRequested' || selectedOrder.returnReason) && (
-                  <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <div className="mb-6 bg-highlight/10 border border-highlight/30 rounded-xl p-4">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <ReturnIcon className="w-5 h-5 text-amber-600" />
+                      <div className="w-10 h-10 bg-highlight/15 rounded-full flex items-center justify-center flex-shrink-0">
+                        <ReturnIcon className="w-5 h-5 text-highlight" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-sm font-semibold text-amber-800 mb-1">Return Request</h3>
-                        <p className="text-sm text-amber-700 mb-2">
+                        <h3 className="text-sm font-semibold text-highlight mb-1">Return Request</h3>
+                        <p className="text-sm text-highlight mb-2">
                           <span className="font-medium">Reason:</span> {selectedOrder.returnReason || 'Not specified'}
                         </p>
                         {selectedOrder.returnRequestedAt && (
-                          <p className="text-xs text-amber-600">
+                          <p className="text-xs text-highlight">
                             Requested on: {new Date(selectedOrder.returnRequestedAt.seconds * 1000).toLocaleDateString('en-IN', { 
                               day: 'numeric', 
                               month: 'short', 
@@ -793,7 +793,7 @@ const AdminOrders = () => {
                       <select
                         value={trackingForm.status}
                         onChange={(e) => setTrackingForm({ ...trackingForm, status: e.target.value as Order['status'] })}
-                        className="w-full px-4 py-3 pr-10 border border-gray-200 rounded-xl bg-white text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent appearance-none cursor-pointer"
+                        className="w-full px-4 py-3 pr-10 border border-gray-200 rounded-xl bg-white text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent appearance-none cursor-pointer"
                       >
                         <option value="pending">⏳ Pending</option>
                         <option value="processing">📦 Processing</option>
@@ -818,7 +818,7 @@ const AdminOrders = () => {
                       value={trackingForm.trackingUrl}
                       onChange={(e) => setTrackingForm({ ...trackingForm, trackingUrl: e.target.value })}
                       placeholder="https://..."
-                      className="h-12 border-gray-200 rounded-xl focus:ring-amber-500 focus:border-amber-500"
+                      className="h-12 border-gray-200 rounded-xl focus:ring-highlight focus:border-highlight"
                     />
                   </div>
 
@@ -830,7 +830,7 @@ const AdminOrders = () => {
                       onChange={(e) => setTrackingForm({ ...trackingForm, note: e.target.value })}
                       placeholder="Add a note for this status update..."
                       rows={2}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none text-sm"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-highlight focus:border-transparent resize-none text-sm"
                     />
                   </div>
                 </div>
@@ -872,7 +872,7 @@ const AdminOrders = () => {
                   <Button
                     onClick={handleTrackingUpdate}
                     disabled={trackingUpdating}
-                    className="flex-1 h-12 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white"
+                    className="flex-1 h-12 bg-gradient-to-r from-highlight to-highlight hover:from-highlight hover:to-highlight text-white"
                   >
                     {trackingUpdating ? (
                       <>
@@ -947,7 +947,7 @@ const AdminOrders = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Total Amount</span>
-                      <span className="text-sm font-semibold text-amber-600">₹{selectedOrder.total.toFixed(2)}</span>
+                      <span className="text-sm font-semibold text-highlight">₹{selectedOrder.total.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Items</span>

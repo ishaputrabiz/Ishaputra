@@ -32,9 +32,9 @@ const STATUS_CONFIG: Record<VideoCallStatus, {
 }> = {
   pending: {
     label: 'Pending Confirmation',
-    badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200',
-    dot: 'bg-amber-400',
-    border: 'border-amber-200/60 dark:border-amber-800/40',
+    badge: 'bg-highlight/15 text-highlight dark:bg-highlight/15 dark:text-charcoal-foreground',
+    dot: 'bg-highlight/70',
+    border: 'border-highlight/18 dark:border-highlight/24',
     icon: Clock,
   },
   confirmed: {
@@ -132,7 +132,7 @@ const MyVideoCalls = () => {
           </button>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-sm">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-highlight/70 to-highlight flex items-center justify-center shadow-sm">
                 <Video className="w-4 h-4 text-white" />
               </div>
               <h1 className="text-xl font-bold tracking-tight text-foreground">My Video Calls</h1>
@@ -143,8 +143,8 @@ const MyVideoCalls = () => {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
-              <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
+            <div className="w-12 h-12 rounded-full bg-highlight/10 dark:bg-highlight/8 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-highlight" />
             </div>
             <p className="text-sm text-muted-foreground">Loading your calls…</p>
           </div>
@@ -156,7 +156,7 @@ const MyVideoCalls = () => {
             {activeRequests.length > 0 && (
               <section>
                 <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <Sparkles className="w-4 h-4 text-highlight" />
                   <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Active</h2>
                   <span className="ml-auto text-xs text-muted-foreground">{activeRequests.length} request{activeRequests.length !== 1 ? 's' : ''}</span>
                 </div>
@@ -358,8 +358,8 @@ function EmptyState({ onBrowse }: { onBrowse: () => void }) {
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center py-24 text-center gap-4"
     >
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/30 dark:to-amber-800/10 flex items-center justify-center shadow-inner">
-        <Video className="w-9 h-9 text-amber-500" />
+      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-highlight/15 to-highlight/10 dark:from-highlight/8 dark:to-highlight/5 flex items-center justify-center shadow-inner">
+        <Video className="w-9 h-9 text-highlight" />
       </div>
       <div>
         <p className="font-semibold text-foreground mb-1">No video call requests yet</p>
@@ -368,7 +368,7 @@ function EmptyState({ onBrowse }: { onBrowse: () => void }) {
         </p>
       </div>
       <Button
-        className="mt-2 bg-amber-600 hover:bg-amber-700 text-white rounded-full px-6 gap-2"
+        className="mt-2 bg-highlight hover:bg-highlight text-white rounded-full px-6 gap-2"
         onClick={onBrowse}
       >
         <Sparkles className="w-4 h-4" />

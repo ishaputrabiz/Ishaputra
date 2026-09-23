@@ -43,7 +43,7 @@ const SplitSection = () => {
             animate={isInView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.8, delay: 0.2 }}
             className="lg:pl-8"
-            style={{ fontFamily: "'Poppins', sans-serif" }}
+            style={{ fontFamily: "var(--font-body)" }}
           >
             <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground block mb-4">
               OUR CHALLENGE TO DO BETTER

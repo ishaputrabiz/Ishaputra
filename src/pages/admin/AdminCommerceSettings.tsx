@@ -72,11 +72,11 @@ const Section = ({
     initial={{ opacity: 0, y: 14 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.4 }}
-    className="bg-white dark:bg-gray-900 border border-[#F5EFE6] dark:border-gray-800 rounded-2xl p-6 shadow-sm"
+    className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl p-6 shadow-sm"
   >
     <div className="flex items-center gap-3 mb-5">
       {Icon && (
-        <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/20 grid place-items-center text-amber-700 dark:text-amber-400">
+        <div className="w-9 h-9 rounded-lg bg-highlight/10 dark:bg-highlight/5 grid place-items-center text-highlight dark:text-highlight">
           <Icon className="w-4 h-4" />
         </div>
       )}
@@ -163,7 +163,7 @@ const CouponsTab = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
       </div>
     );
   }
@@ -179,7 +179,7 @@ const CouponsTab = () => {
           <Button
             type="button"
             onClick={addCoupon}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
+            className="bg-highlight hover:bg-highlight text-white"
           >
             <Plus className="w-4 h-4 mr-1.5" /> Add Coupon
           </Button>
@@ -327,7 +327,7 @@ const CouponsTab = () => {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
+            className="bg-highlight hover:bg-highlight text-white"
           >
             {saving ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -399,7 +399,7 @@ const DeliveryGstTab = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
       </div>
     );
   }
@@ -412,7 +412,7 @@ const DeliveryGstTab = () => {
         icon={Truck}
       >
         <div className="space-y-5">
-          <div className="flex items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-900/10 p-3">
+          <div className="flex items-start gap-3 rounded-lg border border-highlight/30 dark:border-highlight/20 bg-highlight/6 dark:bg-highlight/5 p-3">
             <Switch
               checked={delivery.enabled}
               onCheckedChange={(v) => updateDelivery('enabled', v)}
@@ -506,7 +506,7 @@ const DeliveryGstTab = () => {
                 size="sm"
                 onClick={addStateRate}
                 disabled={!delivery.enabled}
-                className="border-amber-200 text-amber-700 hover:bg-amber-50 shrink-0"
+                className="border-highlight/30 text-highlight hover:bg-highlight/10 shrink-0"
               >
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add State
               </Button>
@@ -621,7 +621,7 @@ const DeliveryGstTab = () => {
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="bg-amber-600 hover:bg-amber-700 text-white"
+          className="bg-highlight hover:bg-highlight text-white"
         >
           {saving ? (
             <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -686,7 +686,7 @@ const SupportTab = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
       </div>
     );
   }
@@ -735,7 +735,7 @@ const SupportTab = () => {
           <Button
             type="button"
             onClick={addFaq}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
+            className="bg-highlight hover:bg-highlight text-white"
           >
             <Plus className="w-4 h-4 mr-1.5" /> Add FAQ
           </Button>
@@ -784,7 +784,7 @@ const SupportTab = () => {
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="bg-amber-600 hover:bg-amber-700 text-white"
+          className="bg-highlight hover:bg-highlight text-white"
         >
           {saving ? (
             <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -812,7 +812,7 @@ const AdminCommerceSettings = () => {
       </div>
 
       <Tabs defaultValue="delivery" className="w-full">
-        <TabsList className="bg-white dark:bg-gray-900 border border-[#F5EFE6] dark:border-gray-800 p-1 rounded-xl mb-6">
+        <TabsList className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 p-1 rounded-xl mb-6">
           <TabsTrigger value="delivery" className="gap-1.5">
             <Truck className="w-4 h-4" /> Delivery & GST
           </TabsTrigger>

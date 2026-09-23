@@ -65,7 +65,7 @@ const AdminNewsletterSubscriptions = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Mail className="w-6 h-6 text-amber-600" />
+            <Mail className="w-6 h-6 text-highlight" />
             Newsletter Subscribers
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -85,9 +85,9 @@ const AdminNewsletterSubscriptions = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900 rounded-xl p-4">
+        <div className="bg-highlight/10 dark:bg-highlight/6 border border-highlight/20 dark:border-highlight/50 rounded-xl p-4">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Subscribers</p>
-          <p className="text-3xl font-bold text-amber-700 dark:text-amber-400 mt-1">{subs.length}</p>
+          <p className="text-3xl font-bold text-highlight dark:text-highlight mt-1">{subs.length}</p>
         </div>
         <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 rounded-xl p-4">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Showing</p>
@@ -109,7 +109,7 @@ const AdminNewsletterSubscriptions = () => {
       {/* List */}
       {loading ? (
         <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+          <Loader2 className="w-8 h-8 animate-spin text-highlight" />
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">

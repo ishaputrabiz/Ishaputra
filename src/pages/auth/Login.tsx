@@ -651,8 +651,8 @@ const Login = () => {
             </div>
 
             {/* Tip */}
-            <div className="mt-6 p-3 bg-amber-50 rounded-lg border border-amber-100">
-              <p className="text-sm text-amber-700 text-center">
+            <div className="mt-6 p-3 bg-highlight/10 rounded-lg border border-highlight/20">
+              <p className="text-sm text-highlight text-center">
                 💡 <span className="font-medium">Tip:</span> Didn't receive email? Check your spam folder.
               </p>
             </div>

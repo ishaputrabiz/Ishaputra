@@ -220,7 +220,7 @@ export async function payWithRazorpay(
       description: options.description || 'Order payment',
       ...(options.prefill ? { prefill: options.prefill } : {}),
       ...(options.notes ? { notes: options.notes } : {}),
-      theme: { color: options.themeColor || '#832729' },
+      theme: { color: options.themeColor || '#A4532C' },
       modal: {
         ondismiss: () => finish(() => reject(new PaymentCancelledError())),
       },

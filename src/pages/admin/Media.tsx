@@ -101,15 +101,15 @@ const Media = () => {
           <CardTitle className="text-gray-900">Upload Media</CardTitle>
         </CardHeader>
         <CardContent>
-          <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:border-amber-600 transition-colors">
+          <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:border-highlight transition-colors">
             <div className="flex flex-col items-center justify-center pt-5 pb-6">
               {uploading ? (
                 <>
-                  <Loader2 className="h-12 w-12 animate-spin text-amber-600 mb-4" />
+                  <Loader2 className="h-12 w-12 animate-spin text-highlight mb-4" />
                   <p className="text-lg text-gray-700">Uploading... {uploadProgress}%</p>
                   <div className="w-64 h-2 bg-gray-100 rounded-full mt-4">
                     <div
-                      className="h-full bg-amber-600 rounded-full transition-all"
+                      className="h-full bg-highlight rounded-full transition-all"
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
@@ -146,10 +146,10 @@ const Media = () => {
             Uploaded Media ({mediaItems.length})
           </CardTitle>
           <div className="flex border border-gray-200 rounded-md overflow-hidden">
-            <button onClick={() => setViewMode('grid')} className={`p-2 ${viewMode === 'grid' ? 'bg-amber-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+            <button onClick={() => setViewMode('grid')} className={`p-2 ${viewMode === 'grid' ? 'bg-highlight text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
               <LayoutGrid className="h-4 w-4" />
             </button>
-            <button onClick={() => setViewMode('table')} className={`p-2 ${viewMode === 'table' ? 'bg-amber-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+            <button onClick={() => setViewMode('table')} className={`p-2 ${viewMode === 'table' ? 'bg-highlight text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
               <List className="h-4 w-4" />
             </button>
           </div>
@@ -178,7 +178,7 @@ const Media = () => {
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <button
                       onClick={() => handleCopyUrl(item.url)}
-                      className="p-2 bg-amber-600 rounded-lg text-white hover:bg-amber-700 transition-colors"
+                      className="p-2 bg-highlight rounded-lg text-white hover:bg-highlight transition-colors"
                       title="Copy URL"
                     >
                       {copiedUrl === item.url ? (
@@ -239,7 +239,7 @@ const Media = () => {
                       <td className="px-4 py-3"><span className="text-xs text-gray-500 font-mono truncate max-w-xs block">{item.url}</span></td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center gap-2 justify-end">
-                          <button onClick={() => handleCopyUrl(item.url)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded" title="Copy URL">
+                          <button onClick={() => handleCopyUrl(item.url)} className="p-1.5 text-highlight hover:bg-highlight/10 rounded" title="Copy URL">
                             {copiedUrl === item.url ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                           </button>
                           <button onClick={() => handleDelete(item.url)} className="p-1.5 text-red-500 hover:bg-red-50 rounded" title="Delete">

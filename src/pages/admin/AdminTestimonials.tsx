@@ -445,7 +445,7 @@ const AdminTestimonials = () => {
               {/* Preview Card */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Preview</label>
-                <div className="bg-white rounded-2xl p-6 shadow-md border border-border/30 max-w-sm" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                <div className="bg-white rounded-2xl p-6 shadow-md border border-border/30 max-w-sm" style={{ fontFamily: "var(--font-body)" }}>
                   <div className="flex items-center gap-1 mb-3">
                     {[1, 2, 3, 4, 5].map((i) => (
                       <Star key={i} className={`w-4 h-4 ${i <= formData.rating ? 'fill-orange-400 text-orange-400' : 'fill-gray-200 text-gray-200'}`} />

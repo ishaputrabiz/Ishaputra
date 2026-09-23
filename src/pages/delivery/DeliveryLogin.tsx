@@ -112,7 +112,7 @@ const DeliveryLogin = () => {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-        <Loader2 className="h-10 w-10 animate-spin text-amber-500" />
+        <Loader2 className="h-10 w-10 animate-spin text-highlight" />
       </div>
     );
   }
@@ -147,9 +147,9 @@ const DeliveryLogin = () => {
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.1 }}
-                  className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-amber-500/10 mb-4"
+                  className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-highlight/10 mb-4"
                 >
-                  <Truck className="h-10 w-10 text-amber-500" />
+                  <Truck className="h-10 w-10 text-highlight" />
                 </motion.div>
                 <motion.h1
                   initial={{ y: 10, opacity: 0 }}
@@ -204,7 +204,7 @@ const DeliveryLogin = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="pl-12 h-14 bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-amber-500 focus:ring-amber-500/20 rounded-xl text-base"
+                      className="pl-12 h-14 bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-highlight focus:ring-highlight/20 rounded-xl text-base"
                       required
                     />
                   </div>
@@ -222,7 +222,7 @@ const DeliveryLogin = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
-                      className="pl-12 pr-12 h-14 bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-amber-500 focus:ring-amber-500/20 rounded-xl text-base"
+                      className="pl-12 pr-12 h-14 bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-highlight focus:ring-highlight/20 rounded-xl text-base"
                       required
                     />
                     <button
@@ -245,7 +245,7 @@ const DeliveryLogin = () => {
                         onChange={(e) => setRememberMe(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-5 h-5 rounded border-2 border-gray-600 peer-checked:bg-amber-500 peer-checked:border-amber-500 transition-colors flex items-center justify-center">
+                      <div className="w-5 h-5 rounded border-2 border-gray-600 peer-checked:bg-highlight peer-checked:border-highlight transition-colors flex items-center justify-center">
                         {rememberMe && (
                           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -262,7 +262,7 @@ const DeliveryLogin = () => {
                       setShowForgotPassword(true);
                       setForgotPasswordEmail(email);
                     }}
-                    className="text-sm text-amber-500 hover:text-amber-400 transition-colors"
+                    className="text-sm text-highlight hover:text-highlight-soft transition-colors"
                   >
                     Forgot Password?
                   </button>
@@ -272,7 +272,7 @@ const DeliveryLogin = () => {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-14 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-base transition-all active:scale-[0.98]"
+                  className="w-full h-14 bg-highlight hover:bg-highlight text-white font-semibold rounded-xl text-base transition-all active:scale-[0.98]"
                 >
                   {loading ? (
                     <span className="flex items-center gap-2">
@@ -317,8 +317,8 @@ const DeliveryLogin = () => {
 
               {/* Title */}
               <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/10 mb-4">
-                  <Lock className="h-8 w-8 text-amber-500" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-highlight/10 mb-4">
+                  <Lock className="h-8 w-8 text-highlight" />
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">
                   Reset Password
@@ -356,7 +356,7 @@ const DeliveryLogin = () => {
                       value={forgotPasswordEmail}
                       onChange={(e) => setForgotPasswordEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="pl-12 h-14 bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-amber-500 focus:ring-amber-500/20 rounded-xl text-base"
+                      className="pl-12 h-14 bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-highlight focus:ring-highlight/20 rounded-xl text-base"
                       required
                     />
                   </div>
@@ -365,7 +365,7 @@ const DeliveryLogin = () => {
                 <Button
                   type="submit"
                   disabled={resetSending}
-                  className="w-full h-14 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-base transition-all active:scale-[0.98]"
+                  className="w-full h-14 bg-highlight hover:bg-highlight text-white font-semibold rounded-xl text-base transition-all active:scale-[0.98]"
                 >
                   {resetSending ? (
                     <span className="flex items-center gap-2">

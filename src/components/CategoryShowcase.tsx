@@ -37,7 +37,7 @@ const CategoryShowcase = () => {
   }
 
   return (
-    <section className="w-full py-8 md:py-16 bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(212,175,55,0.05)_100%)]">
+    <section className="w-full py-8 md:py-16 bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,hsl(var(--highlight)/0.05)_100%)]">
       <div className="container-custom">
         {/* Section Title */}
         <div className="text-center mb-6 md:mb-10">
@@ -46,7 +46,7 @@ const CategoryShowcase = () => {
             <span className="text-[10px] uppercase tracking-[0.32em] text-primary/80 font-medium">Our Collections</span>
             <span className="h-px w-8 bg-primary/50" />
           </div>
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
             Curated for every moment
           </h2>
           <p className="text-sm text-muted-foreground mt-2 font-light">Explore curated collections crafted with passion</p>
@@ -91,7 +91,7 @@ const CategoryShowcase = () => {
                       </div>
                       <h3 
                         className={`font-semibold mb-0.5 transition-all duration-300 ${isFirst ? 'text-xl md:text-3xl' : 'text-base md:text-xl'}`}
-                        style={{ fontFamily: "'Playfair Display', serif" }}
+                        style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
                       >
                         {showcase.title}
                       </h3>

@@ -14,7 +14,7 @@ export const DEFAULT_HOME_COLLECTIONS: Array<
     // depend on anything outside our own storage.
     imageUrl:
       "https://images.sreerasthusilvers.com/products/2026/09/m3bd50a1a721a43e3accf0a3b.jpg",
-    tint: "from-[#2a1810]/88 via-[#2a1810]/35 to-transparent",
+    tint: "from-charcoal/88 via-charcoal/35 to-transparent",
     active: true,
     order: 0,
   },
@@ -26,7 +26,7 @@ export const DEFAULT_HOME_COLLECTIONS: Array<
     ctaLink: "/category/gifting",
     imageUrl:
       "https://images.unsplash.com/photo-1549421263-6064833b071b?auto=format&fit=crop&w=1200&q=80",
-    tint: "from-[#3a2418]/85 via-[#3a2418]/30 to-transparent",
+    tint: "from-charcoal/85 via-charcoal/30 to-transparent",
     active: true,
     order: 1,
   },
@@ -38,7 +38,7 @@ export const DEFAULT_HOME_COLLECTIONS: Array<
     ctaLink: "/category/articles",
     imageUrl:
       "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1200&q=80",
-    tint: "from-[#3b2417]/80 via-[#3b2417]/30 to-transparent",
+    tint: "from-charcoal/80 via-charcoal/30 to-transparent",
     active: true,
     order: 2,
   },
@@ -62,7 +62,7 @@ export const DEFAULT_HOME_COLLECTIONS: Array<
     ctaLink: "/category/jewellery",
     imageUrl:
       "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=1200&q=80",
-    tint: "from-[#3a1d20]/85 via-[#3a1d20]/35 to-transparent",
+    tint: "from-charcoal/85 via-charcoal/35 to-transparent",
     active: true,
     order: 4,
   },

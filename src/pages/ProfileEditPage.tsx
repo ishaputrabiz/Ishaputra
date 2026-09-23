@@ -192,12 +192,12 @@ const ProfileEditPage = () => {
       {/* Desktop site header */}
       <div className="hidden lg:block"><Header /></div>
 
-      <div className="min-h-screen bg-gray-50 dark:bg-zinc-900/50 pb-24 lg:pb-16 dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="min-h-screen bg-gray-50 dark:bg-zinc-900/50 pb-24 lg:pb-16 dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "var(--font-body)" }}>
         {/* Desktop page wrapper for centered card width */}
         <div className="lg:max-w-3xl lg:mx-auto lg:px-6 lg:pt-8">
         <button
           onClick={() => navigate('/account')}
-          className="mb-4 hidden items-center gap-2 rounded-full border border-[#d4af37]/15 bg-white/90 dark:bg-zinc-900/90 px-4 py-2 text-sm font-medium text-gray-700 dark:text-zinc-300 shadow-sm transition-colors hover:bg-white dark:border-[#d4af37]/20 dark:bg-zinc-900/88 dark:text-zinc-100 dark:hover:bg-zinc-900 lg:inline-flex"
+          className="mb-4 hidden items-center gap-2 rounded-full border border-highlight/15 bg-white/90 dark:bg-zinc-900/90 px-4 py-2 text-sm font-medium text-gray-700 dark:text-zinc-300 shadow-sm transition-colors hover:bg-white dark:border-highlight/20 dark:bg-zinc-900/88 dark:text-zinc-100 dark:hover:bg-zinc-900 lg:inline-flex"
         >
           <ArrowLeft className="h-4 w-4" />
           Back

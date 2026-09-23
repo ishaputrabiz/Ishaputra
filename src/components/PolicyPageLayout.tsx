@@ -30,7 +30,7 @@ const PolicyPageLayout = ({ title, effectiveDate, children }: PolicyPageLayoutPr
 
       {/* Premium page header band */}
       <section className="relative bg-gradient-to-br from-[#1a1a1a] via-[#222] to-[#1a1a1a] dark:from-card dark:via-card dark:to-card text-white">
-        <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle_at_30%_20%,#d4af37_0%,transparent_55%)]" />
+        <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle_at_30%_20%,hsl(var(--highlight))_0%,transparent_55%)]" />
         <div className="container-custom relative py-10 md:py-14">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-1.5 text-xs text-white/60 mb-4">
@@ -49,7 +49,7 @@ const PolicyPageLayout = ({ title, effectiveDate, children }: PolicyPageLayoutPr
             </p>
           )}
           {/* Gold accent underline */}
-          <div className="mt-5 h-[2px] w-16 bg-gradient-to-r from-[#d4af37] to-transparent rounded-full" />
+          <div className="mt-5 h-[2px] w-16 bg-gradient-to-r from-highlight to-transparent rounded-full" />
         </div>
       </section>
 

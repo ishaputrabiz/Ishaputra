@@ -68,7 +68,7 @@ const LuxurySofaSection = () => {
           }}
         >
           <div className="container-custom w-full">
-            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center" style={{ fontFamily: "'Poppins', sans-serif" }}>
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center" style={{ fontFamily: "var(--font-body)" }}>
               {/* Left: Product Image */}
               <motion.div
                 className="relative max-w-md mx-auto lg:mx-0"
@@ -89,7 +89,7 @@ const LuxurySofaSection = () => {
                 style={{ y: subtitleY, opacity: subtitleOpacity }}
               >
                 {/* Product Title */}
-                <h1 className="text-xl md:text-2xl font-semibold text-foreground mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                <h1 className="text-xl md:text-2xl font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-body)" }}>
                   Royal Silver Sofa
                 </h1>
 
@@ -123,7 +123,7 @@ const LuxurySofaSection = () => {
                   <div className="flex items-start gap-8">
                     <div>
                       <p className="text-[10px] text-muted-foreground mb-0.5">Regular price</p>
-                      <p className="text-lg md:text-xl font-semibold text-foreground" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                      <p className="text-lg md:text-xl font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                         ₹99,500
                       </p>
                     </div>
@@ -131,7 +131,7 @@ const LuxurySofaSection = () => {
                       <p className="text-[10px] text-muted-foreground mb-0.5">
                         Member (Save ₹20,900 per year)
                       </p>
-                      <p className="text-lg md:text-xl font-semibold text-foreground" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                      <p className="text-lg md:text-xl font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                         ₹84,600
                       </p>
                     </div>

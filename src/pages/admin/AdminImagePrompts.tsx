@@ -133,7 +133,7 @@ function ImageDropZone({
         </label>
       )}
       {image && preview ? (
-        <div className="relative group rounded-lg border border-[#F5EFE6] overflow-hidden bg-gray-50">
+        <div className="relative group rounded-lg border border-cream-dark overflow-hidden bg-gray-50">
           <SmartImage src={preview} alt="preview" className="w-full h-36 object-contain bg-white" preset="card" />
           <button
             type="button"
@@ -151,15 +151,15 @@ function ImageDropZone({
           onClick={() => inputRef.current?.click()}
           className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors ${
             dragOver
-              ? 'border-amber-500 bg-amber-50'
+              ? 'border-highlight bg-highlight/10'
               : required
-                ? 'border-amber-300 hover:border-amber-500 hover:bg-[#FFF9E6]/30 bg-[#FFF9E6]/10'
-                : 'border-[#F5EFE6] hover:border-amber-400 hover:bg-[#FFF9E6]/30'
+                ? 'border-highlight/45 hover:border-highlight hover:bg-cream/30 bg-cream/10'
+                : 'border-cream-dark hover:border-highlight/70 hover:bg-cream/30'
           }`}
         >
           <Upload className="h-6 w-6 mx-auto text-gray-400 mb-1.5" />
           <p className="text-xs text-gray-500">
-            Drop image or <span className="text-amber-600 font-medium">click to upload</span>
+            Drop image or <span className="text-highlight font-medium">click to upload</span>
           </p>
           {hint && <p className="text-[10px] text-gray-400 mt-1">{hint}</p>}
         </div>
@@ -222,15 +222,15 @@ function HeroImageDropZone({
         onClick={() => inputRef.current?.click()}
         className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
           dragOver
-            ? 'border-amber-500 bg-amber-50'
-            : 'border-[#F5EFE6] hover:border-amber-400 hover:bg-[#FFF9E6]/30'
+            ? 'border-highlight bg-highlight/10'
+            : 'border-cream-dark hover:border-highlight/70 hover:bg-cream/30'
         }`}
       >
         <Upload className="h-5 w-5 mx-auto text-gray-400 mb-1" />
         <p className="text-xs text-gray-500">
           {imageCount === 0
-            ? <>Drop images or <span className="text-amber-600 font-medium">click to upload</span> (select multiple)</>
-            : <>Add more images — <span className="text-amber-600 font-medium">click or drop</span></>
+            ? <>Drop images or <span className="text-highlight font-medium">click to upload</span> (select multiple)</>
+            : <>Add more images — <span className="text-highlight font-medium">click or drop</span></>
           }
         </p>
         <p className="text-[10px] text-gray-400 mt-1">
@@ -581,10 +581,10 @@ const AdminImagePrompts = () => {
     }
   };
 
-  const inputStyles = "w-full bg-white border border-[#F5EFE6] rounded-lg px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 transition-colors";
-  const selectStyles = "w-full bg-white border border-[#F5EFE6] rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 transition-colors appearance-none cursor-pointer";
+  const inputStyles = "w-full bg-white border border-cream-dark rounded-lg px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-highlight focus:ring-1 focus:ring-highlight/20 transition-colors";
+  const selectStyles = "w-full bg-white border border-cream-dark rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:border-highlight focus:ring-1 focus:ring-highlight/20 transition-colors appearance-none cursor-pointer";
   const labelStyles = "block text-sm font-medium text-gray-700 mb-1.5";
-  const textareaStyles = "w-full bg-white border border-[#F5EFE6] rounded-lg px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 transition-colors resize-none";
+  const textareaStyles = "w-full bg-white border border-cream-dark rounded-lg px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-highlight focus:ring-1 focus:ring-highlight/20 transition-colors resize-none";
 
   return (
     <div className="space-y-6">
@@ -592,29 +592,29 @@ const AdminImagePrompts = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Sparkles className="h-7 w-7 text-amber-600" />
+            <Sparkles className="h-7 w-7 text-highlight" />
             AI Image Prompt Generator
           </h1>
           <p className="text-gray-500 text-sm mt-1">
             Upload your jewelry image → generate reference-locked Nano Banana Pro prompts for product photos and banners
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-400 bg-white px-3 py-1.5 rounded-full border border-[#F5EFE6]">
+        <div className="flex items-center gap-2 text-xs text-gray-400 bg-white px-3 py-1.5 rounded-full border border-cream-dark">
           <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
           Gemini 2.5 Flash
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white rounded-xl border border-[#F5EFE6] p-1.5 flex flex-wrap gap-1">
+      <div className="bg-white rounded-xl border border-cream-dark p-1.5 flex flex-wrap gap-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => { setActiveTab(tab.id); setGeneratedPrompt(''); setCopied(false); }}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 min-w-[140px] justify-center ${
               activeTab === tab.id
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'text-gray-600 hover:bg-[#FFF9E6] hover:text-amber-700'
+                ? 'bg-highlight text-white shadow-sm'
+                : 'text-gray-600 hover:bg-cream hover:text-highlight'
             }`}
           >
             <tab.icon className="h-4 w-4" />
@@ -632,14 +632,14 @@ const AdminImagePrompts = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
-            className="bg-white rounded-xl border border-[#F5EFE6] p-6 space-y-5"
+            className="bg-white rounded-xl border border-cream-dark p-6 space-y-5"
           >
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                {activeTab === 'product-model' && <Gem className="h-4 w-4 text-amber-600" />}
-                {activeTab === 'product-studio' && <Camera className="h-4 w-4 text-amber-600" />}
-                {activeTab === 'hero-section' && <Gift className="h-4 w-4 text-amber-600" />}
-                {activeTab === 'custom' && <Wand2 className="h-4 w-4 text-amber-600" />}
+              <div className="w-8 h-8 bg-highlight/15 rounded-lg flex items-center justify-center">
+                {activeTab === 'product-model' && <Gem className="h-4 w-4 text-highlight" />}
+                {activeTab === 'product-studio' && <Camera className="h-4 w-4 text-highlight" />}
+                {activeTab === 'hero-section' && <Gift className="h-4 w-4 text-highlight" />}
+                {activeTab === 'custom' && <Wand2 className="h-4 w-4 text-highlight" />}
               </div>
               <div>
                 <h2 className="font-semibold text-gray-900 text-sm">
@@ -666,9 +666,9 @@ const AdminImagePrompts = () => {
                 />
 
                 {activeTab === 'product-model' && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1.5">
-                    <p className="text-xs text-amber-800 font-semibold">Website Product Page Model Shot</p>
-                    <ul className="text-[11px] text-amber-700 space-y-0.5 list-disc list-inside">
+                  <div className="bg-highlight/10 border border-highlight/30 rounded-lg p-3 space-y-1.5">
+                    <p className="text-xs text-highlight font-semibold">Website Product Page Model Shot</p>
+                    <ul className="text-[11px] text-highlight space-y-0.5 list-disc list-inside">
                       <li>Premium Indian model — DSLR photographed, not AI-looking</li>
                       <li>Real skin pores, catchlights, hair flyaways, natural imperfections</li>
                       <li>Product stays large, sharp, centered, and inspectable for the product page</li>
@@ -680,9 +680,9 @@ const AdminImagePrompts = () => {
                   </div>
                 )}
                 {activeTab === 'product-studio' && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1.5">
-                    <p className="text-xs text-amber-800 font-semibold">Studio Product Photoshoot</p>
-                    <ul className="text-[11px] text-amber-700 space-y-0.5 list-disc list-inside">
+                  <div className="bg-highlight/10 border border-highlight/30 rounded-lg p-3 space-y-1.5">
+                    <p className="text-xs text-highlight font-semibold">Studio Product Photoshoot</p>
+                    <ul className="text-[11px] text-highlight space-y-0.5 list-disc list-inside">
                       <li>Product-only premium studio shot — no model</li>
                       <li>Keeps original metal color, stones, beads, pearls, and proportions</li>
                       <li>Macro-level detail — every texture and engraving razor-sharp</li>
@@ -705,7 +705,7 @@ const AdminImagePrompts = () => {
                   {heroPreviews.length > 0 && (
                     <div className="grid grid-cols-3 gap-2 mb-2">
                       {heroPreviews.map((preview, idx) => (
-                        <div key={idx} className="relative group rounded-lg border border-[#F5EFE6] overflow-hidden bg-gray-50">
+                        <div key={idx} className="relative group rounded-lg border border-cream-dark overflow-hidden bg-gray-50">
                           <SmartImage src={preview} alt={`ref-${idx + 1}`} className="w-full h-24 object-contain bg-white" preset="card" />
                           <button
                             type="button"
@@ -728,7 +728,7 @@ const AdminImagePrompts = () => {
                   />
                   {heroPreviews.length > 0 && (
                     <div className="flex items-center justify-between mt-1.5">
-                      <p className="text-[10px] text-amber-600 font-medium">{heroPreviews.length} image{heroPreviews.length > 1 ? 's' : ''} uploaded — AI will study all and create one cohesive banner</p>
+                      <p className="text-[10px] text-highlight font-medium">{heroPreviews.length} image{heroPreviews.length > 1 ? 's' : ''} uploaded — AI will study all and create one cohesive banner</p>
                       <button
                         type="button"
                         onClick={() => { setHeroImages([]); setHeroPreviews([]); }}
@@ -756,8 +756,8 @@ const AdminImagePrompts = () => {
                         onClick={() => setFestivalOrEvent(s)}
                         className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
                           festivalOrEvent === s
-                            ? 'bg-amber-600 text-white border-amber-600'
-                            : 'border-[#F5EFE6] text-gray-500 hover:border-amber-400 hover:text-amber-700'
+                            ? 'bg-highlight text-white border-highlight'
+                            : 'border-cream-dark text-gray-500 hover:border-highlight/70 hover:text-highlight'
                         }`}
                       >
                         {s}
@@ -766,11 +766,11 @@ const AdminImagePrompts = () => {
                     <div className="relative group">
                       <button
                         type="button"
-                        className="text-[10px] px-2 py-1 rounded-full border border-[#F5EFE6] text-gray-400 hover:text-amber-600"
+                        className="text-[10px] px-2 py-1 rounded-full border border-cream-dark text-gray-400 hover:text-highlight"
                       >
                         More...
                       </button>
-                      <div className="absolute bottom-full left-0 mb-1 hidden group-hover:flex flex-wrap gap-1 bg-white border border-[#F5EFE6] rounded-lg p-2 shadow-lg z-10 w-64">
+                      <div className="absolute bottom-full left-0 mb-1 hidden group-hover:flex flex-wrap gap-1 bg-white border border-cream-dark rounded-lg p-2 shadow-lg z-10 w-64">
                         {festivalSuggestions.slice(8).map(s => (
                           <button
                             key={s}
@@ -778,8 +778,8 @@ const AdminImagePrompts = () => {
                             onClick={() => setFestivalOrEvent(s)}
                             className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
                               festivalOrEvent === s
-                                ? 'bg-amber-600 text-white border-amber-600'
-                                : 'border-[#F5EFE6] text-gray-500 hover:border-amber-400 hover:text-amber-700'
+                                ? 'bg-highlight text-white border-highlight'
+                                : 'border-cream-dark text-gray-500 hover:border-highlight/70 hover:text-highlight'
                             }`}
                           >
                             {s}
@@ -834,12 +834,12 @@ const AdminImagePrompts = () => {
                         onClick={() => setIncludeModel(opt.value)}
                         className={`flex-1 text-center px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
                           includeModel === opt.value
-                            ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                            : 'border-[#F5EFE6] text-gray-500 hover:border-amber-400 hover:text-amber-700'
+                            ? 'bg-highlight text-white border-highlight shadow-sm'
+                            : 'border-cream-dark text-gray-500 hover:border-highlight/70 hover:text-highlight'
                         }`}
                       >
                         <div>{opt.label}</div>
-                        <div className={`text-[10px] font-normal mt-0.5 ${includeModel === opt.value ? 'text-amber-100' : 'text-gray-400'}`}>{opt.desc}</div>
+                        <div className={`text-[10px] font-normal mt-0.5 ${includeModel === opt.value ? 'text-charcoal-foreground' : 'text-gray-400'}`}>{opt.desc}</div>
                       </button>
                     ))}
                   </div>
@@ -858,12 +858,12 @@ const AdminImagePrompts = () => {
                         onClick={() => setHeroOutputFormat(opt.value)}
                         className={`text-center px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
                           heroOutputFormat === opt.value
-                            ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                            : 'border-[#F5EFE6] text-gray-500 hover:border-amber-400 hover:text-amber-700'
+                            ? 'bg-highlight text-white border-highlight shadow-sm'
+                            : 'border-cream-dark text-gray-500 hover:border-highlight/70 hover:text-highlight'
                         }`}
                       >
                         <div>{opt.label}</div>
-                        <div className={`text-[10px] font-normal mt-0.5 ${heroOutputFormat === opt.value ? 'text-amber-100' : 'text-gray-400'}`}>{opt.desc}</div>
+                        <div className={`text-[10px] font-normal mt-0.5 ${heroOutputFormat === opt.value ? 'text-charcoal-foreground' : 'text-gray-400'}`}>{opt.desc}</div>
                       </button>
                     ))}
                   </div>
@@ -871,9 +871,9 @@ const AdminImagePrompts = () => {
                     Mobile banners use the homepage's 4:5 crop; Both asks Nano Banana Pro for two native campaign outputs.
                   </p>
                 </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1.5">
-                  <p className="text-xs text-amber-800 font-semibold">Complete Banner Design</p>
-                  <ul className="text-[11px] text-amber-700 space-y-0.5 list-disc list-inside">
+                <div className="bg-highlight/10 border border-highlight/30 rounded-lg p-3 space-y-1.5">
+                  <p className="text-xs text-highlight font-semibold">Complete Banner Design</p>
+                  <ul className="text-[11px] text-highlight space-y-0.5 list-disc list-inside">
                     <li><strong>Upload multiple images</strong> — jewelry, references, inspiration. AI studies ALL</li>
                     <li>Text rendered IN the image with aesthetic typography</li>
                     <li>Offer styled as a premium design element (not plain text)</li>
@@ -922,7 +922,7 @@ const AdminImagePrompts = () => {
                     className={textareaStyles}
                   />
                 </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                <div className="bg-highlight/10 border border-highlight/30 rounded-lg p-3 text-xs text-highlight">
                   <strong>Custom:</strong> Any image type. Upload a reference and AI will preserve it exactly while enhancing the scene around it.
                 </div>
               </>
@@ -932,7 +932,7 @@ const AdminImagePrompts = () => {
             <Button
               onClick={handleGenerate}
               disabled={loading}
-              className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-lg font-medium transition-all shadow-sm"
+              className="w-full bg-highlight hover:bg-highlight text-white py-3 rounded-lg font-medium transition-all shadow-sm"
             >
               {loading ? (
                 <>
@@ -949,9 +949,9 @@ const AdminImagePrompts = () => {
           </motion.div>
 
           {/* Logo / Watermark Card */}
-          <div className="bg-white rounded-xl border border-[#F5EFE6] p-4">
+          <div className="bg-white rounded-xl border border-cream-dark p-4">
             <div className="flex items-center gap-2 mb-3">
-              <Shield className="h-4 w-4 text-amber-600" />
+              <Shield className="h-4 w-4 text-highlight" />
               <h3 className="font-semibold text-gray-900 text-sm">Brand Watermark</h3>
             </div>
             <div className="grid grid-cols-2 gap-2 mb-3">
@@ -967,8 +967,8 @@ const AdminImagePrompts = () => {
                   onClick={() => setLogoMode(opt.value)}
                   className={`rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
                     logoMode === opt.value
-                      ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                      : 'border-[#F5EFE6] text-gray-500 hover:border-amber-400 hover:text-amber-700'
+                      ? 'bg-highlight text-white border-highlight shadow-sm'
+                      : 'border-cream-dark text-gray-500 hover:border-highlight/70 hover:text-highlight'
                   }`}
                 >
                   {opt.label}
@@ -976,7 +976,7 @@ const AdminImagePrompts = () => {
               ))}
             </div>
             {activeLogoPreview && logoMode !== 'custom' && (
-              <div className="mb-3 rounded-lg border border-[#F5EFE6] bg-gray-50 p-3">
+              <div className="mb-3 rounded-lg border border-cream-dark bg-gray-50 p-3">
                 <img src={activeLogoPreview} alt="selected logo" className="h-12 w-full object-contain" />
               </div>
             )}
@@ -997,8 +997,8 @@ const AdminImagePrompts = () => {
         {/* Output Section */}
         <div className="xl:col-span-3 space-y-4">
           {/* Generated Prompt Display */}
-          <div className="bg-white rounded-xl border border-[#F5EFE6] overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#F5EFE6]">
+          <div className="bg-white rounded-xl border border-cream-dark overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-cream-dark">
               <h3 className="font-semibold text-gray-900 text-sm">Generated Prompt</h3>
               <div className="flex items-center gap-2">
                 {generatedPrompt && (
@@ -1008,7 +1008,7 @@ const AdminImagePrompts = () => {
                       size="sm"
                       onClick={handleGenerate}
                       disabled={loading}
-                      className="text-xs border-[#F5EFE6] hover:bg-amber-50"
+                      className="text-xs border-cream-dark hover:bg-highlight/10"
                     >
                       <RefreshCw className={`h-3 w-3 mr-1 ${loading ? 'animate-spin' : ''}`} />
                       Regenerate
@@ -1017,7 +1017,7 @@ const AdminImagePrompts = () => {
                       variant="outline"
                       size="sm"
                       onClick={handleCopy}
-                      className="text-xs border-[#F5EFE6] hover:bg-amber-50"
+                      className="text-xs border-cream-dark hover:bg-highlight/10"
                     >
                       {copied ? (
                         <>
@@ -1039,8 +1039,8 @@ const AdminImagePrompts = () => {
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-3">
                   <div className="relative">
-                    <div className="w-12 h-12 border-4 border-amber-200 border-t-amber-600 rounded-full animate-spin" />
-                    <Sparkles className="h-5 w-5 text-amber-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                    <div className="w-12 h-12 border-4 border-highlight/30 border-t-highlight rounded-full animate-spin" />
+                    <Sparkles className="h-5 w-5 text-highlight absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                   </div>
                   <p className="text-sm text-gray-500">Gemini 2.5 Flash is analyzing your jewelry & crafting the prompt...</p>
                 </div>
@@ -1060,7 +1060,7 @@ const AdminImagePrompts = () => {
                         size="sm"
                         onClick={handleVariation}
                         disabled={variationLoading || refining}
-                        className="text-xs border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-700"
+                        className="text-xs border-highlight/45 bg-highlight/10 hover:bg-highlight/15 text-highlight"
                       >
                         {variationLoading ? (
                           <>
@@ -1079,7 +1079,7 @@ const AdminImagePrompts = () => {
                       Copy prompt → paste into Nano Banana Pro with the same reference images
                     </span>
                     {(productImage || referenceImage || heroImages.length > 0) && (
-                      <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-xs font-medium">
+                      <span className="bg-highlight/10 text-highlight px-2 py-0.5 rounded text-xs font-medium">
                         Attach product/reference images alongside the prompt
                       </span>
                     )}
@@ -1091,9 +1091,9 @@ const AdminImagePrompts = () => {
                   </div>
 
                   {/* Refine Section */}
-                  <div className="border border-[#F5EFE6] rounded-lg p-4 space-y-3 bg-[#FFFCF5]">
+                  <div className="border border-cream-dark rounded-lg p-4 space-y-3 bg-cream">
                     <div className="flex items-center gap-2">
-                      <Wand2 className="h-4 w-4 text-amber-600" />
+                      <Wand2 className="h-4 w-4 text-highlight" />
                       <h4 className="text-sm font-medium text-gray-800">Refine this prompt</h4>
                     </div>
                     <textarea
@@ -1101,13 +1101,13 @@ const AdminImagePrompts = () => {
                       onChange={(e) => setRefineText(e.target.value)}
                       placeholder="Tell AI what to change... e.g., 'Make the background darker', 'Change pose to side profile', 'Add more festive elements', 'Make the model look more traditional'"
                       rows={2}
-                      className="w-full bg-white border border-[#F5EFE6] rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 transition-colors resize-none"
+                      className="w-full bg-white border border-cream-dark rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-highlight focus:ring-1 focus:ring-highlight/20 transition-colors resize-none"
                     />
                     <Button
                       onClick={handleRefine}
                       disabled={!refineText.trim() || refining || variationLoading}
                       size="sm"
-                      className="bg-amber-600 hover:bg-amber-700 text-white text-xs"
+                      className="bg-highlight hover:bg-highlight text-white text-xs"
                     >
                       {refining ? (
                         <>
@@ -1136,23 +1136,23 @@ const AdminImagePrompts = () => {
           </div>
 
           {/* How to use */}
-          <div className="bg-white rounded-xl border border-[#F5EFE6] p-6">
+          <div className="bg-white rounded-xl border border-cream-dark p-6">
             <h3 className="font-semibold text-gray-900 text-sm mb-3">How to use these prompts</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-600">
               <div className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-5 h-5 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-bold text-[10px]">1</span>
+                <span className="flex-shrink-0 w-5 h-5 bg-highlight/15 text-highlight rounded-full flex items-center justify-center font-bold text-[10px]">1</span>
                 <span><strong>Upload</strong> your jewelry image → Gemini builds a prompt that uses it as a locked product reference, not a text description.</span>
               </div>
               <div className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-5 h-5 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-bold text-[10px]">2</span>
+                <span className="flex-shrink-0 w-5 h-5 bg-highlight/15 text-highlight rounded-full flex items-center justify-center font-bold text-[10px]">2</span>
                 <span><strong>Copy</strong> the prompt and paste into Nano Banana Pro. <strong>Attach the same jewelry and logo references</strong> alongside it.</span>
               </div>
               <div className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-5 h-5 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-bold text-[10px]">3</span>
+                <span className="flex-shrink-0 w-5 h-5 bg-highlight/15 text-highlight rounded-full flex items-center justify-center font-bold text-[10px]">3</span>
                 <span>The prompt says <strong>"use the attached product image directly"</strong> — Nano Banana Pro should preserve the original and enhance only the scene.</span>
               </div>
               <div className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-5 h-5 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-bold text-[10px]">4</span>
+                <span className="flex-shrink-0 w-5 h-5 bg-highlight/15 text-highlight rounded-full flex items-center justify-center font-bold text-[10px]">4</span>
                 <span>Your <strong>logo watermark</strong> can use black or white variants. Auto Contrast asks the prompt to choose based on background readability.</span>
               </div>
             </div>
@@ -1160,7 +1160,7 @@ const AdminImagePrompts = () => {
 
           {/* History */}
           {history.length > 0 && (
-            <div className="bg-white rounded-xl border border-[#F5EFE6] overflow-hidden">
+            <div className="bg-white rounded-xl border border-cream-dark overflow-hidden">
               <button
                 onClick={() => setShowHistory(!showHistory)}
                 className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
@@ -1171,15 +1171,15 @@ const AdminImagePrompts = () => {
                 <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showHistory ? 'rotate-180' : ''}`} />
               </button>
               {showHistory && (
-                <div className="border-t border-[#F5EFE6] divide-y divide-[#F5EFE6] max-h-[400px] overflow-y-auto">
+                <div className="border-t border-cream-dark divide-y divide-cream-dark max-h-[400px] overflow-y-auto">
                   {history.map((entry) => (
                     <div
                       key={entry.id}
-                      className="group relative w-full text-left px-6 py-3 hover:bg-[#FFF9E6]/50 transition-colors cursor-pointer"
+                      className="group relative w-full text-left px-6 py-3 hover:bg-cream/50 transition-colors cursor-pointer"
                       onClick={() => loadFromHistory(entry)}
                     >
                       <div className="flex items-center justify-between pr-8">
-                        <span className="text-xs font-medium text-amber-700 capitalize">
+                        <span className="text-xs font-medium text-highlight capitalize">
                           {entry.category.replace('-', ' ')}
                         </span>
                         <span className="text-[10px] text-gray-400">

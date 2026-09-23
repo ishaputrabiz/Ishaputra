@@ -89,7 +89,7 @@ const OfferRibbon = () => {
     <button
       type="button"
       onClick={onCopy}
-      className="offer-ticket group relative inline-flex flex-shrink-0 items-center gap-1 overflow-hidden rounded-md border border-dashed border-[#e8c56a]/70 bg-[#e8c56a]/10 px-1.5 py-[3px] text-[10.5px] font-semibold tracking-[0.04em] min-[380px]:tracking-[0.08em] text-[#f3d98f] transition-colors hover:bg-[#e8c56a]/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e8c56a]/70 md:gap-1.5 md:px-2.5 md:text-[11px] md:tracking-[0.18em]"
+      className="offer-ticket group relative inline-flex flex-shrink-0 items-center gap-1 overflow-hidden rounded-md border border-dashed border-highlight-soft/70 bg-highlight-soft/10 px-1.5 py-[3px] text-[10.5px] font-semibold tracking-[0.04em] min-[380px]:tracking-[0.08em] text-highlight-soft transition-colors hover:bg-highlight-soft/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight-soft/70 md:gap-1.5 md:px-2.5 md:text-[11px] md:tracking-[0.18em]"
       aria-label={isCopied ? `Code ${offer.code} copied` : `Copy code ${offer.code}`}
     >
       <span aria-hidden className="offer-ticket__foil pointer-events-none absolute inset-0" />
@@ -115,7 +115,7 @@ const OfferRibbon = () => {
     <div
       role="region"
       aria-label="Current offers"
-      className="offer-ribbon relative z-[60] overflow-hidden text-[#fbf3e4]"
+      className="offer-ribbon relative z-[60] overflow-hidden text-charcoal-foreground"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
@@ -125,7 +125,7 @@ const OfferRibbon = () => {
       <div aria-hidden className="offer-ribbon__engraving pointer-events-none absolute inset-0" />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#e8c56a]/80 to-transparent"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-highlight-soft/80 to-transparent"
       />
 
       <div className="relative mx-auto flex min-h-[54px] max-w-[1440px] items-center justify-center px-8 py-1.5 md:h-10 md:min-h-0 md:px-10 md:py-0 lg:h-[42px]">
@@ -146,7 +146,7 @@ const OfferRibbon = () => {
               code.
             */}
             <div className="flex flex-col items-center gap-1 md:hidden">
-              <span className="max-w-full truncate text-[9.5px] font-medium uppercase tracking-[0.2em] text-[#e8c56a]">
+              <span className="max-w-full truncate text-[9.5px] font-medium uppercase tracking-[0.2em] text-highlight-soft">
                 <span aria-hidden>✦ </span>
                 {eyebrow}
                 <span aria-hidden> ✦</span>
@@ -156,7 +156,7 @@ const OfferRibbon = () => {
                   {couponHeadline(offer)}
                 </span>
                 {secondLineTerms && (
-                  <span className="min-w-0 truncate text-[10px] leading-none text-[#fbf3e4]/80 min-[380px]:text-[10.5px]">
+                  <span className="min-w-0 truncate text-[10px] leading-none text-charcoal-foreground/80 min-[380px]:text-[10.5px]">
                     {secondLineTerms}
                   </span>
                 )}
@@ -167,10 +167,10 @@ const OfferRibbon = () => {
             {/* Tablet and up: one line. The full small print needs a laptop's
                 width, so tablets get the short form instead of nothing. */}
             <div className="hidden min-w-0 items-center gap-3 md:flex">
-              <span aria-hidden className="text-[11px] text-[#e8c56a]">✦</span>
+              <span aria-hidden className="text-[11px] text-highlight-soft">✦</span>
 
               {offer.description?.trim() && (
-                <span className="truncate text-[10px] font-medium uppercase tracking-[0.28em] text-[#e8c56a]">
+                <span className="truncate text-[10px] font-medium uppercase tracking-[0.28em] text-highlight-soft">
                   {offer.description.trim()}
                 </span>
               )}
@@ -179,20 +179,20 @@ const OfferRibbon = () => {
                 <span className="whitespace-nowrap font-heading text-base italic leading-none [font-variant-numeric:lining-nums]">
                   {couponHeadline(offer)}
                 </span>
-                {terms && <span className="hidden truncate text-[11px] text-[#fbf3e4]/70 lg:inline">{terms}</span>}
+                {terms && <span className="hidden truncate text-[11px] text-charcoal-foreground/70 lg:inline">{terms}</span>}
                 {shortTerms && (
-                  <span className="truncate text-[11px] text-[#fbf3e4]/70 lg:hidden">{shortTerms}</span>
+                  <span className="truncate text-[11px] text-charcoal-foreground/70 lg:hidden">{shortTerms}</span>
                 )}
               </span>
 
               {ticket}
 
               {isCopied ? (
-                <span className="whitespace-nowrap text-[11px] text-[#fbf3e4]/80">Copied · applied at checkout</span>
+                <span className="whitespace-nowrap text-[11px] text-charcoal-foreground/80">Copied · applied at checkout</span>
               ) : (
                 <Link
                   to={shopLink(offer)}
-                  className="hidden whitespace-nowrap text-[11px] font-medium text-[#fbf3e4] underline decoration-[#e8c56a]/60 underline-offset-4 transition-colors hover:text-[#f3d98f] lg:inline"
+                  className="hidden whitespace-nowrap text-[11px] font-medium text-charcoal-foreground underline decoration-highlight-soft/60 underline-offset-4 transition-colors hover:text-highlight-soft lg:inline"
                 >
                   Shop now →
                 </Link>
@@ -211,7 +211,7 @@ const OfferRibbon = () => {
               <span
                 key={o.id}
                 className={`h-1 rounded-full transition-all duration-300 ${
-                  i === index ? 'w-3 bg-[#e8c56a]' : 'w-1 bg-[#fbf3e4]/35'
+                  i === index ? 'w-3 bg-highlight-soft' : 'w-1 bg-cream/35'
                 }`}
               />
             ))}
@@ -221,7 +221,7 @@ const OfferRibbon = () => {
         <button
           type="button"
           onClick={onDismiss}
-          className="absolute right-1.5 grid h-6 w-6 place-items-center rounded-full text-[#fbf3e4]/70 transition-colors hover:bg-white/10 hover:text-[#fbf3e4] md:right-3 md:h-7 md:w-7"
+          className="absolute right-1.5 grid h-6 w-6 place-items-center rounded-full text-charcoal-foreground/70 transition-colors hover:bg-white/10 hover:text-charcoal-foreground md:right-3 md:h-7 md:w-7"
           aria-label="Dismiss offers"
         >
           <X className="h-3.5 w-3.5" />

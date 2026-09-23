@@ -153,7 +153,7 @@ const CustomerSupport = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,rgba(212,175,55,0.06)_0%,rgba(255,255,255,1)_20%),linear-gradient(135deg,rgba(131,39,41,0.03)_0%,rgba(255,255,255,1)_55%)] dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]">
+    <div className="min-h-screen bg-[linear-gradient(180deg,hsl(var(--highlight)/0.06)_0%,rgba(255,255,255,1)_20%),linear-gradient(135deg,hsl(var(--primary)/0.03)_0%,rgba(255,255,255,1)_55%)] dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]">
       <Header />
       
       <div className="max-w-2xl mx-auto px-3 py-4 pb-24 lg:px-4 lg:py-6 lg:pb-8">
@@ -163,7 +163,7 @@ const CustomerSupport = () => {
             if (selectedOption) { setSelectedOption(null); return; }
             navigate('/account');
           }}
-          className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-[#d4af37]/15 bg-white/80 dark:bg-zinc-900/80 px-3 py-2 text-gray-700 dark:text-zinc-300 shadow-sm backdrop-blur transition-colors hover:text-gray-900 dark:border-[#d4af37]/20 dark:bg-zinc-900/85 dark:text-zinc-100 dark:hover:text-white lg:mb-6"
+          className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-highlight/15 bg-white/80 dark:bg-zinc-900/80 px-3 py-2 text-gray-700 dark:text-zinc-300 shadow-sm backdrop-blur transition-colors hover:text-gray-900 dark:border-highlight/20 dark:bg-zinc-900/85 dark:text-zinc-100 dark:hover:text-white lg:mb-6"
         >
           <ArrowLeft className="h-4 w-4 lg:h-5 lg:w-5" />
           <span className="text-xs lg:text-sm font-medium">Back</span>
@@ -178,13 +178,13 @@ const CustomerSupport = () => {
               exit={{ opacity: 0 }}
             >
               {/* Header */}
-              <div className="mb-5 rounded-[28px] border border-[#d4af37]/15 bg-white/85 dark:bg-zinc-900/85 px-5 py-6 text-center shadow-[0_30px_80px_-60px_rgba(0,0,0,0.45)] backdrop-blur dark:border-[#d4af37]/20 dark:bg-zinc-900/88 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.88)] lg:mb-8 lg:px-8">
+              <div className="mb-5 rounded-[28px] border border-highlight/15 bg-white/85 dark:bg-zinc-900/85 px-5 py-6 text-center shadow-[0_30px_80px_-60px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/20 dark:bg-zinc-900/88 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.88)] lg:mb-8 lg:px-8">
                 <div className="flex items-center justify-center gap-2 mb-3">
-                  <span className="h-px w-8 bg-[#d4af37]/50" />
-                  <span className="text-[10px] uppercase tracking-[0.32em] text-[#832729] font-medium">Support Lounge</span>
-                  <span className="h-px w-8 bg-[#d4af37]/50" />
+                  <span className="h-px w-8 bg-highlight/50" />
+                  <span className="text-[10px] uppercase tracking-[0.32em] text-primary font-medium">Support Lounge</span>
+                  <span className="h-px w-8 bg-highlight/50" />
                 </div>
-                <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-[linear-gradient(135deg,rgba(212,175,55,0.18)_0%,rgba(131,39,41,0.12)_100%)] text-[#832729]">
+                <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-[linear-gradient(135deg,hsl(var(--highlight)/0.18)_0%,hsl(var(--primary)/0.12)_100%)] text-primary">
                   <HeadphonesIcon className="h-6 w-6" />
                 </div>
                 <h1 className="mb-1 text-lg font-bold text-gray-900 dark:text-zinc-100 lg:mb-2 lg:text-3xl">Customer Support</h1>
@@ -192,8 +192,8 @@ const CustomerSupport = () => {
                   Choose the fastest way to reach us for orders, custom requests, and after-sales help.
                 </p>
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[11px] text-gray-600 dark:text-zinc-400 dark:text-zinc-300">
-                  <span className="rounded-full border border-[#d4af37]/20 bg-[#fffaf1] px-3 py-1 dark:bg-amber-950/20">{contactInfo.hours}</span>
-                  <span className="rounded-full border border-[#d4af37]/20 bg-[#fffaf1] px-3 py-1 dark:bg-amber-950/20">{contactInfo.responseTime}</span>
+                  <span className="rounded-full border border-highlight/20 bg-cream px-3 py-1 dark:bg-highlight/5">{contactInfo.hours}</span>
+                  <span className="rounded-full border border-highlight/20 bg-cream px-3 py-1 dark:bg-highlight/5">{contactInfo.responseTime}</span>
                 </div>
               </div>
 
@@ -203,7 +203,7 @@ const CustomerSupport = () => {
                 <motion.button
                   onClick={() => setSelectedOption('email')}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full rounded-xl border border-[#d4af37]/12 bg-white/85 dark:bg-zinc-900/85 p-3 text-left shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)] transition-all active:bg-gray-50 dark:bg-zinc-900/50 hover:-translate-y-0.5 hover:border-[#d4af37]/35 dark:border-[#d4af37]/20 dark:bg-zinc-900/88 dark:active:bg-zinc-800 lg:rounded-2xl lg:p-5"
+                  className="w-full rounded-xl border border-highlight/12 bg-white/85 dark:bg-zinc-900/85 p-3 text-left shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)] transition-all active:bg-gray-50 dark:bg-zinc-900/50 hover:-translate-y-0.5 hover:border-highlight/35 dark:border-highlight/20 dark:bg-zinc-900/88 dark:active:bg-zinc-800 lg:rounded-2xl lg:p-5"
                 >
                   <div className="flex items-center gap-3 lg:gap-4">
                     <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center flex-shrink-0">
@@ -223,7 +223,7 @@ const CustomerSupport = () => {
                 <motion.button
                   onClick={() => setSelectedOption('phone')}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full rounded-xl border border-[#d4af37]/12 bg-white/85 dark:bg-zinc-900/85 p-3 text-left shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)] transition-all active:bg-gray-50 dark:bg-zinc-900/50 hover:-translate-y-0.5 hover:border-[#d4af37]/35 dark:border-[#d4af37]/20 dark:bg-zinc-900/88 dark:active:bg-zinc-800 lg:rounded-2xl lg:p-5"
+                  className="w-full rounded-xl border border-highlight/12 bg-white/85 dark:bg-zinc-900/85 p-3 text-left shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)] transition-all active:bg-gray-50 dark:bg-zinc-900/50 hover:-translate-y-0.5 hover:border-highlight/35 dark:border-highlight/20 dark:bg-zinc-900/88 dark:active:bg-zinc-800 lg:rounded-2xl lg:p-5"
                 >
                   <div className="flex items-center gap-3 lg:gap-4">
                     <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center flex-shrink-0">
@@ -243,7 +243,7 @@ const CustomerSupport = () => {
                 <motion.button
                   onClick={() => setSelectedOption('message')}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full rounded-xl border border-[#d4af37]/12 bg-white/85 dark:bg-zinc-900/85 p-3 text-left shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)] transition-all active:bg-gray-50 dark:bg-zinc-900/50 hover:-translate-y-0.5 hover:border-[#d4af37]/35 dark:border-[#d4af37]/20 dark:bg-zinc-900/88 dark:active:bg-zinc-800 lg:rounded-2xl lg:p-5"
+                  className="w-full rounded-xl border border-highlight/12 bg-white/85 dark:bg-zinc-900/85 p-3 text-left shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)] transition-all active:bg-gray-50 dark:bg-zinc-900/50 hover:-translate-y-0.5 hover:border-highlight/35 dark:border-highlight/20 dark:bg-zinc-900/88 dark:active:bg-zinc-800 lg:rounded-2xl lg:p-5"
                 >
                   <div className="flex items-center gap-3 lg:gap-4">
                     <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center flex-shrink-0">
@@ -263,7 +263,7 @@ const CustomerSupport = () => {
               {/* Additional Info */}
               <div className="space-y-2 lg:space-y-3">
                 {/* Business Hours */}
-                <div className="border border-[#d4af37]/12 bg-white/80 dark:bg-zinc-900/80 p-3 lg:p-5 rounded-xl lg:rounded-2xl shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)]">
+                <div className="border border-highlight/12 bg-white/80 dark:bg-zinc-900/80 p-3 lg:p-5 rounded-xl lg:rounded-2xl shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)]">
                   <div className="flex items-start gap-3 lg:gap-4">
                     <div className="w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center flex-shrink-0">
                       <Clock className="w-5 h-5 lg:w-7 lg:h-7 text-blue-600" />
@@ -277,7 +277,7 @@ const CustomerSupport = () => {
                 </div>
 
                 {/* Contact Summary */}
-                <div className="border border-[#d4af37]/12 bg-white/80 dark:bg-zinc-900/80 p-3 lg:p-5 rounded-xl lg:rounded-2xl shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)]">
+                <div className="border border-highlight/12 bg-white/80 dark:bg-zinc-900/80 p-3 lg:p-5 rounded-xl lg:rounded-2xl shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)]">
                   <div className="flex items-start gap-3 lg:gap-4">
                     <div className="w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center flex-shrink-0">
                       <MapPin className="w-5 h-5 lg:w-7 lg:h-7 text-blue-600" />
@@ -333,7 +333,7 @@ const CustomerSupport = () => {
                 ))}
               </div>
 
-              <div className="bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,rgba(212,175,55,0.12)_100%)] border border-[#d4af37]/12 p-3 lg:p-4 rounded-lg lg:rounded-xl mb-4 lg:mb-6">
+              <div className="bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,hsl(var(--highlight)/0.12)_100%)] border border-highlight/12 p-3 lg:p-4 rounded-lg lg:rounded-xl mb-4 lg:mb-6">
                 <p className="text-xs lg:text-sm text-gray-700 dark:text-zinc-300">
                   <span className="font-semibold">Tip:</span> We typically respond {contactInfo.responseTime.toLowerCase()} during business days.
                 </p>
@@ -362,7 +362,7 @@ const CustomerSupport = () => {
               <motion.button
                 onClick={handlePhoneCall}
                 whileTap={{ scale: 0.98 }}
-                className="w-full border border-[#d4af37]/20 bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,rgba(212,175,55,0.12)_100%)] active:bg-blue-50 text-blue-600 rounded-xl lg:rounded-2xl p-4 lg:p-6 mb-4 lg:mb-6 transition-colors shadow-[0_20px_45px_-35px_rgba(0,0,0,0.45)]"
+                className="w-full border border-highlight/20 bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,hsl(var(--highlight)/0.12)_100%)] active:bg-blue-50 text-blue-600 rounded-xl lg:rounded-2xl p-4 lg:p-6 mb-4 lg:mb-6 transition-colors shadow-[0_20px_45px_-35px_rgba(0,0,0,0.45)]"
               >
                 <div className="flex items-center justify-center gap-2 lg:gap-3">
                   <Phone className="w-5 h-5 lg:w-6 lg:h-6" />
@@ -399,7 +399,7 @@ const CustomerSupport = () => {
                 ))}
               </div>
 
-              <div className="p-3 lg:p-4 bg-[linear-gradient(135deg,rgba(34,197,94,0.08)_0%,rgba(212,175,55,0.10)_100%)] border border-[#d4af37]/12 rounded-lg lg:rounded-xl">
+              <div className="p-3 lg:p-4 bg-[linear-gradient(135deg,rgba(34,197,94,0.08)_0%,hsl(var(--highlight)/0.10)_100%)] border border-highlight/12 rounded-lg lg:rounded-xl">
                 <div className="flex items-start gap-2 lg:gap-3">
                   <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-green-600 flex-shrink-0 mt-0.5" />
                   <div>
@@ -457,7 +457,7 @@ const CustomerSupport = () => {
                 ))}
               </div>
 
-              <div className="p-3 lg:p-4 bg-[linear-gradient(135deg,rgba(168,85,247,0.08)_0%,rgba(212,175,55,0.10)_100%)] border border-[#d4af37]/12 rounded-lg lg:rounded-xl">
+              <div className="p-3 lg:p-4 bg-[linear-gradient(135deg,rgba(168,85,247,0.08)_0%,hsl(var(--highlight)/0.10)_100%)] border border-highlight/12 rounded-lg lg:rounded-xl">
                 <p className="text-xs lg:text-sm text-gray-700 dark:text-zinc-300">
                   <span className="font-semibold">Note:</span> Our team is available during business hours to assist you promptly on WhatsApp.
                 </p>

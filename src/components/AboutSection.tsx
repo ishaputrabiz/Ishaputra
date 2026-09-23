@@ -40,12 +40,12 @@ const AboutSection = () => {
             <path d="M100 570 L105 580 L100 590 L95 580 Z" stroke="url(#goldGradient)" strokeWidth="1" fill="none" />
             <defs>
               <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#D4A853" />
-                <stop offset="50%" stopColor="#C9A227" />
-                <stop offset="100%" stopColor="#B8860B" />
+                <stop offset="0%" stopColor="#C9A266" />
+                <stop offset="50%" stopColor="#A57C44" />
+                <stop offset="100%" stopColor="#8C6834" />
               </linearGradient>
               <radialGradient id="lanternGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#FFD700" stopOpacity="0.6" />
+                <stop offset="0%" stopColor="#E2C08A" stopOpacity="0.6" />
                 <stop offset="70%" stopColor="#FFA500" stopOpacity="0.3" />
                 <stop offset="100%" stopColor="#FF8C00" stopOpacity="0" />
               </radialGradient>
@@ -79,12 +79,12 @@ const AboutSection = () => {
             <path d="M100 570 L105 580 L100 590 L95 580 Z" stroke="url(#goldGradient2)" strokeWidth="1" fill="none" />
             <defs>
               <linearGradient id="goldGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#D4A853" />
-                <stop offset="50%" stopColor="#C9A227" />
-                <stop offset="100%" stopColor="#B8860B" />
+                <stop offset="0%" stopColor="#C9A266" />
+                <stop offset="50%" stopColor="#A57C44" />
+                <stop offset="100%" stopColor="#8C6834" />
               </linearGradient>
               <radialGradient id="lanternGlow2" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#FFD700" stopOpacity="0.6" />
+                <stop offset="0%" stopColor="#E2C08A" stopOpacity="0.6" />
                 <stop offset="70%" stopColor="#FFA500" stopOpacity="0.3" />
                 <stop offset="100%" stopColor="#FF8C00" stopOpacity="0" />
               </radialGradient>

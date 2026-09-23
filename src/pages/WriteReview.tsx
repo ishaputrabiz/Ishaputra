@@ -19,8 +19,8 @@ interface LocationState {
 }
 
 const ratingLabels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
-const ratingColors = ['', 'text-red-500', 'text-orange-500', 'text-amber-500', 'text-lime-500', 'text-emerald-500'];
-const ratingBg = ['', 'bg-red-50 border-red-200', 'bg-orange-50 border-orange-200', 'bg-amber-50 border-amber-200', 'bg-lime-50 border-lime-200', 'bg-emerald-50 border-emerald-200'];
+const ratingColors = ['', 'text-red-500', 'text-orange-500', 'text-highlight', 'text-lime-500', 'text-emerald-500'];
+const ratingBg = ['', 'bg-red-50 border-red-200', 'bg-orange-50 border-orange-200', 'bg-highlight/10 border-highlight/30', 'bg-lime-50 border-lime-200', 'bg-emerald-50 border-emerald-200'];
 
 const WriteReview = () => {
   const navigate = useNavigate();
@@ -130,7 +130,7 @@ const WriteReview = () => {
   const activeRating = hoverRating || rating;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FFFBF5] to-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="min-h-screen bg-gradient-to-b from-cream to-white" style={{ fontFamily: "var(--font-body)" }}>
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-zinc-800 px-4 py-3.5 flex items-center gap-3 shadow-sm">
         <button
@@ -156,7 +156,7 @@ const WriteReview = () => {
             <SmartImage src={productImage} alt={productName} className="w-full h-full object-cover" preset="thumb" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-amber-600 font-medium uppercase tracking-wide mb-0.5">Reviewing</p>
+            <p className="text-xs text-highlight font-medium uppercase tracking-wide mb-0.5">Reviewing</p>
             <h2 className="font-semibold text-gray-900 dark:text-zinc-100 text-sm leading-tight line-clamp-2">{productName}</h2>
             <div className="flex items-center gap-1 mt-1">
               <CheckCircle2 size={12} className="text-emerald-500" />
@@ -188,7 +188,7 @@ const WriteReview = () => {
                   strokeWidth={1.5}
                   className={`transition-all duration-150 ${
                     star <= activeRating
-                      ? 'fill-amber-400 text-amber-400 drop-shadow-sm'
+                      ? 'fill-highlight-soft text-highlight-soft drop-shadow-sm'
                       : 'fill-none text-gray-200'
                   }`}
                 />
@@ -224,7 +224,7 @@ const WriteReview = () => {
             value={reviewText}
             onChange={(e) => setReviewText(e.target.value)}
             placeholder="Share what you loved or didn't love about this product. Would you recommend it to others?"
-            className="w-full h-36 p-4 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent text-sm text-gray-800 dark:text-zinc-200 placeholder:text-gray-400 dark:placeholder:text-zinc-500 dark:text-zinc-500 transition-all"
+            className="w-full h-36 p-4 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-highlight/45 focus:border-transparent text-sm text-gray-800 dark:text-zinc-200 placeholder:text-gray-400 dark:placeholder:text-zinc-500 dark:text-zinc-500 transition-all"
             maxLength={1000}
           />
           <div className="flex justify-end mt-1.5">
@@ -248,9 +248,9 @@ const WriteReview = () => {
             {/* Add Photos */}
             <label className={`block cursor-pointer ${images.length >= 4 ? 'opacity-50 pointer-events-none' : ''}`}>
               <input type="file" accept={IMAGE_ACCEPT} multiple onChange={handleImageUpload} className="hidden" disabled={images.length >= 4} />
-              <div className="border-2 border-dashed border-amber-200 bg-amber-50/50 rounded-xl p-4 flex flex-col items-center gap-2 hover:border-amber-400 hover:bg-amber-50 transition-all">
-                <div className="w-11 h-11 bg-amber-100 rounded-full flex items-center justify-center">
-                  <Camera size={20} className="text-amber-600" />
+              <div className="border-2 border-dashed border-highlight/30 bg-highlight/5 rounded-xl p-4 flex flex-col items-center gap-2 hover:border-highlight/70 hover:bg-highlight/10 transition-all">
+                <div className="w-11 h-11 bg-highlight/15 rounded-full flex items-center justify-center">
+                  <Camera size={20} className="text-highlight" />
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-medium text-gray-800 dark:text-zinc-200">Add Photos</p>

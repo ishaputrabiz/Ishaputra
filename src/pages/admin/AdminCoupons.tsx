@@ -306,7 +306,7 @@ const AdminCoupons = () => {
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-amber-700 font-medium mb-2 flex items-center gap-2">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-highlight font-medium mb-2 flex items-center gap-2">
             <Ticket className="w-3.5 h-3.5" /> Marketing
           </p>
           <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">Coupons</h1>
@@ -316,7 +316,7 @@ const AdminCoupons = () => {
         </div>
         <button
           onClick={openNew}
-          className="inline-flex items-center gap-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 text-sm font-medium shadow-sm"
+          className="inline-flex items-center gap-2 rounded-full bg-highlight hover:bg-highlight text-white px-5 py-2.5 text-sm font-medium shadow-sm"
         >
           <Plus className="w-4 h-4" /> New Coupon
         </button>
@@ -324,7 +324,7 @@ const AdminCoupons = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard icon={<Ticket className="w-5 h-5" />} label="Total Coupons" value={stats.total} tint="bg-amber-50 text-amber-700" />
+        <StatCard icon={<Ticket className="w-5 h-5" />} label="Total Coupons" value={stats.total} tint="bg-highlight/10 text-highlight" />
         <StatCard icon={<Check className="w-5 h-5" />} label="Active" value={stats.active} tint="bg-emerald-50 text-emerald-700" />
         <StatCard icon={<UsersIcon className="w-5 h-5" />} label="Total Redemptions" value={stats.uses} tint="bg-indigo-50 text-indigo-700" />
       </div>
@@ -337,7 +337,7 @@ const AdminCoupons = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search coupon code…"
-            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:border-amber-400"
+            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:border-highlight/70"
           />
         </div>
         <div className="inline-flex rounded-xl border border-gray-200 bg-white overflow-hidden text-sm">
@@ -345,7 +345,7 @@ const AdminCoupons = () => {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-2 capitalize ${filter === f ? 'bg-amber-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`px-4 py-2 capitalize ${filter === f ? 'bg-highlight text-white' : 'text-gray-600 hover:bg-gray-50'}`}
             >
               {f}
             </button>
@@ -354,7 +354,7 @@ const AdminCoupons = () => {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-amber-600" /></div>
+        <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-highlight" /></div>
       ) : list.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
           <Ticket className="w-10 h-10 mx-auto text-gray-300 mb-3" />
@@ -374,13 +374,13 @@ const AdminCoupons = () => {
                 className="relative rounded-2xl bg-white border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
               >
                 {/* Ticket left strip */}
-                <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${expired ? 'bg-gray-300' : c.active ? 'bg-amber-500' : 'bg-gray-300'}`} />
+                <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${expired ? 'bg-gray-300' : c.active ? 'bg-highlight' : 'bg-gray-300'}`} />
                 <div className="p-5 pl-6">
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <button
                         onClick={() => copyCode(c.code)}
-                        className="group inline-flex items-center gap-2 font-mono font-bold text-lg text-gray-900 hover:text-amber-700"
+                        className="group inline-flex items-center gap-2 font-mono font-bold text-lg text-gray-900 hover:text-highlight"
                         title="Copy code"
                       >
                         {c.code}
@@ -397,7 +397,7 @@ const AdminCoupons = () => {
                         // the owner is not left wondering why the ribbon is empty.
                         <span
                           className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                            state === 'live' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'
+                            state === 'live' ? 'bg-highlight/15 text-highlight' : 'bg-gray-100 text-gray-500'
                           }`}
                           title={state === 'live' ? 'Shown in the offer banner' : 'Will show in the banner once it is live'}
                         >
@@ -408,7 +408,7 @@ const AdminCoupons = () => {
                   </div>
 
                   <div className="flex items-baseline gap-2 mb-4">
-                    <span className="text-3xl font-bold text-amber-600 flex items-center">
+                    <span className="text-3xl font-bold text-highlight flex items-center">
                       {c.type === 'percent' ? <>{c.value}<Percent className="w-5 h-5 ml-0.5" /></> : <><IndianRupee className="w-6 h-6" />{c.value}</>}
                     </span>
                     <span className="text-xs text-gray-500">OFF</span>
@@ -440,7 +440,7 @@ const AdminCoupons = () => {
                     />
                     {c.maxUses > 0 && (
                       <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                        <div className="h-full bg-amber-500" style={{ width: `${usagePct}%` }} />
+                        <div className="h-full bg-highlight" style={{ width: `${usagePct}%` }} />
                       </div>
                     )}
                   </div>
@@ -562,7 +562,7 @@ const AdminCoupons = () => {
                         onClick={() => toggleCategory(cat.name)}
                         className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                           on
-                            ? 'border-amber-500 bg-amber-50 text-amber-800'
+                            ? 'border-highlight bg-highlight/10 text-highlight'
                             : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                         }`}
                       >
@@ -600,7 +600,7 @@ const AdminCoupons = () => {
                               onClick={() => toggleSubcategory(name)}
                               className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                                 on
-                                  ? 'border-amber-500 bg-amber-50 text-amber-800'
+                                  ? 'border-highlight bg-highlight/10 text-highlight'
                                   : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                               }`}
                             >
@@ -619,7 +619,7 @@ const AdminCoupons = () => {
                 Advertising is opt-in per coupon: a private code for one
                 customer should never appear in the site-wide ribbon.
               */}
-              <label className="flex cursor-pointer items-start justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+              <label className="flex cursor-pointer items-start justify-between gap-4 rounded-xl border border-highlight/30 bg-highlight/6 p-4">
                 <span>
                   <span className="block text-sm font-medium text-gray-900">Show in offer banner</span>
                   <span className="mt-0.5 block text-xs text-gray-500">
@@ -635,7 +635,7 @@ const AdminCoupons = () => {
                 />
                 <span
                   aria-hidden
-                  className="relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full bg-gray-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-amber-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-400"
+                  className="relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full bg-gray-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-highlight peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-highlight/70"
                 />
               </label>
 
@@ -656,7 +656,7 @@ const AdminCoupons = () => {
                 <button type="button" onClick={() => setShowForm(false)}
                   className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
                 <button type="submit" disabled={saving}
-                  className="inline-flex items-center gap-2 px-5 py-2 text-sm bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white rounded-lg">
+                  className="inline-flex items-center gap-2 px-5 py-2 text-sm bg-highlight hover:bg-highlight disabled:opacity-60 text-white rounded-lg">
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {draft.id ? 'Save changes' : 'Create coupon'}
                 </button>
@@ -676,7 +676,7 @@ const AdminCoupons = () => {
           color: rgb(17 24 39);
           font-size: 0.875rem;
         }
-        .cf-input:focus { outline: none; border-color: rgb(217 119 6); box-shadow: 0 0 0 3px rgba(217,119,6,0.15); }
+        .cf-input:focus { outline: none; border-color: rgb(217 119 6); box-shadow: 0 0 0 3px hsl(var(--highlight)/0.15); }
       `}</style>
     </div>
   );

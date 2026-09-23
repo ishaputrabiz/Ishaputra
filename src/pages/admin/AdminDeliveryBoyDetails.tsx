@@ -129,7 +129,7 @@ const AdminDeliveryBoyDetails = () => {
         </div>
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <p className="text-sm text-gray-500">Active Orders</p>
-          <p className="mt-1 text-2xl font-bold text-amber-600">{orders.filter((order) => order.status !== 'delivered' && order.status !== 'cancelled').length}</p>
+          <p className="mt-1 text-2xl font-bold text-highlight">{orders.filter((order) => order.status !== 'delivered' && order.status !== 'cancelled').length}</p>
         </div>
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <p className="text-sm text-gray-500">Completed Deliveries</p>
@@ -195,7 +195,7 @@ const AdminDeliveryBoyDetails = () => {
 
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-yellow-50 p-3 text-yellow-600"><Star className="h-5 w-5" /></div>
+              <div className="rounded-xl bg-highlight/10 p-3 text-highlight"><Star className="h-5 w-5" /></div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Customer Ratings</h2>
                 <p className="text-sm text-gray-500">Most recent delivery feedback.</p>
@@ -209,7 +209,7 @@ const AdminDeliveryBoyDetails = () => {
                   <div key={rating.id} className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
                     <div className="flex items-center justify-between gap-3">
                       <div className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-900">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <Star className="h-4 w-4 fill-highlight-soft text-highlight-soft" />
                         {rating.rating.toFixed(1)}
                       </div>
                       <span className="text-xs text-gray-500">{formatDate(rating.createdAt)}</span>

@@ -112,7 +112,7 @@ const HeroCarousel = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
                 className="eyebrow block mb-4"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-body)" }}
               >
                 {slides[currentSlide].eyebrow}
               </motion.span>
@@ -123,7 +123,7 @@ const HeroCarousel = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
                 className="heading-xl mb-6"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-body)" }}
               >
                 {slides[currentSlide].title.split(" ").map((word, i) => (
                   <span key={i} className="inline-block mr-4">
@@ -138,7 +138,7 @@ const HeroCarousel = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
                 className="body-lg mb-8 max-w-md"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-body)" }}
               >
                 {slides[currentSlide].subtitle}
               </motion.p>

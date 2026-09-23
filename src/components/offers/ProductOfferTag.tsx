@@ -68,13 +68,13 @@ const ProductOfferTag = ({ price, category, subcategory }: Props) => {
         return (
           <div
             key={c.id}
-            className="product-offer relative flex items-center gap-3 rounded-xl border border-[#d4af37]/45 px-3.5 py-3 sm:gap-4 sm:px-4"
+            className="product-offer relative flex items-center gap-3 rounded-xl border border-highlight/45 px-3.5 py-3 sm:gap-4 sm:px-4"
           >
             {/* The ticket's cut-outs, punched in the page's own background. */}
-            <span aria-hidden className="absolute -left-[7px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border border-[#d4af37]/45 bg-background [clip-path:inset(0_0_0_50%)]" />
-            <span aria-hidden className="absolute -right-[7px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border border-[#d4af37]/45 bg-background [clip-path:inset(0_50%_0_0)]" />
+            <span aria-hidden className="absolute -left-[7px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border border-highlight/45 bg-background [clip-path:inset(0_0_0_50%)]" />
+            <span aria-hidden className="absolute -right-[7px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border border-highlight/45 bg-background [clip-path:inset(0_50%_0_0)]" />
 
-            <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-[#832729] text-[#f3d98f] shadow-[inset_0_0_0_1px_rgba(243,217,143,0.35)] dark:bg-[#5c1a1d]">
+            <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-primary text-highlight-soft shadow-[inset_0_0_0_1px_rgba(243,217,143,0.35)] dark:bg-primary-dark">
               <BadgePercent className="h-[18px] w-[18px]" aria-hidden />
             </span>
 
@@ -82,14 +82,14 @@ const ProductOfferTag = ({ price, category, subcategory }: Props) => {
               {qualifies ? (
                 <p className="text-sm leading-snug text-foreground">
                   Get it for{' '}
-                  <span className="font-heading text-lg font-semibold text-[#832729] [font-variant-numeric:lining-nums] dark:text-[#e8c56a]">
+                  <span className="font-heading text-lg font-semibold text-primary [font-variant-numeric:lining-nums] dark:text-highlight-soft">
                     {inr(price - saving)}
                   </span>{' '}
                   <span className="text-muted-foreground">with this code</span>
                 </p>
               ) : (
                 <p className="text-sm leading-snug text-foreground">
-                  <span className="font-heading text-base font-semibold text-[#832729] [font-variant-numeric:lining-nums] dark:text-[#e8c56a]">
+                  <span className="font-heading text-base font-semibold text-primary [font-variant-numeric:lining-nums] dark:text-highlight-soft">
                     {couponHeadline(c)}
                   </span>{' '}
                   when you add {inr(shortBy)} more
@@ -107,7 +107,7 @@ const ProductOfferTag = ({ price, category, subcategory }: Props) => {
             <button
               type="button"
               onClick={() => onCopy(c.code)}
-              className="group relative inline-flex flex-shrink-0 items-center gap-1.5 overflow-hidden rounded-lg border border-dashed border-[#832729]/60 bg-white/70 px-2 py-1.5 text-xs font-semibold tracking-[0.08em] text-[#832729] sm:px-2.5 sm:tracking-[0.14em] transition-colors hover:bg-[#832729] hover:text-[#fbf3e4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#832729]/40 dark:border-[#e8c56a]/60 dark:bg-transparent dark:text-[#e8c56a] dark:hover:bg-[#e8c56a] dark:hover:text-zinc-900"
+              className="group relative inline-flex flex-shrink-0 items-center gap-1.5 overflow-hidden rounded-lg border border-dashed border-primary/60 bg-white/70 px-2 py-1.5 text-xs font-semibold tracking-[0.08em] text-primary sm:px-2.5 sm:tracking-[0.14em] transition-colors hover:bg-primary hover:text-charcoal-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:border-highlight-soft/60 dark:bg-transparent dark:text-highlight-soft dark:hover:bg-highlight-soft dark:hover:text-zinc-900"
               aria-label={isCopied ? `Code ${c.code} copied` : `Copy code ${c.code}`}
             >
               {isCopied ? (
@@ -130,7 +130,7 @@ const ProductOfferTag = ({ price, category, subcategory }: Props) => {
         <button
           type="button"
           onClick={() => setShowAll((v) => !v)}
-          className="text-xs font-medium text-[#832729] underline decoration-[#d4af37]/60 underline-offset-4 hover:text-[#5c1a1d] dark:text-[#e8c56a]"
+          className="text-xs font-medium text-primary underline decoration-highlight/60 underline-offset-4 hover:text-primary-dark dark:text-highlight-soft"
         >
           {showAll ? 'Show fewer offers' : `+${applicable.length - 1} more offer${applicable.length > 2 ? 's' : ''}`}
         </button>

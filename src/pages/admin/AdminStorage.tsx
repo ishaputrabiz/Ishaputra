@@ -35,7 +35,7 @@ const shortDate = (iso: string) =>
 const DEFAULT_PHOTO_BYTES = MAX_IMAGE_BYTES * 0.9 + 50 * 1024;
 
 const barColor = (p: number, warn: number, block: number) =>
-  p >= block ? 'bg-red-500' : p >= warn ? 'bg-amber-500' : 'bg-emerald-500';
+  p >= block ? 'bg-red-500' : p >= warn ? 'bg-highlight' : 'bg-emerald-500';
 
 interface MeterProps {
   icon: typeof HardDrive;
@@ -49,9 +49,9 @@ interface MeterProps {
 }
 
 const Meter = ({ icon: Icon, title, hint, used, limit, percent, usage, missing }: MeterProps) => (
-  <div className="bg-white dark:bg-gray-900 border border-[#F5EFE6] dark:border-gray-800 rounded-2xl p-5 shadow-sm">
+  <div className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl p-5 shadow-sm">
     <div className="flex items-start gap-3 mb-4">
-      <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/20 grid place-items-center text-amber-700 dark:text-amber-400 shrink-0">
+      <div className="w-9 h-9 rounded-lg bg-highlight/10 dark:bg-highlight/5 grid place-items-center text-highlight dark:text-highlight shrink-0">
         <Icon className="w-4 h-4" />
       </div>
       <div className="min-w-0">
@@ -108,7 +108,7 @@ const NumberField = ({
 );
 
 const Estimate = ({ icon: Icon, label, value, detail }: { icon: typeof HardDrive; label: string; value: string; detail: string }) => (
-  <div className="bg-[#FBF8F3] dark:bg-gray-800/60 rounded-xl px-4 py-3">
+  <div className="bg-cream dark:bg-gray-800/60 rounded-xl px-4 py-3">
     <p className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1.5">
       <Icon className="w-3.5 h-3.5" /> {label}
     </p>
@@ -202,7 +202,7 @@ const AdminStorage = () => {
       )}
 
       {!publicUrlConfigured && (
-        <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+        <div className="flex gap-3 rounded-xl border border-highlight/30 bg-highlight/10 dark:border-highlight/50 dark:bg-highlight/6 px-4 py-3 text-sm text-highlight dark:text-charcoal-foreground">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
           <p>
             <strong>Uploads are not possible yet:</strong> the bucket&apos;s public link is not set. Turn on
@@ -222,7 +222,7 @@ const AdminStorage = () => {
               usage.level === 'block'
                 ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300'
                 : usage.level === 'warn'
-                  ? 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200'
+                  ? 'border-highlight/30 bg-highlight/10 text-highlight dark:border-highlight/50 dark:bg-highlight/6 dark:text-charcoal-foreground'
                   : 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200'
             }`}
           >
@@ -290,7 +290,7 @@ const AdminStorage = () => {
       )}
 
       {/* Estimates */}
-      <div className="bg-white dark:bg-gray-900 border border-[#F5EFE6] dark:border-gray-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl p-5 sm:p-6 shadow-sm">
         <h2 className="text-base font-semibold text-gray-900 dark:text-white">What the free plan can handle</h2>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-5">
           Estimates, stopping at {Math.round(thresholds.block * 100)}% of each limit. Change the numbers to match
@@ -352,7 +352,7 @@ const AdminStorage = () => {
       </div>
 
       {/* How the protection works */}
-      <div className="bg-white dark:bg-gray-900 border border-[#F5EFE6] dark:border-gray-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl p-5 sm:p-6 shadow-sm">
         <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-3">How you stay on the free plan</h2>
         <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300 list-disc pl-5">
           <li>

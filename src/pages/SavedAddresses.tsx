@@ -246,7 +246,7 @@ const SavedAddresses = () => {
         <MobileHeader />
         <MobileSearchBar />
       </div>
-      <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "var(--font-body)" }}>
         <div className="container mx-auto max-w-4xl px-4 py-4 pb-24">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -264,14 +264,14 @@ const SavedAddresses = () => {
                 <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-zinc-300 dark:text-zinc-100" />
               </button>
               <div>
-                <h1 className="text-lg font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>Addresses</h1>
+                <h1 className="text-lg font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Addresses</h1>
               </div>
             </div>
             {!showForm && (
               <button
                 onClick={() => setShowForm(true)}
                 className="flex items-center gap-2 border-2 border-blue-600 bg-transparent hover:bg-blue-50 text-blue-600 text-sm px-4 py-2 rounded-full transition-colors font-medium"
-                style={{ fontFamily: "'Poppins', sans-serif" }}
+                style={{ fontFamily: "var(--font-body)" }}
               >
                 <Plus className="w-4 h-4" />
                 Add
@@ -291,7 +291,7 @@ const SavedAddresses = () => {
               >
                 <div className="rounded-2xl bg-white dark:bg-zinc-900 p-6 shadow-lg dark:bg-zinc-900/88 md:p-8">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
                       {editingAddress ? 'Edit Address' : 'Add New Address'}
                     </h2>
                     <button
@@ -305,7 +305,7 @@ const SavedAddresses = () => {
                   <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Full Name */}
                     <div>
-                      <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                      <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                         Full Name *
                       </Label>
                       <Input
@@ -321,7 +321,7 @@ const SavedAddresses = () => {
 
                     {/* Phone Number */}
                     <div>
-                      <Label htmlFor="phoneNumber" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                      <Label htmlFor="phoneNumber" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                         Phone Number *
                       </Label>
                       <Input
@@ -339,7 +339,7 @@ const SavedAddresses = () => {
                     {/* Pin Code & Locality */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <Label htmlFor="pinCode" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <Label htmlFor="pinCode" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                           Pin Code *
                         </Label>
                         <Input
@@ -354,7 +354,7 @@ const SavedAddresses = () => {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="locality" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <Label htmlFor="locality" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                           Locality
                         </Label>
                         <Input
@@ -370,7 +370,7 @@ const SavedAddresses = () => {
 
                     {/* Address */}
                     <div>
-                      <Label htmlFor="address" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                      <Label htmlFor="address" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                         Address (Area and Street) *
                       </Label>
                       <Input
@@ -385,7 +385,7 @@ const SavedAddresses = () => {
                     </div>
 
                     <div>
-                      <Label htmlFor="googleMapsUrl" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                      <Label htmlFor="googleMapsUrl" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                         Google Maps URL
                       </Label>
                       <Input
@@ -401,7 +401,7 @@ const SavedAddresses = () => {
                     {/* City & State */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <Label htmlFor="city" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <Label htmlFor="city" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                           City *
                         </Label>
                         <Input
@@ -415,7 +415,7 @@ const SavedAddresses = () => {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="state" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <Label htmlFor="state" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                           State *
                         </Label>
                         <select
@@ -445,7 +445,7 @@ const SavedAddresses = () => {
                         }
                         className="w-5 h-5 text-blue-600 border-gray-300 dark:border-zinc-700 rounded focus:ring-blue-500"
                       />
-                      <Label htmlFor="isDefault" className="text-sm font-medium text-gray-700 dark:text-zinc-300 cursor-pointer" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                      <Label htmlFor="isDefault" className="text-sm font-medium text-gray-700 dark:text-zinc-300 cursor-pointer" style={{ fontFamily: "var(--font-body)" }}>
                         Set as default shipping address
                       </Label>
                     </div>
@@ -456,7 +456,7 @@ const SavedAddresses = () => {
                         type="submit"
                         disabled={formLoading}
                         className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white h-12 rounded-xl font-semibold shadow-lg"
-                        style={{ fontFamily: "'Poppins', sans-serif" }}
+                        style={{ fontFamily: "var(--font-body)" }}
                       >
                         {formLoading ? (
                           <>
@@ -475,7 +475,7 @@ const SavedAddresses = () => {
                         onClick={resetForm}
                         variant="outline"
                         className="px-8 h-12 rounded-xl border-gray-300 dark:border-zinc-700"
-                        style={{ fontFamily: "'Poppins', sans-serif" }}
+                        style={{ fontFamily: "var(--font-body)" }}
                       >
                         Cancel
                       </Button>
@@ -498,8 +498,8 @@ const SavedAddresses = () => {
                   <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-100 dark:bg-zinc-800">
                     <MapPin className="w-10 h-10 text-gray-400 dark:text-zinc-500" />
                   </div>
-                  <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>No addresses saved</h3>
-                  <p className="text-xs text-gray-600 dark:text-zinc-400 dark:text-zinc-300" style={{ fontFamily: "'Poppins', sans-serif" }}>Add your first delivery address</p>
+                  <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>No addresses saved</h3>
+                  <p className="text-xs text-gray-600 dark:text-zinc-400 dark:text-zinc-300" style={{ fontFamily: "var(--font-body)" }}>Add your first delivery address</p>
                 </motion.div>
               ) : (
                 addresses.map((address, index) => (
@@ -512,17 +512,17 @@ const SavedAddresses = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 pr-8">
-                        <h3 className="mb-1 text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <h3 className="mb-1 text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
                           {address.fullName}
                         </h3>
-                        <div className="space-y-0.5 text-sm text-gray-600 dark:text-zinc-400 dark:text-zinc-300" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                        <div className="space-y-0.5 text-sm text-gray-600 dark:text-zinc-400 dark:text-zinc-300" style={{ fontFamily: "var(--font-body)" }}>
                           <p>{address.address}</p>
                           {address.locality && <p>{address.locality}</p>}
                           <p>{address.city}, {address.state} - {address.pinCode}</p>
                           <p className="pt-1">{address.phoneNumber}</p>
                         </div>
                         {address.isDefault && (
-                          <span className="inline-block mt-2 px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-medium" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                          <span className="inline-block mt-2 px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-medium" style={{ fontFamily: "var(--font-body)" }}>
                             ✓ Default
                           </span>
                         )}
@@ -531,7 +531,7 @@ const SavedAddresses = () => {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 mt-2 ml-2 text-xs text-blue-600 hover:text-blue-700 underline"
-                          style={{ fontFamily: "'Poppins', sans-serif" }}
+                          style={{ fontFamily: "var(--font-body)" }}
                         >
                           <MapPin className="w-3 h-3" /> View on Google Maps
                         </a>
@@ -560,7 +560,7 @@ const SavedAddresses = () => {
                                 setOpenMenuId(null);
                               }}
                               className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800 dark:bg-zinc-900/50 flex items-center gap-2"
-                              style={{ fontFamily: "'Poppins', sans-serif" }}
+                              style={{ fontFamily: "var(--font-body)" }}
                             >
                               <Edit2 className="w-4 h-4" />
                               Edit
@@ -571,7 +571,7 @@ const SavedAddresses = () => {
                                 setOpenMenuId(null);
                               }}
                               className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                              style={{ fontFamily: "'Poppins', sans-serif" }}
+                              style={{ fontFamily: "var(--font-body)" }}
                             >
                               <Trash2 className="w-4 h-4" />
                               Delete
@@ -583,7 +583,7 @@ const SavedAddresses = () => {
                                   setOpenMenuId(null);
                                 }}
                                 className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2 border-t border-gray-100 dark:border-zinc-800"
-                                style={{ fontFamily: "'Poppins', sans-serif" }}
+                                style={{ fontFamily: "var(--font-body)" }}
                               >
                                 <Check className="w-4 h-4" />
                                 Set as Default
