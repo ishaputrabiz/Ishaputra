@@ -30,5 +30,81 @@
   "product-vetiver-cedar-body-wash": {
     "hash": "d5a3e19ef3",
     "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790163977/ishaputrabotanicals/demo/ffu09x9dwszqbvpb01kb.jpg"
+  },
+  "product-oud-vetiver-natural-deodorant": {
+    "hash": "2588dec79e",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164022/ishaputrabotanicals/demo/vpqpwmh7etmlgpyadrpu.jpg"
+  },
+  "product-cedarwood-beard-growth-oil": {
+    "hash": "e0c5b495bc",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164067/ishaputrabotanicals/demo/scpudxxjpkadm16ts5ma.jpg"
+  },
+  "product-triphala-churna": {
+    "hash": "f972dacfc3",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164112/ishaputrabotanicals/demo/eet2job6gsjv0tvfksat.jpg"
+  },
+  "product-tulsi-ginger-immunity-tea": {
+    "hash": "4646e85f95",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164158/ishaputrabotanicals/demo/t0dcjxkmvbmceoldji0f.jpg"
+  },
+  "hero-1-desktop": {
+    "hash": "3eef88eb57",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164203/ishaputrabotanicals/demo/skwawcwe23osyuspv5hf.jpg"
+  },
+  "hero-1-mobile": {
+    "hash": "83de0780a9",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164247/ishaputrabotanicals/demo/ks3swzsmtpgkeqvy7orq.jpg"
+  },
+  "hero-2-desktop": {
+    "hash": "2fb5380e72",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164336/ishaputrabotanicals/demo/v0icvwhgxokaw8qwdq8y.jpg"
+  },
+  "hero-2-mobile": {
+    "hash": "0104c6842e",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164382/ishaputrabotanicals/demo/vn0bgduykhfsjctf6yxr.jpg"
+  },
+  "hero-3-desktop": {
+    "hash": "b4e0b71e67",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164427/ishaputrabotanicals/demo/zurdxwuvf6utvs9nj4fb.jpg"
+  },
+  "hero-3-mobile": {
+    "hash": "dc6818fc76",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164478/ishaputrabotanicals/demo/a7ypk0zgjohkittrd0sl.jpg"
+  },
+  "showcase-1": {
+    "hash": "3cea771033",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164561/ishaputrabotanicals/demo/h9woaemeoyehjp5r5yqx.jpg"
+  },
+  "showcase-2": {
+    "hash": "f691d62413",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164607/ishaputrabotanicals/demo/rz7hkewlyw3clmwabbk5.jpg"
+  },
+  "showcase-3": {
+    "hash": "6497f065e6",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164652/ishaputrabotanicals/demo/t8qvwu2cqpeo20qpnuj1.jpg"
+  },
+  "collection-1": {
+    "hash": "ad2ac0517e",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164697/ishaputrabotanicals/demo/mzsqqseyinqtbimvzvwh.jpg"
+  },
+  "collection-2": {
+    "hash": "0eda01dc03",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790165392/ishaputrabotanicals/demo/vnhhjaoazpge7at8qadp.jpg"
+  },
+  "collection-3": {
+    "hash": "3f01ef7229",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790164877/ishaputrabotanicals/demo/entvt3xwysxtaxhmfxtd.jpg"
+  },
+  "collection-4": {
+    "hash": "94fd2344f5",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790165011/ishaputrabotanicals/demo/cxq4o0gbhhnc38kmwxtc.jpg"
+  },
+  "collection-5": {
+    "hash": "e5817f152d",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790165147/ishaputrabotanicals/demo/vacajxhdpis057fc0chf.jpg"
+  },
+  "collection-wide": {
+    "hash": "7b31744a21",
+    "url": "https://res.cloudinary.com/dcoimqij/image/upload/v1790165192/ishaputrabotanicals/demo/jvogchddy0d1mgp0iztu.jpg"
   }
 }

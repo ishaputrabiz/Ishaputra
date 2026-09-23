@@ -26,10 +26,21 @@ admin.initializeApp({
 
 try {
   const user = await admin.auth().getUserByEmail(email);
-  await admin.firestore().collection('users').doc(user.uid).set(
-    { role: 'admin', updatedAt: admin.firestore.FieldValue.serverTimestamp() },
-    { merge: true },
-  );
+  const ref = admin.firestore().collection('users').doc(user.uid);
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  if ((await ref.get()).exists) {
+    await ref.set({ role: 'admin', updatedAt: now }, { merge: true });
+  } else {
+    // Created in the Firebase console, so signup never wrote a profile: write the one it would have.
+    await ref.set({
+      uid: user.uid,
+      email: user.email,
+      username: user.displayName || user.email.split('@')[0],
+      role: 'admin',
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
   console.log(`${email} (${user.uid}) is now an admin. Sign out and back in to see the admin panel at /admin.`);
 } catch (err) {
   console.error(err.code === 'auth/user-not-found' ? `No account for ${email}. Sign up on the site first.` : err.message);

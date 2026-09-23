@@ -46,8 +46,8 @@
     - Web config, VAPID key and service account are in `.env`. The service-account JSON is in the project folder, git-ignored.
     - Firestore (asia-south1) created and Email/Password + Google sign-in enabled by the user.
     - Security rules deployed 2026-09-23 with the Admin SDK. The Firebase CLI on this PC is logged in as the Sreerasthu account, so `firebase deploy` can't reach this project.
-    - **Indexes not created yet**: the service account lacks permission. Waiting for the user to add the "Cloud Datastore Index Admin" role to `firebase-adminsdk-fbsvc@ishaputrabotanicals.iam.gserviceaccount.com`; then create the 12 indexes in `firestore.indexes.json` via the Firestore REST API. Until then the hero banners (`banners` status+order) and the wide home banner (`homeBanners` slot+order) cannot load.
-    - First admin: the user signs up on the site, then `node scripts/make-admin.mjs <email>`.
+    - All 12 indexes in `firestore.indexes.json` created by the user in the console (2026-09-23). The service account has no index permission, so future index changes are made in the console; `scripts/` can print create-links.
+    - Admin: `admin@ishaputra.com` (created in the console; profile + admin role + verified email set by `scripts/make-admin.mjs` and the Admin SDK).
 - Images: Cloudinary `dcoimqij`, unsigned preset `levelupingup`, until Cloudflare R2 is set up (`VITE_MEDIA_PROVIDER=cloudinary`). Uploads go to the folder `ishaputrabotanicals/<category>`.
 - WhatsApp, Razorpay, Vercel, domain: not started (Step 3).
 
@@ -72,13 +72,13 @@
 - Per page: Step 2
 
 ## Progress
-- [ ] Step 0 safe preview: clean-up, Firebase, Cloudinary uploads, security fix, demo content done. Waiting on: indexes (IAM role) and the first admin account.
+- [x] Step 0 safe preview (2026-09-23): home, products and product pages show demo content on Ishaputra Firebase; only the YouTube section is hidden (no videos yet)
 - [ ] Step 1 new look (client OK?)
 - [ ] Step 2: Home, Products, Product detail, Checkout, Profile, remaining pages
 - [ ] Step 2B features   - [ ] Step 3 accounts   - [ ] Step 4 test and publish   - [ ] Step 5 client changes
 
 ## Next step
-Create the Firestore indexes once the IAM role is added, confirm the home page shows every section, then start Step 1.
+Step 1: colours and fonts, hard-coded colours, logos, loading animation, brand text, remove silver-rate.
 
 ## Open questions
 - Business details: legal name, address, phone, email, WhatsApp, hours, GSTIN, domain, social links (blocking for Step 1 footer, invoice and policy pages; placeholders until then)

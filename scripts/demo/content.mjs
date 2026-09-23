@@ -161,7 +161,7 @@ export const SHOWCASES = [
 /** "Our Collections" cards (`homeCollections`), portrait 3:4. */
 export const COLLECTIONS = [
   { eyebrow: 'Energy', title: 'Energy & Vitality', subtitle: 'Shilajit, ashwagandha and more for daily strength.', link: '/category/energy-vitality', prompt: 'portrait still life, black jar of shilajit resin with copper lid on dark stone, vertical composition' },
-  { eyebrow: 'Hair', title: 'Hair Care', subtitle: 'Oils, shampoos and serums that fight hair fall.', link: '/category/hair-care', prompt: 'portrait still life, amber hair oil bottle and wooden comb on dark wood, vertical composition' },
+  { eyebrow: 'Hair', title: 'Hair Care', subtitle: 'Oils, shampoos and serums that fight hair fall.', link: '/category/hair-care', prompt: 'still life product photography, amber glass bottle of hair oil with black cap standing on a dark walnut table, wooden comb lying in front of it, vertical composition' },
   { eyebrow: 'Skin', title: 'Skin Care', subtitle: 'Clean, clear skin with Ayurvedic actives.', link: '/category/skin-care', prompt: 'portrait still life, black face wash tube and serum bottle on black marble, vertical composition' },
   { eyebrow: 'Grooming', title: 'Personal Care', subtitle: 'Body, beard and daily grooming essentials.', link: '/category/personal-care', prompt: 'portrait still life, charcoal body wash bottle and cedar wood block on dark stone, soft steam, vertical composition' },
   { eyebrow: 'Ayurveda', title: 'Ayurvedic Essentials', subtitle: 'Classical churnas and herbal teas.', link: '/category/ayurvedic-essentials', prompt: 'portrait still life, herbal powder in a dark stone bowl with brass spoon and a steaming tea cup, vertical composition' },
