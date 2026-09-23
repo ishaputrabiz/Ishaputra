@@ -1,6 +1,5 @@
 import { auth } from '@/config/firebase';
-import { usesCloudinary } from '@/lib/mediaProvider';
-import { callMediaApi } from './mediaStorage';
+import { callMediaApi, USES_CLOUDINARY } from './mediaStorage';
 import { invalidateCatalogCache } from './productCache';
 
 /**
@@ -72,8 +71,8 @@ const flush = async () => {
 };
 
 export const requestCatalogRefresh = (productIds: Array<string | null | undefined>) => {
-  // Cloudinary mode keeps no snapshot: the storefront reads Firestore directly.
-  if (usesCloudinary) {
+  // No snapshot to refresh while images live on Cloudinary; the storefront reads Firestore.
+  if (USES_CLOUDINARY) {
     invalidateCatalogCache();
     return;
   }

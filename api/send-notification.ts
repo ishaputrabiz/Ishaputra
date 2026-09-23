@@ -24,14 +24,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
 import { timingSafeEqual } from 'crypto';
 
-/** Constant-time comparison of the x-admin-key header with the configured key. */
-function keyMatches(provided: string | string[] | undefined, expected: string): boolean {
-  if (typeof provided !== 'string') return false;
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
 function initAdmin() {
   if (admin.apps.length) return;
   const b64 = process.env.FIREBASE_ADMIN_SDK_BASE64;
@@ -47,6 +39,13 @@ function initAdmin() {
   admin.initializeApp({ credential: admin.credential.cert(svc) });
 }
 
+/** Constant-time compare, so the key can't be guessed from response timing. */
+function keysMatch(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 function setCors(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -58,13 +57,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Fail closed: with no key configured, nobody may broadcast (this used to let
-  // anyone push to every customer when the env var was missing).
+  // Fail closed: without a configured key nobody may broadcast.
   const expectedKey = process.env.ADMIN_NOTIFICATION_KEY;
   if (!expectedKey) {
-    return res.status(503).json({ error: 'ADMIN_NOTIFICATION_KEY is not configured on the server' });
+    return res.status(503).json({ error: 'ADMIN_NOTIFICATION_KEY is not configured' });
   }
-  if (!keyMatches(req.headers['x-admin-key'], expectedKey)) {
+  const provided = req.headers['x-admin-key'];
+  if (typeof provided !== 'string' || !keysMatch(provided, expectedKey)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

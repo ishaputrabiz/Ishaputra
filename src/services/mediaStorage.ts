@@ -1,11 +1,8 @@
 import { auth } from '@/config/firebase';
 import { PREVIEW_MAX_EDGE } from '@/lib/mediaUrl';
-import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, usesCloudinary } from '@/lib/mediaProvider';
 
 /**
  * Client for /api/media - every file upload in the app goes through here.
- * With VITE_MEDIA_PROVIDER=cloudinary the same functions upload straight to
- * Cloudinary instead (see src/lib/mediaProvider.ts).
  *
  * Rules (the server enforces them again; these just fail fast with a clear message):
  *  - Images: JPG, PNG or WebP, at most 500 KB.
@@ -31,6 +28,24 @@ export const IMAGE_ACCEPT = IMAGE_TYPES.join(',');
 
 /** Fired on window when the server pauses uploads; the admin popup listens for it. */
 export const STORAGE_LIMIT_EVENT = 'media:storage-limit';
+
+/**
+ * Temporary storage for a new store whose Cloudflare R2 isn't set up yet.
+ *
+ * With VITE_MEDIA_PROVIDER=cloudinary the browser uploads straight to
+ * Cloudinary with an unsigned preset, and everything that only exists for R2
+ * (the catalog snapshot, its refresh, the free-tier usage checks) is skipped -
+ * the storefront reads products from Firestore instead. An unsigned preset
+ * cannot delete, so removing a photo leaves its Cloudinary file behind.
+ *
+ * Moving to R2: set the R2_* vars, set VITE_MEDIA_PROVIDER=r2 (or remove it),
+ * add the /catalog/products.json rewrite to vercel.json, and run
+ * scripts/publish-catalog.mjs.
+ */
+const CLOUDINARY_CLOUD = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+export const USES_CLOUDINARY =
+  import.meta.env.VITE_MEDIA_PROVIDER === 'cloudinary' && !!CLOUDINARY_CLOUD && !!CLOUDINARY_PRESET;
 
 export type MediaCategory =
   | 'products' | 'banners' | 'home' | 'gallery' | 'showcases' | 'testimonials'
@@ -284,37 +299,23 @@ const postJson = <T>(body: object, onProgress?: (p: UploadProgress) => void) =>
       }),
   );
 
-/** Shape of a Cloudinary upload response (only the fields we read). */
-interface CloudinaryUpload {
-  secure_url: string;
-  public_id: string;
-  bytes: number;
-  format?: string;
-  resource_type?: string;
-}
-
-/**
- * Unsigned upload straight from the browser. There is no preview or og file
- * to store: Cloudinary resizes on request (src/lib/cloudinaryUrl.ts).
- */
-const uploadToCloudinary = (
-  file: Blob,
+/** Unsigned upload to Cloudinary, returned in the same shape as /api/media. */
+const uploadToCloudinary = async (
+  file: File,
   category: MediaCategory,
   onProgress?: (p: UploadProgress) => void,
 ): Promise<UploadedMedia> => {
-  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
-    return Promise.reject(
-      new MediaUploadError('NOT_CONFIGURED', 'Cloudinary is not set up (VITE_CLOUDINARY_CLOUD_NAME / VITE_CLOUDINARY_UPLOAD_PRESET).'),
-    );
-  }
+  await authHeader(); // same rule as /api/media: signed-in users only
+
   const form = new FormData();
   form.append('file', file);
-  form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-  form.append('folder', category);
+  form.append('upload_preset', CLOUDINARY_PRESET!);
+  // One Cloudinary account may hold several stores; the Firebase project id keeps them apart.
+  form.append('folder', `${import.meta.env.VITE_FIREBASE_PROJECT_ID}/${category}`);
 
   return new Promise<UploadedMedia>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`);
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`);
     if (onProgress) {
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
@@ -323,18 +324,18 @@ const uploadToCloudinary = (
       };
     }
     xhr.onload = () => {
-      let payload: (CloudinaryUpload & { error?: { message?: string } }) | null = null;
+      let payload: { secure_url?: string; public_id?: string; bytes?: number; error?: { message?: string } } | null = null;
       try {
         payload = JSON.parse(xhr.responseText);
       } catch {
-        /* handled below */
+        /* non-JSON error page */
       }
       if (xhr.status >= 200 && xhr.status < 300 && payload?.secure_url) {
         resolve({
           url: payload.secure_url,
-          key: payload.public_id,
-          bytes: payload.bytes,
-          contentType: file.type || `${payload.resource_type || 'image'}/${payload.format || ''}`,
+          key: payload.public_id || '',
+          bytes: payload.bytes ?? file.size,
+          contentType: file.type,
         });
       } else {
         reject(new MediaUploadError('SERVER', payload?.error?.message || `Upload failed (HTTP ${xhr.status}).`));
@@ -358,7 +359,8 @@ export const uploadImage = async (file: File, options: UploadImageOptions): Prom
   const ready = options.autoCompress ? await compressImageToLimit(file) : file;
   assertUploadableImage(ready);
 
-  if (usesCloudinary) return uploadToCloudinary(ready, options.category, options.onProgress);
+  // Cloudinary resizes on delivery, so no preview or link-preview copies are made.
+  if (USES_CLOUDINARY) return uploadToCloudinary(ready, options.category, options.onProgress);
 
   const preview = await createPreview(ready);
   const og = options.category === 'products' ? await createOgImage(ready) : null;
@@ -401,7 +403,7 @@ export const uploadDocument = async (
   if (file.size > MAX_PDF_BYTES) {
     throw new MediaUploadError('TOO_LARGE', `"${file.name}" is ${formatBytes(file.size)}. PDFs must be 1 MB or less.`);
   }
-  if (usesCloudinary) return uploadToCloudinary(file, options.category, options.onProgress);
+  if (USES_CLOUDINARY) return uploadToCloudinary(file, options.category, options.onProgress);
   return postJson<UploadedMedia>(
     { action: 'upload', category: options.category, file: { name: file.name, data: await toBase64(file) } },
     options.onProgress,
@@ -414,8 +416,7 @@ export const uploadDocument = async (
  * fail the save that triggered it - it only leaves an orphaned file behind.
  */
 export const deleteMedia = async (urls: Array<string | undefined | null>): Promise<void> => {
-  // An unsigned preset can upload but not delete; old files stay on Cloudinary.
-  if (usesCloudinary) return;
+  if (USES_CLOUDINARY) return; // an unsigned preset can't delete; the file is left behind
   const list = [...new Set(urls.filter((u): u is string => typeof u === 'string' && /^https?:\/\//.test(u)))];
   for (let i = 0; i < list.length; i += 25) {
     try {
@@ -429,12 +430,6 @@ export const deleteMedia = async (urls: Array<string | undefined | null>): Promi
 export const fetchStorageUsage = async (
   refresh = false,
 ): Promise<{ usage: StorageUsage; publicUrlConfigured: boolean }> => {
-  if (usesCloudinary) {
-    throw new MediaUploadError(
-      'NOT_CONFIGURED',
-      'Images are stored on Cloudinary for now. Check storage and credits on the Cloudinary dashboard.',
-    );
-  }
   const resp = await fetch(`/api/media${refresh ? '?refresh=1' : ''}`, {
     headers: { Authorization: await authHeader() },
   });
@@ -452,7 +447,7 @@ export const fetchStorageUsage = async (
 export const describeUploadError = (error: unknown): string => {
   if (error instanceof MediaUploadError) {
     if (error.code === 'LIMIT_REACHED') return 'Uploads are paused because the free storage plan is almost full.';
-    if (error.code === 'NOT_CONFIGURED') return usesCloudinary ? error.message : 'Image storage is not set up on the server yet.';
+    if (error.code === 'NOT_CONFIGURED') return 'Image storage is not set up on the server yet.';
     return error.message;
   }
   return error instanceof Error ? error.message : 'Upload failed.';

@@ -93,8 +93,6 @@ export interface Product {
   inactiveReason?: InactiveReason | null;
   rating?: number;
   reviewCount?: number;
-  /** Demo product from src/data/sampleProducts.ts; "Remove sample products" deletes these. */
-  isSample?: boolean;
   createdAt?: Date | Timestamp;
   updatedAt?: Date | Timestamp;
   createdBy?: string;

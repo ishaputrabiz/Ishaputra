@@ -14,8 +14,6 @@ import {
   List,
   ScanLine,
   X,
-  Sparkles,
-  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,8 +52,6 @@ import BarcodeScannerDialog from '@/components/admin/BarcodeScannerDialog';
 import { useHardwareScanner } from '@/hooks/useHardwareScanner';
 import { describeError } from '@/lib/errorMessage';
 import { matchesTaxon } from '@/lib/taxonomy';
-import { useAuth } from '@/contexts/AuthContext';
-import { addSampleProducts, removeSampleProducts } from '@/services/sampleProductsService';
 
 /**
  * One dropdown row: name on the left, how many products it holds on the right -
@@ -149,29 +145,6 @@ const Products = () => {
   useHardwareScanner({ onScan: handleScannedCode, enabled: !scannerOpen });
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [sampleBusy, setSampleBusy] = useState(false);
-  const sampleCount = products.filter((p) => p.isSample).length;
-
-  /** Demo catalog for a new store; see src/data/sampleProducts.ts. */
-  const handleSampleProducts = async () => {
-    if (!user || sampleBusy) return;
-    setSampleBusy(true);
-    try {
-      if (sampleCount > 0) {
-        const removed = await removeSampleProducts();
-        toast({ title: 'Sample products removed', description: `${removed} demo products deleted.` });
-      } else {
-        const added = await addSampleProducts(user.uid);
-        toast({ title: 'Sample products added', description: `${added} demo products are now on the storefront.` });
-      }
-      await fetchProducts();
-    } catch (error) {
-      toast({ title: 'Sample products failed', description: describeError(error), variant: 'destructive' });
-    } finally {
-      setSampleBusy(false);
-    }
-  };
 
   useEffect(() => {
     fetchProducts();
@@ -412,18 +385,12 @@ const Products = () => {
             <h1 className="text-2xl font-semibold text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>Products</h1>
             <p className="text-gray-600 mt-1">Curate your silver collection — add, edit, and feature pieces</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={handleSampleProducts} disabled={sampleBusy || loading}>
-              {sampleBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-              {sampleCount > 0 ? `Remove sample products (${sampleCount})` : 'Add sample products'}
+          <Link to="/admin/products/new">
+            <Button className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 shadow-md">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
             </Button>
-            <Link to="/admin/products/new">
-              <Button className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 shadow-md">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Product
-              </Button>
-            </Link>
-          </div>
+          </Link>
         </div>
       </div>
 

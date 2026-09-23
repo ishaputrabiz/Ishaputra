@@ -11,8 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { fetchStorageUsage, formatBytes, STORAGE_LIMIT_EVENT, type StorageUsage } from '@/services/mediaStorage';
-import { usesCloudinary } from '@/lib/mediaProvider';
+import { fetchStorageUsage, formatBytes, STORAGE_LIMIT_EVENT, USES_CLOUDINARY, type StorageUsage } from '@/services/mediaStorage';
 
 const RECHECK_MS = 30 * 60 * 1000;
 const DISMISS_KEY = 'storageLimitDismissed';
@@ -51,8 +50,7 @@ const StorageLimitWatcher = () => {
   }, []);
 
   useEffect(() => {
-    // The R2 free-tier guard doesn't apply to Cloudinary; its dashboard shows usage.
-    if (usesCloudinary) return;
+    if (USES_CLOUDINARY) return; // the free-tier limits it watches are R2's
     let cancelled = false;
     const check = () =>
       fetchStorageUsage()

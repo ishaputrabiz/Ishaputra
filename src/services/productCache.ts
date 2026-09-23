@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { collection, doc, getDocs, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
-import { usesCloudinary } from '@/lib/mediaProvider';
 import type { Product } from './productService';
+import { USES_CLOUDINARY } from './mediaStorage';
 
 /**
  * Session-scoped cache for the public product catalog.
@@ -119,18 +119,25 @@ const fetchSnapshot = async (): Promise<Product[]> => {
   return file.products.filter((p) => p.flags?.isActive === true);
 };
 
+const readActiveFromFirestore = async (): Promise<Product[]> => {
+  const snapshot = await getDocs(
+    query(collection(db, PRODUCTS_COLLECTION), where('flags.isActive', '==', true)),
+  );
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Product);
+};
+
 const fetchActiveProducts = async (): Promise<Product[]> => {
   let products: Product[];
-  try {
-    // Cloudinary mode has no R2 snapshot to read (see src/lib/mediaProvider.ts).
-    if (usesCloudinary) throw new Error('no catalog snapshot in cloudinary mode');
-    products = await fetchSnapshot();
-  } catch (err) {
-    if (!usesCloudinary) console.warn('[productCache] catalog snapshot unavailable, reading Firestore instead:', err);
-    const snapshot = await getDocs(
-      query(collection(db, PRODUCTS_COLLECTION), where('flags.isActive', '==', true)),
-    );
-    products = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Product);
+  if (USES_CLOUDINARY) {
+    // No R2 snapshot exists while images live on Cloudinary.
+    products = await readActiveFromFirestore();
+  } else {
+    try {
+      products = await fetchSnapshot();
+    } catch (err) {
+      console.warn('[productCache] catalog snapshot unavailable, reading Firestore instead:', err);
+      products = await readActiveFromFirestore();
+    }
   }
 
   // Newest first, but a product with no photo never leads a row: it would show

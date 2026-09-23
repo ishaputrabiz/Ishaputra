@@ -17,14 +17,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
 import { createHash, randomInt, timingSafeEqual } from 'crypto';
 
-/** Constant-time check of the x-admin-key header; false when no key is configured. */
-function keyMatches(provided: string | undefined, expected: string | undefined): boolean {
-  if (!expected || typeof provided !== 'string') return false;
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
 const META_BASE = 'https://graph.facebook.com/v21.0';
 
 function initAdmin() {
@@ -110,10 +102,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const expected = process.env.ADMIN_NOTIFICATION_KEY;
   const isOrderTemplate =
     kind === 'template' && ORDER_TEMPLATES.has(String(body.template || ''));
-  // Fail closed: free text and non-order templates need the admin key, and a
-  // missing key must not mean "no check" (it used to let anyone send any text).
-  if (kind !== 'otp' && !isOrderTemplate && !keyMatches(adminKey, expected)) {
-    return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  if (kind !== 'otp' && !isOrderTemplate) {
+    // Fail closed: without a configured key, free text and other templates are refused.
+    if (!expected) return res.status(503).json({ ok: false, error: 'ADMIN_NOTIFICATION_KEY is not configured' });
+    const a = Buffer.from(String(adminKey || ''));
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      return res.status(401).json({ ok: false, error: 'Unauthorized' });
+    }
   }
 
   const to = String(body.to || '').replace(/[^+\d]/g, '');
