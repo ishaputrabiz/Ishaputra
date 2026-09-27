@@ -234,7 +234,7 @@ function HeroImageDropZone({
           }
         </p>
         <p className="text-[10px] text-gray-400 mt-1">
-          Upload jewelry products, style references, banner inspiration — AI studies all and creates one banner
+          Upload products, style references, banner inspiration — AI studies all and creates one banner
         </p>
       </div>
       <input
@@ -415,10 +415,10 @@ const AdminImagePrompts = () => {
   ];
 
   const festivalSuggestions = [
-    'Diwali Sale', 'Akshaya Tritiya', 'Navratri Collection', 'Christmas Offer',
+    'Diwali Sale', "International Men's Day", 'Navratri Collection', 'Christmas Offer',
     'New Year Sale', 'Pongal Festival', 'Wedding Season', 'Raksha Bandhan',
-    'Valentine\'s Day', 'Mother\'s Day', 'Independence Day', 'Ugadi Festival',
-    'Onam Special', 'Eid Collection', 'Ganesh Chaturthi', 'Karwa Chauth',
+    'Valentine\'s Day', 'Father\'s Day', 'Independence Day', 'Ugadi Festival',
+    'Onam Special', 'Eid Collection', 'Ganesh Chaturthi', 'Monsoon Hair Care',
     'Anniversary Sale', 'Launch Offer', 'Clearance Sale', 'Flash Sale',
   ];
 
@@ -596,7 +596,7 @@ const AdminImagePrompts = () => {
             AI Image Prompt Generator
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            Upload your jewelry image → generate reference-locked Nano Banana Pro prompts for product photos and banners
+            Upload your product image → generate reference-locked Nano Banana Pro prompts for product photos and banners
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-400 bg-white px-3 py-1.5 rounded-full border border-cream-dark">
@@ -656,7 +656,7 @@ const AdminImagePrompts = () => {
               <>
                 {/* Product Image Upload — REQUIRED */}
                 <ImageDropZone
-                  label="Upload Jewelry Image"
+                  label="Upload Product Image"
                   image={productImage}
                   preview={productPreview}
                   onSelect={handleProductImageSelect}
@@ -673,7 +673,7 @@ const AdminImagePrompts = () => {
                       <li>Real skin pores, catchlights, hair flyaways, natural imperfections</li>
                       <li>Product stays large, sharp, centered, and inspectable for the product page</li>
                       <li>Your exact uploaded product is treated as the locked source asset</li>
-                      <li>Background, pose, lighting, and styling improve without changing the jewelry</li>
+                      <li>Background, pose, lighting, and styling improve without changing the product</li>
                       <li>After generating, click <strong>"Different Angle / Pose"</strong> for variations</li>
                       <li>Use <strong>"Refine"</strong> to modify any detail you want changed</li>
                     </ul>
@@ -686,7 +686,7 @@ const AdminImagePrompts = () => {
                       <li>Product-only premium studio shot — no model</li>
                       <li>Keeps original metal color, stones, beads, pearls, and proportions</li>
                       <li>Macro-level detail — every texture and engraving razor-sharp</li>
-                      <li>Premium surface auto-selected to complement the jewelry</li>
+                      <li>Premium surface auto-selected to complement the product</li>
                       <li>1:1, 4K, Canon macro lens, focus stacking</li>
                     </ul>
                   </div>
@@ -700,7 +700,7 @@ const AdminImagePrompts = () => {
                 {/* Multi-Image Upload for Hero */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Reference / Jewelry Images <span className="text-gray-400 text-xs font-normal">(upload multiple)</span>
+                    Reference / Product Images <span className="text-gray-400 text-xs font-normal">(upload multiple)</span>
                   </label>
                   {heroPreviews.length > 0 && (
                     <div className="grid grid-cols-3 gap-2 mb-2">
@@ -745,7 +745,7 @@ const AdminImagePrompts = () => {
                     type="text"
                     value={festivalOrEvent}
                     onChange={(e) => setFestivalOrEvent(e.target.value)}
-                    placeholder="e.g., Diwali Sale, Wedding Season, Akshaya Tritiya..."
+                    placeholder="e.g., Diwali Sale, Wedding Season, Monsoon Hair Care..."
                     className={inputStyles}
                   />
                   <div className="flex flex-wrap gap-1.5 mt-2">
@@ -795,7 +795,7 @@ const AdminImagePrompts = () => {
                     type="text"
                     value={bannerHeadline}
                     onChange={(e) => setBannerHeadline(e.target.value)}
-                    placeholder="e.g., Festive jewellery for auspicious beginnings"
+                    placeholder="e.g., Rituals for a stronger you"
                     className={inputStyles}
                   />
                   <p className="text-[10px] text-gray-400 mt-1">The emotional tagline rendered on the banner with aesthetic typography</p>
@@ -815,7 +815,7 @@ const AdminImagePrompts = () => {
                   <textarea
                     value={offerInfo}
                     onChange={(e) => setOfferInfo(e.target.value)}
-                    placeholder="e.g., On all silver jewelry above ₹2,000. Valid till 31st Dec."
+                    placeholder="e.g., On all orders above ₹1,499. Valid till 31st Dec."
                     rows={2}
                     className={textareaStyles}
                   />
@@ -874,7 +874,7 @@ const AdminImagePrompts = () => {
                 <div className="bg-highlight/10 border border-highlight/30 rounded-lg p-3 space-y-1.5">
                   <p className="text-xs text-highlight font-semibold">Complete Banner Design</p>
                   <ul className="text-[11px] text-highlight space-y-0.5 list-disc list-inside">
-                    <li><strong>Upload multiple images</strong> — jewelry, references, inspiration. AI studies ALL</li>
+                    <li><strong>Upload multiple images</strong> — products, references, inspiration. AI studies ALL</li>
                     <li>Text rendered IN the image with aesthetic typography</li>
                     <li>Offer styled as a premium design element (not plain text)</li>
                     <li>SHOP NOW / CTA button included in the design</li>
@@ -917,7 +917,7 @@ const AdminImagePrompts = () => {
                   <textarea
                     value={customRequirement}
                     onChange={(e) => setCustomRequirement(e.target.value)}
-                    placeholder="Describe exactly what you want... e.g., 'A festive Diwali banner showing silver diyas and jewelry with warm golden lighting'"
+                    placeholder="Describe exactly what you want... e.g., 'A dark apothecary banner with amber bottles and a raw ashwagandha root under warm copper light'"
                     rows={5}
                     className={textareaStyles}
                   />
@@ -1042,7 +1042,7 @@ const AdminImagePrompts = () => {
                     <div className="w-12 h-12 border-4 border-highlight/30 border-t-highlight rounded-full animate-spin" />
                     <Sparkles className="h-5 w-5 text-highlight absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                   </div>
-                  <p className="text-sm text-gray-500">Gemini 2.5 Flash is analyzing your jewelry & crafting the prompt...</p>
+                  <p className="text-sm text-gray-500">Gemini 2.5 Flash is analyzing your product & crafting the prompt...</p>
                 </div>
               ) : generatedPrompt ? (
                 <div className="space-y-4">
@@ -1128,7 +1128,7 @@ const AdminImagePrompts = () => {
                   <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center">
                     <Wand2 className="h-8 w-8 text-gray-300" />
                   </div>
-                  <p className="text-sm">Upload your jewelry image, then click "Generate Prompt"</p>
+                  <p className="text-sm">Upload your product image, then click "Generate Prompt"</p>
                   <p className="text-xs">The prompt will lock your uploaded product as the exact source asset</p>
                 </div>
               )}
@@ -1141,11 +1141,11 @@ const AdminImagePrompts = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-600">
               <div className="flex items-start gap-2">
                 <span className="flex-shrink-0 w-5 h-5 bg-highlight/15 text-highlight rounded-full flex items-center justify-center font-bold text-[10px]">1</span>
-                <span><strong>Upload</strong> your jewelry image → Gemini builds a prompt that uses it as a locked product reference, not a text description.</span>
+                <span><strong>Upload</strong> your product image → Gemini builds a prompt that uses it as a locked product reference, not a text description.</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="flex-shrink-0 w-5 h-5 bg-highlight/15 text-highlight rounded-full flex items-center justify-center font-bold text-[10px]">2</span>
-                <span><strong>Copy</strong> the prompt and paste into Nano Banana Pro. <strong>Attach the same jewelry and logo references</strong> alongside it.</span>
+                <span><strong>Copy</strong> the prompt and paste into Nano Banana Pro. <strong>Attach the same product and logo references</strong> alongside it.</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="flex-shrink-0 w-5 h-5 bg-highlight/15 text-highlight rounded-full flex items-center justify-center font-bold text-[10px]">3</span>

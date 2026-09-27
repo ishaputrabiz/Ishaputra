@@ -104,7 +104,7 @@ const Wishlist = () => {
             <div className="absolute inset-0 z-0">
               <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/60 z-10" />
               <img 
-                src="https://res.cloudinary.com/dcoimqij/image/upload/f_auto,q_auto,w_1600/v1790165192/ishaputrabotanicals/demo/jvogchddy0d1mgp0iztu.jpg" 
+                src="https://res.cloudinary.com/dcoimqij/image/upload/f_auto,q_auto,w_1600/v1790515752/ishaputrabotanicals/demo/jsk5fcgynmfin5gfvlik.jpg" 
                 alt="My Wishlist"
                 className="w-full h-full object-cover"
               />

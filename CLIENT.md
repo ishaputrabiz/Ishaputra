@@ -16,9 +16,19 @@
 
 ## Business details
 - Brand name: Ishaputra Botanicals. Tagline (from the logo): "Pure wellness for a stronger you"
-- Legal name / GSTIN: TODO(client)
-- Address, phone, email, WhatsApp, hours: TODO(client)
-- Domain, social links: TODO(client)
+- Location: **Hyderabad** (confirmed by the user, 2026-09-27). State Telangana (code 36) is set for invoices.
+- Everything else in `src/config/brand.ts` is **dummy data**, as the user asked, and must be replaced before launch:
+    - Address: Road No. 12, Banjara Hills, Hyderabad 500034
+    - Phone: +91 98765 43210
+    - Email: hello@ishaputra.com
+    - Hours: Mon–Sat 10–7
+    - Domain: ishaputra.com
+    - Map: a city-level embed of Banjara Hills
+- Deliberately left empty (hidden on the site):
+    - WhatsApp: the Enquire button would message whoever owns a dummy number
+    - GSTIN: a made-up number must never print on an invoice
+    - Social links
+- Legal name: TODO(client)
 - Categories (a first guess, confirm with the client; in `DEFAULT_CATEGORIES` and seeded to Firestore):
     - Energy & Vitality → Capsules, Powders, Shilajit
     - Hair Care → Hair Oils, Shampoos, Hair Serums
@@ -58,7 +68,12 @@
 - 2026-09-23: Removed the `vercel.json` rewrite that served Sreerasthu's `catalog/products.json`. Add it back with `images.<ishaputra-domain>` when moving to R2.
 - 2026-09-23: Demo content comes from `scripts/seed-demo.mjs` with data in `scripts/demo/content.mjs`.
     - It writes 12 products, 3 hero banners, 3 showcases, 5 collection cards, 1 wide banner and 3 placeholder testimonials, all marked `demo: true`.
-    - Images are generated free by Pollinations (the anonymous tier gives about 768px and a watermark, which is cropped off) and uploaded to Cloudinary. Their URLs are cached in `scripts/demo/images.json`.
+    - Images (2026-09-27): **real Pexels photos**, because the user disliked the AI images. Pexels licence: free for commercial use, no attribution required.
+        - They are set per item in the "Real photos" section of `scripts/demo/content.mjs`, cropped to each slot by the seed script, and uploaded to Cloudinary.
+        - URLs are cached in `scripts/demo/images.json`; sources are listed in `scripts/demo/credits.json`.
+        - The same photos serve the About, Contact and Wishlist pages, the collection-banner fallback and the default collection cards.
+        - Photos were rejected for visible brand logos (a gym-vest logo, an essential-oil label, Tom Ford, Calvin Klein, The Man Company) and for the generic Ayurveda look (a bright turmeric flat lay).
+        - Items without `photo` fall back to Pollinations AI generation.
     - Remove everything with `node scripts/seed-demo.mjs --remove` before launch.
     - The AI product photos have made-up label text. Replace them with real photos in Step 3.
 - 2026-09-23: Security fix: `api/send-notification.ts` and `api/whatsapp-send.ts` now refuse requests when `ADMIN_NOTIFICATION_KEY` is unset, and compare the key in constant time. Still to do in Step 3, when WhatsApp is connected:
@@ -69,13 +84,13 @@
 - 2026-09-27 (Step 1):
     - Business details live in `src/config/brand.ts`. Empty fields are hidden on the site (footer, contact, invoice, policies), never shown as placeholders.
     - Deleted 13 unused components (`AboutSection`, `HeroCarousel`, `LuxurySofaSection`, `ProductDetailSection`...), unused `src/data/content.json`, and 40 unused jewellery images.
-    - The user declined one deletion step. These now-unused jewellery images are still in `src/assets/`: `handmade-crafting.jpg`, `handmade-section.jpg`, `hero-jewelry.jpg`, `promo-*.jpg`, `collection-banner.jpg`. Delete them only if the user agrees.
+    - Leftover unused jewellery images in `src/assets/` were deleted once the user asked to "complete remaining things" (2026-09-27).
     - `SILVER_PRICING_ENABLED = false` in `src/config/features.ts` hides the silver-rate widget, `/admin/silver-rate` and the product-form calculator. The headers show `LoyaltyPointsButton` (links to `/wallet`) instead.
     - Bare `/products` now lists the whole catalogue (it used to say "Category not found"; Sreerasthu's own links hit this too).
     - The mobile Categories page now reads the store's Firestore categories instead of a hard-coded jewellery list.
     - About page rewritten: the fake team became "What We Stand For" and the fake testimonial became the brand promise. Its images now use Cloudinary URLs; the old `/src/assets/...` paths broke in production.
     - Logo files, favicon, push icon, OG image and the empty-cart illustration all come from `node scripts/build-logo-assets.mjs`.
-    - **Deferred:** the admin AI prompt tool (`src/services/geminiService.ts`) still carries jewellery art direction. Rewrite it before the client uses it; it also needs `GEMINI_API_KEY`.
+    - The admin AI prompt tool (`src/services/geminiService.ts` + `AdminImagePrompts.tsx`) was rewritten for men's wellness (2026-09-27): packaging fidelity, Indian male models, natural product use, brand palette, the brief's "avoid" list. It still needs `GEMINI_API_KEY` to run.
 
 ## Design decisions
 - Colours, light mode:
@@ -106,7 +121,7 @@
 Client reviews the Step 1 look (light and dark, mobile and desktop). After their OK: Step 2, starting with the Home page.
 
 ## Open questions
-- Business details: legal name, address, phone, WhatsApp, GSTIN, state (for IGST vs CGST+SGST), domain, social links. They go in `src/config/brand.ts`. The email `hello@ishaputra.com` and the hours are **guesses**: confirm them.
+- Real business details to replace the dummy ones in `src/config/brand.ts`: legal name, address, phone, WhatsApp, email, hours, GSTIN, domain, social links (blocking for launch, not for review)
 - Vector (SVG/AI) logo file? A transparent PNG is in; a vector would give a sharper favicon (not blocking)
 - Category tree correct? (not blocking)
 - Loyalty card: a digital tier card or a physical/QR card? (Step 2B)

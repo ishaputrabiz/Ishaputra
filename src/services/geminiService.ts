@@ -56,6 +56,17 @@ async function generateWithFallback(
   return payload.text;
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// ART DIRECTION - Ishaputra Botanicals
+// Premium men's Ayurveda and botanical wellness: energy, hair, skin and
+// personal care. Premium, masculine, earthy, contemporary. Palette: black,
+// charcoal, rust copper, cream. Avoid: the generic Ayurveda look, excessive
+// leaves, mandalas, orange gradients, yoga imagery.
+// ────────────────────────────────────────────────────────────────────────────
+
+const BRAND_LINE =
+  "Ishaputra Botanicals, a premium men's Ayurveda and botanical wellness brand (energy & vitality, hair care, skin care, personal care, classical Ayurvedic essentials)";
+
 function hasLogos(logoImages?: ImageInput[]) {
   return !!logoImages && logoImages.length > 0;
 }
@@ -74,189 +85,183 @@ function logoInstruction(logoImages?: ImageInput[], logoMode: LogoMode = 'auto-c
 
   return `LOGO RULE - CONTRAST-AWARE AND ABSOLUTE:
 Attached logo image file(s) are provided as ${logoModeLabel(logoMode)}. Use the attached logo artwork directly; do NOT redraw it, retype it, convert it into random text, or place it on an opaque block.
-- If both black and white logo variants are attached, choose the variant that is most readable against the final background: white logo on dark/rich backgrounds, black logo on light/bright backgrounds.
+- If both black and white logo variants are attached, choose the variant that is most readable against the final background: light/bronze logo on dark/rich backgrounds, dark logo on light/bright backgrounds.
 - Preserve the transparent PNG edges. No black box, white box, rectangle, glow blob, or muddy background behind the logo.
-- Size: 12-18% of image width for product images; 10-16% for hero banners. It must be readable but never overpower the jewellery or offer.
+- Size: 12-18% of image width for product images; 10-16% for hero banners. It must be readable but never overpower the product or offer.
 - Position: choose the cleanest safe area with strong contrast, usually top-left or top-center for banners and a corner for product images.
 - Opacity: 100% unless the background is extremely simple; never make the logo faded or hard to read.
-- State exactly in the final prompt: "Place the attached logo image directly; choose black or white version based on background contrast; do not recreate it as text."`;
+- State exactly in the final prompt: "Place the attached logo image directly; choose the light or dark version based on background contrast; do not recreate it as text."`;
 }
 
 const NANO_BANANA_PRO_HANDOFF = `NANO BANANA PRO WORKFLOW:
 This prompt is meant for Nano Banana Pro with attached reference images. The generated image must use those attached references as source assets, not as loose inspiration. The prompt must tell Nano Banana Pro exactly what to preserve, what to enhance, and what final ratio/quality to output.`;
 
 const PRODUCT_FIDELITY_RULE = `PRODUCT FIDELITY - THE NON-NEGOTIABLE CORE:
-Use the attached jewellery/product image exactly as provided. Preserve the exact design, shape, proportions, chain/setting, stone positions, engraving, polish, metal color, scale, silhouette, clasp details, defects, and craftsmanship. Do not redesign it, simplify it, add extra stones, remove parts, change the metal tone, change gemstones, invent a matching set, or replace it with a similar-looking piece. Only improve the scene around it: lighting, camera, model, styling, environment, reflections, shadows, and composition.`;
+Use the attached product image exactly as provided. Preserve the exact pack: bottle, jar, tube, pump, dropper or pouch shape; glass or plastic colour (amber, black, frosted); cap and pump finish; label layout, artwork, typography and colours; fill level and liquid colour; proportions and scale. Do not redesign it, relabel it, invent new text, change the glass colour, add extra products, or replace it with a similar-looking pack. Only improve the scene around it: lighting, camera, model, styling, environment, reflections, shadows, and composition.`;
 
 const REFERENCE_LOCKED_PROMPT_STYLE = `REFERENCE-LOCKED PROMPT STYLE:
-The generated prompt must treat the uploaded jewellery image as a locked visual asset, not as an object to describe from memory. Do not describe the product motif, stones, beads, color, or material in the generated prompt. Instead, instruct Nano Banana Pro to use the attached jewellery reference directly as the product layer/source asset. Product words create hallucinated replacements; asset-lock language preserves the real product.`;
+The generated prompt must treat the uploaded product image as a locked visual asset, not as an object to describe from memory. Do not describe the label wording, pack colours, or ingredients in the generated prompt. Instead, instruct Nano Banana Pro to use the attached product reference directly as the product layer/source asset. Product words create hallucinated replacements; asset-lock language preserves the real product.`;
 
 const PRODUCT_TRANSFER_RULE = `PRODUCT TRANSFER RULE:
-If the uploaded jewellery is photographed on a display bust, tray, hand, table, or rough store background, remove or replace only the support/background. Transfer the exact jewellery itself onto the model or studio setup without redrawing it. Keep every pendant, chain link, bead, pearl, stone, engraving, oxidized area, plating tone, and spacing identical to the uploaded photo. If a part must curve naturally on a model, adapt only perspective and contact shadow while preserving the visible design exactly.`;
+If the uploaded product is photographed on a cluttered table, in a hand, or against a rough background, remove or replace only the support/background. Transfer the exact product itself into the model's hand or the studio set without redrawing it. Keep the label, cap, pump, glass tint and every printed detail identical to the uploaded photo. Adapt only perspective, reflections and contact shadow.`;
 
 const REFERENCE_DISCIPLINE_RULE = `REFERENCE DISCIPLINE:
 Study every attached reference carefully. Keep the uploaded product/reference subject real and unchanged, like a professional retouching brief: preserve identity, geometry, materials, and proportions while upgrading the scene to a premium photographed result. If a reference is low quality, use it to preserve the product accurately, then rebuild only the lighting, surroundings, and photographic quality around it.`;
 
 const PHOTOREALISM_RULE = `PHOTOREALISM - MUST LOOK LIKE A REAL CAMERA CAPTURE:
-- Real skin texture if a model appears: visible pores, tiny facial hair, natural moles/freckles, slight skin tone variation, real lip lines, non-perfect symmetry, natural under-eye and cheek texture.
-- Real eyes and hair: believable catchlights from softboxes/windows, individual hair strands, flyaways, imperfect hairline, no CG helmet hair.
-- Real material response: the metal color and finish follow the uploaded product exactly; silver stays cool, gold plating stays warm, oxidized areas stay dark, beads/pearls/stones keep their original colors. Fabric weave is visible, stones refract light naturally, shadows contact the surface correctly.
-- Real camera behavior: Canon EOS R5 or Hasselblad-style editorial capture, accurate lens compression, natural depth of field, subtle film grain, true light falloff, no overdone HDR.
-- Real environment: floors, walls, props, flowers, fabric folds, marble, velvet, and reflections must have scale, texture, depth, and natural imperfections.
-- Banned AI tells: plastic skin, wax faces, floating jewellery, impossible shadows, deformed fingers, warped text, random extra jewellery, fake sparkle noise, over-smoothed surfaces, perfect symmetry, digital glow.`;
+- Real skin texture if a model appears: visible pores, beard and stubble texture with individual hairs, natural skin tone variation, real lip lines, non-perfect symmetry, no airbrushing.
+- Real eyes and hair: believable catchlights from softboxes/windows, individual hair strands, natural hairline, no CG helmet hair.
+- Real material response: glass refracts and shows true caustics, liquids show a meniscus and the colour of the uploaded product, matte and gloss finishes stay as they are, powders and resins have grain and weight. Wood grain, stone pores and linen weave are visible; shadows contact the surface correctly.
+- Real camera behaviour: Canon EOS R5 or Hasselblad-style editorial capture, accurate lens compression, natural depth of field, subtle film grain, true light falloff, no overdone HDR.
+- Real environment: stone, slate, walnut, brass, linen and tile must have scale, texture, depth and natural imperfections.
+- Banned AI tells: plastic skin, waxy faces, floating products, impossible shadows, deformed fingers, warped or invented label text, extra products, fake sparkle, over-smoothed surfaces, perfect symmetry, digital glow.`;
 
-const ATTIRE_AND_STYLING_RULE = `DYNAMIC ATTIRE AND STYLING - DO NOT DEFAULT TO GREEN SAREE:
-Choose attire based on the uploaded jewellery style and campaign mood. Options include Kanjivaram silk saree, Banarasi saree, handloom drape, bridal lehenga, modern structured gown, velvet blouse, minimalist editorial black/ivory outfit, or contemporary festive styling. The outfit must complement the jewellery and never compete with it. Avoid repeating green saree by default; use emerald or green only when it is clearly the best cultural/compositional choice. Prefer rich, varied palettes such as deep wine, ivory, champagne, sapphire, antique rose, charcoal, royal blue, temple red, pearl white, or muted gold accents while keeping the uploaded product's exact color/material unchanged.`;
+const STYLING_RULE = `MEN'S STYLING - PREMIUM, MASCULINE, CONTEMPORARY:
+Choose wardrobe from the Ishaputra palette of black, charcoal, rust copper and cream: a charcoal linen shirt with rolled sleeves, a black crew-neck tee, a rust-copper or cream kurta with a modern cut, an earthy overshirt, a towel-around-the-neck grooming moment, or a plain dark training vest for energy and vitality shots. Grooming is sharp and real: a well-kept beard or stubble, natural hair. Never use saffron robes, prayer beads, yoga poses, meditation clichés, or costume-like traditional dress. The outfit supports the product and never competes with it.`;
 
-const LUXURY_ENVIRONMENT_RULE = `WORLD-CLASS ENVIRONMENT:
-Create a real, high-budget luxury photography setting rather than a flat backdrop. Choose one setting that fits the product: editorial studio with sculpted light, palace corridor, temple-inspired architectural detail, marble atelier, velvet/silk styling table, premium boutique interior, garden at golden hour, or cinematic festive set. The environment must have foreground/midground/background depth, natural shadows, physically plausible reflections, and professional art direction.`;
+const ENVIRONMENT_RULE = `PREMIUM MEN'S WELLNESS ENVIRONMENT:
+Create a real, high-budget set rather than a flat backdrop. Choose one setting that fits the product: dark slate bathroom with brushed-brass fittings; charcoal studio sweep with sculpted light; walnut apothecary shelf with amber glass; black stone vanity at dawn; barber lounge of leather, oak and brass; modern Indian home with lime-plaster walls and teak; quiet gym at first light for energy products. The set must have foreground/midground/background depth, natural shadows, physically plausible reflections, and professional art direction. Keep botanicals minimal and sculptural (a single root, a few dried stems, a small bowl of powder or resin) - never a wall of leaves, a mandala, a temple backdrop, or an orange gradient.`;
 
-const SILVER_COLOR_RULE = `SILVER JEWELLERY COLOR ANCHOR:
-Ishaputra Botanicals sells 92.5% silver jewellery. Silver must remain cool, luminous, and premium. Do not warm it into yellow gold or bronze. Any gold, maroon, green, or festive colors belong to the set, props, text, or attire only - never to the silver product unless the uploaded reference itself contains those tones.`;
+const BRAND_PALETTE_RULE = `BRAND PALETTE ANCHOR:
+Ishaputra's visual world is black, charcoal, rust copper and cream, with bronze accents from the logo. Grade the scene toward deep neutrals with warm copper light. Products keep their real packaging colours; the palette belongs to the set, light, wardrobe and typography. Avoid orange gradients, neon, and saturated festival colours unless the brief explicitly asks for a festival.`;
 
-const MATERIAL_FIDELITY_RULE = `MATERIAL AND COLOR FIDELITY - ABSOLUTE COLOR LOCK:
-The uploaded jewellery reference is the single source of truth for color. NEVER convert gold to silver or silver to gold — this is the most common failure and it is forbidden. If the uploaded piece is gold-polished it stays gold in every pixel; if it is silver it stays silver; the same applies to oxidized, rose-toned, rhodium, two-tone, coral-beaded, pearl-accented, or gemstone-set pieces. Preserve the exact metal tone, bead color, pearl color, stone color, polish, oxidation, patina, and contrast from the reference. Lighting, mood, and brand context must NEVER shift the metal color — light the scene around the product, never re-tint the product. The final prompt must include this sentence verbatim: "Keep the exact metal color and stone colors from the attached reference photo; do not shift gold to silver or silver to gold under any lighting."`;
+const MATERIAL_FIDELITY_RULE = `PACKAGING AND COLOUR FIDELITY - ABSOLUTE COLOUR LOCK:
+The uploaded product reference is the single source of truth for colour. Keep the exact glass tint (amber stays amber, black stays black, frosted stays frosted), cap and pump finish, label colours, liquid/powder/resin colour and fill level. Lighting, mood and brand grading must NEVER re-tint the product - light the scene around it. The final prompt must include this sentence verbatim: "Keep the exact packaging, label and product colours from the attached reference photo; do not change or recolour them under any lighting."`;
 
 const PRODUCT_PAGE_MODEL_SHOT_RULE = `PRODUCT PAGE MODEL SHOT:
-This is for a website product page primary image, not a poster, not a social ad, and not a loose fashion portrait. The jewellery must be the clearest hero: large, centered, sharply focused, fully visible, correctly scaled on the model, and suitable for a customer to inspect before buying. The model should look premium and real, but her face, outfit, and background must support the product rather than steal attention. Use a clean luxury crop with minimal distractions, natural skin, believable neck/collarbone anatomy, and a background that adds class without hiding or competing with the jewellery.`;
+This is for a website product page primary image, not a poster and not a loose fashion portrait. The product must be the clearest hero: large, sharply focused, label facing the camera, correctly scaled in the model's hand or beside him, and suitable for a customer to inspect before buying. The model looks premium and real, but his face, outfit and background support the product rather than steal attention.`;
 
-const MODEL_BEAUTY_RULE = `MODEL BEAUTY - YOUNG, GORGEOUS, CELEBRITY-LEVEL:
-The model must be a YOUNG (early-to-mid 20s), strikingly beautiful Indian woman with celebrity/leading-actress looks (think Tanishq/Kalyan campaign face). Requirements:
-- Youthful, radiant, flawless-yet-real skin with a healthy glow, fine natural texture and pores; absolutely NOT old, aged, grey-haired, tired, or plain.
-- Gorgeous, camera-attractive features: bright expressive eyes with true catchlights, defined brows, sculpted cheekbones, soft full lips.
-- Professional glam makeup that flatters: dewy base, subtly smoky or warm eyes, defined lashes, blush, a refined lip — polished and aspirational, never heavy or muddy.
-- Dark, healthy, beautifully styled hair (sleek bun, soft waves, or bridal updo) unless the concept specifies otherwise.
-- A WARM, GENUINE, JOYFUL SMILE is the default expression (gentle teeth-showing or a soft radiant smile) — she should look happy, confident, and inviting, like the reference celebrity portraits.
-- Hyper-realistic editorial photography quality - never CGI, doll-like, plastic, waxy, over-smoothed, or uncanny, but always youthful and beautiful.`;
+const MODEL_RULE = `MODEL - REAL, CONFIDENT, AUTHENTIC INDIAN MAN:
+The model is an Indian man aged roughly 25-40 with a well-groomed beard or stubble, healthy natural skin, and a fit but real build. Requirements:
+- Natural skin with pores, fine lines and beard texture; never airbrushed, plastic, or doll-like.
+- Calm confidence: a composed half-smile, a relaxed direct gaze, or a focused grooming moment - never a cheesy grin or an exaggerated flex.
+- Neat, natural hair; grooming consistent with the product (a fuller beard for beard care, healthy hair for hair care, clear skin for skin care).
+- Hyper-realistic editorial photography quality - never CGI or uncanny.`;
 
-const NATURAL_WEAR_RULE = `NATURAL, ANATOMICALLY-CORRECT WEARING:
-The attached jewellery must sit on the body exactly the way that specific piece is genuinely worn, with real physics: a necklace/choker resting on the collarbone with correct drape, weight, and gravity; earrings hanging correctly from the earlobe with hair swept to reveal them; a ring on the correct finger and a bangle/bracelet on the wrist with believable, relaxed hand choreography; an anklet at the ankle; a maang-tikka/nose-ring/haram placed in its correct anatomical position. Render real contact points, gentle skin compression under weight, and soft accurate contact shadows where metal meets skin. The jewellery must never float, sit at the wrong scale, hover off the skin, clip through skin/fabric/hair, or appear pasted on.`;
+const NATURAL_USE_RULE = `NATURAL, CORRECT PRODUCT USE:
+Show the product the way it is genuinely used: beard oil - a few drops from the dropper into the palm or worked through the beard; hair oil or serum - dropper at the scalp or fingertips massaging the roots; face wash - lather at a stone basin; body wash - a pump into the hand in a dark-tiled shower; capsules - two in the palm beside a glass of water; shilajit - a pea-sized amount on a spoon over a cup of warm water; churna - a spoon of powder over warm water; herbal tea - a steaming cup held in both hands. Real contact points, believable hand anatomy, and accurate contact shadows. The product never floats, never sits at the wrong scale, and never has fingers covering the label.`;
 
-const JEWELLERY_VISIBILITY_RULE = `JEWELLERY MUST BE FULLY AND CLEARLY VISIBLE:
-The attached jewellery is the product the customer is buying, so the ENTIRE piece must be shown completely, unobstructed, sharp, and well-lit. The model faces the camera (straight-on or a gentle three-quarter turn) so the whole piece reads end to end. NEVER use a full side profile, a back view, a strong downward gaze, crossed arms, or hands/hair/chin/saree pallu that cover or crop any part of the jewellery. For a necklace/haram, keep the neckline and full drape open and visible on the chest; for earrings, sweep the hair back and angle slightly so both the ear and the earring show; for a maang-tikka/nose-ring keep the forehead/face clear. The jewellery must be large in frame, centered, in crisp focus, and never tiny, blurred, half-hidden, or turned away.`;
+const PRODUCT_VISIBILITY_RULE = `PRODUCT MUST BE FULLY AND CLEARLY VISIBLE:
+The attached product is what the customer is buying, so the entire pack must be shown completely, unobstructed, sharp and well-lit, with the label facing the camera and readable. Never crop the cap or base, never let hands, hair, steam or props cover the label, and never turn the pack away. The product is large in frame, in crisp focus, and never tiny, blurred or half-hidden.`;
 
 const PRODUCT_COMPLETE_VISIBILITY_RULE = `PRODUCT MUST BE SHOWN COMPLETELY (STUDIO):
-Lay/present the attached jewellery so the ENTIRE design is fully open, spread out, and readable - every motif, the full chain/band, the centerpiece, and all drops/beads visible at once. Do NOT coil it, fold it, stand it on its edge, prop it vertically, overlap parts, or curl it in a way that hides or compresses any portion (the necklace should read as a full, gently opened U/arc, not a tight curve or a standing loop). The complete piece is sharp, correctly proportioned, evenly lit, and large in frame so a customer can inspect the whole design before buying. Nothing crops or covers it.`;
+Present the attached product upright (or lying naturally if that is its form) so the whole pack, cap to base, and the full label are visible at once. Do not tilt it into an unreadable angle, stack products over it, or crop any part. The complete pack is sharp, correctly proportioned, evenly lit, and large in frame so a customer can inspect it before buying.`;
 
 // ────────────────────────────────────────────────────────────────────────────
 // CREATIVE CONCEPT ROTATION
-// The prompt-writing model used to converge to one "look" every time. We now
-// pick a fresh, distinct concept on every generation from curated luxury pools,
-// so each click produces a genuinely different, professional photoshoot idea
-// while the attached product stays locked and unchanged.
+// The prompt-writing model used to converge to one "look" every time. We pick
+// a fresh, distinct concept on every generation from curated pools, so each
+// click produces a genuinely different photoshoot idea while the attached
+// product stays locked and unchanged.
 // ────────────────────────────────────────────────────────────────────────────
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 const MODEL_BACKDROPS = [
-  'minimal seamless studio sweep in warm ivory with a soft sculpted gradient and clean negative space',
-  'opulent palace interior with carved sandstone arches, brass diyas, and creamy window light bokeh',
-  'modern concrete-and-glass editorial studio with directional sunlight and long architectural shadows',
-  'South-Indian temple corridor of granite pillars with marigold garlands and warm golden-hour rim light',
-  'champagne silk drapery backdrop lit by a large beauty dish for soft luxury falloff',
-  'contemporary art-gallery white wall with a single crisp accent spotlight and clean shadow',
-  'marble haveli courtyard at sunset with a shallow reflecting pool and warm amber glow',
-  'painterly deep-charcoal canvas backdrop with classic Vogue-beauty chiaroscuro lighting',
-  'festive Diwali set with warm fairy-light bokeh and rich out-of-focus textiles',
-  'serene monsoon veranda with brass accents, jasmine vines, and soft diffused overcast light',
-  'jewel-toned velvet backdrop (sapphire / wine / emerald chosen to flatter the piece) with spotlit drama',
-  'sunlit ivory linen interior with sheer curtains and gentle wind-blown movement',
+  'dark slate bathroom with a brushed-brass tap and soft steam catching a single window light',
+  'charcoal seamless studio sweep with a sculpted copper-toned rim light and clean negative space',
+  'walnut apothecary shelf of amber glass bottles, softly out of focus behind him',
+  'black stone vanity at dawn with cool daylight from a frosted window and a warm practical lamp',
+  'barber lounge of oiled leather, oak and brass, shallow depth of field',
+  'modern Indian home interior with lime-plaster walls, teak furniture and late-afternoon light',
+  'quiet industrial gym at first light, dust in the air, dark iron and concrete',
+  'rooftop terrace in Hyderabad at blue hour, city lights softly out of focus',
+  'dark-tiled walk-in shower with water droplets on black stone and a single overhead light',
+  'minimal study with a linen curtain, a copper cup and long morning shadows',
 ];
 
 const MODEL_ARCHETYPES = [
-  'radiant young South-Indian bride in her early 20s, flawless dewy skin, soft glam with warm eyes, jasmine flowers in a neat bun, glowing happy smile',
-  'stunning young Indian actress-type in her mid 20s, luminous complexion, defined brows, expressive eyes, sleek low bun, bright joyful smile',
-  'beautiful youthful model in her early 20s with fresh natural glam, soft loose waves, rosy cheeks, gentle teeth-showing smile',
-  'gorgeous young festive-glam woman in her mid 20s, dewy base, subtly smoky eyes, statement bindi, polished bun, warm confident smile',
-  'elegant young bride in her early 20s with traditional gold-toned bridal makeup, kohl-lined bright eyes, fresh flowers in hair, radiant smile',
-  'charming young woman in her mid 20s, modern soft-glam, healthy dark hair in a graceful updo, sparkling eyes, cheerful inviting smile',
+  'Indian man in his early 30s with a full, neatly shaped beard, calm confident gaze, composed half-smile',
+  'athletic Indian man in his late 20s with short stubble and cropped hair, focused and energetic',
+  'Indian man in his mid 30s with a salt-and-pepper beard, relaxed and self-assured',
+  'Indian man in his late 20s with thick wavy hair and a trimmed beard, warm natural expression',
+  'lean Indian man in his early 30s with a clean fade and precise beard line, quietly intense',
+  'Indian man around 40 with a groomed beard and laugh lines, grounded and approachable',
 ];
 
 const MODEL_POSE_MOODS = [
-  'warm front-facing beauty portrait, shoulders square to camera, bright genuine smile, the full necklace open and visible on the neckline',
-  'gentle three-quarter turn toward camera with a joyful smile, eyes to lens, jewellery fully in view and unobstructed',
-  'elegant soft head-tilt with a radiant teeth-showing smile, chin level, the complete piece centered and clear',
-  'graceful straight-on portrait, lips in a happy natural smile, hands relaxed and away from the jewellery so nothing is covered',
-  'poised seated pose facing camera, confident warm smile, neckline open so the entire necklace reads end to end',
-  'fresh candid laugh toward camera, hair swept back to reveal earrings, full jewellery sharp and visible',
+  'mid-grooming moment, dropper in hand, product label turned to camera, eyes to lens',
+  'three-quarter turn toward camera holding the product at chest height, label clear',
+  'leaning on a stone vanity, product in the foreground in sharp focus, face softly behind',
+  'morning ritual, product in one hand and a cup of warm water in the other, relaxed posture',
+  'post-workout, towel around the neck, product held naturally at shoulder height',
+  'seated on a teak bench, forearms on knees, product held out slightly toward camera',
 ];
 
 const MODEL_LIGHTING = [
-  '85mm beauty portrait, large softbox key with silver reflector fill, creamy shallow bokeh',
-  '100mm macro-leaning beauty, butterfly lighting, crisp eye catchlights, fine detail',
-  '70mm editorial, soft window light with negative fill for dimensional shaping',
-  'low-key Rembrandt lighting from a single gridded softbox, rich shadow depth',
-  'bright high-key clamshell beauty lighting for clean, luminous e-commerce clarity',
-  'warm golden-hour directional sun with a subtle haze and gentle lens flare control',
+  '85mm portrait, large softbox key with negative fill for masculine shaping, creamy shallow bokeh',
+  '50mm editorial, soft window light raking across skin and beard texture',
+  'low-key Rembrandt lighting from a single gridded softbox with a warm copper rim',
+  '100mm detail lens, crisp product focus with the face falling gently soft',
+  'clean high-key catalogue light for bright e-commerce clarity',
+  'golden-hour directional sun through a window with controlled flare',
 ];
 
 const MODEL_PALETTES = [
-  'ivory and champagne handloom drape',
-  'deep wine Banarasi silk',
-  'royal sapphire-blue silk with subtle gold zari',
-  'antique-rose pastel drape',
-  'charcoal and gold structured blouse with a minimalist drape',
-  'temple-red Kanjivaram with gold border',
-  'pearl-white minimalist modern gown',
-  'muted plum and old-gold festive ensemble',
+  'charcoal linen shirt with rolled sleeves',
+  'black crew-neck tee',
+  'rust-copper kurta with a modern cut',
+  'cream kurta with a subtle texture',
+  'earthy olive overshirt over a black tee',
+  'plain dark training vest',
+  'white towel around the neck, bare shoulders, grooming moment',
 ];
 
 const STUDIO_SURFACES = [
-  'jet-black plush velvet that makes highlights glow',
-  'pooled ivory silk with soft natural folds',
-  'polished white Carrara marble slab with subtle veining',
-  'smoked grey acrylic riser with a clean reflection',
-  'warm brushed travertine stone with fine texture',
-  'museum-grade matte plinth in bone white',
-  'dark walnut wood with brushed-brass accents',
-  'frosted glass surface with gentle underlight glow',
-  'raw concrete with a single dramatic shaft of light',
-  'soft mirror base producing an elegant inverted reflection',
+  'honed black slate with fine texture',
+  'dark walnut with visible grain and a brushed-brass tray',
+  'raw grey concrete with a single dramatic shaft of light',
+  'black basalt stone slab with a few water droplets',
+  'cream travertine with soft natural pores',
+  'charcoal linen cloth with loose natural folds',
+  'weathered teak board with a small copper bowl',
+  'smoked glass riser with a clean, subtle reflection',
 ];
 
 const STUDIO_ANGLES = [
-  'clean top-down flat-lay with the piece fully opened and spread flat so the entire design reads at once',
-  'eye-level hero shot with the necklace gently opened into a wide U on a low support, the whole piece visible and filling the frame',
-  'subtle 30-45 degree angle on a flat surface, piece fully laid open and spread (never curled or standing) for depth while showing every detail',
-  'softly elevated three-quarter view with the complete piece opened flat and centered, full design sharp and readable',
-  'gentle glossy-base composition with the piece laid fully open and a soft mirrored reflection beneath, whole design visible',
+  'eye-level hero shot, product upright and centred, label square to camera',
+  'low three-quarter angle for a strong, monumental product silhouette',
+  'clean top-down flat-lay with the product and one or two raw ingredients arranged with generous negative space',
+  'close 45-degree angle with a shallow depth of field falling away behind the product',
+  'product on a stone riser with a soft reflection beneath, full pack visible',
 ];
 
 const STUDIO_LIGHTING = [
-  'single dramatic softbox with deep controlled shadow (chiaroscuro luxury)',
-  'bright high-key catalogue lighting with clean white falloff',
-  'smooth gradient sweep light from bright to soft shadow',
-  'dual rim "jewellery-box" lighting that traces every edge',
-  'neutral calibrated white-balanced key so the metal reads exactly as in the reference photo',
-  'soft directional key with gentle specular highlights, white-balanced so the metal tone never shifts',
+  'single dramatic softbox with deep controlled shadow (chiaroscuro apothecary)',
+  'backlit glass glowing amber with a soft front fill so the label stays readable',
+  'warm copper rim light with a cool neutral key',
+  'bright high-key catalogue lighting with clean falloff',
+  'window light with a hard shadow pattern from blinds',
+  'neutral calibrated key so the packaging colours read exactly as in the reference photo',
 ];
 
 const STUDIO_MOODS = [
-  'minimalist museum elegance',
-  'opulent festive richness',
-  'editorial luxe magazine feel',
+  'modern apothecary',
+  'quiet morning ritual',
+  'dark editorial grooming campaign',
   'clean premium catalogue clarity',
-  'moody cinematic still-life',
-  'fresh natural-light freshness',
+  'moody cinematic still life',
+  'earthy botanical science',
 ];
 
 const STUDIO_PROPS = [
-  'a single fresh orchid placed subtly out of focus',
-  'a raw uncut gemstone cluster as a quiet accent',
-  'a length of silk ribbon trailing softly in the background',
-  'a few scattered rose petals, sparse and tasteful',
-  'a blurred brass incense holder far in the background',
-  'fine water droplets for a fresh, just-polished feel',
-  'no props at all - pure minimalist focus on the jewellery',
+  'a single raw ashwagandha root, sculptural and sparse',
+  'a small stone bowl of dark resin or herbal powder',
+  'a wooden beard comb resting beside the product',
+  'a copper cup of warm water with a thin wisp of steam',
+  'a folded charcoal linen towel',
+  'a few dried stems, minimal and architectural',
+  'fine water droplets on the stone for a fresh feel',
+  'no props at all - pure minimalist focus on the product',
 ];
 
 function buildModelConcept(): string {
   return `CREATIVE CONCEPT FOR THIS GENERATION (commit to it fully - this is freshly chosen and changes every time, so the result must be unique and NOT a generic default):
 - Setting / background: ${pick(MODEL_BACKDROPS)}
 - Model look: ${pick(MODEL_ARCHETYPES)}
-- Pose & mood: ${pick(MODEL_POSE_MOODS)}
+- Pose & moment: ${pick(MODEL_POSE_MOODS)}
 - Lighting & camera: ${pick(MODEL_LIGHTING)}
-- Wardrobe & palette: ${pick(MODEL_PALETTES)}
-Translate every line above into the final prompt. Do NOT collapse into a plain neutral studio or a default green saree. This concept defines THIS specific photoshoot.`;
+- Wardrobe: ${pick(MODEL_PALETTES)}
+Translate every line above into the final prompt. Do NOT collapse into a plain neutral studio or a generic Ayurveda scene. This concept defines THIS specific photoshoot.`;
 }
 
 function buildStudioConcept(): string {
@@ -266,7 +271,7 @@ function buildStudioConcept(): string {
 - Lighting design: ${pick(STUDIO_LIGHTING)}
 - Mood: ${pick(STUDIO_MOODS)}
 - Prop accent (keep subtle, never competing with the product): ${pick(STUDIO_PROPS)}
-Build the entire still-life around this exact concept so it looks distinct from previous generations while keeping the attached jewellery locked and unchanged.`;
+Build the entire still life around this exact concept so it looks distinct from previous generations while keeping the attached product locked and unchanged.`;
 }
 
 // Slightly higher temperature for the creative prompt writer so wording and
@@ -274,36 +279,36 @@ Build the entire still-life around this exact concept so it looks distinct from 
 const CREATIVE_CONFIG = { temperature: 1.2, topP: 0.97 } as const;
 
 const PROSE_FORMAT_RULE = `OUTPUT FORMAT OF THE PROMPT ITSELF - STRICT:
-Write the final prompt as ONE flowing, vivid, richly detailed prose paragraph (or at most two), the way a film director briefs a cinematographer. Absolutely NO JSON, no key-value pairs, no curly braces, no bullet lists, no numbered lists, no markdown, no section headers, no quotation wrappers. Image models follow evocative natural language far better than structured data — a JSON prompt produces flat, lifeless renders. Every rule above must be woven into the prose naturally.`;
+Write the final prompt as ONE flowing, vivid, richly detailed prose paragraph (or at most two), the way a film director briefs a cinematographer. Absolutely NO JSON, no key-value pairs, no curly braces, no bullet lists, no numbered lists, no markdown, no section headers, no quotation wrappers. Image models follow evocative natural language far better than structured data - a JSON prompt produces flat, lifeless renders. Every rule above must be woven into the prose naturally.`;
 
 const REALISM_FIRST_ANCHOR = `REALISM IS THE #1 PRIORITY:
-Open the final prompt by declaring it is "an ultra-photorealistic RAW photograph, shot on a real camera" and keep reinforcing photographic language throughout (lens, aperture, film grain, true light falloff, natural skin micro-texture). The single biggest failure to avoid is a render that looks AI-generated: smooth CG skin, painted hair, fake bokeh, plastic highlights. If a viewer could not mistake the result for a genuine editorial photograph from a Vogue India jewellery campaign, it has failed.`;
+Open the final prompt by declaring it is "an ultra-photorealistic RAW photograph, shot on a real camera" and keep reinforcing photographic language throughout (lens, aperture, film grain, true light falloff, natural skin and beard micro-texture). The single biggest failure to avoid is a render that looks AI-generated: smooth CG skin, painted hair, fake bokeh, plastic highlights, warped label text. If a viewer could not mistake the result for a genuine editorial photograph from a premium men's grooming campaign, it has failed.`;
 
 function heroFormatInstruction(format: HeroOutputFormat) {
   if (format === 'desktop-16:9') {
-    return `OUTPUT FORMAT: Generate one desktop hero banner, 16:9 ratio, 3840x2160 or 4096x2304. Use horizontal composition, generous side safe zones, readable typography, and no cropped product/model face.`;
+    return `OUTPUT FORMAT: Generate one desktop hero banner, 16:9 ratio, 3840x2160 or 4096x2304. Use horizontal composition, generous side safe zones, readable typography, and no cropped product or model face.`;
   }
 
   if (format === 'mobile-4:5') {
-    return `OUTPUT FORMAT: Generate one mobile hero banner, 4:5 ratio, 3200x4000 or 4096x5120. Use vertical composition for phone screens, keep all text inside central safe zones, keep the jewellery and model face fully visible, and leave enough breathing room near top/bottom UI crop areas.`;
+    return `OUTPUT FORMAT: Generate one mobile hero banner, 4:5 ratio, 3200x4000 or 4096x5120. Use vertical composition for phone screens, keep all text inside central safe zones, keep the product and model face fully visible, and leave enough breathing room near top/bottom UI crop areas.`;
   }
 
   return `OUTPUT FORMAT: Generate TWO separate final banner images from the same premium campaign concept:
 1. Desktop version: 16:9 ratio, 3840x2160 or 4096x2304, horizontal composition with readable text and logo safe zones.
-2. Mobile version: 4:5 ratio, 3200x4000 or 4096x5120, vertical composition with all text, offer, jewellery, model face, and logo inside safe zones.
+2. Mobile version: 4:5 ratio, 3200x4000 or 4096x5120, vertical composition with all text, offer, product, model face, and logo inside safe zones.
 Both images must feel like the same campaign, but each must be composed natively for its ratio. Do not simply crop the desktop into mobile.`;
 }
 
 function modelInstruction(includeModel: 'auto' | 'yes' | 'no', festivalOrEvent: string) {
   if (includeModel === 'yes') {
-    return `MODEL DIRECTION: Include a real-looking Indian model styled for "${festivalOrEvent}". She must look photographed, not generated. Choose pose, expression, attire, makeup, and camera angle based on the jewellery type. The model supports the jewellery; the product remains the hero.`;
+    return `MODEL DIRECTION: Include a real-looking Indian male model styled for "${festivalOrEvent}". He must look photographed, not generated. Choose pose, moment, wardrobe and camera angle to suit the products. The model supports the product; the product remains the hero.`;
   }
 
   if (includeModel === 'no') {
-    return `MODEL DIRECTION: No model. Create a breathtaking product-and-design composition using the exact attached jewellery, premium props, typography, fabric, light, and festival elements.`;
+    return `MODEL DIRECTION: No model. Create a breathtaking product-and-design composition using the exact attached products, a few sculptural raw ingredients, stone, wood, light, typography and restrained campaign elements.`;
   }
 
-  return `MODEL DECISION: Decide whether model or product-only gives the strongest luxury banner for "${festivalOrEvent}". Do not include a model automatically. Use a model for bridal/emotional/lifestyle scale; choose product-only for collections, offer-led banners, intricate jewellery, or clean premium layouts. Either choice must feel like a real Tanishq/Kalyan/Malabar-level campaign.`;
+  return `MODEL DECISION: Decide whether a model or product-only gives the strongest premium banner for "${festivalOrEvent}". Do not include a model automatically. Use a model for lifestyle, routine and aspiration; choose product-only for collections, offer-led banners, or clean apothecary layouts. Either choice must feel like a top-tier men's grooming campaign.`;
 }
 
 export async function generateProductModelPrompt(
@@ -311,15 +316,15 @@ export async function generateProductModelPrompt(
   logoImages: ImageInput[] = [],
   logoMode: LogoMode = 'auto-contrast'
 ): Promise<string> {
-  const systemPrompt = `You are a world-class AI image prompt engineer and luxury jewellery creative director for Ishaputra Botanicals, a premium 92.5% silver jewellery brand.
+  const systemPrompt = `You are a world-class AI image prompt engineer and creative director for ${BRAND_LINE}.
 
 ${NANO_BANANA_PRO_HANDOFF}
 
 ATTACHED IMAGES:
-- Jewellery/product reference: attached first. Preserve it exactly.
+- Product reference: attached first. Preserve it exactly.
 ${hasLogos(logoImages) ? `- Logo reference(s): ${logoImages.length} attached logo image(s). ${logoInstruction(logoImages, logoMode)}` : '- No usable logo image may be attached. Do not invent a fake logo.'}
 
-Create the final prompt for a WORLD-CLASS product + model jewellery photoshoot.
+Create the final prompt for a WORLD-CLASS product + model photoshoot.
 
 ${REALISM_FIRST_ANCHOR}
 ${PHOTOREALISM_RULE}
@@ -329,30 +334,30 @@ ${PRODUCT_TRANSFER_RULE}
 ${REFERENCE_DISCIPLINE_RULE}
 ${MATERIAL_FIDELITY_RULE}
 ${PRODUCT_PAGE_MODEL_SHOT_RULE}
-${MODEL_BEAUTY_RULE}
-${NATURAL_WEAR_RULE}
-${JEWELLERY_VISIBILITY_RULE}
-${ATTIRE_AND_STYLING_RULE}
-${LUXURY_ENVIRONMENT_RULE}
+${MODEL_RULE}
+${NATURAL_USE_RULE}
+${PRODUCT_VISIBILITY_RULE}
+${STYLING_RULE}
+${ENVIRONMENT_RULE}
+${BRAND_PALETTE_RULE}
 ${PROSE_FORMAT_RULE}
 
 ${buildModelConcept()}
 
 CAMPAIGN REQUIREMENTS:
 - Output ratio: 1:1 square, 4096x4096, 4K.
-- The model must be young, beautiful, and smiling, and the entire jewellery piece must be fully visible and sharp.
-- The image must feel like a real luxury e-commerce photoshoot by a top photographer, not a generated composite or fashion poster.
-- Select the crop dynamically from the jewellery type only for framing: necklace/choker gets collarbone/neck framing; earrings get hair swept aside and side profile; bangles/rings get elegant hand choreography; anklets get graceful foot/hem composition; sets get balanced 3/4 body framing. Do not describe the product's motif, stones, beads, color, or material in the final prompt.
-- Use a composed product-page pose with real gesture and body language. Avoid passport-photo frontality, over-dramatic fashion poses, or distant crops where the jewellery is too small.
-- Use camera/lens choices that match the product: 85mm beauty portrait, 100mm macro detail, 70mm 3/4 editorial, or low-angle glamour. Include physically plausible depth of field and lighting.
-- The attached jewellery must be sharp, correctly scaled, and naturally worn or placed with believable contact shadows while remaining the exact uploaded product asset.
-- The final prompt must say: "Do not generate a similar jewellery design. Use the attached product image directly and keep the jewellery unchanged."
+- The model must look real and confident, and the entire product must be fully visible, sharp, with the label facing the camera.
+- The image must feel like a real premium e-commerce photoshoot by a top photographer, not a generated composite or poster.
+- Choose the framing from the product type: dropper bottles and oils get a close grooming moment; capsules, resin and powders get a hands-and-cup ritual; washes get a basin or shower moment; teas get a warm cup held in both hands. Do not describe the label wording or pack colours in the final prompt.
+- Use a composed, natural moment with real gesture and body language. Avoid stiff catalogue poses, exaggerated flexing, or distant crops where the product is too small.
+- Use camera/lens choices that match the shot: 85mm portrait, 100mm detail, or 50mm editorial. Include physically plausible depth of field and lighting.
+- The final prompt must say: "Do not generate a similar product. Use the attached product image directly and keep the pack and label unchanged."
 - The final prompt must explicitly say to upload and use the attached product reference in Nano Banana Pro.
 ${logoInstruction(logoImages, logoMode)}
 
 Generate ONLY the final Nano Banana Pro prompt text as flowing prose. Absolutely no JSON, no key-value structure, no markdown, no explanation.`;
 
-  const userMessage = `Create one premium 1:1 4K product-page model prompt for Nano Banana Pro, built around the specific creative concept above so it is clearly different from previous generations. The uploaded jewellery must remain exactly unchanged as a locked visual asset. Do not describe or reinterpret the jewellery; build a hyper-realistic, beautiful model photo around the exact product, with the jewellery worn naturally and correctly, full material/color fidelity to the reference, and no repetitive green-saree default.`;
+  const userMessage = `Create one premium 1:1 4K product-page model prompt for Nano Banana Pro, built around the specific creative concept above so it is clearly different from previous generations. The uploaded product must remain exactly unchanged as a locked visual asset. Do not describe or reinterpret the product; build a hyper-realistic photo of a real Indian man using it naturally, with full packaging and colour fidelity to the reference and nothing from the generic Ayurveda cliché list.`;
 
   return generateWithFallback(
     buildContents(`${systemPrompt}\n\n${userMessage}`, [productImage, ...logoImages]),
@@ -365,12 +370,12 @@ export async function generateProductStudioPrompt(
   logoImages: ImageInput[] = [],
   logoMode: LogoMode = 'auto-contrast'
 ): Promise<string> {
-  const systemPrompt = `You are a world-class prompt engineer for luxury jewellery studio photography: Cartier/Tiffany-level macro product imagery adapted for Ishaputra Botanicals.
+  const systemPrompt = `You are a world-class prompt engineer for premium apothecary and men's grooming still-life photography, working for ${BRAND_LINE}.
 
 ${NANO_BANANA_PRO_HANDOFF}
 
 ATTACHED IMAGES:
-- Jewellery/product reference: attached first. Preserve it exactly.
+- Product reference: attached first. Preserve it exactly.
 ${hasLogos(logoImages) ? `- Logo reference(s): ${logoImages.length} attached logo image(s). ${logoInstruction(logoImages, logoMode)}` : '- No usable logo image may be attached. Do not invent a fake logo.'}
 
 Create the final prompt for a PRODUCT-ONLY world-class studio photoshoot.
@@ -383,24 +388,25 @@ ${REFERENCE_DISCIPLINE_RULE}
 ${MATERIAL_FIDELITY_RULE}
 ${PRODUCT_COMPLETE_VISIBILITY_RULE}
 ${PHOTOREALISM_RULE}
+${BRAND_PALETTE_RULE}
 ${PROSE_FORMAT_RULE}
 
 ${buildStudioConcept()}
 
 STUDIO REQUIREMENTS:
-- No model, no hands, no human body, no mannequin unless explicitly needed for scale. Product-only.
+- No model, no hands, no human body. Product-only.
 - Output ratio: 1:1 square, 4096x4096, 4K.
-- The complete jewellery design must be fully open, spread, and visible - never curled, folded, or standing on edge.
-- Use a premium still-life setup chosen to flatter the uploaded jewellery: black velvet, ivory silk, white/grey marble, smoked acrylic riser, museum plinth, jewellery box, satin folds, brushed stone, or subtle flower petals.
-- Use Canon EOS R5 / Hasselblad-style macro product photography, 100mm macro lens, ISO 100, focus stacking, calibrated white balance, softbox key light, rim light, flags, reflectors, and controlled specular highlights.
-- Preserve every product detail from the uploaded asset: metal grain, stone facets, engravings, clasps, chain links, bends, surface wear, color tone, and exact proportions. Do not describe or recreate a similar design from words.
-- Do not add matching pieces, extra gemstones, fake chains, fake sparkle overlays, or text unless logo placement is requested.
-- Make the image look like a real high-end e-commerce/still-life photograph with natural shadows and contact reflections.
+- The complete pack must be fully visible, upright or lying naturally, label facing the camera and readable.
+- Use a premium still-life set chosen to flatter the product: black slate, dark walnut, raw concrete, basalt, travertine, charcoal linen, teak, or smoked glass - with at most one or two sculptural raw ingredients.
+- Use Canon EOS R5 / Hasselblad-style product photography, 100mm macro lens, ISO 100, focus stacking, calibrated white balance, softbox key, rim light, flags, reflectors, and controlled specular highlights on the glass.
+- Preserve every product detail from the uploaded asset: shape, glass tint, cap, pump, label artwork and typography, fill level, and exact proportions. Do not describe or recreate a similar product from words.
+- Do not add extra products, fake labels, invented text, or sparkle overlays, and no text unless logo placement is requested.
+- Make the image look like a real high-end e-commerce still-life photograph with natural shadows and contact reflections.
 ${logoInstruction(logoImages, logoMode)}
 
 Generate ONLY the final Nano Banana Pro prompt text as flowing prose. Absolutely no JSON, no key-value structure, no markdown, no explanation.`;
 
-  const userMessage = `Create one premium 1:1 4K studio product prompt for Nano Banana Pro, built around the specific creative concept above so it is clearly different from previous generations. Use the uploaded jewellery exactly as a locked visual asset, no model, no redesigned product, no descriptive replacement, and produce a world-class macro luxury still-life shot.`;
+  const userMessage = `Create one premium 1:1 4K studio product prompt for Nano Banana Pro, built around the specific creative concept above so it is clearly different from previous generations. Use the uploaded product exactly as a locked visual asset - no model, no redesigned pack, no descriptive replacement - and produce a world-class modern apothecary still-life shot.`;
 
   return generateWithFallback(
     buildContents(`${systemPrompt}\n\n${userMessage}`, [productImage, ...logoImages]),
@@ -422,7 +428,7 @@ export async function generateHeroSectionPrompt(
   const hasRef = !!referenceImages && referenceImages.length > 0;
   const refCount = referenceImages?.length || 0;
 
-  const systemPrompt = `You are the creative director at India's #1 luxury jewellery advertising agency. You create homepage campaigns for premium jewellery brands and now you are creating a Ishaputra Botanicals hero banner for Nano Banana Pro.
+  const systemPrompt = `You are the creative director at India's leading premium men's grooming and wellness advertising agency. You are creating a homepage hero banner for ${BRAND_LINE}, for Nano Banana Pro.
 
 ${NANO_BANANA_PRO_HANDOFF}
 
@@ -435,40 +441,40 @@ ${offerInfo ? `- Offer Details: "${offerInfo}"` : '- Offer Details: none provide
 - Output Selection: ${outputFormat}
 
 ATTACHED IMAGES:
-${hasRef ? `- ${refCount} product/reference image(s) are attached. Use the exact jewellery/product assets from these images unchanged. If multiple products are attached, include them cohesively without redesigning any piece.` : '- No product image may be attached; create premium 92.5 silver jewellery suitable for the campaign, but do not invent a fake brand logo.'}
+${hasRef ? `- ${refCount} product/reference image(s) are attached. Use the exact product assets from these images unchanged. If multiple products are attached, arrange them cohesively without redesigning any pack.` : '- No product image may be attached; show unbranded premium amber or black glass bottles and jars suitable for the campaign, but do not invent a fake brand logo or label text.'}
 ${hasLogos(logoImages) ? `- ${logoImages.length} logo image(s) are attached. ${logoInstruction(logoImages, logoMode)}` : '- No usable logo image may be attached. Reserve a clean brand area but do not invent a fake logo.'}
 
-${hasRef ? `${PRODUCT_FIDELITY_RULE}\n${REFERENCE_LOCKED_PROMPT_STYLE}\n${PRODUCT_TRANSFER_RULE}\n${MATERIAL_FIDELITY_RULE}` : SILVER_COLOR_RULE}
+${hasRef ? `${PRODUCT_FIDELITY_RULE}\n${REFERENCE_LOCKED_PROMPT_STYLE}\n${PRODUCT_TRANSFER_RULE}\n${MATERIAL_FIDELITY_RULE}` : ''}
+${BRAND_PALETTE_RULE}
 ${REFERENCE_DISCIPLINE_RULE}
-${ATTIRE_AND_STYLING_RULE}
+${STYLING_RULE}
 ${PHOTOREALISM_RULE}
 
 ${heroFormatInstruction(outputFormat)}
 
 CAMPAIGN ART DIRECTION:
 - Make this a complete publish-ready homepage banner, not a plain product photo with empty space.
-- Use the festival/event as the real visual language: culturally accurate colors, props, flowers, fabric, motifs, and emotional mood.
-- Avoid one-note color defaults. Do not let green dominate every campaign; use green only when culturally/compositionally needed and balance it with silver, ivory, wine, amber, maroon, blue, or neutral luxury tones.
-- Jewellery color and material must follow the uploaded reference exactly. If no product reference is attached, keep created Ishaputra products true to their packaging colours.
-- Text must be rendered inside the image with luxury typography: headline, offer title, optional offer details, and a premium CTA such as "SHOP NOW" or "EXPLORE NOW".
+- Use the festival/event as the mood, expressed through light, restrained props and typography - never through mandalas, temple backdrops, heaps of leaves, or orange gradients.
+- Product colours and packaging follow the uploaded reference exactly.
+- Text must be rendered inside the image with bold, modern sans-serif typography: headline, offer title, optional offer details, and a premium CTA such as "SHOP NOW" or "EXPLORE THE RANGE".
 - The offer badge must look premium, not like a cheap sticker. Use refined spacing, strong contrast, and clean hierarchy.
 - Keep all text readable and inside safe zones for the selected ratio. No cropped words, warped letters, or unreadable decorative text.
-- Include logo using the contrast-aware rule above.
+- Include the logo using the contrast-aware rule above.
 
 ${modelInstruction(includeModel, festivalOrEvent)}
-${LUXURY_ENVIRONMENT_RULE}
+${ENVIRONMENT_RULE}
 
 FINAL PROMPT MUST INCLUDE:
 1. A clear instruction to attach and use the product/reference images exactly as provided.
 2. A clear instruction to generate the selected ratio(s): ${outputFormat}.
 3. The exact headline/offer requirements.
-4. Product fidelity and material/color fidelity from the uploaded reference.
+4. Product fidelity and packaging/colour fidelity from the uploaded reference.
 5. Realism rules for model, product, materials, and environment.
-6. Contrast-aware black/white logo placement when logo references are attached.
+6. Contrast-aware logo placement when logo references are attached.
 
 Generate ONLY the final Nano Banana Pro prompt text as flowing prose. Absolutely no JSON, no key-value structure, no markdown, no explanation.`;
 
-  const userMessage = `Create the ultimate Ishaputra Botanicals hero banner prompt for Nano Banana Pro. Theme: ${festivalOrEvent}. Headline: ${bannerHeadline || 'AI creates one'}. Offer: ${offerTitle}${offerInfo ? ` - ${offerInfo}` : ''}. Output: ${outputFormat}. Use all attached product/reference images exactly as-is and create a world-class luxury advertisement with realistic photography, premium typography, safe zones, and contrast-aware logo handling.`;
+  const userMessage = `Create the ultimate Ishaputra Botanicals hero banner prompt for Nano Banana Pro. Theme: ${festivalOrEvent}. Headline: ${bannerHeadline || 'AI creates one'}. Offer: ${offerTitle}${offerInfo ? ` - ${offerInfo}` : ''}. Output: ${outputFormat}. Use all attached product/reference images exactly as-is and create a world-class premium men's wellness advertisement with realistic photography, bold modern typography, safe zones, and contrast-aware logo handling.`;
 
   const images: ImageInput[] = [];
   if (referenceImages) images.push(...referenceImages);
@@ -488,7 +494,7 @@ export async function generateCustomImagePrompt(
   logoImages: ImageInput[] = [],
   logoMode: LogoMode = 'auto-contrast'
 ): Promise<string> {
-  const systemPrompt = `You are an expert AI image prompt engineer for Ishaputra Botanicals, a premium 92.5% silver jewellery brand.
+  const systemPrompt = `You are an expert AI image prompt engineer for ${BRAND_LINE}.
 
 ${NANO_BANANA_PRO_HANDOFF}
 
@@ -500,18 +506,19 @@ ATTACHED IMAGES:
 ${referenceImage ? '- A product/reference image is attached. Use it exactly as provided and preserve the subject/product without redesigning it.' : '- No product/reference image is attached.'}
 ${hasLogos(logoImages) ? `- Logo reference(s): ${logoImages.length} attached image(s). ${logoInstruction(logoImages, logoMode)}` : '- No usable logo image may be attached. Do not invent a fake logo.'}
 
-${referenceImage ? PRODUCT_FIDELITY_RULE : SILVER_COLOR_RULE}
+${referenceImage ? PRODUCT_FIDELITY_RULE : ''}
 ${referenceImage ? `${REFERENCE_LOCKED_PROMPT_STYLE}\n${PRODUCT_TRANSFER_RULE}\n${MATERIAL_FIDELITY_RULE}` : ''}
+${BRAND_PALETTE_RULE}
 ${REFERENCE_DISCIPLINE_RULE}
 ${PHOTOREALISM_RULE}
-${LUXURY_ENVIRONMENT_RULE}
+${ENVIRONMENT_RULE}
 ${logoInstruction(logoImages, logoMode)}
 
 Rules:
 - The user's custom requirement is the creative direction, but product/reference fidelity and photorealism are mandatory.
-- Use real camera, real materials, real lighting, believable scale, and premium jewellery art direction.
-- If this is a banner/hero/social post, include safe text areas, readable typography, and premium layout.
-- If this is product photography, keep jewellery/product as the hero and avoid distracting props.
+- Use real camera, real materials, real lighting, believable scale, and premium men's wellness art direction.
+- If this is a banner/hero/social post, include safe text areas, readable modern typography, and a premium layout.
+- If this is product photography, keep the product as the hero and avoid distracting props.
 
 Generate ONLY the final Nano Banana Pro prompt text as flowing prose. Absolutely no JSON, no key-value structure, no markdown, no explanation.`;
 
@@ -532,7 +539,7 @@ export async function generateVariationPrompt(
   logoImages: ImageInput[] = [],
   logoMode: LogoMode = 'auto-contrast'
 ): Promise<string> {
-  const systemPrompt = `You are a world-class AI image prompt engineer for Nano Banana Pro. Create a new standalone variation of the existing product + model jewellery photoshoot prompt.
+  const systemPrompt = `You are a world-class AI image prompt engineer for Nano Banana Pro. Create a new standalone variation of the existing product + model photoshoot prompt for ${BRAND_LINE}.
 
 ORIGINAL PROMPT:
 """
@@ -540,12 +547,11 @@ ${originalPrompt}
 """
 
 VARIATION REQUIREMENTS:
-- Keep the exact uploaded jewellery unchanged.
-- Keep the same luxury campaign quality and product fidelity.
-- Keep the same product-page usefulness: jewellery large, sharp, inspectable, and true to the uploaded asset.
-- Change the camera angle, crop, model pose, expression, hand placement, and composition enough to feel like a genuinely different shot from the same world-class session.
+- Keep the exact uploaded product unchanged.
+- Keep the same premium campaign quality and product fidelity.
+- Keep the same product-page usefulness: product large, sharp, label readable, and true to the uploaded asset.
+- Change the camera angle, crop, pose, moment, hand placement and composition enough to feel like a genuinely different shot from the same session.
 - Re-style the shoot using the fresh creative concept below so the variation looks distinctly different from the original.
-- Do not default to green saree. Choose attire and palette dynamically based on the jewellery and the concept.
 - Improve realism and premium art direction wherever the original was weak.
 ${REALISM_FIRST_ANCHOR}
 ${PRODUCT_FIDELITY_RULE}
@@ -553,9 +559,10 @@ ${REFERENCE_LOCKED_PROMPT_STYLE}
 ${PRODUCT_TRANSFER_RULE}
 ${MATERIAL_FIDELITY_RULE}
 ${PRODUCT_PAGE_MODEL_SHOT_RULE}
-${MODEL_BEAUTY_RULE}
-${NATURAL_WEAR_RULE}
-${JEWELLERY_VISIBILITY_RULE}
+${MODEL_RULE}
+${NATURAL_USE_RULE}
+${PRODUCT_VISIBILITY_RULE}
+${STYLING_RULE}
 ${PHOTOREALISM_RULE}
 ${PROSE_FORMAT_RULE}
 
@@ -564,7 +571,7 @@ ${logoInstruction(logoImages, logoMode)}
 
 Generate ONLY the complete replacement Nano Banana Pro prompt as flowing prose. Absolutely no JSON, no key-value structure, no markdown, no explanation.`;
 
-  const userMessage = `Create a different angle/pose variation for the uploaded jewellery, restyled around the fresh creative concept above. Product must remain exactly unchanged as a locked visual asset. The model must look hyper-realistic and beautiful with the jewellery worn naturally. Output should still be 1:1 4K world-class realistic website product-page model photography.`;
+  const userMessage = `Create a different angle/pose variation for the uploaded product, restyled around the fresh creative concept above. The product must remain exactly unchanged as a locked visual asset. The model must look hyper-realistic and confident, using the product naturally. Output should still be 1:1 4K world-class realistic website product-page photography.`;
 
   return generateWithFallback(
     buildContents(`${systemPrompt}\n\n${userMessage}`, [productImage, ...logoImages]),
@@ -586,7 +593,7 @@ ${currentPrompt}
 USER'S REFINEMENT REQUEST:
 "${refinementInstruction}"
 
-Apply the requested change while preserving all product/reference fidelity, locked visual asset instructions, Nano Banana Pro attachment instructions, ratio instructions, realism rules, material/color accuracy from the uploaded reference, product-page suitability, and logo contrast rules. Output the complete updated prompt, not a patch note.
+Apply the requested change while preserving all product/reference fidelity, locked visual asset instructions, Nano Banana Pro attachment instructions, ratio instructions, realism rules, packaging/colour accuracy from the uploaded reference, product-page suitability, and logo contrast rules. Output the complete updated prompt, not a patch note.
 
 Generate ONLY the refined prompt text. No explanations, no markdown.`;
 

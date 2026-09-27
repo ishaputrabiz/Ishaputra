@@ -25,17 +25,23 @@ export const BRAND = {
   /** TODO(client): the live domain. Until then VITE_SITE_URL (or this) is used. */
   siteUrl: 'https://ishaputra.com',
 
-  /** TODO(client): confirm each contact detail. Empty values are hidden on the site. */
+  /**
+   * TODO(client): DUMMY contact details (only "Hyderabad" is confirmed).
+   * Replace every value before launch. Empty values are hidden on the site.
+   */
   email: 'hello@ishaputra.com',
-  phones: [] as string[],
+  phones: ['+91 98765 43210'] as string[],
+  /** Empty until the real number arrives: the Enquire button would message whoever owns a dummy number. */
   whatsapp: '',
-  addressLines: [] as string[],
+  addressLines: ['Road No. 12, Banjara Hills', 'Hyderabad, Telangana 500034'] as string[],
   hours: 'Mon – Sat · 10:00 AM – 7:00 PM',
-  mapEmbedUrl: '',
+  /** City-level map until the client shares a store location (no API key needed). */
+  mapEmbedUrl: 'https://www.google.com/maps/embed?origin=mfe&pb=!1m2!2m1!1sBanjara+Hills,+Hyderabad',
+  /** Left empty on purpose: a made-up GSTIN must never print on an invoice. */
   gstin: '',
-  /** TODO(client): state of registration. Decides IGST vs CGST+SGST on invoices; empty = IGST. */
-  state: '',
-  stateCode: '',
+  /** Decides IGST vs CGST+SGST on invoices (Hyderabad → Telangana, code 36). */
+  state: 'Telangana',
+  stateCode: '36',
 
   social: {
     instagram: '',

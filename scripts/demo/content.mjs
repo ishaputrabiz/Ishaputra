@@ -183,3 +183,61 @@ export const TESTIMONIALS = [
   { title: 'Hair fall is down', quote: 'The bhringraj oil and the serum together made a visible difference in about a month.', author: 'Rahul S.', role: 'Hyderabad', rating: 5 },
   { title: 'Finally, grooming that feels premium', quote: 'The beard oil smells like cedar, not perfume. Packaging looks great on the shelf too.', author: 'Vikram R.', role: 'Pune', rating: 4 },
 ];
+
+// ── Real photos ──────────────────────────────────────────────────────────────
+// Pexels photo ids (https://www.pexels.com/photo/<id>/). Pexels licence: free for
+// commercial use, no attribution required; sources are also written to
+// demo/credits.json. Chosen to be unbranded and to fit the brief (dark,
+// masculine, earthy; no yoga, mandalas or orange gradients). An item with a
+// `photo` uses it instead of its AI `prompt`.
+
+const PRODUCT_PHOTOS = {
+  'Himalayan Shilajit Resin': 10860492,
+  'Ashwagandha KSM-66 Capsules': 13787561,
+  'Bhringraj Hair Strength Oil': 7797851,
+  'Onion & Amla Anti-Hairfall Shampoo': 7795690,
+  'Rosemary Redensyl Hair Serum': 8054395,
+  'Charcoal & Neem Face Wash': 5240623,
+  'Kumkumadi Night Face Serum': 8102135,
+  'Vetiver & Cedar Body Wash': 8217467,
+  'Oud & Vetiver Natural Deodorant': 10036639,
+  'Cedarwood Beard Growth Oil': 7795400,
+  'Triphala Churna': 4871244,
+  'Tulsi Ginger Immunity Tea': 905485,
+};
+for (const p of PRODUCTS) p.photo = PRODUCT_PHOTOS[p.name];
+
+// Hero: the modern man (portrait placed right on the wide canvas), the apothecary shelf, hair.
+// (Rejected: a gym shot with a printed logo on the vest; a bright turmeric flat lay - the
+// generic Ayurveda look the brief rules out.)
+Object.assign(HERO_BANNERS[0], { photo: 17566140, fit: 'portrait-right', link: '/category/personal-care' });
+Object.assign(HERO_BANNERS[1], { photo: 8666804, link: '/category/ayurvedic-essentials' });
+Object.assign(HERO_BANNERS[2], { photo: 30911691, link: '/category/hair-care' });
+
+Object.assign(SHOWCASES[0], { photo: 29850901 }); // Daily Strength
+Object.assign(SHOWCASES[1], { photo: 4625615 }); // The Grooming Ritual
+Object.assign(SHOWCASES[2], { photo: 30725172 }); // Root Strength
+
+Object.assign(COLLECTIONS[0], { photo: 30283461 }); // Energy
+Object.assign(COLLECTIONS[1], { photo: 11092052 }); // Hair
+Object.assign(COLLECTIONS[2], { photo: 8102135 }); // Skin
+Object.assign(COLLECTIONS[3], { photo: 9456810 }); // Grooming
+Object.assign(COLLECTIONS[4], { photo: 4242242 }); // Ayurveda
+
+COLLECTION_BANNER.photo = 678414;
+
+/** Photos the page code uses directly (About, Contact, Wishlist). */
+export const PAGE_PHOTOS = {
+  'about-hero': { photo: 8330249, size: 'heroDesktop' },
+  'about-story-a': { photo: 7797851, size: 'collection' },
+  'about-story-b': { photo: 4242242, size: 'collection' },
+  'about-collection': { photo: 678414, size: 'wide' },
+  'about-craft': { photo: 8666804, size: 'wide' },
+  'about-ritual': { photo: 12098225, size: 'showcase' },
+  'about-classical': { photo: 5480235, size: 'collection' },
+  'about-clean': { photo: 8102135, size: 'collection' },
+  'about-daily': { photo: 905485, size: 'collection' },
+  'about-men': { photo: 17566140, size: 'collection' },
+  'contact-banner': { photo: 5480235, size: 'wide' },
+  'wishlist-banner': { photo: 7795400, size: 'wide' },
+};

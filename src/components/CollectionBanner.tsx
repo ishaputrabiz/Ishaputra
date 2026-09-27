@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { motion, useInView } from "framer-motion";
 // Shown only until the admin sets a "collection-wide" home banner.
 const collectionFallback =
-  "https://res.cloudinary.com/dcoimqij/image/upload/v1790165192/ishaputrabotanicals/demo/jvogchddy0d1mgp0iztu.jpg";
+  "https://res.cloudinary.com/dcoimqij/image/upload/v1790515736/ishaputrabotanicals/demo/ovmyqmtzjk2j7qewbtug.jpg";
 import {
   subscribeHomeBanners,
   type HomeBanner,

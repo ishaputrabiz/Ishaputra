@@ -39,7 +39,7 @@ const Contact = () => {
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: "url('https://res.cloudinary.com/dcoimqij/image/upload/f_auto,q_auto,w_1600/v1790164427/ishaputrabotanicals/demo/zurdxwuvf6utvs9nj4fb.jpg')",
+            backgroundImage: "url('https://res.cloudinary.com/dcoimqij/image/upload/f_auto,q_auto,w_1600/v1790515862/ishaputrabotanicals/demo/pgwiragwuq2cgzz5fmkw.jpg')",
             filter: "blur(2px)",
           }}
         />
@@ -244,7 +244,7 @@ const Contact = () => {
               ) : (
                 // No store location yet (online-only): same box, brand photo instead of a map.
                 <div className="relative h-full w-full">
-                  <img src="https://res.cloudinary.com/dcoimqij/image/upload/f_auto,q_auto,w_1200/v1790164203/ishaputrabotanicals/demo/skwawcwe23osyuspv5hf.jpg" alt={BRAND.name} className="h-full w-full object-cover" loading="lazy" />
+                  <img src="https://res.cloudinary.com/dcoimqij/image/upload/f_auto,q_auto,w_1200/v1790515743/ishaputrabotanicals/demo/cdcrb0q48xmdi9givh1x.jpg" alt={BRAND.name} className="h-full w-full object-cover" loading="lazy" />
                   <div className="absolute inset-0 bg-gradient-to-t from-charcoal/85 via-charcoal/20 to-transparent" />
                   <div className="absolute bottom-8 left-8 right-8">
                     <p className="text-xs uppercase tracking-[0.3em] text-highlight-soft mb-2">{BRAND.tagline}</p>

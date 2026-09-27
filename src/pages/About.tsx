@@ -9,25 +9,25 @@ import { cldUrl } from "@/lib/cloudinaryUrl";
 import { BRAND } from "@/config/brand";
 
 /**
- * Photography for this page. Placeholders from the demo shoot
- * (scripts/demo/content.mjs) - TODO(client): replace with real brand photos.
+ * Photography for this page: Pexels stock (free for commercial use) until the
+ * client's own shoot - sources in scripts/demo/credits.json (page-about-*).
  */
 const CLD = "https://res.cloudinary.com/dcoimqij/image/upload";
 const PHOTOS = {
-  hero: `${CLD}/v1790164427/ishaputrabotanicals/demo/zurdxwuvf6utvs9nj4fb.jpg`,
-  storyA: `${CLD}/v1790163572/ishaputrabotanicals/demo/lvsrpcrgiysg8ehwduoh.jpg`,
-  storyB: `${CLD}/v1790163707/ishaputrabotanicals/demo/sxtyv3ru1xmfsceene3p.jpg`,
-  collection: `${CLD}/v1790165192/ishaputrabotanicals/demo/jvogchddy0d1mgp0iztu.jpg`,
-  craft: `${CLD}/v1790164203/ishaputrabotanicals/demo/skwawcwe23osyuspv5hf.jpg`,
-  ritual: `${CLD}/v1790164336/ishaputrabotanicals/demo/v0icvwhgxokaw8qwdq8y.jpg`,
-  energy: `${CLD}/v1790164697/ishaputrabotanicals/demo/mzsqqseyinqtbimvzvwh.jpg`,
-  hair: `${CLD}/v1790165392/ishaputrabotanicals/demo/vnhhjaoazpge7at8qadp.jpg`,
-  skin: `${CLD}/v1790164877/ishaputrabotanicals/demo/entvt3xwysxtaxhmfxtd.jpg`,
-  grooming: `${CLD}/v1790165011/ishaputrabotanicals/demo/cxq4o0gbhhnc38kmwxtc.jpg`,
-  classical: `${CLD}/v1790164561/ishaputrabotanicals/demo/h9woaemeoyehjp5r5yqx.jpg`,
-  clean: `${CLD}/v1790164652/ishaputrabotanicals/demo/t8qvwu2cqpeo20qpnuj1.jpg`,
-  daily: `${CLD}/v1790164112/ishaputrabotanicals/demo/eet2job6gsjv0tvfksat.jpg`,
-  men: `${CLD}/v1790164158/ishaputrabotanicals/demo/t0dcjxkmvbmceoldji0f.jpg`,
+  hero: `${CLD}/v1790515738/ishaputrabotanicals/demo/byd8pu2yr0ggnuzjjuki.jpg`,
+  storyA: `${CLD}/v1790515740/ishaputrabotanicals/demo/sx0mm5t33bz08fvtoohs.jpg`,
+  storyB: `${CLD}/v1790515741/ishaputrabotanicals/demo/wmlgtuuqefyx1cui5c4o.jpg`,
+  collection: `${CLD}/v1790515742/ishaputrabotanicals/demo/vzav3ydug30xswtpvl6w.jpg`,
+  craft: `${CLD}/v1790515743/ishaputrabotanicals/demo/cdcrb0q48xmdi9givh1x.jpg`,
+  ritual: `${CLD}/v1790515745/ishaputrabotanicals/demo/rhcmvbepwkogypbc0kip.jpg`,
+  energy: `${CLD}/v1790515728/ishaputrabotanicals/demo/xg0ugfrhcptxlhfaefnm.jpg`,
+  hair: `${CLD}/v1790515729/ishaputrabotanicals/demo/qrro0cdf6uefdu2ahxbi.jpg`,
+  skin: `${CLD}/v1790515731/ishaputrabotanicals/demo/ajzt8fes8lkwmlznvzgc.jpg`,
+  grooming: `${CLD}/v1790515732/ishaputrabotanicals/demo/wsoazltiqroiesbta6bo.jpg`,
+  classical: `${CLD}/v1790515747/ishaputrabotanicals/demo/hokj0a5c3ko3vpgfd1rg.jpg`,
+  clean: `${CLD}/v1790515748/ishaputrabotanicals/demo/b0cge9lvkj8wbcqsyhg5.jpg`,
+  daily: `${CLD}/v1790515749/ishaputrabotanicals/demo/j5hfmrkesbrjyjpba2ip.jpg`,
+  men: `${CLD}/v1790515750/ishaputrabotanicals/demo/wxpbiqfpvnc8zvx6n6rt.jpg`,
 };
 
 const About = () => {
