@@ -55,7 +55,7 @@ const VideoCallRequestModal = ({
     // The site's own address, so the link is right on every domain (and in dev).
     const productLink = productId ? `\n${window.location.origin}/product/${productId}` : '';
     const customerLine = name.trim() ? `\nRequested by: ${name.trim()}` : '';
-    const message = `Hi Sreerasthu Silvers! I'd like a WhatsApp video call demo.${productLine ? '\n' + productLine : ''}${productLink}${customerLine}`;
+    const message = `Hi Ishaputra Botanicals! I'd like a WhatsApp video consultation.${productLine ? '\n' + productLine : ''}${productLink}${customerLine}`;
     window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -172,7 +172,7 @@ const VideoCallRequestModal = ({
                 <div className="mb-5">
                   <div className="flex items-center gap-2 mb-1">
                     <Video className="w-5 h-5 text-highlight" />
-                    <h3 className="text-lg font-semibold">Book a Demo Video Call</h3>
+                    <h3 className="text-lg font-semibold">Book a Video Consultation</h3>
                   </div>
                   {productTitle && (
                     <p className="text-xs text-muted-foreground truncate">For: {productTitle}</p>
@@ -299,7 +299,7 @@ const VideoCallRequestModal = ({
 
                     {tab === 'instant' && (
                       <p className="text-xs text-muted-foreground bg-highlight/10 dark:bg-highlight/6 border border-highlight/20 dark:border-highlight/50 rounded-lg px-3 py-2">
-                        Our jewellery expert will call you as soon as possible during business hours (10am–7pm).
+                        Our wellness expert will call you as soon as possible during business hours (10am–7pm).
                       </p>
                     )}
 

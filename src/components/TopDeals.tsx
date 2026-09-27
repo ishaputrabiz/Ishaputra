@@ -226,7 +226,7 @@ const TopDeals = () => {
               <h2 className="text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                 Handpicked savings
               </h2>
-              <p className="text-sm text-muted-foreground mt-1 font-light">Handpicked deals on our finest pieces</p>
+              <p className="text-sm text-muted-foreground mt-1 font-light">Handpicked deals on our best rituals</p>
             </div>
             <button 
               onClick={() => navigate('/products?tag=top-deals')}

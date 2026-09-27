@@ -7,16 +7,16 @@ const MobileSearchBar = () => {
   const navigate = useNavigate();
   
   const categories = [
-    "silver jewellery",
-    "rings",
-    "necklaces",
-    "earrings",
-    "bracelets",
-    "pendants",
-    "chains",
-    "anklets",
-    "silver coins",
-    "gift articles"
+    "shilajit",
+    "ashwagandha",
+    "hair oil",
+    "hair serum",
+    "face wash",
+    "face serum",
+    "beard oil",
+    "body wash",
+    "deodorant",
+    "herbal tea"
   ];
   
   const [currentIndex, setCurrentIndex] = useState(0);

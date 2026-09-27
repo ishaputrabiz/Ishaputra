@@ -41,6 +41,8 @@ import {
   Star,
 } from 'lucide-react';
 import { SmartImage } from "@/components/ui/smart-image";
+import { BRAND } from "@/config/brand";
+import { SITE_HOST } from "@/lib/siteUrl";
 
 // Order Status Stepper Component
 const OrderStatusStepper = ({ status, isReturnPickedState = false }: { status: string; isReturnPickedState?: boolean }) => {
@@ -1221,9 +1223,9 @@ const OrderDetailsPage = () => {
             }}
           >
             {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: '20px', borderBottom: '2px solid #f97316', paddingBottom: '16px' }}>
-              <h1 style={{ fontSize: '22px', fontWeight: 'bold', color: '#f97316', margin: 0 }}>SREE RASTHU SILVERS</h1>
-              <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0 0' }}>92.5% Pure Silver Jewelry</p>
+            <div style={{ textAlign: 'center', marginBottom: '20px', borderBottom: '2px solid #A4532C', paddingBottom: '16px' }}>
+              <h1 style={{ fontSize: '22px', fontWeight: 'bold', color: '#A4532C', margin: 0 }}>ISHAPUTRA BOTANICALS</h1>
+              <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0 0' }}>{BRAND.tagline}</p>
             </div>
 
             {/* Receipt Title */}
@@ -1314,8 +1316,8 @@ const OrderDetailsPage = () => {
             {/* Footer */}
             <div style={{ textAlign: 'center', borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
               <p style={{ fontSize: '12px', fontWeight: '500', color: '#1f2937', margin: '0 0 4px 0' }}>Thank you for shopping with us! 🎉</p>
-              <p style={{ fontSize: '11px', color: '#6b7280', margin: '0 0 8px 0' }}>For support: +91 98198 73745</p>
-              <p style={{ fontSize: '10px', color: '#9ca3af', margin: 0 }}>www.sreerasthusilvers.com</p>
+              <p style={{ fontSize: '11px', color: '#6b7280', margin: '0 0 8px 0' }}>For support: {BRAND.phones[0] || BRAND.email}</p>
+              <p style={{ fontSize: '10px', color: '#9ca3af', margin: 0 }}>{SITE_HOST}</p>
             </div>
           </div>
         </div>

@@ -69,7 +69,7 @@ function logoModeLabel(mode: LogoMode) {
 
 function logoInstruction(logoImages?: ImageInput[], logoMode: LogoMode = 'auto-contrast') {
   if (!hasLogos(logoImages)) {
-    return 'LOGO: Reserve a clean, premium space for the Sreerasthu Silvers brand mark, but do not invent or render a fake logo.';
+    return 'LOGO: Reserve a clean, premium space for the Ishaputra Botanicals brand mark, but do not invent or render a fake logo.';
   }
 
   return `LOGO RULE - CONTRAST-AWARE AND ABSOLUTE:
@@ -112,7 +112,7 @@ const LUXURY_ENVIRONMENT_RULE = `WORLD-CLASS ENVIRONMENT:
 Create a real, high-budget luxury photography setting rather than a flat backdrop. Choose one setting that fits the product: editorial studio with sculpted light, palace corridor, temple-inspired architectural detail, marble atelier, velvet/silk styling table, premium boutique interior, garden at golden hour, or cinematic festive set. The environment must have foreground/midground/background depth, natural shadows, physically plausible reflections, and professional art direction.`;
 
 const SILVER_COLOR_RULE = `SILVER JEWELLERY COLOR ANCHOR:
-Sreerasthu Silvers sells 92.5% silver jewellery. Silver must remain cool, luminous, and premium. Do not warm it into yellow gold or bronze. Any gold, maroon, green, or festive colors belong to the set, props, text, or attire only - never to the silver product unless the uploaded reference itself contains those tones.`;
+Ishaputra Botanicals sells 92.5% silver jewellery. Silver must remain cool, luminous, and premium. Do not warm it into yellow gold or bronze. Any gold, maroon, green, or festive colors belong to the set, props, text, or attire only - never to the silver product unless the uploaded reference itself contains those tones.`;
 
 const MATERIAL_FIDELITY_RULE = `MATERIAL AND COLOR FIDELITY - ABSOLUTE COLOR LOCK:
 The uploaded jewellery reference is the single source of truth for color. NEVER convert gold to silver or silver to gold — this is the most common failure and it is forbidden. If the uploaded piece is gold-polished it stays gold in every pixel; if it is silver it stays silver; the same applies to oxidized, rose-toned, rhodium, two-tone, coral-beaded, pearl-accented, or gemstone-set pieces. Preserve the exact metal tone, bead color, pearl color, stone color, polish, oxidation, patina, and contrast from the reference. Lighting, mood, and brand context must NEVER shift the metal color — light the scene around the product, never re-tint the product. The final prompt must include this sentence verbatim: "Keep the exact metal color and stone colors from the attached reference photo; do not shift gold to silver or silver to gold under any lighting."`;
@@ -311,7 +311,7 @@ export async function generateProductModelPrompt(
   logoImages: ImageInput[] = [],
   logoMode: LogoMode = 'auto-contrast'
 ): Promise<string> {
-  const systemPrompt = `You are a world-class AI image prompt engineer and luxury jewellery creative director for Sreerasthu Silvers, a premium 92.5% silver jewellery brand.
+  const systemPrompt = `You are a world-class AI image prompt engineer and luxury jewellery creative director for Ishaputra Botanicals, a premium 92.5% silver jewellery brand.
 
 ${NANO_BANANA_PRO_HANDOFF}
 
@@ -365,7 +365,7 @@ export async function generateProductStudioPrompt(
   logoImages: ImageInput[] = [],
   logoMode: LogoMode = 'auto-contrast'
 ): Promise<string> {
-  const systemPrompt = `You are a world-class prompt engineer for luxury jewellery studio photography: Cartier/Tiffany-level macro product imagery adapted for Sreerasthu Silvers.
+  const systemPrompt = `You are a world-class prompt engineer for luxury jewellery studio photography: Cartier/Tiffany-level macro product imagery adapted for Ishaputra Botanicals.
 
 ${NANO_BANANA_PRO_HANDOFF}
 
@@ -422,7 +422,7 @@ export async function generateHeroSectionPrompt(
   const hasRef = !!referenceImages && referenceImages.length > 0;
   const refCount = referenceImages?.length || 0;
 
-  const systemPrompt = `You are the creative director at India's #1 luxury jewellery advertising agency. You create homepage campaigns for premium jewellery brands and now you are creating a Sreerasthu Silvers hero banner for Nano Banana Pro.
+  const systemPrompt = `You are the creative director at India's #1 luxury jewellery advertising agency. You create homepage campaigns for premium jewellery brands and now you are creating a Ishaputra Botanicals hero banner for Nano Banana Pro.
 
 ${NANO_BANANA_PRO_HANDOFF}
 
@@ -449,7 +449,7 @@ CAMPAIGN ART DIRECTION:
 - Make this a complete publish-ready homepage banner, not a plain product photo with empty space.
 - Use the festival/event as the real visual language: culturally accurate colors, props, flowers, fabric, motifs, and emotional mood.
 - Avoid one-note color defaults. Do not let green dominate every campaign; use green only when culturally/compositionally needed and balance it with silver, ivory, wine, amber, maroon, blue, or neutral luxury tones.
-- Jewellery color and material must follow the uploaded reference exactly. If no product reference is attached, keep created Sreerasthu jewellery cool-toned silver.
+- Jewellery color and material must follow the uploaded reference exactly. If no product reference is attached, keep created Ishaputra products true to their packaging colours.
 - Text must be rendered inside the image with luxury typography: headline, offer title, optional offer details, and a premium CTA such as "SHOP NOW" or "EXPLORE NOW".
 - The offer badge must look premium, not like a cheap sticker. Use refined spacing, strong contrast, and clean hierarchy.
 - Keep all text readable and inside safe zones for the selected ratio. No cropped words, warped letters, or unreadable decorative text.
@@ -468,7 +468,7 @@ FINAL PROMPT MUST INCLUDE:
 
 Generate ONLY the final Nano Banana Pro prompt text as flowing prose. Absolutely no JSON, no key-value structure, no markdown, no explanation.`;
 
-  const userMessage = `Create the ultimate Sreerasthu Silvers hero banner prompt for Nano Banana Pro. Theme: ${festivalOrEvent}. Headline: ${bannerHeadline || 'AI creates one'}. Offer: ${offerTitle}${offerInfo ? ` - ${offerInfo}` : ''}. Output: ${outputFormat}. Use all attached product/reference images exactly as-is and create a world-class luxury advertisement with realistic photography, premium typography, safe zones, and contrast-aware logo handling.`;
+  const userMessage = `Create the ultimate Ishaputra Botanicals hero banner prompt for Nano Banana Pro. Theme: ${festivalOrEvent}. Headline: ${bannerHeadline || 'AI creates one'}. Offer: ${offerTitle}${offerInfo ? ` - ${offerInfo}` : ''}. Output: ${outputFormat}. Use all attached product/reference images exactly as-is and create a world-class luxury advertisement with realistic photography, premium typography, safe zones, and contrast-aware logo handling.`;
 
   const images: ImageInput[] = [];
   if (referenceImages) images.push(...referenceImages);
@@ -488,7 +488,7 @@ export async function generateCustomImagePrompt(
   logoImages: ImageInput[] = [],
   logoMode: LogoMode = 'auto-contrast'
 ): Promise<string> {
-  const systemPrompt = `You are an expert AI image prompt engineer for Sreerasthu Silvers, a premium 92.5% silver jewellery brand.
+  const systemPrompt = `You are an expert AI image prompt engineer for Ishaputra Botanicals, a premium 92.5% silver jewellery brand.
 
 ${NANO_BANANA_PRO_HANDOFF}
 

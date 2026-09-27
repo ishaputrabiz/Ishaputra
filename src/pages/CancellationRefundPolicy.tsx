@@ -6,6 +6,7 @@ import {
   policySectionClassName,
 } from "@/components/PolicyPageLayout";
 import PolicyPageLayout from "@/components/PolicyPageLayout";
+import { BRAND } from "@/config/brand";
 
 const CancellationRefundPolicy = () => {
   return (
@@ -14,7 +15,7 @@ const CancellationRefundPolicy = () => {
             {/* Introduction */}
             <section className={policySectionClassName}>
               <p className={policyBodyClassName}>
-                At Sreerasthu Silvers, customer satisfaction is our priority.
+                At Ishaputra Botanicals, customer satisfaction is our priority.
               </p>
             </section>
 
@@ -78,8 +79,8 @@ const CancellationRefundPolicy = () => {
               <p className={`${policyBodyClassName} mb-2`}>
                 <strong className="text-foreground">For refund assistance:</strong>
               </p>
-              <p className={policyBodyClassName}>Email: <a href="mailto:sreerasthusilvers@gmail.com" className={policyLinkClassName}>sreerasthusilvers@gmail.com</a></p>
-              <p className={policyBodyClassName}>Phone: +91 63049 60489</p>
+              <p className={policyBodyClassName}>Email: <a href={`mailto:${BRAND.email}`} className={policyLinkClassName}>{BRAND.email}</a></p>
+              {BRAND.phones[0] && <p className={policyBodyClassName}>Phone: {BRAND.phones[0]}</p>}
             </section>
       </>
     </PolicyPageLayout>

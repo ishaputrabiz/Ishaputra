@@ -126,7 +126,7 @@ export const sendOrderStatusAlert = async (params: {
   const phrase = friendly[params.status] || `status changed to ${params.status}`;
   const name = params.customerName ? params.customerName.split(' ')[0] : 'there';
   const text =
-    `Hi ${name}, your Sreerasthu Silvers order #${params.orderId.slice(-6).toUpperCase()} ${phrase}. ` +
+    `Hi ${name}, your Ishaputra Botanicals order #${params.orderId.slice(-6).toUpperCase()} ${phrase}. ` +
     `Track it any time in your account.`;
   try {
     return await sendWhatsAppText({ to: params.to, text });
@@ -432,7 +432,7 @@ export const sendDeliveryAssignedTemplate = (opts: {
 
 /** In-App video call started → customer gets deep link to join
  *  Template: video_call_inapp  {{1}}customerName {{2}}productTitle
- *  Button: Dynamic URL → base https://sreerasthusilvers-kkd.vercel.app/call/ + {{1}} = requestId
+ *  Button: Dynamic URL → base https://<your-domain>/call/ + {{1}} = requestId
  */
 export const sendVideoCallInAppTemplate = (opts: {
   to?: string;

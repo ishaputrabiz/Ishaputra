@@ -58,6 +58,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { SmartImage } from "@/components/ui/smart-image";
 import { describeError } from '@/lib/errorMessage';
+import { SILVER_PRICING_ENABLED } from '@/config/features';
 
 // YouTube helpers
 function extractYouTubeId(url: string): string | null {
@@ -1100,6 +1101,7 @@ const ProductForm = () => {
             <CardContent className="space-y-4">
 
               {/* ── Silver Rate Calculator (optional) ── */}
+              {SILVER_PRICING_ENABLED && (
               <div className="rounded-xl border border-dashed border-highlight/45 bg-highlight/6 p-4 space-y-3">
                 {/* Entire header row is clickable to toggle */}
                 <div
@@ -1253,6 +1255,7 @@ const ProductForm = () => {
                   </div>
                 )}
               </div>
+              )}
 
               {/* ── Standard pricing fields ── */}
               {silverPricing.enabled ? (

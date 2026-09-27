@@ -139,7 +139,7 @@ const VerifyEmail = () => {
       
       if (currentUser.emailVerified) {
         sessionStorage.removeItem('pendingVerificationEmail');
-        toast.success('Email verified successfully! Welcome to Sreerasthu Silvers!');
+        toast.success('Email verified successfully! Welcome to Ishaputra Botanicals!');
         navigate('/account', { replace: true });
       } else {
         toast.error('Email not verified yet. Please check your inbox.');
@@ -182,7 +182,7 @@ const VerifyEmail = () => {
     <div className="min-h-[100dvh] bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 flex flex-col items-center justify-center p-4 font-poppins">
       {/* Brand Logo */}
       <div className="mb-6">
-        <img src={logo} alt="Sreerasthu Silvers" className="h-12 md:h-14 w-auto" />
+        <img src={logo} alt="Ishaputra Botanicals" className="h-12 md:h-14 w-auto" />
       </div>
 
       <div className="relative w-full max-w-md bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-2xl p-8 sm:p-10">

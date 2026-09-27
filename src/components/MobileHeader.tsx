@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import SilverRateWidget from "./SilverRateWidget";
+import LoyaltyPointsButton from "./LoyaltyPointsButton";
+import { SILVER_PRICING_ENABLED } from "@/config/features";
 
 const MobileHeader = () => {
   const lightModeLogo = "/black_logo.png";
@@ -50,7 +52,7 @@ const MobileHeader = () => {
             <Menu className="w-[24px] h-[24px] text-foreground/80" strokeWidth={1.5} />
           </button>
           <a href="/" className="flex items-center">
-            <img src={resolvedTheme === 'dark' ? darkModeLogo : lightModeLogo} alt="Sreerasthu Silvers" className="h-10 w-auto object-contain" />
+            <img src={resolvedTheme === 'dark' ? darkModeLogo : lightModeLogo} alt="Ishaputra Botanicals" className="h-10 w-auto object-contain" />
           </a>
         </div>
 
@@ -58,7 +60,7 @@ const MobileHeader = () => {
         <div className="flex items-center gap-1">
           {/* Live silver rate (replaces the old categories grid icon —
               categories are still reachable from the hamburger + bottom nav) */}
-          <SilverRateWidget variant="icon" />
+          {SILVER_PRICING_ENABLED ? <SilverRateWidget variant="icon" /> : <LoyaltyPointsButton size={22} />}
 
           {/* Wishlist */}
           <button

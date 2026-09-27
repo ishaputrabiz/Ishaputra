@@ -62,7 +62,7 @@ const AdminLogin = () => {
               <span className="font-bold text-charcoal" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>S</span>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-[0.4em] text-highlight-soft/70">Sreerasthu</p>
+              <p className="text-[10px] uppercase tracking-[0.4em] text-highlight-soft/70">Ishaputra</p>
               <p className="text-sm font-medium text-white/90">Silvers & Jewellery</p>
             </div>
           </div>
@@ -86,7 +86,7 @@ const AdminLogin = () => {
             Managed with <span className="italic text-highlight-soft">precision.</span>
           </h1>
           <p className="text-white/60 mt-6 text-sm leading-relaxed">
-            Welcome to the Sreerasthu Silvers control room — orchestrate your collections,
+            Welcome to the Ishaputra Botanicals control room — orchestrate your collections,
             curate your storefront, and craft moments that last lifetimes.
           </p>
         </motion.div>

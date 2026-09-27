@@ -101,7 +101,7 @@ const ShoppingCart = () => {
                 <div className="flex-1 flex justify-start">
                   <img 
                     src={resolvedTheme === 'dark' ? '/white_logo.png' : '/black_logo.png'}
-                    alt="Sreerasthu Silvers" 
+                    alt="Ishaputra Botanicals" 
                     className="h-8 w-auto object-contain"
                   />
                 </div>
@@ -301,7 +301,7 @@ const ShoppingCart = () => {
                     Your cart is empty
                   </h3>
                   <p className="text-sm text-muted-foreground mb-8 max-w-[260px] leading-relaxed">
-                    Discover our exquisite collection of handcrafted silver jewelry.
+                    Discover classical Ayurveda, made for the modern man.
                   </p>
                   <button
                     onClick={closeCart}

@@ -20,14 +20,14 @@ import { SmartImage } from "@/components/ui/smart-image";
 const ROTATE_MS = 7000;
 
 /**
- * Only claims the shop already makes elsewhere: the purity in the logo, the
- * warranty badge on every product page, and the two windows written into the
- * shipping and refund policies. Shipping is not free by default, so it is the
- * delivery time that is promised here.
+ * Only claims the shop already makes elsewhere: the support reply time in
+ * Customer Support settings, the Razorpay checkout, and the two windows written
+ * into the shipping and refund policies. Shipping is not free by default, so it
+ * is the delivery time that is promised here.
  */
 const PROMISES: Array<{ value: string; label: string }> = [
-  { value: "92.5", label: "Hallmarked sterling silver" },
-  { value: "2 yrs", label: "Warranty on every piece" },
+  { value: "24 h", label: "Support reply time" },
+  { value: "100%", label: "Secure Razorpay checkout" },
   { value: "7 days", label: "Returns from delivery" },
   { value: "3–7 days", label: "Delivery across India" },
 ];
@@ -234,7 +234,7 @@ const TestimonialsCarousel = () => {
                 ))}
               </dl>
               <p className="mt-7 border-t border-white/10 pt-5 text-xs font-light leading-relaxed text-white/45">
-                Every piece is hand-finished in our own workshop and checked for purity before it is packed.
+                Classical Ayurvedic formulations, made simple for the modern man's daily routine.
               </p>
             </div>
           </motion.div>

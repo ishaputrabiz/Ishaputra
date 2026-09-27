@@ -66,22 +66,47 @@
     - OTP sends have no per-phone rate limit.
 - 2026-09-23: The YouTube section stays hidden until the client has videos.
 
+- 2026-09-27 (Step 1):
+    - Business details live in `src/config/brand.ts`. Empty fields are hidden on the site (footer, contact, invoice, policies), never shown as placeholders.
+    - Deleted 13 unused components (`AboutSection`, `HeroCarousel`, `LuxurySofaSection`, `ProductDetailSection`...), unused `src/data/content.json`, and 40 unused jewellery images.
+    - The user declined one deletion step. These now-unused jewellery images are still in `src/assets/`: `handmade-crafting.jpg`, `handmade-section.jpg`, `hero-jewelry.jpg`, `promo-*.jpg`, `collection-banner.jpg`. Delete them only if the user agrees.
+    - `SILVER_PRICING_ENABLED = false` in `src/config/features.ts` hides the silver-rate widget, `/admin/silver-rate` and the product-form calculator. The headers show `LoyaltyPointsButton` (links to `/wallet`) instead.
+    - Bare `/products` now lists the whole catalogue (it used to say "Category not found"; Sreerasthu's own links hit this too).
+    - The mobile Categories page now reads the store's Firestore categories instead of a hard-coded jewellery list.
+    - About page rewritten: the fake team became "What We Stand For" and the fake testimonial became the brand promise. Its images now use Cloudinary URLs; the old `/src/assets/...` paths broke in production.
+    - Logo files, favicon, push icon, OG image and the empty-cart illustration all come from `node scripts/build-logo-assets.mjs`.
+    - **Deferred:** the admin AI prompt tool (`src/services/geminiService.ts`) still carries jewellery art direction. Rewrite it before the client uses it; it also needs `GEMINI_API_KEY`.
+
 ## Design decisions
-- Colours (light / dark): Step 1
-- Fonts: Step 1
-- Per page: Step 2
+- Colours, light mode:
+    - Background: cream `#F6F2EB`
+    - Primary: rust copper `#A4532C`
+    - Highlight: bronze `#8C6834` (deep enough for small text)
+    - Highlight soft: `#C9A266`, for text on dark bands
+    - Charcoal bands: `#1B1A18`
+- Colours, dark mode:
+    - Background: near-black `#0E0D0C`
+    - Primary: copper `#C97542`
+    - Highlight: bronze `#C9A266`
+- Every text pair passes WCAG AA (checked with a script).
+- Fonts: **Archivo** headings at 112% width (`--font-heading-stretch`) and **Manrope** body. All 262 inline font styles now use `var(--font-heading)` / `var(--font-body)`.
+- Texture: a subtle film-grain overlay (`body::after`, `--grain-opacity`).
+- Logo: the deep-bronze version (brightness 0.72) on light backgrounds, the original on dark. The favicon and app icons use the monogram.
+- Loading screen (mobile only): the monogram is revealed bottom-up with a copper light sweep, the tagline settles in, and a copper progress line runs underneath. It respects reduced motion.
+- Per page: Step 2.
+    - Noted for Step 2: the copper marquee band is bold in dark mode; the product page's "more" link is still blue; the black "Buy" button is low-contrast in dark mode; product specifications (net quantity, ingredients) don't show on the product page yet.
 
 ## Progress
 - [x] Step 0 safe preview (2026-09-23): home, products and product pages show demo content on Ishaputra Firebase; only the YouTube section is hidden (no videos yet)
-- [ ] Step 1 new look (client OK?)
+- [ ] Step 1 new look: done 2026-09-27, waiting for client review
 - [ ] Step 2: Home, Products, Product detail, Checkout, Profile, remaining pages
 - [ ] Step 2B features   - [ ] Step 3 accounts   - [ ] Step 4 test and publish   - [ ] Step 5 client changes
 
 ## Next step
-Step 1: colours and fonts, hard-coded colours, logos, loading animation, brand text, remove silver-rate.
+Client reviews the Step 1 look (light and dark, mobile and desktop). After their OK: Step 2, starting with the Home page.
 
 ## Open questions
-- Business details: legal name, address, phone, email, WhatsApp, hours, GSTIN, domain, social links (blocking for Step 1 footer, invoice and policy pages; placeholders until then)
+- Business details: legal name, address, phone, WhatsApp, GSTIN, state (for IGST vs CGST+SGST), domain, social links. They go in `src/config/brand.ts`. The email `hello@ishaputra.com` and the hours are **guesses**: confirm them.
 - Vector (SVG/AI) logo file? A transparent PNG is in; a vector would give a sharper favicon (not blocking)
 - Category tree correct? (not blocking)
 - Loyalty card: a digital tier card or a physical/QR card? (Step 2B)

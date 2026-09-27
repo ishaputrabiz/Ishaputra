@@ -364,7 +364,7 @@ function EmptyState({ onBrowse }: { onBrowse: () => void }) {
       <div>
         <p className="font-semibold text-foreground mb-1">No video call requests yet</p>
         <p className="text-sm text-muted-foreground max-w-xs">
-          Book a live demo call with our jewellery experts from any product page.
+          Book a video consultation with our wellness experts from any product page.
         </p>
       </div>
       <Button
@@ -372,7 +372,7 @@ function EmptyState({ onBrowse }: { onBrowse: () => void }) {
         onClick={onBrowse}
       >
         <Sparkles className="w-4 h-4" />
-        Browse Jewellery
+        Browse Products
       </Button>
     </motion.div>
   );

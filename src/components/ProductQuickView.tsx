@@ -18,6 +18,7 @@ interface Product {
   alt?: string;
   badge?: string;
   discount?: number;
+  description?: string;
 }
 
 interface ProductQuickViewProps {
@@ -69,7 +70,7 @@ const ProductQuickView = ({ product, isOpen, onClose }: ProductQuickViewProps) =
   const decrementQuantity = () => setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
 
   // Generate a random SKU based on product id
-  const sku = `sreerasthu-${product.category.toLowerCase().replace(/[^a-z]/g, '-')}-${product.id}`;
+  const sku = `ishaputra-${product.category.toLowerCase().replace(/[^a-z]/g, '-')}-${product.id}`;
 
   return (
     <AnimatePresence>
@@ -168,7 +169,7 @@ const ProductQuickView = ({ product, isOpen, onClose }: ProductQuickViewProps) =
 
                   {/* Description */}
                   <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                    Exquisitely crafted with attention to detail. This stunning piece from our {product.category} collection showcases timeless elegance and superior craftsmanship.
+                    {product.description || `From our ${product.category} range - classical Ayurvedic ingredients, made for everyday use.`}
                   </p>
 
                   {/* Quantity & Actions */}

@@ -1,6 +1,6 @@
 // ============================================
 // SECURITY SERVICE — Enterprise-Grade
-// Sreerasthu Silvers eCommerce Platform
+// Ishaputra Botanicals eCommerce Platform
 // ============================================
 // Handles: Login history, session management,
 // device tracking, account lock, 2FA prep,

@@ -39,7 +39,7 @@ const InstagramGallery = () => {
           <h2 className="text-2xl md:text-3xl font-semibold text-foreground font-serif mb-1">
             Gallery
           </h2>
-          <p className="text-sm text-muted-foreground font-light">Our finest pieces in one place</p>
+          <p className="text-sm text-muted-foreground font-light">Our rituals in one place</p>
         </div>
 
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3 md:gap-4">

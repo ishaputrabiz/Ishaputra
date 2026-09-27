@@ -77,7 +77,7 @@ const PromoSection = () => {
             <div className="flex items-center gap-2 mb-2">
               <span className="h-px w-8 bg-primary/50" />
               <span className="text-[10px] uppercase tracking-[0.32em] text-primary/80 font-medium">
-                The Sreerasthu Edit
+                The Ishaputra Edit
               </span>
             </div>
             <h2
@@ -89,8 +89,8 @@ const PromoSection = () => {
             {/* Deliberately not a count: collections are switched on and off in
                 Admin > Home Collections as stock arrives. */}
             <p className="hidden md:block text-sm text-muted-foreground mt-2 max-w-xl font-light">
-              One atelier, many stories. Glide through the collections we are
-              hand-finishing right now.
+              Five rituals, one standard. Glide through the ranges that keep
+              you strong every day.
             </p>
           </motion.div>
 

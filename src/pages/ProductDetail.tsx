@@ -357,7 +357,7 @@ const ProductDetail = () => {
     const productUrl = window.location.href;
     const productTitle = product.title;
     const productImage = product.image.startsWith('http') ? product.image : `${window.location.origin}${product.image}`;
-    const shareText = `Check out ${productTitle} at Sreerasthu Silvers! ₹${product.price.toLocaleString("en-IN")}`;
+    const shareText = `Check out ${productTitle} at Ishaputra Botanicals! ₹${product.price.toLocaleString("en-IN")}`;
 
     // Helper function to share with image via native share API
     const shareWithImage = async (text: string) => {
@@ -422,7 +422,7 @@ const ProductDetail = () => {
         const shared = await shareWithImage(shareText);
         if (!shared) {
           const emailBody = `${shareText}\n\nProduct Link: ${productUrl}`;
-          window.open(`mailto:?subject=${encodeURIComponent(productTitle + ' - Sreerasthu Silvers')}&body=${encodeURIComponent(emailBody)}`, '_blank');
+          window.open(`mailto:?subject=${encodeURIComponent(productTitle + ' - Ishaputra Botanicals')}&body=${encodeURIComponent(emailBody)}`, '_blank');
         }
         break;
       }
@@ -542,7 +542,7 @@ const ProductDetail = () => {
           <h1 className="text-2xl font-semibold mb-4">Product Not Found</h1>
           <p className="text-muted-foreground mb-6">The product you're looking for doesn't exist or has been removed.</p>
           <button
-            onClick={() => navigate("/shop/necklaces")}
+            onClick={() => navigate("/products")}
             className="px-6 py-3 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-all"
           >
             Back to Shop
@@ -553,7 +553,7 @@ const ProductDetail = () => {
   }
 
   // Generate SKU
-  const sku = `sreerasthu-${product.category.toLowerCase().replace(/[^a-z]/g, "-")}-${product.id}`;
+  const sku = `ishaputra-${product.category.toLowerCase().replace(/[^a-z]/g, "-")}-${product.id}`;
 
   // Product images for gallery - use all images from product, fallback to main image if no images array
   const productImages = product.images && product.images.length > 0 ? product.images : [product.image];
@@ -879,10 +879,9 @@ const ProductDetail = () => {
                   <p className={`text-xs md:text-sm text-muted-foreground leading-relaxed ${
                     !showFullDescription ? 'line-clamp-2' : ''
                   }`}>
-                    {product.description ||
-                      `Traditional silver anklet with delicate bells creating a graceful and charming`}
+                    {product.description || 'Details for this product are coming soon.'}
                   </p>
-                  {(product.description || 'Traditional silver anklet with delicate bells creating a graceful and charming').length > 100 && (
+                  {(product.description || '').length > 100 && (
                     <button
                       onClick={() => setShowFullDescription(!showFullDescription)}
                       className="text-blue-600 text-xs md:text-sm font-medium mt-1 hover:underline"
@@ -948,7 +947,7 @@ const ProductDetail = () => {
 
                   {isUnavailable(product) ? (
                     <div className="flex-1 min-w-[160px] rounded-full border-2 border-orange-200 bg-orange-50 px-6 py-3.5 text-center text-sm font-semibold text-orange-800 dark:border-orange-900/50 dark:bg-orange-950/40 dark:text-orange-200">
-                      Sold out · Ask us about similar pieces below
+                      Sold out · Ask us about similar products below
                     </div>
                   ) : (<>
                   {/* Add to Cart Button */}
@@ -1000,8 +999,8 @@ const ProductDetail = () => {
                     className="flex-1 min-w-0 px-3 sm:px-5 py-3 font-medium text-xs sm:text-sm rounded-full border-2 border-highlight text-highlight dark:text-highlight hover:bg-highlight/10 dark:hover:bg-highlight/6 transition-all flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap"
                   >
                     <Video className="w-4 h-4 shrink-0" />
-                    <span className="hidden sm:inline">Book a Demo Video Call</span>
-                    <span className="sm:hidden">Video Call</span>
+                    <span className="hidden sm:inline">Video Consultation</span>
+                    <span className="sm:hidden">Consult</span>
                   </motion.button>
 
                   <WhatsAppEnquiryButton product={product} className="flex-1 min-w-0" />
@@ -1103,15 +1102,15 @@ const ProductDetail = () => {
                 <div className="grid grid-cols-3 gap-2 md:gap-4 mt-4 md:mt-5 mb-6 md:mb-8">
                   <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3 p-2 md:p-3 bg-secondary/50 rounded-lg md:rounded-xl text-center md:text-left">
                     <Truck className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
-                    <span className="text-[10px] md:text-sm leading-tight">Free Shipping</span>
+                    <span className="text-[10px] md:text-sm leading-tight">Delivery Across India</span>
                   </div>
                   <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3 p-2 md:p-3 bg-secondary/50 rounded-lg md:rounded-xl text-center md:text-left">
                     <Shield className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
-                    <span className="text-[10px] md:text-sm leading-tight">2 Year Warranty</span>
+                    <span className="text-[10px] md:text-sm leading-tight">Secure Checkout</span>
                   </div>
                   <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3 p-2 md:p-3 bg-secondary/50 rounded-lg md:rounded-xl text-center md:text-left">
                     <RotateCcw className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
-                    <span className="text-[10px] md:text-sm leading-tight">Easy Returns</span>
+                    <span className="text-[10px] md:text-sm leading-tight">7-Day Returns</span>
                   </div>
                 </div>
 

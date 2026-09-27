@@ -46,7 +46,7 @@ import { toast } from 'sonner';
 // ── constants ─────────────────────────────────────────────────────────────────
 
 const CHAT_TEMPLATES = [
-  "Hi, I'm your delivery partner from Sreerasthu Silvers. I'm on my way!",
+  "Hi, I'm your delivery partner from Ishaputra Botanicals. I'm on my way!",
   'Hello, I have arrived. Please share your OTP to confirm delivery.',
   "I'm at your location. Could you come down to collect the order?",
   "I'm running a few minutes late. Will reach soon, thank you for your patience!",

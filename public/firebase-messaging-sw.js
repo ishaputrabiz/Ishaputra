@@ -37,13 +37,13 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.messagin
         );
         if (isAppInForeground) return;
 
-        const notificationTitle = payload.notification?.title || payload.data?.title || 'Sreerasthu Silvers';
+        const notificationTitle = payload.notification?.title || payload.data?.title || 'Ishaputra Botanicals';
         const notificationOptions = {
           body: payload.notification?.body || payload.data?.body || '',
           icon: payload.notification?.icon || '/icon-192.png',
           badge: '/icon-192.png',
           image: payload.notification?.image || payload.data?.image,
-          tag: payload.data?.tag || 'srs-notification',
+          tag: payload.data?.tag || 'ishaputra-notification',
           data: {
             url: payload.data?.url || payload.fcmOptions?.link || '/',
             ...payload.data,

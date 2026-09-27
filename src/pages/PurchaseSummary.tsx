@@ -239,7 +239,7 @@ const PurchaseSummary: React.FC = () => {
         <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full">
           <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-zinc-300" />
         </button>
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">My Jewellery Journey</h1>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">My Wellness Journey</h1>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 lg:py-10 pb-24 lg:pb-10">
@@ -406,7 +406,7 @@ const PurchaseSummary: React.FC = () => {
           <Button 
             variant="outline"
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 hover:from-blue-100 hover:to-indigo-100 transition-all shadow-sm"
-            onClick={() => navigate('/jewelry')}
+            onClick={() => navigate('/products')}
           >
             <ShoppingBag className="w-4 h-4" />
             Continue Shopping

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Settings as SettingsIcon, Store, Database, Cloud } from 'lucide-react';
+import { BRAND } from '@/config/brand';
 
 const Settings = () => {
   return (
@@ -31,7 +32,7 @@ const Settings = () => {
             <div>
               <Label className="text-gray-700">Store Name</Label>
               <Input
-                defaultValue="Sreerasthu Silvers"
+                defaultValue={BRAND.name}
                 className="mt-2 bg-gray-100 border-gray-300 text-gray-900"
                 readOnly
               />
@@ -39,7 +40,7 @@ const Settings = () => {
             <div>
               <Label className="text-gray-700">Contact Email</Label>
               <Input
-                defaultValue="contact@sreerasthu.com"
+                defaultValue={BRAND.email}
                 className="mt-2 bg-gray-100 border-gray-300 text-gray-900"
               />
             </div>
@@ -67,12 +68,12 @@ const Settings = () => {
           <CardContent className="space-y-3 text-sm">
             <div className="flex justify-between py-2 border-b border-gray-200">
               <span className="text-gray-600">Project ID</span>
-              <span className="text-gray-900 font-mono">sreerasthusilvers-2d574</span>
+              <span className="text-gray-900 font-mono">{import.meta.env.VITE_FIREBASE_PROJECT_ID}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-gray-200">
               <span className="text-gray-600">Auth Domain</span>
               <span className="text-gray-900 font-mono text-xs">
-                sreerasthusilvers-2d574.firebaseapp.com
+                {import.meta.env.VITE_FIREBASE_AUTH_DOMAIN}
               </span>
             </div>
             <div className="flex justify-between py-2 border-b border-gray-200">
@@ -118,7 +119,7 @@ const Settings = () => {
               <Label className="text-gray-700">Admin Email</Label>
               <Input
                 type="email"
-                placeholder="admin@sreerasthu.com"
+                placeholder="admin@example.com"
                 className="mt-2 bg-gray-100 border-gray-300 text-gray-900"
               />
             </div>

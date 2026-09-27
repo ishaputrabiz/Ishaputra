@@ -65,7 +65,7 @@ const Signup = () => {
 
     try {
       await signup(email, password, username, phone || undefined, sameForWhatsApp);
-      toast.success('Account created! Welcome to Sreerasthu Silvers.');
+      toast.success('Account created! Welcome to Ishaputra Botanicals.');
       navigate('/', { replace: true });
     } catch (err: any) {
       console.error('Signup error:', err);
@@ -90,7 +90,7 @@ const Signup = () => {
           {/* Brand Logo */}
           <div className="flex justify-center mb-4">
             <Link to="/">
-              <img src={logo} alt="Sreerasthu Silvers" className="h-12 md:h-14 w-auto" />
+              <img src={logo} alt="Ishaputra Botanicals" className="h-12 md:h-14 w-auto" />
             </Link>
           </div>
 
@@ -98,7 +98,7 @@ const Signup = () => {
             {/* Header */}
             <div className="text-center mb-6">
               <h1 className="text-2xl md:text-3xl font-light text-gray-900 dark:text-zinc-100 mb-2">Create Account</h1>
-              <p className="text-gray-600 dark:text-zinc-400">Join Sreerasthu Silvers today</p>
+              <p className="text-gray-600 dark:text-zinc-400">Join Ishaputra Botanicals today</p>
             </div>
 
             {/* Error Message */}

@@ -217,6 +217,8 @@ const CategoryPage = () => {
     'featured': { flag: 'isFeatured', label: 'Featured Products' },
   };
   const tagMeta = activeTag ? TAG_MAP[activeTag] : undefined;
+  /** Bare /products (no category, no tag): the whole catalogue. "Shop all" links land here. */
+  const showAll = !categorySlug && !activeTag;
 
   // UI
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -451,13 +453,13 @@ const CategoryPage = () => {
   useEffect(() => {
     // Tag-only mode (e.g. /products?tag=top-deals — no category slug):
     // pull every active product and keep only those whose flag matches.
-    if (!categorySlug && tagMeta) {
+    if (!categorySlug && (tagMeta || showAll)) {
       setLoading(true);
       setSubcategoryFallback(false); // tag views are not category-scoped
       const unsub = subscribeToActiveProducts((fbProducts) => {
-        const matching = fbProducts.filter(
-          (p: any) => p?.flags?.[tagMeta.flag] === true
-        );
+        const matching = tagMeta
+          ? fbProducts.filter((p: any) => p?.flags?.[tagMeta.flag] === true)
+          : fbProducts;
         const uiProducts = matching.map((fp) => {
           const ui = adaptFirebaseArrayToUI([fp])[0];
           return {
@@ -680,7 +682,7 @@ const CategoryPage = () => {
     }
   };
 
-  if (!currentCategory && !tagMeta && !loading && categories.length > 0) {
+  if (!currentCategory && !tagMeta && !showAll && !loading && categories.length > 0) {
     return (
       <div className="min-h-screen bg-background">
         <Header />

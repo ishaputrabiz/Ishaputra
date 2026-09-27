@@ -194,7 +194,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           await sendToMeta({
             to,
             type: 'text',
-            text: { body: `Your Sreerasthu Silvers verification code is ${otp}. Valid for 10 minutes.` },
+            text: { body: `Your Ishaputra Botanicals verification code is ${otp}. Valid for 10 minutes.` },
           });
           deliveryMode = 'text';
         } catch (textErr: any) {

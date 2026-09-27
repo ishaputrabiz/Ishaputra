@@ -229,10 +229,10 @@ const MobileOrders = () => {
             </div>
             <h3 className="mb-1 text-base font-semibold text-gray-800 dark:text-zinc-200 dark:text-zinc-100">No orders yet!</h3>
             <p className="mb-6 text-sm text-gray-500 dark:text-zinc-500 dark:text-zinc-400">
-              {selectedOrderTab === 'current' ? 'Your bag is waiting — explore our silver collection!' : 'Discover stunning silver jewellery crafted just for you'}
+              {selectedOrderTab === 'current' ? 'Your bag is waiting — explore the Ishaputra range!' : 'Discover classical Ayurveda made for the modern man'}
             </p>
             <button
-              onClick={() => navigate('/category/jewellery')}
+              onClick={() => navigate('/products')}
               className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-900 dark:bg-zinc-100 text-white text-sm font-medium rounded-full hover:bg-gray-800 dark:bg-zinc-100 transition-colors"
             >
               ✨ Start Shopping

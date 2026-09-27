@@ -272,7 +272,7 @@ const AdminOrderDetails = () => {
       void notifyOrder({
         orderId: order.id,
         audience: 'customer',
-        title: 'New reply from Sreerasthu support',
+        title: 'New reply from Ishaputra support',
         body: text.length > 140 ? `${text.slice(0, 137)}…` : text,
         url: `/account/orders/${order.id}`,
         data: { kind: 'order-chat', orderId: order.id },

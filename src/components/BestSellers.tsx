@@ -119,7 +119,7 @@ const BestSellers = () => {
             <h2 className="text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
               Most loved right now
             </h2>
-            <p className="text-sm text-muted-foreground mt-1 font-light">Our most loved pieces, chosen by you</p>
+            <p className="text-sm text-muted-foreground mt-1 font-light">Our most loved rituals, chosen by you</p>
           </div>
           <button
             onClick={() => navigate('/products?tag=best-sellers')}
@@ -184,7 +184,7 @@ const BestSellers = () => {
               <div className="w-full py-12 text-center">
                 <Package className="w-12 h-12 mx-auto mb-3 text-primary/40" />
                 <p className="text-base font-medium text-foreground/70 mb-1">Best Sellers Coming Soon</p>
-                <p className="text-sm text-muted-foreground">Our most loved pieces will appear here. Check back shortly!</p>
+                <p className="text-sm text-muted-foreground">Our most loved products will appear here. Check back shortly!</p>
               </div>
             ) : (
               <>
@@ -326,7 +326,7 @@ const BestSellers = () => {
               <div className="w-full py-12 text-center">
                 <Package className="w-12 h-12 mx-auto mb-3 text-primary/40" />
                 <p className="text-base font-medium text-foreground/70 mb-1">Best Sellers Coming Soon</p>
-                <p className="text-sm text-muted-foreground">Our most loved pieces will appear here. Check back shortly!</p>
+                <p className="text-sm text-muted-foreground">Our most loved products will appear here. Check back shortly!</p>
               </div>
             ) : (
               <div className="group/best-sellers relative overflow-hidden rounded-[28px] border border-border/60 bg-background/70 py-2 dark:border-highlight/12 dark:bg-white/[0.03]">

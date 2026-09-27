@@ -6,7 +6,7 @@ import { DEFAULT_SUPPORT, getCustomerSupportSettings } from "@/services/siteSett
  * "Enquire on WhatsApp" for a product.
  *
  * Opens a chat with the store's WhatsApp number (Admin > Commerce settings >
- * Customer support, default +91 6304960489) with a message naming the product
+ * Customer support; defaults to BRAND.whatsapp) with a message naming the product
  * and linking to its page. WhatsApp turns that link into a preview card with the
  * product photo because /product/:id serves real Open Graph tags to link-preview
  * crawlers - see the `og` handler in api/media.ts and the rewrite in vercel.json.
@@ -32,7 +32,7 @@ const toWhatsAppDigits = (phone: string) => {
 const buildEnquiryUrl = (phone: string, product: EnquiryProduct, origin: string) => {
   const pageUrl = `${origin}/product/${encodeURIComponent(product.id)}`;
   const message = [
-    "Hello Sreerasthu Silvers,",
+    "Hello Ishaputra Botanicals,",
     "I'm interested in this product. Could you please share more details?",
     "",
     `*${product.title}*`,

@@ -182,7 +182,7 @@ const HeroBanner = () => {
             className="text-2xl md:text-3xl font-semibold text-foreground"
             style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
           >
-            Welcome to Sreerasthu Silvers
+            Welcome to Ishaputra Botanicals
           </h2>
           <p className="text-sm md:text-base text-muted-foreground max-w-md">
             We're setting up our store with amazing collections. Stay tuned — something beautiful is on its way!
@@ -268,7 +268,7 @@ const HeroBanner = () => {
                 <div className="absolute inset-x-0 bottom-0 top-auto p-5 lg:p-8">
                   <div className="flex items-center gap-2">
                     <span className="h-px w-8 bg-white/45" />
-                    <span className="text-[10px] uppercase tracking-[0.32em] text-white/70">Sreerasthu Silvers</span>
+                    <span className="text-[10px] uppercase tracking-[0.32em] text-white/70">Ishaputra Botanicals</span>
                   </div>
                 </div>
               </button>

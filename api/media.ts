@@ -885,12 +885,12 @@ const escapeHtml = (value: unknown) =>
 
 export function productPreviewHtml(product: PreviewProduct | null, pageUrl: string, image: string | null): string {
   const name = product?.name?.trim();
-  const title = name ? `${name} | Sreerasthu Silvers` : 'Sreerasthu Silvers | 92.5 Pure Silver Jewellery';
+  const title = name ? `${name} | Ishaputra Botanicals` : "Ishaputra Botanicals | Men's Ayurveda & Botanical Wellness";
   const price = typeof product?.price === 'number' ? `₹${product.price.toLocaleString('en-IN')}` : '';
   const about = String(product?.description || '').replace(/\s+/g, ' ').trim();
   let description = [price, about].filter(Boolean).join(' · ');
   if (description.length > 200) description = `${description.slice(0, 197).trimEnd()}...`;
-  if (!description) description = 'Handcrafted 92.5 pure silver jewellery, gifts and pooja articles.';
+  if (!description) description = "Premium men's Ayurveda and botanical wellness - pure wellness for a stronger you.";
   const imageType = image?.endsWith('.png') ? 'image/png' : image?.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
 
   const t = escapeHtml(title);
@@ -904,7 +904,7 @@ export function productPreviewHtml(product: PreviewProduct | null, pageUrl: stri
 <title>${t}</title>
 <meta name="description" content="${d}">
 <link rel="canonical" href="${u}">
-<meta property="og:site_name" content="Sreerasthu Silvers">
+<meta property="og:site_name" content="Ishaputra Botanicals">
 <meta property="og:type" content="product">
 <meta property="og:title" content="${t}">
 <meta property="og:description" content="${d}">

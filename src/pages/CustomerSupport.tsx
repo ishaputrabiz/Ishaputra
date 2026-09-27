@@ -45,12 +45,12 @@ const CustomerSupport = () => {
     {
       id: 2,
       question: 'What is your return policy?',
-      message: 'Hello, I would like to inquire about your return and exchange policy for silver products.',
+      message: 'Hello, I would like to inquire about your return and exchange policy.',
     },
     {
       id: 3,
-      question: 'Do you offer custom designs?',
-      message: 'Hello, I am interested in custom silver jewelry/furniture designs. Can you provide more information about the customization process?',
+      question: 'Which product is right for me?',
+      message: 'Hello, I would like help choosing the right Ishaputra products for my needs. Could you suggest a routine?',
     },
     {
       id: 4,
@@ -59,8 +59,8 @@ const CustomerSupport = () => {
     },
     {
       id: 5,
-      question: 'How can I verify the authenticity of silver?',
-      message: 'Hello, I would like to understand how I can verify the authenticity and purity of your silver products.',
+      question: 'What ingredients are in your products?',
+      message: 'Hello, I would like to know the full ingredient list of a product before I buy.',
     },
     {
       id: 6,
@@ -69,13 +69,13 @@ const CustomerSupport = () => {
     },
     {
       id: 7,
-      question: 'What is the warranty on silver products?',
-      message: 'Hello, I would like to know about the warranty and after-sales service for your silver products.',
+      question: 'How long before I see results?',
+      message: 'Hello, I would like to know how long it usually takes to see results and how to use the products for the best effect.',
     },
     {
       id: 8,
-      question: 'How do I care for my silver jewelry?',
-      message: 'Hello, I would like to get information on how to properly care for and maintain my silver jewelry.',
+      question: 'Can I combine products in one routine?',
+      message: 'Hello, I would like to know which Ishaputra products can be used together in a daily routine.',
     },
   ];
 

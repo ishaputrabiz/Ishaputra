@@ -216,7 +216,7 @@ export async function payWithRazorpay(
       amount: order.amount,
       currency: order.currency,
       order_id: order.order_id,
-      name: options.name || 'Sreerasthu Silvers',
+      name: options.name || 'Ishaputra Botanicals',
       description: options.description || 'Order payment',
       ...(options.prefill ? { prefill: options.prefill } : {}),
       ...(options.notes ? { notes: options.notes } : {}),

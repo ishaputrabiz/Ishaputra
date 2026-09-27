@@ -1,3 +1,5 @@
+import { BRAND } from '@/config/brand';
+
 /**
  * The store's own address, in one place.
  *
@@ -9,7 +11,7 @@
  * Set VITE_SITE_URL on Vercel when the live domain changes. The default matches
  * the <link rel="canonical"> in index.html.
  */
-export const SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://sreerasthusilvers.com').replace(/\/+$/, '');
+export const SITE_URL = (import.meta.env.VITE_SITE_URL || BRAND.siteUrl).replace(/\/+$/, '');
 
-/** Without the scheme, for reading aloud in a sentence: "sreerasthusilvers.com". */
+/** Without the scheme, for reading aloud in a sentence: "ishaputra.com". */
 export const SITE_HOST = SITE_URL.replace(/^https?:\/\//, '');

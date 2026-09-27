@@ -1,6 +1,6 @@
 // ============================================
 // CLOUD FUNCTIONS — Production Architecture
-// Sreerasthu Silvers eCommerce Platform
+// Ishaputra Botanicals eCommerce Platform
 // ============================================
 // These are PSEUDO/REFERENCE implementations.
 // Deploy to Firebase Cloud Functions when ready.

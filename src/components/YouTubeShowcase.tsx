@@ -155,10 +155,10 @@ const YouTubeShowcase = () => {
               className="text-2xl md:text-4xl font-medium tracking-tight text-foreground"
               style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
             >
-              The Sreerasthu Film Reel
+              The Ishaputra Film Reel
             </h2>
             <p className="hidden md:block mt-3 text-sm text-muted-foreground max-w-xl font-light">
-              Behind the craft, story films, and product showcases from our atelier.
+              How we make it, how to use it, and the herbs behind every formula.
             </p>
           </div>
           <a

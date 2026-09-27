@@ -147,7 +147,7 @@ const FeaturedSection = () => {
                 View All
               </button>
             </div>
-            <p className="text-xs text-muted-foreground/90">A layered mobile edit with one hero pick and sharper supporting cards.</p>
+            <p className="text-xs text-muted-foreground/90">Our editors’ picks for the modern man’s routine.</p>
           </div>
 
           <div className="space-y-4">

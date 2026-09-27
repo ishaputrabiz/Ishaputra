@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { BRAND } from "@/config/brand";
+import { SITE_HOST } from "@/lib/siteUrl";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -37,7 +39,7 @@ const Contact = () => {
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2070')",
+            backgroundImage: "url('https://res.cloudinary.com/dcoimqij/image/upload/f_auto,q_auto,w_1600/v1790164427/ishaputrabotanicals/demo/zurdxwuvf6utvs9nj4fb.jpg')",
             filter: "blur(2px)",
           }}
         />
@@ -79,8 +81,8 @@ const Contact = () => {
             Get In Touch
           </h2>
           <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
-            We are your premier destination for exquisite silver jewelry and furniture in Kakinada.
-            Discover our stunning collection of handcrafted silver pieces that blend tradition with contemporary elegance.
+            Questions about a product, your order or which ritual suits you? Write to us - a real person
+            reads every message and replies within a day.
           </p>
         </motion.div>
 
@@ -101,8 +103,13 @@ const Contact = () => {
               </h3>
             </div>
             <div className="ml-10">
-              <p className="text-muted-foreground mb-1">Ramasomayajulu St, Rama Rao Peta</p>
-              <p className="text-muted-foreground">Kakinada, Andhra Pradesh 533001</p>
+              {BRAND.addressLines.length > 0 ? (
+                BRAND.addressLines.map((line) => (
+                  <p key={line} className="text-muted-foreground mb-1">{line}</p>
+                ))
+              ) : (
+                <p className="text-muted-foreground">Online store - shipping across India</p>
+              )}
             </div>
           </motion.div>
 
@@ -121,9 +128,9 @@ const Contact = () => {
               </h3>
             </div>
             <div className="ml-10">
-              <p className="text-muted-foreground mb-1">Mobile: 063049 60489</p>
-              <p className="text-muted-foreground mb-1">Website: sreerasthusiIvers.co.in</p>
-              <p className="text-muted-foreground">Mail: info@sreerasthusiIvers.co.in</p>
+              {BRAND.phones[0] && <p className="text-muted-foreground mb-1">Mobile: {BRAND.phones[0]}</p>}
+              <p className="text-muted-foreground mb-1">Website: {SITE_HOST}</p>
+              {BRAND.email && <p className="text-muted-foreground">Mail: {BRAND.email}</p>}
             </div>
           </motion.div>
 
@@ -142,8 +149,8 @@ const Contact = () => {
               </h3>
             </div>
             <div className="ml-10">
-              <p className="text-muted-foreground mb-1">Monday-Saturday: 9:00 am - 8:00 pm </p>
-              <p className="text-muted-foreground">Sundays: 10:00 am - 6:00 pm </p>
+              <p className="text-muted-foreground mb-1">{BRAND.hours}</p>
+              <p className="text-muted-foreground">Online orders: 24 × 7</p>
             </div>
           </motion.div>
         </div>
@@ -224,26 +231,27 @@ const Contact = () => {
               transition={{ duration: 0.6 }}
               className="rounded-2xl overflow-hidden h-[550px] shadow-lg relative group"
             >
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2221.0993420701366!2d82.23309095095026!3d16.957824580737896!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a38290006734e2b%3A0x9f8b6cdf933bc2a!2sSreerastu%20silvers!5e0!3m2!1sen!2sin!4v1772431378848!5m2!1sen!2sin"
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-              
-              {/* Clickable Overlay to Open in Google Maps */}
-              <a
-                href="https://www.google.com/maps/place/Sreerastu+silvers/@16.957928,82.2329618,17.66z/data=!4m6!3m5!1s0x3a38290006734e2b:0x9f8b6cdf933bc2a!8m2!3d16.9577817!4d82.2346344!16s%2Fg%2F11xclhs7tw?entry=ttu&g_ep=EgoyMDI1MTIwOS4wIKXMDSoASAFQAw%3D%3D"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute top-4 right-4 z-10 bg-background/95 backdrop-blur-sm px-5 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 group-hover:scale-105"
-              >
-                <MapPin className="w-5 h-5 text-primary" />
-                <span className="text-sm font-medium text-foreground">Open in Google Maps</span>
-              </a>
+              {BRAND.mapEmbedUrl ? (
+                <iframe
+                  src={BRAND.mapEmbedUrl}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              ) : (
+                // No store location yet (online-only): same box, brand photo instead of a map.
+                <div className="relative h-full w-full">
+                  <img src="https://res.cloudinary.com/dcoimqij/image/upload/f_auto,q_auto,w_1200/v1790164203/ishaputrabotanicals/demo/skwawcwe23osyuspv5hf.jpg" alt={BRAND.name} className="h-full w-full object-cover" loading="lazy" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-charcoal/85 via-charcoal/20 to-transparent" />
+                  <div className="absolute bottom-8 left-8 right-8">
+                    <p className="text-xs uppercase tracking-[0.3em] text-highlight-soft mb-2">{BRAND.tagline}</p>
+                    <p className="text-2xl font-heading text-charcoal-foreground">Shipping across India</p>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>

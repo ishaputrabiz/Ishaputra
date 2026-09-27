@@ -326,7 +326,7 @@ const AdminSiteSettings = () => {
           <ListInput
             values={settings.phones || []}
             onChange={(v) => update('phones', v)}
-            placeholder="+91 6304960489"
+            placeholder="+91 98765 43210"
           />
         </Card>
         <Card title="Email addresses" subtitle="First email is shown in the footer." icon={Mail}>
@@ -452,7 +452,7 @@ const AdminSiteSettings = () => {
         <Input
           value={settings.copyrightSuffix || ''}
           onChange={(e) => update('copyrightSuffix', e.target.value)}
-          placeholder="Sreerasthu Silvers"
+          placeholder="Ishaputra Botanicals"
           className="bg-white dark:bg-gray-950"
         />
       </Card>

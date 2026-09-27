@@ -12,7 +12,7 @@ const ShippingPolicy = () => {
             {/* Introduction */}
             <section className={policySectionClassName}>
               <p className={policyBodyClassName}>
-                At Sreerasthu Silvers, we aim to deliver your jewellery safely and promptly.
+                At Ishaputra Botanicals, we aim to deliver your order safely and promptly.
               </p>
             </section>
 

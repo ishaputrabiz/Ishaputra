@@ -1,16 +1,12 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useRef, useEffect, useState, useMemo } from "react";
-import { 
-  Gem, 
-  Armchair, 
-  BookOpen, 
-  Gift, 
-  Flame, 
-  UserCircle,
-  Heart,
-  Home,
-  Landmark,
+import {
+  Zap,
+  Droplet,
+  Sparkles,
+  ShowerHead,
+  FlaskConical,
   MoreHorizontal,
   ChevronRight
 } from "lucide-react";
@@ -30,28 +26,19 @@ import { subscribeToCategories, Category } from "@/services/categoryService";
 
 /** Fallback order for the handful of categories that ship by default. */
 const CATEGORY_ORDER = [
-  'jewellery',
-  'furniture',
-  'articles',
-  'gifting',
-  'pooja-items',
-  'mens',
-  'wedding',
-  'others',
+  'energy-vitality',
+  'hair-care',
+  'skin-care',
+  'personal-care',
+  'ayurvedic-essentials',
 ];
 
 const ICON_MAP: Record<string, any> = {
-  jewellery: Gem,
-  furniture: Armchair,
-  articles: BookOpen,
-  gifting: Gift,
-  "pooja-items": Flame,
-  "pooja items": Flame,
-  mens: UserCircle,
-  "men's": UserCircle,
-  wedding: Heart,
-  artifacts: Landmark,
-  others: Home,
+  'energy-vitality': Zap,
+  'hair-care': Droplet,
+  'skin-care': Sparkles,
+  'personal-care': ShowerHead,
+  'ayurvedic-essentials': FlaskConical,
   more: MoreHorizontal,
 };
 

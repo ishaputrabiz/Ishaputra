@@ -1642,9 +1642,9 @@ const AccountPage = () => {
                       <div className="text-center py-12">
                         <Package className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-foreground mb-1">No orders yet!</h3>
-                        <p className="text-sm text-muted-foreground mb-6">Discover stunning silver jewellery crafted just for you</p>
+                        <p className="text-sm text-muted-foreground mb-6">Discover classical Ayurveda made for the modern man</p>
                         <button
-                          onClick={() => navigate('/category/jewellery')}
+                          onClick={() => navigate('/products')}
                           className="px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
                         >
                           ✨ Start Shopping
@@ -1781,7 +1781,7 @@ const AccountPage = () => {
               <div>
                 <h4 className="text-xl font-bold text-foreground">Order #: {selectedOrder.orderId}</h4>
                 <p className="text-base text-muted-foreground mt-2">
-                  {selectedOrder.items.length} Products | By sree rasthu silvers | {formatDate(selectedOrder.createdAt)}
+                  {selectedOrder.items.length} Products | By Ishaputra Botanicals | {formatDate(selectedOrder.createdAt)}
                 </p>
               </div>
 

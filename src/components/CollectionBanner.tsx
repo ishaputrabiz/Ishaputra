@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useInView } from "framer-motion";
-import collectionFallback from "@/assets/collection-banner.jpg";
+// Shown only until the admin sets a "collection-wide" home banner.
+const collectionFallback =
+  "https://res.cloudinary.com/dcoimqij/image/upload/v1790165192/ishaputrabotanicals/demo/jvogchddy0d1mgp0iztu.jpg";
 import {
   subscribeHomeBanners,
   type HomeBanner,
@@ -10,11 +12,11 @@ import { SmartImage } from "@/components/ui/smart-image";
 
 const FALLBACK: HomeBanner = {
   slot: "collection-wide",
-  eyebrow: "SREERASTHU SILVERS COLLECTION",
-  title: "Shop The Latest Jewellery",
-  subtitle: "Exceptional Handcrafted Design to Enhance the Magnificent Glow",
-  ctaLabel: "Shop Now",
-  ctaLink: "/category/jewellery",
+  eyebrow: "Rooted in Ayurveda",
+  title: "Built for the modern man",
+  subtitle: "Classical formulations, clean ingredients, made for everyday strength.",
+  ctaLabel: "Shop the range",
+  ctaLink: "/products",
   imageUrl: collectionFallback,
   active: true,
   order: 0,

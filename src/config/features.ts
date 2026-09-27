@@ -20,3 +20,11 @@
  * rewritten, only re-enabled.
  */
 export const DELIVERY_PARTNERS_ENABLED = false;
+
+/**
+ * Live metal-rate pricing (silver jewellery stores only): the header rate
+ * widget, Admin > Silver Rate, and the grams x rate calculator on the product
+ * form. Off for stores that sell at fixed prices; products without
+ * silverPricing.enabled already use their stored price everywhere.
+ */
+export const SILVER_PRICING_ENABLED = false;

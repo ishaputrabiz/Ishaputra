@@ -47,9 +47,9 @@ const CategoryShowcase = () => {
             <span className="h-px w-8 bg-primary/50" />
           </div>
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
-            Curated for every moment
+            Built for every routine
           </h2>
-          <p className="text-sm text-muted-foreground mt-2 font-light">Explore curated collections crafted with passion</p>
+          <p className="text-sm text-muted-foreground mt-2 font-light">Rituals for energy, hair, skin and grooming</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-5 auto-rows-[220px] md:auto-rows-[190px]">

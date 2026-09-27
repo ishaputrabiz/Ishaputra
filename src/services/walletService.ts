@@ -1,6 +1,6 @@
 // ============================================
 // WALLET SERVICE — Production-Grade
-// Sreerasthu Silvers eCommerce Platform
+// Ishaputra Botanicals eCommerce Platform
 // ============================================
 // ARCHITECTURE NOTES:
 // 1. Wallet balance is ALWAYS computed server-side via Firestore transactions

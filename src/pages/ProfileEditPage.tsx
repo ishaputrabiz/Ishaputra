@@ -260,7 +260,7 @@ const ProfileEditPage = () => {
             {/* Logo in banner */}
             <img
               src={darkLogo}
-              alt="Sreerasthu"
+              alt="Ishaputra Botanicals"
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-14 object-contain opacity-[0.08] pointer-events-none"
             />
           </div>
@@ -417,7 +417,7 @@ const ProfileEditPage = () => {
         </div>
 
         {/* App Version */}
-        <p className="text-center text-[10px] text-gray-400 dark:text-zinc-500 pb-2 mt-8">Sreerasthu Silvers v1.0.0</p>
+        <p className="text-center text-[10px] text-gray-400 dark:text-zinc-500 pb-2 mt-8">Ishaputra Botanicals v1.0.0</p>
         </div>
       </div>
 

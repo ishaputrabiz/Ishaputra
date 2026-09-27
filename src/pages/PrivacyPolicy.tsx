@@ -9,6 +9,7 @@ import {
 } from "@/components/PolicyPageLayout";
 import PolicyPageLayout from "@/components/PolicyPageLayout";
 import { SITE_HOST, SITE_URL } from "@/lib/siteUrl";
+import { BRAND } from "@/config/brand";
 
 const PrivacyPolicy = () => {
   return (
@@ -17,7 +18,7 @@ const PrivacyPolicy = () => {
             {/* Introduction */}
             <section className={policySectionClassName}>
               <p className={policyBodyClassName}>
-                Sreerasthu Silvers ("we", "our", "us") operates the website <a href={SITE_URL} className={policyLinkClassName}>{SITE_HOST}</a>.
+                Ishaputra Botanicals ("we", "our", "us") operates the website <a href={SITE_URL} className={policyLinkClassName}>{SITE_HOST}</a>.
                 We value your privacy and are committed to protecting your personal information.
               </p>
             </section>
@@ -92,14 +93,16 @@ const PrivacyPolicy = () => {
                 For any privacy-related concerns, contact:
               </p>
               <div className={policyCardClassName}>
-                <p className={policyBodyClassName}><strong className="text-foreground">Email:</strong> <a href="mailto:sreerasthusilvers@gmail.com" className={policyLinkClassName}>sreerasthusilvers@gmail.com</a></p>
-                <p className={`${policyBodyClassName} mt-2`}><strong className="text-foreground">Phone:</strong> +91 63049 60489</p>
+                <p className={policyBodyClassName}><strong className="text-foreground">Email:</strong> <a href={`mailto:${BRAND.email}`} className={policyLinkClassName}>{BRAND.email}</a></p>
+                {BRAND.phones[0] && (
+                  <p className={`${policyBodyClassName} mt-2`}><strong className="text-foreground">Phone:</strong> {BRAND.phones[0]}</p>
+                )}
                 <div className="mt-4">
                   <p className="font-semibold text-foreground">Address:</p>
-                  <p className={policyBodyClassName}>Sreerasthu Silvers</p>
-                  <p className={policyBodyClassName}>Ramasomayajulu St,</p>
-                  <p className={policyBodyClassName}>Rama Rao Peta, Kakinada,</p>
-                  <p className={policyBodyClassName}>Andhra Pradesh – 533001, India</p>
+                  <p className={policyBodyClassName}>{BRAND.legalName}</p>
+                  {BRAND.addressLines.map((line) => (
+                    <p key={line} className={policyBodyClassName}>{line}</p>
+                  ))}
                 </div>
               </div>
             </section>

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { getActiveProductsCached, useCatalogRevision } from "@/services/productCache";
 import { UIProduct, adaptFirebaseToUI } from "@/lib/productAdapter";
 import { SmartImage } from "@/components/ui/smart-image";
+import { BRAND } from '@/config/brand';
 
 // Speech Recognition types
 interface SpeechRecognitionEvent extends Event {
@@ -45,7 +46,7 @@ declare global {
   }
 }
 
-const SEARCH_HISTORY_KEY = "sreerasthu_search_history";
+const SEARCH_HISTORY_KEY = BRAND.storageKeys.searchHistory;
 const MAX_HISTORY = 10;
 
 const getSearchHistory = (): string[] => {
@@ -84,7 +85,7 @@ const MobileSearch = () => {
   const hasSpokenRef = useRef(false);
 
   // Popular/trending searches (static list for now)
-  const trendingSearches = ["Necklace", "Silver Ring", "Earrings", "Bracelet", "Pooja Items", "Silver Idols"];
+  const trendingSearches = ["Shilajit", "Ashwagandha", "Hair Oil", "Beard Oil", "Face Wash", "Herbal Tea"];
 
   // Focus input on mount
   useEffect(() => {

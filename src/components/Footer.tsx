@@ -120,7 +120,7 @@ const Footer = () => {
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
               <p className="text-[10px] uppercase tracking-[0.3em] text-highlight mb-3 font-medium">
-                The Sreerasthu Circle
+                The Ishaputra Circle
               </p>
               <h3 className="text-2xl md:text-3xl font-serif font-medium leading-tight">
                 Be the first to discover new collections & private offers.
@@ -156,7 +156,7 @@ const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-x-8 gap-y-10">
           {/* Brand & socials */}
           <div className="col-span-2">
-            <img src={darkModeLogo} alt="Sreerasthu Silvers" className="h-12 w-auto mb-5" />
+            <img src={darkModeLogo} alt="Ishaputra Botanicals" className="h-12 w-auto mb-5" />
             <p className="text-white/55 text-sm leading-relaxed mb-6 font-light max-w-sm">
               {settings.brandTagline}
             </p>
@@ -309,7 +309,7 @@ const Footer = () => {
         <div className="container-custom flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-white/40 font-light">
           <p>
             © {new Date().getFullYear()}{" "}
-            <span className="text-white/65 font-normal">{settings.copyrightSuffix || "Sreerasthu Silvers"}</span>. All Rights Reserved.
+            <span className="text-white/65 font-normal">{settings.copyrightSuffix || "Ishaputra Botanicals"}</span>. All Rights Reserved.
           </p>
           <p>
             Designed & Developed by{" "}

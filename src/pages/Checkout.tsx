@@ -490,7 +490,7 @@ const MobileCheckout = () => {
           shippingState: selectedAddress.state,
           couponCode: pricing.appliedCoupon?.code,
           receipt: orderId,
-          name: 'Sreerasthu Silvers',
+          name: 'Ishaputra Botanicals',
           description: `Order ${orderId}`,
           prefill: {
             name: userProfile?.username || user.displayName || selectedAddress.fullName,
@@ -612,7 +612,7 @@ const MobileCheckout = () => {
           </button>
           <img
             src={resolvedTheme === 'dark' ? '/white_logo.png' : '/black_logo.png'}
-            alt="Sreerasthu Silvers"
+            alt="Ishaputra Botanicals"
             className="h-9 w-auto object-contain"
           />
           <div className="w-8" />
@@ -1007,7 +1007,7 @@ const MobileCheckout = () => {
                   <ShoppingBag className="w-10 h-10 text-gray-400 dark:text-zinc-500" strokeWidth={1.5} />
                 </div>
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-zinc-100 mb-2" style={{ fontFamily: "var(--font-body)" }}>Your cart is empty</h2>
-                <p className="text-sm text-gray-500 dark:text-zinc-400 mb-6">Add some beautiful silver jewellery to get started</p>
+                <p className="text-sm text-gray-500 dark:text-zinc-400 mb-6">Add a daily ritual to get started</p>
                 <button
                   onClick={() => navigate('/')}
                   className="px-6 py-3 bg-primary text-white text-sm font-semibold rounded-full shadow-sm active:scale-95 transition-transform"
@@ -2176,7 +2176,7 @@ const Checkout = () => {
           shippingState: selectedAddress.state,
           couponCode: pricing.appliedCoupon?.code,
           receipt: orderId,
-          name: 'Sreerasthu Silvers',
+          name: 'Ishaputra Botanicals',
           description: `Order ${orderId}`,
           prefill: {
             name: userProfile?.username || user.displayName || selectedAddress.fullName,
@@ -2756,7 +2756,7 @@ const Checkout = () => {
                       <UnavailableTag reason={unavailable[item.id]} />
                       {item.category && (
                         <p className="text-sm text-muted-foreground mb-2">
-                          Sold by: Sreerasthu Silvers
+                          Sold by: Ishaputra Botanicals
                         </p>
                       )}
                       <div className="flex items-center gap-3">

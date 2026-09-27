@@ -1,5 +1,6 @@
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
+import { BRAND } from '@/config/brand';
 
 export type SocialPlatform =
   | 'facebook'
@@ -36,21 +37,20 @@ export interface FooterSettings {
 const SETTINGS_DOC = doc(db, 'siteSettings', 'footer');
 
 export const DEFAULT_FOOTER: FooterSettings = {
-  brandTagline:
-    'Your one-stop destination for premium silver jewelry, elegant furniture, exquisite articles, unique gift items, and sacred pooja items — crafted to celebrate every moment.',
-  addressLines: ['Ramasomayajulu street', 'Ramaraopeta, Kakinada, Andhra Pradesh, India, 533001'],
-  phones: ['+91 6304960489'],
-  emails: ['sreerasthusilvers@gmail.com'],
-  businessHours: 'Mon – Sat · 10:00 AM – 9:00 PM',
-  mapEmbedUrl:
-    'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2971.5777289331822!2d82.23205947387872!3d16.957781683857988!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a38290006734e2b%3A0x9f8b6cdf933bc2a!2sSreerastu%20silvers!5e1!3m2!1sen!2sin!4v1773164635883!5m2!1sen!2sin',
-  shopLinks: ['Rings', 'Earrings', 'Necklaces', 'Bracelets'],
-  categoryLinks: ['Jewellery', 'Furniture', 'Articles', 'Gifting', 'Pooja Items', "Men's", 'Wedding', 'Others'],
+  brandTagline: BRAND.description,
+  addressLines: [...BRAND.addressLines],
+  phones: [...BRAND.phones],
+  emails: BRAND.email ? [BRAND.email] : [],
+  businessHours: BRAND.hours,
+  mapEmbedUrl: BRAND.mapEmbedUrl,
+  shopLinks: ['Shilajit', 'Hair Oils', 'Face Serums', 'Beard Care'],
+  categoryLinks: ['Energy & Vitality', 'Hair Care', 'Skin Care', 'Personal Care', 'Ayurvedic Essentials'],
   socialLinks: [
-    { platform: 'facebook', url: 'https://www.facebook.com/sreerasthusilvers', active: true },
-    { platform: 'instagram', url: 'https://www.instagram.com/sreerasthu_silvers/', active: true },
+    { platform: 'instagram', url: BRAND.social.instagram, active: !!BRAND.social.instagram },
+    { platform: 'facebook', url: BRAND.social.facebook, active: !!BRAND.social.facebook },
+    { platform: 'youtube', url: BRAND.social.youtube, active: !!BRAND.social.youtube },
   ],
-  copyrightSuffix: 'Sreerasthu Silvers',
+  copyrightSuffix: BRAND.name,
 };
 
 export async function getFooterSettings(): Promise<FooterSettings> {
@@ -457,10 +457,10 @@ export interface CustomerSupportSettings {
 }
 
 export const DEFAULT_SUPPORT: CustomerSupportSettings = {
-  phone: '+91 6304960489',
-  email: 'sreerasthusilvers@gmail.com',
-  whatsapp: '+91 6304960489',
-  hours: 'Mon – Sat · 10:00 AM – 9:00 PM',
+  phone: BRAND.phones[0] || '',
+  email: BRAND.email,
+  whatsapp: BRAND.whatsapp,
+  hours: BRAND.hours,
   responseTime: 'Within 24 hours',
   faqs: [],
 };

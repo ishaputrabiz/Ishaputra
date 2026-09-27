@@ -368,7 +368,7 @@ const Login = () => {
           {/* Brand Logo */}
           <div className="flex justify-center mb-4">
             <Link to="/">
-              <img src={logo} alt="Sreerasthu Silvers" className="h-12 md:h-14 w-auto" />
+              <img src={logo} alt="Ishaputra Botanicals" className="h-12 md:h-14 w-auto" />
             </Link>
           </div>
 

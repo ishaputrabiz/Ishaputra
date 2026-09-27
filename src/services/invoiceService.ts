@@ -12,24 +12,21 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Order } from '@/services/orderService';
+import { BRAND } from '@/config/brand';
 
 // ---------------------------------------------------------------------------
 // Seller details — single source of truth for the invoice header.
 // ---------------------------------------------------------------------------
+// Values live in src/config/brand.ts; blanks are left off the invoice rather
+// than printed as placeholders.
 const SELLER = {
-  name: 'Sreerasthu Silvers',
-  addressLines: [
-    'Ramasomayajulu St, Rama Rao Peta',
-    'Kakinada, Andhra Pradesh 533001',
-    'India',
-  ],
-  state: 'Andhra Pradesh',
-  stateCode: '37',
-  phone: '+91 63049 60489',
-  email: 'support@sreerasthusilvers.com',
-  // GSTIN can be filled in once the business registers — kept blank to avoid
-  // printing placeholder values on a real invoice.
-  gstin: '',
+  name: BRAND.legalName,
+  addressLines: BRAND.addressLines,
+  state: BRAND.state,
+  stateCode: BRAND.stateCode,
+  phone: BRAND.phones[0] || '',
+  email: BRAND.email,
+  gstin: BRAND.gstin,
 } as const;
 
 const LOGO_URL = '/logo-new.png';
@@ -241,9 +238,9 @@ export const generateInvoicePDF = async (order: Order): Promise<void> => {
   const sellerLines = [
     SELLER.name,
     ...SELLER.addressLines,
-    `Phone: ${SELLER.phone}`,
-    `Email: ${SELLER.email}`,
-    `State Code: ${SELLER.stateCode}`,
+    ...(SELLER.phone ? [`Phone: ${SELLER.phone}`] : []),
+    ...(SELLER.email ? [`Email: ${SELLER.email}`] : []),
+    ...(SELLER.stateCode ? [`State Code: ${SELLER.stateCode}`] : []),
     ...(SELLER.gstin ? [`GSTIN: ${SELLER.gstin}`] : []),
   ];
   sellerLines.forEach((line, idx) => doc.text(line, sellerX, y + 5 + idx * 4));

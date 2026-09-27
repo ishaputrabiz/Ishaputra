@@ -123,7 +123,7 @@ const TrendProducts = () => {
             <h2 className="text-2xl md:text-3xl font-semibold text-foreground font-serif">
               New Arrivals
             </h2>
-            <p className="text-sm text-muted-foreground mt-1 font-light">Fresh designs crafted just for you</p>
+            <p className="text-sm text-muted-foreground mt-1 font-light">Fresh formulations, just in</p>
           </div>
           <button onClick={() => navigate('/products?tag=new-arrivals')} className="text-sm text-primary font-medium hover:underline underline-offset-4 flex items-center gap-1">
             View All <ChevronRight className="w-4 h-4" />
@@ -185,7 +185,7 @@ const TrendProducts = () => {
               <div className="w-full py-12 text-center">
                 <Package className="w-12 h-12 mx-auto mb-3 text-primary/40" />
                 <p className="text-base font-medium text-foreground/70 mb-1">New Arrivals Coming Soon</p>
-                <p className="text-sm text-muted-foreground">Fresh designs are on their way. Stay tuned!</p>
+                <p className="text-sm text-muted-foreground">New formulations are on their way. Stay tuned!</p>
               </div>
             ) : (
               <>
@@ -314,7 +314,7 @@ const TrendProducts = () => {
               <div className="w-full py-12 text-center">
                 <Package className="mx-auto mb-3 h-12 w-12 text-primary/40" />
                 <p className="mb-1 text-base font-medium text-foreground/70">New Arrivals Coming Soon</p>
-                <p className="text-sm text-muted-foreground">Fresh designs are on their way. Stay tuned!</p>
+                <p className="text-sm text-muted-foreground">New formulations are on their way. Stay tuned!</p>
               </div>
             ) : (
               <div className="group/new-arrivals relative overflow-hidden rounded-[28px] border border-border/60 bg-background/70 py-2 dark:border-highlight/12 dark:bg-white/[0.03]">

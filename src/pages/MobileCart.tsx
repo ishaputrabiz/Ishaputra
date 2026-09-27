@@ -136,7 +136,7 @@ const MobileCart = () => {
         </button>
         <img
           src={resolvedTheme === 'dark' ? '/white_logo.png' : '/black_logo.png'}
-          alt="Sreerasthu Silvers"
+          alt="Ishaputra Botanicals"
           className="h-9 w-auto object-contain"
         />
         <button className="p-2 -mr-2 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors">

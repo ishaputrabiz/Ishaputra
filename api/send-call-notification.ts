@@ -73,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ ok: true, notified: false, reason: 'no_tokens' });
     }
 
-    const callerName = String(body.callerName || '').trim().slice(0, 60) || 'Sreerasthu Silvers customer';
+    const callerName = String(body.callerName || '').trim().slice(0, 60) || 'Ishaputra Botanicals customer';
     const url = `/call/${callId}`;
     const response = await admin.messaging(app).sendEachForMulticast({
       tokens,

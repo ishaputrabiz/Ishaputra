@@ -15,7 +15,7 @@ import ShoppingCart from "@/components/ShoppingCart";
 import ProtectedRoute from "@/guards/ProtectedRoute";
 import AdminRoute from "@/guards/AdminRoute";
 import DeliveryRoute from "@/guards/DeliveryRoute";
-import { DELIVERY_PARTNERS_ENABLED } from "@/config/features";
+import { DELIVERY_PARTNERS_ENABLED, SILVER_PRICING_ENABLED } from "@/config/features";
 import DeliveryLightThemeWrapper from "@/components/DeliveryLightThemeWrapper";
 
 // Public Pages
@@ -344,7 +344,7 @@ const App = () => {
                 <Route path="home-collections" element={<AdminHomeCollections />} />
                 <Route path="videos" element={<AdminVideos />} />
                 <Route path="site-settings" element={<AdminSiteSettings />} />
-                <Route path="silver-rate" element={<AdminSilverRate />} />
+                {SILVER_PRICING_ENABLED && <Route path="silver-rate" element={<AdminSilverRate />} />}
                 <Route path="commerce-settings" element={<AdminCommerceSettings />} />
                 <Route path="marketing" element={<AdminNotifications />} />
                 <Route path="whatsapp" element={<AdminWhatsApp />} />

@@ -2,14 +2,14 @@ import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 
 const phrases = [
-  "The Iconic Collection",
-  "Color In Your Look",
-  "Elegant And Everlasting",
-  "Handcrafted Jewelry",
-  "Timeless Beauty",
-  "Premium Quality",
-  "Exclusive Designs",
-  "925 Pure Silver",
+  "Pure Wellness For A Stronger You",
+  "Rooted In Ayurveda",
+  "Classical Formulations",
+  "Clean Ingredients",
+  "Made For Men",
+  "Daily Rituals",
+  "Modern Botanical Science",
+  "Shilajit · Ashwagandha · Bhringraj",
 ];
 
 const MarqueeBand = () => {

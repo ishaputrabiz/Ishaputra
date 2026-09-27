@@ -14,7 +14,7 @@ const BrandWatermark = () => (
   <div className="flex items-center gap-2.5">
     <img
       src="/white_logo.png"
-      alt="Sreerasthu Silvers"
+      alt="Ishaputra Botanicals"
       className="h-8 w-auto object-contain drop-shadow-lg"
     />
   </div>
@@ -120,7 +120,7 @@ const VideoCallPage = () => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({
           callId: nextCallId,
-          callerName: user.displayName || user.email?.split('@')[0] || 'Sreerasthu Silvers customer',
+          callerName: user.displayName || user.email?.split('@')[0] || 'Ishaputra Botanicals customer',
         }),
       });
     } catch { /* non-critical */ }
@@ -400,7 +400,7 @@ const VideoCallPage = () => {
                 <span className="absolute inset-3 rounded-full border-2 border-highlight/28 animate-ping [animation-delay:300ms]" />
                 <span className="absolute inset-6 rounded-full border-2 border-highlight/42 animate-ping [animation-delay:600ms]" />
                 <div className="absolute inset-8 rounded-full bg-gradient-to-br from-highlight/70 to-highlight flex items-center justify-center shadow-xl shadow-highlight/13">
-                  <img src="/white_logo.png" alt="Sreerasthu Silvers" className="w-8 h-8 object-contain" />
+                  <img src="/white_logo.png" alt="Ishaputra Botanicals" className="w-8 h-8 object-contain" />
                 </div>
               </div>
               <p className="text-white/90 font-medium">Connecting to expert…</p>

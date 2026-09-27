@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
-import { Gem } from "lucide-react";
+import { Award } from "lucide-react";
 
 const phrases = [
-  "Free Shipping Over ₹20,000 For Members",
-  "Free Shipping Over ₹20,000 For Members",
-  "Free Shipping Over ₹20,000 For Members",
-  "Free Shipping Over ₹20,000 For Members",
+  "Earn Loyalty Points On Every Order",
+  "Delivery Across India",
+  "Secure Razorpay Checkout",
+  "Pure Wellness For A Stronger You",
 ];
 
 const FreeShippingBand = () => {
@@ -33,7 +33,7 @@ const FreeShippingBand = () => {
               <span className="text-sm font-light text-primary tracking-wide">
                 {phrase}
               </span>
-              <Gem className="w-3.5 h-3.5 text-primary/50 flex-shrink-0" />
+              <Award className="w-3.5 h-3.5 text-primary/50 flex-shrink-0" />
             </div>
           ))}
         </motion.div>

@@ -100,10 +100,10 @@ const Profile = () => {
           >
             <div className="relative z-10">
               <p className="text-xs mb-2 opacity-80">EXCLUSIVE OFFER</p>
-              <h3 className="text-xl font-bold mb-1">Premium Silver</h3>
+              <h3 className="text-xl font-bold mb-1">Energy &amp; Vitality</h3>
               <h3 className="text-xl font-bold mb-3">Collection</h3>
-              <p className="text-2xl font-bold text-highlight-soft mb-2">From ₹2,999*</p>
-              <p className="text-xs opacity-80">Pure 925 Sterling Silver</p>
+              <p className="text-2xl font-bold text-highlight-soft mb-2">From ₹799*</p>
+              <p className="text-xs opacity-80">Shilajit · Ashwagandha · Rasayanas</p>
             </div>
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mb-12"></div>

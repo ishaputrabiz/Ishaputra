@@ -11,6 +11,8 @@ import MobileHeader from "./MobileHeader";
 import OfferRibbon from "./offers/OfferRibbon";
 import ThemeToggle from "./ThemeToggle";
 import SilverRateWidget from "./SilverRateWidget";
+import LoyaltyPointsButton from "./LoyaltyPointsButton";
+import { SILVER_PRICING_ENABLED } from "@/config/features";
 import { SmartImage } from "@/components/ui/smart-image";
 
 const Header = () => {
@@ -125,7 +127,7 @@ const Header = () => {
           <div className="flex items-center justify-between gap-8 h-[68px]">
             {/* Logo */}
             <a href="/" className="flex items-center flex-shrink-0">
-              <img src={resolvedTheme === 'dark' ? darkModeLogo : lightModeLogo} alt="Sreerasthu Silvers" className="h-8 lg:h-10 w-auto" />
+              <img src={resolvedTheme === 'dark' ? darkModeLogo : lightModeLogo} alt="Ishaputra Botanicals" className="h-8 lg:h-10 w-auto" />
             </a>
 
             {/* Search Bar - Premium Style */}
@@ -137,7 +139,7 @@ const Header = () => {
                   </div>
                   <input
                     type="text"
-                    placeholder="Search for silver jewelry, furniture and more"
+                    placeholder="Search shilajit, hair oil, face wash and more"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => searchQuery && setShowSearchResults(true)}
@@ -239,8 +241,8 @@ const Header = () => {
 
             {/* Right Actions */}
             <div className="flex items-center gap-5 flex-shrink-0">
-              {/* Live silver rate */}
-              <SilverRateWidget variant="icon" />
+              {/* Live silver rate (metal stores) or loyalty points */}
+              {SILVER_PRICING_ENABLED ? <SilverRateWidget variant="icon" /> : <LoyaltyPointsButton />}
 
               {/* Theme Toggle */}
               <ThemeToggle />

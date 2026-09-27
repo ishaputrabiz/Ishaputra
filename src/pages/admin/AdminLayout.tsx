@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { onCatalogPublishFailure } from '@/services/catalogPublisher';
-import { DELIVERY_PARTNERS_ENABLED } from '@/config/features';
+import { DELIVERY_PARTNERS_ENABLED, SILVER_PRICING_ENABLED } from '@/config/features';
 import {
   LayoutDashboard,
   Package,
@@ -101,7 +101,7 @@ const AdminLayout = () => {
     { path: '/admin/gift-cards', icon: Gift, label: 'Gift Cards' },
     { path: '/admin/video-calls', icon: Video, label: 'Video Calls' },
     { path: '/admin/newsletter', icon: Mail, label: 'Newsletter' },
-    { path: '/admin/silver-rate', icon: Coins, label: 'Silver Rate' },
+    ...(SILVER_PRICING_ENABLED ? [{ path: '/admin/silver-rate', icon: Coins, label: 'Silver Rate' }] : []),
     { path: '/admin/commerce-settings', icon: Settings, label: 'Commerce' },
     { path: '/admin/image-prompts', icon: Sparkles, label: 'AI Prompts' },
     { path: '/admin/marketing', icon: Bell, label: 'Marketing' },
@@ -161,7 +161,7 @@ const AdminLayout = () => {
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-cream-dark dark:border-gray-800 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <img src={resolvedTheme === 'dark' ? darkModeLogo : lightModeLogo} alt="Sreerasthu Silvers" className="h-8 w-auto" />
+            <img src={resolvedTheme === 'dark' ? darkModeLogo : lightModeLogo} alt="Ishaputra Botanicals" className="h-8 w-auto" />
           </div>
           <button
             onClick={() => setSidebarOpen(false)}

@@ -1,31 +1,31 @@
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
-import { Package, Headphones, CalendarCheck, Gift } from "lucide-react";
+import { ShieldCheck, Headphones, Video, Award } from "lucide-react";
 
 const features = [
   {
     id: 1,
-    title: "Complimentary Shipping",
-    description: "Free shipping & returns on orders over ₹10,000.",
-    icon: Package,
+    title: "Secure Checkout",
+    description: "Pay safely with UPI, cards or netbanking via Razorpay.",
+    icon: ShieldCheck,
   },
   {
     id: 2,
-    title: "Sreerasthu At Your Service",
-    description: "Our client care experts are always here to help.",
+    title: "Ishaputra At Your Service",
+    description: "Real people, replying within a day.",
     icon: Headphones,
   },
   {
     id: 3,
-    title: "Book an Appointment",
-    description: "In-store or virtual appointments available.",
-    icon: CalendarCheck,
+    title: "Video Consultation",
+    description: "Talk to our wellness experts before you buy.",
+    icon: Video,
   },
   {
     id: 4,
-    title: "The Iconic Box",
-    description: "Every purchase wrapped in our signature packaging.",
-    icon: Gift,
+    title: "Rewards On Every Order",
+    description: "Earn loyalty points to use on your next ritual.",
+    icon: Award,
   },
 ];
 
@@ -41,7 +41,7 @@ const FeatureIcons = () => {
           <div className="flex items-center gap-2 mb-2">
             <span className="h-px w-8 bg-primary/50" />
             <span className="text-[10px] uppercase tracking-[0.32em] text-primary/80 font-medium">
-              The Sreerasthu Promise
+              The Ishaputra Promise
             </span>
             <span className="h-px w-8 bg-primary/50" />
           </div>

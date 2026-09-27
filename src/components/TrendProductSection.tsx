@@ -178,7 +178,7 @@ const TrendProductSection = () => {
               <h2 className="text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                 Trending Now
               </h2>
-              <p className="text-sm text-muted-foreground mt-1 font-light">What's hot and trending in silver</p>
+              <p className="text-sm text-muted-foreground mt-1 font-light">What men are reaching for this week</p>
             </div>
             <div className="flex items-center gap-3">
               <button

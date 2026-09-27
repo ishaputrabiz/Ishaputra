@@ -1,7 +1,7 @@
 // ============================================
 // WALLET & PAYMENT SYSTEM TYPES
 // Production-grade type definitions for
-// Sreerasthu Silvers eCommerce Platform
+// Ishaputra Botanicals eCommerce Platform
 // ============================================
 
 import { Timestamp } from 'firebase/firestore';

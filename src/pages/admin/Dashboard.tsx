@@ -154,7 +154,7 @@ const Dashboard = () => {
         <div className="relative flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-serif font-semibold text-gray-900" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Dashboard</h1>
-            <p className="text-gray-600 text-sm mt-1">Welcome back — here's what's happening at <span className="text-highlight font-medium">Sreerasthu Silvers</span> today.</p>
+            <p className="text-gray-600 text-sm mt-1">Welcome back — here's what's happening at <span className="text-highlight font-medium">Ishaputra Botanicals</span> today.</p>
           </div>
           <Link to="/admin/products/new">
             <Button className="bg-gradient-to-r from-highlight to-highlight hover:from-highlight hover:to-highlight/35 shadow-md">

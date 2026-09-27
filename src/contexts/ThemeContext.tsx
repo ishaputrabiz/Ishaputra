@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { BRAND } from '@/config/brand';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -18,7 +19,7 @@ export const useTheme = () => {
   return context;
 };
 
-const THEME_KEY = 'sreerasthu-theme';
+const THEME_KEY = BRAND.storageKeys.theme;
 
 function getSystemTheme(): 'light' | 'dark' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
