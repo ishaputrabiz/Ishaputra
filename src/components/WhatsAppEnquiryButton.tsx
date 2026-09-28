@@ -79,7 +79,7 @@ const WhatsAppEnquiryButton = ({ product, className = "" }: Props) => {
       target="_blank"
       rel="noopener noreferrer"
       whileTap={{ scale: 0.97 }}
-      className={`px-3 sm:px-5 py-3 font-medium text-xs sm:text-sm rounded-full border-2 border-[#25D366] text-[#128C7E] dark:text-[#25D366] hover:bg-[#25D366]/10 transition-all flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap ${className}`}
+      className={`px-3 sm:px-5 py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.14em] rounded-[6px] border border-[#25D366]/70 text-[#128C7E] dark:text-[#25D366] hover:bg-[#25D366]/10 transition-all flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap ${className}`}
     >
       <WhatsAppIcon className="w-4 h-4 shrink-0" />
       <span className="hidden sm:inline">Enquire on WhatsApp</span>

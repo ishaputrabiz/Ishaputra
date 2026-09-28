@@ -104,11 +104,8 @@ export interface UIProductDetail extends UIProduct {
   description?: string;
   images: string[];
   videos: string[];
-  specifications?: {
-    material?: string;
-    purity?: string;
-    dimensions?: string;
-  };
+  /** Free-form "label: value" pairs from the admin form (net quantity, key ingredients, how to use...). */
+  specifications?: Record<string, string | undefined>;
 }
 
 /**

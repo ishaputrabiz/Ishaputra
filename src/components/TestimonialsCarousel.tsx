@@ -89,15 +89,14 @@ const TestimonialsCarousel = () => {
   return (
     <section
       ref={ref}
-      className="relative overflow-hidden bg-charcoal py-16 md:py-24"
+      className="tx-slate relative overflow-hidden py-16 md:py-24"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
       {/* gold light from the top-left, deep shadow bottom-right */}
-      <div className="pointer-events-none absolute -left-40 -top-40 h-[560px] w-[560px] rounded-full bg-[radial-gradient(circle,hsl(var(--highlight)/0.22)_0%,transparent_62%)] blur-2xl" />
       <div className="pointer-events-none absolute -bottom-52 -right-24 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle,rgba(0,0,0,0.55)_0%,transparent_65%)] blur-2xl" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-highlight/60 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-highlight/40 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-highlight-soft/40 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-highlight-soft/25 to-transparent" />
 
       <div className="container-custom relative">
         <motion.div
@@ -106,9 +105,7 @@ const TestimonialsCarousel = () => {
           transition={{ duration: 0.6 }}
           className="mb-10 md:mb-14"
         >
-          <span className="flex items-center gap-2 text-[10px] uppercase tracking-[0.32em] text-highlight">
-            <span className="h-px w-8 bg-highlight/60" /> Testimonials
-          </span>
+          <p className="eyebrow-no on-dark"><b>09</b><span>Testimonials</span></p>
           <h2 className="mt-3 font-serif text-3xl leading-tight text-white md:text-[2.75rem]">
             What our clients say
           </h2>
@@ -127,7 +124,7 @@ const TestimonialsCarousel = () => {
           >
             <span
               aria-hidden
-              className="pointer-events-none absolute -top-16 -left-5 z-0 select-none font-serif text-[9rem] leading-none text-highlight/12 md:-top-24 md:-left-8 md:text-[13rem]"
+              className="pointer-events-none absolute -top-16 -left-5 z-0 select-none font-serif text-[9rem] leading-none text-highlight-soft/10 md:-top-24 md:-left-8 md:text-[13rem]"
             >
               &ldquo;
             </span>
@@ -202,12 +199,12 @@ const TestimonialsCarousel = () => {
                       aria-label={`Testimonial ${i + 1}`}
                       onClick={() => setIndex(i)}
                       className={`h-1 rounded-full transition-all duration-300 ${
-                        i === index ? "w-7 bg-highlight" : "w-1.5 bg-white/25 hover:bg-white/50"
+                        i === index ? "w-7 bg-highlight-soft" : "w-1.5 bg-white/25 hover:bg-white/50"
                       }`}
                     />
                   ))}
                 </span>
-                <span className="ml-auto font-serif text-xs text-white/35">
+                <span className="ml-auto text-[11px] font-bold tracking-[0.18em] tabular-nums text-white/35">
                   {String(index + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}
                 </span>
               </div>
@@ -221,12 +218,12 @@ const TestimonialsCarousel = () => {
             transition={{ duration: 0.7, delay: 0.2 }}
             className="lg:col-span-5"
           >
-            <div className="rounded-[26px] border border-highlight/20 bg-white/[0.03] p-6 backdrop-blur-sm md:p-8">
-              <p className="text-[10px] uppercase tracking-[0.3em] text-highlight/80">Why they come back</p>
+            <div className="rounded-[var(--radius-panel)] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm md:p-8">
+              <p className="eyebrow-no on-dark">Why they come back</p>
               <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-7">
                 {PROMISES.map((p) => (
                   <div key={p.label}>
-                    <dt className="font-serif text-2xl text-white md:text-[1.75rem]">{p.value}</dt>
+                    <dt className="font-serif text-2xl font-semibold tabular-nums text-highlight-soft md:text-[1.75rem]">{p.value}</dt>
                     <dd className="mt-1 text-[11px] uppercase tracking-[0.16em] leading-relaxed text-white/45">
                       {p.label}
                     </dd>

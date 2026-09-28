@@ -111,11 +111,11 @@ const ProductCard = ({ product, index = 0, onQuickView }: ProductCardProps) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="product-card group cursor-pointer border border-border rounded-xl p-2 lg:p-0 lg:border-0"
+      className="product-card card-product group cursor-pointer p-1.5 lg:p-2 flex flex-col"
       onClick={handleCardClick}
     >
       {/* Image Container */}
-      <div className="product-card-image relative bg-muted rounded-xl lg:rounded-2xl overflow-hidden aspect-square mb-2 lg:mb-3">
+      <div className="product-card-image tile-img relative overflow-hidden aspect-square mb-2.5 lg:mb-3">
         <SmartImage
           src={product.image}
           alt={product.alt || product.title}
@@ -127,7 +127,7 @@ const ProductCard = ({ product, index = 0, onQuickView }: ProductCardProps) => {
         {/* Wishlist Heart - Top Right */}
         <button
           onClick={handleWishlistClick}
-          className="absolute top-1.5 right-1.5 lg:top-2 lg:right-2 p-1.5 lg:p-2 bg-background/90 dark:bg-card/90 backdrop-blur-sm rounded-full shadow-md hover:bg-background transition-all"
+          className="absolute top-1.5 right-1.5 lg:top-2 lg:right-2 p-1.5 lg:p-2 bg-card/90 backdrop-blur-sm rounded-full border border-foreground/10 hover:border-primary/40 transition-all"
           aria-label={isInWishlist(product.id) ? "Remove from wishlist" : "Add to wishlist"}
         >
           <Heart 
@@ -141,14 +141,14 @@ const ProductCard = ({ product, index = 0, onQuickView }: ProductCardProps) => {
       </div>
 
       {/* Product Info */}
-      <div className="space-y-0.5 lg:space-y-1.5">
+      <div className="px-1 pb-1 space-y-0.5 lg:space-y-1.5 flex flex-col flex-1">
         {/* Category */}
-        <span className="text-[10px] lg:text-xs uppercase tracking-wider font-medium" style={{ color: 'hsl(var(--highlight))' }}>
+        <span className="text-[9px] lg:text-[10px] uppercase tracking-[0.2em] font-bold text-primary">
           {product.category}
         </span>
 
         {/* Title - Single Line with Ellipsis */}
-        <h4 className="font-medium text-xs lg:text-base leading-snug text-foreground truncate" style={{ fontFamily: "var(--font-body)" }}>
+        <h4 className="font-semibold text-xs lg:text-[15px] leading-snug text-foreground truncate" style={{ fontFamily: "var(--font-body)" }}>
           {product.title}
         </h4>
 
@@ -165,7 +165,7 @@ const ProductCard = ({ product, index = 0, onQuickView }: ProductCardProps) => {
                   ? "fill-highlight-soft text-highlight-soft"
                   : i < product.rating
                   ? "fill-charcoal-foreground text-highlight-soft"
-                  : "fill-gray-200 text-gray-400"
+                  : "fill-foreground/10 text-foreground/20"
               }`}
             />
           ))}
@@ -175,15 +175,15 @@ const ProductCard = ({ product, index = 0, onQuickView }: ProductCardProps) => {
         </div>
 
         {/* Price */}
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 lg:gap-2 pt-0.5 lg:pt-1">
-          <span className="text-sm lg:text-xl font-bold text-foreground">₹{displayPrice.toLocaleString('en-IN')}</span>
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 lg:gap-2 pt-0.5 lg:pt-1 pb-2.5 lg:pb-3">
+          <span className="price-now text-sm lg:text-lg">₹{displayPrice.toLocaleString('en-IN')}</span>
           {displayOldPrice && displayOldPrice > displayPrice && (
-            <span className="text-[10px] lg:text-sm text-muted-foreground line-through">
+            <span className="price-was text-[10px] lg:text-sm">
               ₹{displayOldPrice.toLocaleString('en-IN')}
             </span>
           )}
           {displayDiscount && (
-            <span className="basis-full lg:basis-auto text-[10px] lg:text-xs font-semibold text-highlight dark:text-highlight-soft">{displayDiscount}% Off</span>
+            <span className="chip-off">{displayDiscount}% off</span>
           )}
         </div>
 
@@ -191,7 +191,9 @@ const ProductCard = ({ product, index = 0, onQuickView }: ProductCardProps) => {
         {inCartQty > 0 ? (
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full mt-1 lg:mt-2 py-1.5 lg:py-2 px-2 bg-foreground/5 border border-border rounded-full flex items-center justify-between"
+            className="w-full !mt-auto"
+          >
+            <div className="py-1.5 px-1.5 border border-primary/40 rounded-[6px] flex items-center justify-between"
           >
             <button
               type="button"
@@ -201,11 +203,11 @@ const ProductCard = ({ product, index = 0, onQuickView }: ProductCardProps) => {
                 if (inCartQty <= 1 && cartItem) removeFromCart(cartItem.id);
                 else if (cartItem) updateQuantity(cartItem.id, inCartQty - 1);
               }}
-              className="w-7 h-7 rounded-full bg-background border border-border flex items-center justify-center hover:bg-muted"
+              className="w-7 h-7 rounded-[4px] bg-card border border-foreground/15 flex items-center justify-center hover:border-primary hover:text-primary transition-colors"
             >
               <Minus className="w-3 h-3" />
             </button>
-            <span className="text-xs lg:text-sm font-semibold">{inCartQty} in cart</span>
+            <span className="text-[10px] lg:text-[11px] font-bold uppercase tracking-[0.14em] text-primary">{inCartQty} in cart</span>
             <button
               type="button"
               aria-label="Increase quantity"
@@ -213,18 +215,19 @@ const ProductCard = ({ product, index = 0, onQuickView }: ProductCardProps) => {
                 e.stopPropagation();
                 if (cartItem) updateQuantity(cartItem.id, inCartQty + 1);
               }}
-              className="w-7 h-7 rounded-full bg-background border border-border flex items-center justify-center hover:bg-muted"
+              className="w-7 h-7 rounded-[4px] bg-card border border-foreground/15 flex items-center justify-center hover:border-primary hover:text-primary transition-colors"
             >
               <Plus className="w-3 h-3" />
             </button>
+            </div>
           </div>
         ) : (
           <button
             onClick={handleAddToCart}
-            className="w-full mt-1 lg:mt-2 py-1.5 lg:py-2.5 px-3 lg:px-4 bg-foreground/5 text-foreground text-[11px] lg:text-sm font-medium rounded-full hover:bg-foreground/10 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-1.5 lg:gap-2 border border-border"
+            className="w-full !mt-auto py-2 lg:py-2.5 px-3 lg:px-4 text-foreground text-[10px] lg:text-[11px] font-bold uppercase tracking-[0.16em] rounded-[6px] hover:bg-primary hover:border-primary hover:text-primary-foreground active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-1.5 lg:gap-2 border border-foreground/15"
           >
             <ShoppingBag className="w-3 h-3 lg:w-4 lg:h-4" />
-            Add to Cart
+            Add to cart
           </button>
         )}
       </div>

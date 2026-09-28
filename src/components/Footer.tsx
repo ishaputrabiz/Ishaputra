@@ -109,26 +109,25 @@ const Footer = () => {
   const categoryLinks = (settings.categoryLinks || []).filter(Boolean);
 
   return (
-    <footer className="relative bg-[#0e0e0e] dark:bg-card text-white overflow-hidden">
+    <footer className="tx-slate relative text-white overflow-hidden">
       {/* Decorative gold glow */}
-      <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-[640px] h-[640px] rounded-full bg-[radial-gradient(circle,hsl(var(--highlight)/0.18)_0%,transparent_60%)] blur-2xl" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-highlight/60 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-highlight-soft/40 to-transparent" />
 
       {/* ── Newsletter strip ── */}
       <div className="relative border-b border-white/10">
         <div className="container-custom py-10 md:py-12">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.3em] text-highlight mb-3 font-medium">
+              <p className="eyebrow-no on-dark mb-3">
                 The Ishaputra Circle
               </p>
-              <h3 className="text-2xl md:text-3xl font-serif font-medium leading-tight">
+              <h3 className="text-2xl md:text-3xl font-serif font-semibold leading-tight">
                 Be the first to discover new collections & private offers.
               </h3>
             </div>
             <form
               onSubmit={handleNewsletterSubmit}
-              className="flex w-full max-w-lg md:ml-auto rounded-full bg-white/5 backdrop-blur border border-white/10 p-1.5 focus-within:border-highlight/60 transition-colors overflow-hidden"
+              className="flex w-full max-w-lg md:ml-auto rounded-[8px] bg-white/5 backdrop-blur border border-white/15 p-1.5 focus-within:border-highlight-soft/70 transition-colors overflow-hidden"
             >
               <input
                 type="email"
@@ -141,7 +140,7 @@ const Footer = () => {
               <button
                 type="submit"
                 disabled={newsletterLoading}
-                className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full bg-highlight hover:bg-highlight disabled:opacity-60 text-black px-4 md:px-6 py-2.5 text-xs font-semibold tracking-wide transition-colors"
+                className="btn-copper flex-shrink-0 !px-4 md:!px-6 !py-2.5 disabled:opacity-60"
               >
                 <span className="hidden sm:inline">{newsletterLoading ? 'Subscribing…' : 'Subscribe'}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -172,7 +171,7 @@ const Footer = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={SOCIAL_LABELS[s.platform]}
-                      className="group relative w-10 h-10 rounded-full grid place-items-center bg-white/5 border border-white/10 hover:border-highlight hover:bg-highlight hover:text-black transition-all"
+                      className="group relative w-10 h-10 rounded-full grid place-items-center bg-white/5 border border-white/15 hover:border-primary hover:bg-primary hover:text-white transition-all"
                     >
                       <Icon className="w-4 h-4" />
                     </a>
@@ -184,13 +183,13 @@ const Footer = () => {
 
           {/* Shop */}
           <div>
-            <h4 className="font-serif font-medium mb-4 text-white text-sm tracking-wide">Shop</h4>
+            <h4 className="mb-5 text-[11px] font-bold uppercase tracking-[0.22em] text-highlight-soft">Shop</h4>
             <ul className="space-y-2.5">
               {shopLinks.map((name) => (
                 <li key={name}>
                   <Link
                     to={`/shop/${toSlug(name)}`}
-                    className="text-sm text-white/50 hover:text-highlight transition-colors font-light"
+                    className="text-sm text-white/50 hover:text-white transition-colors font-light"
                   >
                     {name}
                   </Link>
@@ -201,13 +200,13 @@ const Footer = () => {
 
           {/* Categories */}
           <div>
-            <h4 className="font-serif font-medium mb-4 text-white text-sm tracking-wide">Categories</h4>
+            <h4 className="mb-5 text-[11px] font-bold uppercase tracking-[0.22em] text-highlight-soft">Categories</h4>
             <ul className="space-y-2.5">
               {categoryLinks.map((name) => (
                 <li key={name}>
                   <Link
                     to={buildCategoryHref(name)}
-                    className="text-sm text-white/50 hover:text-highlight transition-colors font-light"
+                    className="text-sm text-white/50 hover:text-white transition-colors font-light"
                   >
                     {name}
                   </Link>
@@ -218,7 +217,7 @@ const Footer = () => {
 
           {/* Information */}
           <div>
-            <h4 className="font-serif font-medium mb-4 text-white text-sm tracking-wide">Information</h4>
+            <h4 className="mb-5 text-[11px] font-bold uppercase tracking-[0.22em] text-highlight-soft">Information</h4>
             <ul className="space-y-2.5">
               {[
                 { name: "Privacy Policy", path: "/privacy-policy" },
@@ -229,7 +228,7 @@ const Footer = () => {
                 <li key={link.name}>
                   <Link
                     to={link.path}
-                    className="text-sm text-white/50 hover:text-highlight transition-colors font-light"
+                    className="text-sm text-white/50 hover:text-white transition-colors font-light"
                   >
                     {link.name}
                   </Link>
@@ -240,11 +239,11 @@ const Footer = () => {
 
           {/* Contact */}
           <div className="col-span-2 md:col-span-1">
-            <h4 className="font-serif font-medium mb-4 text-white text-sm tracking-wide">Reach Us</h4>
+            <h4 className="mb-5 text-[11px] font-bold uppercase tracking-[0.22em] text-highlight-soft">Reach Us</h4>
             <ul className="space-y-3 text-sm text-white/55 font-light">
               {settings.addressLines?.length > 0 && (
                 <li className="flex gap-2.5">
-                  <MapPin className="w-4 h-4 text-highlight flex-shrink-0 mt-0.5" />
+                  <MapPin className="w-4 h-4 text-highlight-soft flex-shrink-0 mt-0.5" />
                   <span>
                     {settings.addressLines.map((line, i) => (
                       <span key={i} className="block leading-snug">{line}</span>
@@ -254,7 +253,7 @@ const Footer = () => {
               )}
               {settings.phones?.[0] && (
                 <li className="flex gap-2.5">
-                  <Phone className="w-4 h-4 text-highlight flex-shrink-0 mt-0.5" />
+                  <Phone className="w-4 h-4 text-highlight-soft flex-shrink-0 mt-0.5" />
                   <a
                     href={`tel:${settings.phones[0].replace(/\s+/g, "")}`}
                     className="hover:text-white transition-colors break-all"
@@ -265,7 +264,7 @@ const Footer = () => {
               )}
               {settings.emails?.[0] && (
                 <li className="flex gap-2.5">
-                  <Mail className="w-4 h-4 text-highlight flex-shrink-0 mt-0.5" />
+                  <Mail className="w-4 h-4 text-highlight-soft flex-shrink-0 mt-0.5" />
                   <a
                     href={`mailto:${settings.emails[0]}`}
                     className="hover:text-white transition-colors break-all"
@@ -276,7 +275,7 @@ const Footer = () => {
               )}
               {settings.businessHours && (
                 <li className="flex gap-2.5">
-                  <Clock className="w-4 h-4 text-highlight flex-shrink-0 mt-0.5" />
+                  <Clock className="w-4 h-4 text-highlight-soft flex-shrink-0 mt-0.5" />
                   <span>{settings.businessHours}</span>
                 </li>
               )}
@@ -287,7 +286,7 @@ const Footer = () => {
         {/* Map */}
         {settings.mapEmbedUrl && (
           <LazyMount
-            className="mt-12 rounded-2xl overflow-hidden border border-white/10"
+            className="mt-12 rounded-[var(--radius-card)] overflow-hidden border border-white/10"
             placeholder={<div className="h-[220px] w-full bg-white/5" />}
           >
             <iframe
@@ -305,6 +304,13 @@ const Footer = () => {
       </div>
 
       {/* ── Bottom bar ── */}
+      {/* Hollow wordmark, cropped by the bottom bar */}
+      <div aria-hidden className="pointer-events-none relative container-custom select-none overflow-hidden">
+        <p className="text-outline whitespace-nowrap text-center text-[15vw] font-bold uppercase leading-[0.8] opacity-25 md:text-[9.5vw] translate-y-[18%]" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
+          Ishaputra
+        </p>
+      </div>
+
       <div className="relative border-t border-white/10 py-5">
         <div className="container-custom flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-white/40 font-light">
           <p>
@@ -317,7 +323,7 @@ const Footer = () => {
               href="https://www.thedreamteamservices.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white/65 hover:text-highlight transition-colors font-normal whitespace-nowrap"
+              className="text-white/65 hover:text-white transition-colors font-normal whitespace-nowrap"
             >
               DREAM TEAM SERVICES
             </a>

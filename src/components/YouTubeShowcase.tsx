@@ -57,8 +57,8 @@ const InlinePlayer = ({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
           <div className="absolute inset-0 grid place-items-center">
-            <span className="relative grid place-items-center w-14 h-14 md:w-20 md:h-20 rounded-full bg-white/95 text-black shadow-2xl transition-transform group-hover:scale-110">
-              <span className="absolute inset-0 rounded-full animate-ping bg-white/40" />
+            <span className="relative grid place-items-center w-14 h-14 md:w-20 md:h-20 rounded-full bg-primary text-primary-foreground shadow-2xl transition-transform group-hover:scale-110">
+              <span className="absolute inset-0 rounded-full animate-ping bg-primary/40" />
               <Play className="w-5 h-5 md:w-7 md:h-7 ml-1 fill-current" />
             </span>
           </div>
@@ -139,20 +139,16 @@ const YouTubeShowcase = () => {
   const stripVideos = canScroll && videos.length > 1 ? [...videos, ...videos] : videos;
 
   return (
-    <section className="relative w-full py-14 md:py-24 bg-gradient-to-b from-background via-background to-cream dark:to-zinc-950 overflow-hidden">
+    <section className="relative w-full py-14 md:py-24 overflow-hidden">
       {/* gold ambient glow */}
-      <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-[radial-gradient(circle,hsl(var(--highlight)/0.12)_0%,transparent_60%)] blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 right-0 w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,hsl(var(--primary)/0.10)_0%,transparent_60%)] blur-3xl" />
 
       <div className="container-custom relative">
         {/* header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8 md:mb-10 px-1 md:px-0">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.32em] text-primary mb-3 font-medium flex items-center gap-2">
-              <YoutubeIcon className="w-3.5 h-3.5" /> Watch · Discover · Shop
-            </p>
+            <p className="eyebrow-no mb-3"><b>10</b><span>Watch · Discover · Shop</span></p>
             <h2
-              className="text-2xl md:text-4xl font-medium tracking-tight text-foreground"
+              className="text-2xl md:text-4xl font-semibold text-foreground"
               style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
             >
               The Ishaputra Film Reel
@@ -165,7 +161,7 @@ const YouTubeShowcase = () => {
             href="https://www.youtube.com/"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden md:inline-flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-foreground hover:text-primary transition-colors"
+            className="link-arrow hidden md:inline-flex"
           >
             View Channel <YoutubeIcon className="w-4 h-4" />
           </a>
@@ -182,8 +178,7 @@ const YouTubeShowcase = () => {
               featured.aspectRatio === "9:16" ? "max-w-[22rem] md:max-w-[26rem]" : "max-w-[72rem]"
             }`}
           >
-            <div className="absolute -inset-[2px] rounded-[26px] bg-gradient-to-br from-highlight via-highlight-soft to-highlight opacity-90 blur-[1px]" />
-            <div className="relative shadow-[0_30px_70px_-30px_rgba(0,0,0,0.55)] rounded-[24px] overflow-hidden">
+            <div className="relative panel overflow-hidden">
               <InlinePlayer
                 video={featured}
                 playing={playingIds.has(featured.id || featured.videoId)}
@@ -192,7 +187,7 @@ const YouTubeShowcase = () => {
                   setPlayingIds(prev => { const s = new Set(prev); s.delete(featured.id || featured.videoId); return s; });
                   openVideo(featured);
                 }}
-                rounded="rounded-[24px]"
+                rounded="rounded-[var(--radius-panel)]"
               />
               {!playingIds.has(featured.id || featured.videoId) && (
                 <>
@@ -243,7 +238,7 @@ const YouTubeShowcase = () => {
                 aria-label="Scroll videos left"
                 onClick={() => scrollByPage("prev")}
                 disabled={!canScroll}
-                className="w-8 h-8 md:w-10 md:h-10 rounded-full border border-border/70 bg-background/90 dark:bg-zinc-900/80 backdrop-blur flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-colors disabled:cursor-default disabled:opacity-40"
+                className="btn-round !h-8 !w-8 md:!h-10 md:!w-10"
               >
                 <ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </button>
@@ -252,7 +247,7 @@ const YouTubeShowcase = () => {
                 aria-label="Scroll videos right"
                 onClick={() => scrollByPage("next")}
                 disabled={!canScroll}
-                className="w-8 h-8 md:w-10 md:h-10 rounded-full border border-border/70 bg-background/90 dark:bg-zinc-900/80 backdrop-blur flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-colors disabled:cursor-default disabled:opacity-40"
+                className="btn-round !h-8 !w-8 md:!h-10 md:!w-10"
               >
                 <ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </button>
@@ -260,9 +255,7 @@ const YouTubeShowcase = () => {
           </div>
 
           <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 md:w-16 bg-gradient-to-r from-background to-transparent" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 md:w-16 bg-gradient-to-l from-background to-transparent" />
-
+                        
             <div
               ref={scrollerRef}
               className="flex items-stretch gap-3 md:gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 px-1"
@@ -280,7 +273,7 @@ const YouTubeShowcase = () => {
                     key={cardKey}
                     whileHover={{ y: -4 }}
                     transition={{ duration: 0.25 }}
-                    className={`group flex-shrink-0 snap-center text-left rounded-2xl overflow-hidden border-2 transition-all bg-card ${
+                    className={`group flex-shrink-0 snap-center text-left rounded-[var(--radius-card)] overflow-hidden border transition-all bg-card ${
                       // Phone cards are sized off the viewport so a reel is
                       // watchable, with the next one peeking to invite a swipe.
                       isPortrait
@@ -288,8 +281,8 @@ const YouTubeShowcase = () => {
                         : "w-[82vw] max-w-[340px] md:w-[320px]"
                     } ${
                       isFeaturedActive
-                        ? "border-primary shadow-[0_18px_36px_-18px_hsl(var(--highlight)/0.6)]"
-                        : "border-transparent shadow-md hover:shadow-xl"
+                        ? "border-primary shadow-[var(--shadow-card-hover)]"
+                        : "border-foreground/[0.07] hover:border-primary/35 hover:shadow-[var(--shadow-card-hover)]"
                     }`}
                   >
                     <div className="relative">
@@ -304,12 +297,12 @@ const YouTubeShowcase = () => {
                         rounded=""
                       />
                       {!isPlaying && v.featured && (
-                        <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-highlight/95 text-white text-[9px] uppercase tracking-[0.2em] font-semibold shadow">
+                        <span className="tag-dark absolute top-2 left-2 z-10">
                           ★ Featured
                         </span>
                       )}
                       {!isPlaying && isFeaturedActive && (
-                        <span className="absolute top-2 right-2 z-10 px-2 py-0.5 rounded-full bg-primary/95 text-white text-[9px] uppercase tracking-[0.22em] font-semibold">
+                        <span className="absolute top-2 right-2 z-10 rounded-[4px] bg-primary px-2 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-primary-foreground">
                           In Spotlight
                         </span>
                       )}

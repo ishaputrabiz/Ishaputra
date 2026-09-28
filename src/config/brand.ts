@@ -49,6 +49,19 @@ export const BRAND = {
     youtube: '',
   },
 
+  /**
+   * "Price range" filter on the Products page, in rupees (min inclusive, max
+   * exclusive). Sized to this catalogue (₹299 - ₹1,499 today); a jewellery
+   * store would use far wider bands.
+   */
+  priceRanges: [
+    { label: 'Under ₹400', min: 0, max: 400 },
+    { label: '₹400 – ₹700', min: 400, max: 700 },
+    { label: '₹700 – ₹1,000', min: 700, max: 1000 },
+    { label: '₹1,000 – ₹2,000', min: 1000, max: 2000 },
+    { label: 'Above ₹2,000', min: 2000, max: Infinity },
+  ],
+
   /** localStorage keys - prefixed per store so two stores on one device don't share state. */
   storageKeys: {
     theme: 'ishaputra-theme',

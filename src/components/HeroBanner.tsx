@@ -1,14 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { subscribeToActiveBanners, Banner } from "@/services/bannerService";
 import { useNavigate } from "react-router-dom";
 import { SmartImage } from "@/components/ui/smart-image";
 import { cldUrl } from "@/lib/cloudinaryUrl";
 
 /**
+ * Brand lines laid over the hero photos, one per slide in turn. Banner
+ * artwork should therefore be photography without baked-in text.
+ */
+const HERO_LINES = [
+  "Pure wellness\nfor a stronger you.",
+  "Classical Ayurveda,\nmodern routine.",
+  "Rooted in Ayurveda.\nBuilt for men.",
+];
+
+/**
  * Seamless looping hero carousel.
  *
- * Advances one banner at a time with a standard jewellery-site carousel feel.
+ * Full-bleed: the photo runs edge to edge, capped at the viewport height.
  * The first slide is cloned at the end of the track so looping from the last
  * banner back to the first does not produce a visible reset.
  */
@@ -162,10 +172,10 @@ const HeroBanner = () => {
 
   if (loading || !imagesReady) {
     return (
-      <section className="relative aspect-[4/5] lg:aspect-[16/9] lg:h-auto lg:mx-auto lg:max-w-[1400px] flex items-center justify-center bg-muted">
+      <section className="tx-slate relative flex aspect-[4/5] items-center justify-center lg:aspect-auto lg:h-[min(84vh,56.25vw)]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <span className="text-xs text-muted-foreground font-light tracking-wider">Loading</span>
+          <Loader2 className="w-6 h-6 animate-spin text-highlight-soft" />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-charcoal-foreground/60">Loading</span>
         </div>
       </section>
     );
@@ -173,19 +183,17 @@ const HeroBanner = () => {
 
   if (banners.length === 0) {
     return (
-      <section className="relative aspect-[4/5] lg:aspect-[16/9] lg:h-auto lg:mx-auto lg:max-w-[1400px] flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10">
+      <section className="tx-slate tx-contour relative flex aspect-[4/5] items-center justify-center lg:aspect-auto lg:h-[min(84vh,56.25vw)]">
         <div className="flex flex-col items-center gap-4 px-6 text-center">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-3xl">✨</span>
-          </div>
+          <img src="/loading_white.png" alt="" className="h-16 w-auto" />
           <h2
-            className="text-2xl md:text-3xl font-semibold text-foreground"
+            className="text-2xl md:text-4xl font-semibold text-charcoal-foreground"
             style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
           >
             Welcome to Ishaputra Botanicals
           </h2>
-          <p className="text-sm md:text-base text-muted-foreground max-w-md">
-            We're setting up our store with amazing collections. Stay tuned — something beautiful is on its way!
+          <p className="text-sm md:text-base text-charcoal-foreground/65 max-w-md">
+            Pure wellness for a stronger you. Our first rituals are on their way.
           </p>
         </div>
       </section>
@@ -210,9 +218,9 @@ const HeroBanner = () => {
 
         Phones keep their own 4:5 portrait crop from the mobile artwork.
       */}
-      <div className="relative px-3 pt-1 lg:mx-auto lg:max-w-[1400px] lg:px-4">
+      <div className="relative">
         <div
-          className="relative overflow-hidden rounded-[28px] shadow-[0_30px_80px_-55px_rgba(0,0,0,0.55)]"
+          className="relative overflow-hidden"
           onTouchStart={(e) => {
             touchStartXRef.current = e.touches[0]?.clientX ?? null;
             setIsPaused(true);
@@ -244,7 +252,7 @@ const HeroBanner = () => {
                 type="button"
                 key={`${banner.id || banner.imageUrl}-${idx}`}
                 onClick={() => handleBannerClick(banner)}
-                className="relative aspect-[4/5] w-full flex-shrink-0 cursor-pointer overflow-hidden bg-black text-left lg:aspect-[16/9] lg:h-auto"
+                className="group/hero relative aspect-[4/5] w-full flex-shrink-0 cursor-pointer overflow-hidden bg-charcoal text-left lg:aspect-auto lg:h-[min(84vh,56.25vw)]"
                 aria-label={`Hero banner ${((idx % banners.length) || 0) + 1}`}
               >
                 <picture>
@@ -258,18 +266,28 @@ const HeroBanner = () => {
                   <SmartImage
                     src={banner.imageUrl}
                     alt={`Hero banner ${((idx % banners.length) || 0) + 1}`}
-                    className="absolute inset-0 h-full w-full object-cover"
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-[2400ms] ease-out group-hover/hero:scale-[1.03]"
                     draggable={false}
                     preset="hero"
                     priority={idx === 0}
                   />
                 </picture>
-                <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/15 to-black/20 lg:from-black/55 lg:via-black/10 lg:to-black/25" />
-                <div className="absolute inset-x-0 bottom-0 top-auto p-5 lg:p-8">
-                  <div className="flex items-center gap-2">
-                    <span className="h-px w-8 bg-white/45" />
-                    <span className="text-[10px] uppercase tracking-[0.32em] text-white/70">Ishaputra Botanicals</span>
-                  </div>
+                {/* Legibility wash: rises from the bottom on phones, from the left on desktop */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/5 lg:bg-gradient-to-r lg:from-black/75 lg:via-black/30 lg:to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 px-6 pb-14 lg:inset-y-0 lg:right-auto lg:flex lg:w-[60%] lg:max-w-[820px] lg:flex-col lg:items-start lg:justify-end lg:px-16 lg:pb-24">
+                  <p className="eyebrow-no text-white/70 [&_b]:text-highlight-soft">
+                    <b>{String(((idx % banners.length) || 0) + 1).padStart(2, "0")}</b>
+                    <span>Ishaputra Botanicals</span>
+                  </p>
+                  <h2
+                    className="mt-4 whitespace-pre-line text-[32px] font-semibold leading-[1.02] text-white lg:text-[60px] xl:text-[68px]"
+                    style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)", letterSpacing: "-0.03em" }}
+                  >
+                    {HERO_LINES[(idx % banners.length) % HERO_LINES.length]}
+                  </h2>
+                  <span className="btn-line mt-6 w-fit text-white transition-colors group-hover/hero:bg-white group-hover/hero:text-charcoal lg:mt-8">
+                    Explore the range <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
                 </div>
               </button>
             ))}
@@ -281,7 +299,7 @@ const HeroBanner = () => {
                 type="button"
                 onClick={goToPrev}
                 aria-label="Previous banner"
-                className="absolute left-3 top-1/2 z-10 hidden -translate-y-1/2 sm:grid h-10 w-10 place-items-center rounded-full bg-black/30 text-white backdrop-blur-md transition hover:bg-black/50"
+                className="btn-round absolute right-20 bottom-8 z-10 hidden border-white/30 bg-black/25 text-white hover:!border-white hover:!text-white lg:inline-flex"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
@@ -289,7 +307,7 @@ const HeroBanner = () => {
                 type="button"
                 onClick={goToNext}
                 aria-label="Next banner"
-                className="absolute right-3 top-1/2 z-10 hidden -translate-y-1/2 sm:grid h-10 w-10 place-items-center rounded-full bg-black/30 text-white backdrop-blur-md transition hover:bg-black/50"
+                className="btn-round absolute right-8 bottom-8 z-10 hidden border-white/30 bg-black/25 text-white hover:!border-white hover:!text-white lg:inline-flex"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
@@ -297,14 +315,14 @@ const HeroBanner = () => {
           )}
 
           {hasMultipleBanners && (
-            <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full bg-transparent px-2 py-1 lg:bottom-5">
+            <div className="absolute bottom-5 left-6 z-10 flex items-center gap-2 lg:bottom-11 lg:left-auto lg:right-36">
               {banners.map((_, index) => (
                 <button
                   key={`hero-dot-${index}`}
                   type="button"
                   onClick={() => jumpToSlide(index)}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    activeDotIndex === index ? "w-8 bg-white" : "w-1.5 bg-white/45"
+                  className={`h-[2px] rounded-full transition-all duration-500 ${
+                    activeDotIndex === index ? "w-10 bg-highlight-soft" : "w-5 bg-white/40 hover:bg-white/70"
                   }`}
                   aria-label={`Go to banner ${index + 1}`}
                 />

@@ -119,7 +119,7 @@ const Header = () => {
       <header
         className={`hidden lg:block sticky top-0 z-50 transition-all duration-500 ${
           isScrolled
-            ? "bg-background/98 backdrop-blur-xl shadow-[0_1px_0_rgba(0,0,0,0.06)] dark:shadow-[0_1px_0_rgba(255,255,255,0.06)]"
+            ? "bg-background/95 backdrop-blur-xl shadow-[0_1px_0_rgba(0,0,0,0.06)] dark:shadow-[0_1px_0_rgba(255,255,255,0.06)]"
             : "bg-background"
         }`}
       >

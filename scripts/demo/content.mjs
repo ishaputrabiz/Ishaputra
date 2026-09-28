@@ -224,14 +224,15 @@ Object.assign(COLLECTIONS[2], { photo: 8102135 }); // Skin
 Object.assign(COLLECTIONS[3], { photo: 9456810 }); // Grooming
 Object.assign(COLLECTIONS[4], { photo: 4242242 }); // Ayurveda
 
-COLLECTION_BANNER.photo = 678414;
+// Apothecary vials by candlelight (was a spice-bowl flat lay: too generic-Ayurveda).
+COLLECTION_BANNER.photo = 7978130;
 
 /** Photos the page code uses directly (About, Contact, Wishlist). */
 export const PAGE_PHOTOS = {
   'about-hero': { photo: 8330249, size: 'heroDesktop' },
   'about-story-a': { photo: 7797851, size: 'collection' },
   'about-story-b': { photo: 4242242, size: 'collection' },
-  'about-collection': { photo: 678414, size: 'wide' },
+  'about-collection': { photo: 7978130, size: 'wide' },
   'about-craft': { photo: 8666804, size: 'wide' },
   'about-ritual': { photo: 12098225, size: 'showcase' },
   'about-classical': { photo: 5480235, size: 'collection' },

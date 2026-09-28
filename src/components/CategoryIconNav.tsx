@@ -172,8 +172,8 @@ const CategoryIconNav = () => {
                 transition={{ delay: index * 0.04 }}
                 className={`group flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 min-w-fit flex-shrink-0 transition-all duration-200 ${
                   isActive
-                    ? "border-primary/30 bg-primary/10 text-primary shadow-[0_8px_18px_-14px_hsl(var(--primary)/0.65)]"
-                    : "border-border/70 bg-background text-muted-foreground"
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-foreground/10 bg-card/60 text-foreground/70"
                 }`}
               >
                 <div className={`grid place-items-center rounded-full w-7 h-7 transition-colors duration-200 ${
@@ -223,10 +223,10 @@ const CategoryIconNav = () => {
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.03 }}
-                    className={`flex items-center gap-2 px-4 py-3 whitespace-nowrap text-[13px] font-medium transition-all duration-200 relative group border-b-2 ${
+                    className={`flex items-center gap-2 px-4 py-3.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.16em] transition-all duration-200 relative group border-b-2 ${
                       isActive
                         ? "text-primary border-primary"
-                        : "text-muted-foreground hover:text-foreground border-transparent hover:border-border"
+                        : "text-foreground/60 hover:text-foreground border-transparent hover:border-primary/40"
                     }`}
                   >
                     <Icon className={`w-4 h-4 transition-colors duration-200 ${
@@ -243,7 +243,7 @@ const CategoryIconNav = () => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 4 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute top-full left-0 z-50 min-w-[220px] bg-background border border-border rounded-xl shadow-xl py-2 mt-0"
+                        className="tx-paper panel absolute top-full left-0 z-50 min-w-[240px] py-2 mt-0"
                         onMouseEnter={() => handleMouseEnter(category.name)}
                         onMouseLeave={handleMouseLeave}
                       >
@@ -254,7 +254,7 @@ const CategoryIconNav = () => {
                                 setHoveredCategory(null);
                                 navigate(`/category/${categorySlug}?sub=${sub.slug}`);
                               }}
-                              className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
+                              className="w-full flex items-center justify-between px-5 py-2.5 text-sm text-foreground hover:text-primary hover:bg-foreground/[0.04] transition-colors text-left"
                             >
                               <span>{sub.name}</span>
                               {sub.children && sub.children.length > 0 && (

@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { Award } from "lucide-react";
 
 const phrases = [
   "Earn Loyalty Points On Every Order",
@@ -12,7 +11,7 @@ const FreeShippingBand = () => {
   const duplicatedPhrases = [...phrases, ...phrases, ...phrases];
 
   return (
-    <section className="hidden md:block py-3.5 bg-primary/10 border-y border-primary/10 overflow-hidden">
+    <section className="hidden md:block py-3.5 tx-sheet border-y border-foreground/[0.08] overflow-hidden">
       <div className="relative">
         <motion.div
           className="flex items-center gap-12 whitespace-nowrap"
@@ -30,10 +29,10 @@ const FreeShippingBand = () => {
         >
           {duplicatedPhrases.map((phrase, index) => (
             <div key={index} className="flex items-center gap-12">
-              <span className="text-sm font-light text-primary tracking-wide">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-foreground/70">
                 {phrase}
               </span>
-              <Award className="w-3.5 h-3.5 text-primary/50 flex-shrink-0" />
+              <span className="sep-diamond !bg-primary/70" />
             </div>
           ))}
         </motion.div>

@@ -44,15 +44,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSilverRate, computeSilverOriginalPrice } from "@/contexts/SilverRateContext";
 import { SmartImage } from "@/components/ui/smart-image";
+import { BRAND } from "@/config/brand";
 
 // ─── helpers ──────────────────────────────────────────
-const priceRanges = [
-  { label: "Under ₹5,000", min: 0, max: 5000 },
-  { label: "₹5,000 – ₹15,000", min: 5000, max: 15000 },
-  { label: "₹15,000 – ₹50,000", min: 15000, max: 50000 },
-  { label: "₹50,000 – ₹1,00,000", min: 50000, max: 100000 },
-  { label: "Above ₹1,00,000", min: 100000, max: Infinity },
-];
+const priceRanges = BRAND.priceRanges;
 
 const sortOptions = [
   { value: "recent", label: "Newest First" },
@@ -95,10 +90,10 @@ const CategoryProductCard = memo(function CategoryProductCard({
     ? (product.oldPrice ?? null)
     : null;
   return (
-    <div className="group bg-card rounded-xl border border-border overflow-hidden hover:shadow-lg transition-all duration-300">
+    <div className="card-product group overflow-hidden p-1.5 sm:p-2 flex flex-col">
       {/* Image */}
       <div
-        className="relative aspect-square overflow-hidden cursor-pointer"
+        className="tile-img relative aspect-square overflow-hidden cursor-pointer"
         onClick={() => onOpen(product.id)}
       >
         <SmartImage
@@ -106,7 +101,7 @@ const CategoryProductCard = memo(function CategoryProductCard({
           alt={product.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" preset="card" />
         {product.badge && (
-          <span className="absolute top-2 left-2 bg-primary/90 text-white text-[9px] font-semibold px-1.5 py-0.5 rounded">
+          <span className="tag-dark absolute top-2 left-2">
             {product.badge}
           </span>
         )}
@@ -115,7 +110,7 @@ const CategoryProductCard = memo(function CategoryProductCard({
             e.stopPropagation();
             onToggleWishlist(product, wishlisted);
           }}
-          className="absolute top-2 right-2 z-10 w-7 h-7 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm"
+          className="absolute top-2 right-2 z-10 w-8 h-8 bg-card/90 backdrop-blur-sm rounded-full flex items-center justify-center border border-foreground/10 hover:border-primary/40 transition-colors"
         >
           <Heart
             className={`w-3.5 h-3.5 ${wishlisted ? "fill-red-500 text-red-500" : "text-foreground/70"}`}
@@ -124,9 +119,9 @@ const CategoryProductCard = memo(function CategoryProductCard({
       </div>
 
       {/* Info */}
-      <div className="p-3 space-y-1">
+      <div className="px-1.5 pt-3 pb-1 space-y-1.5 flex flex-col flex-1">
         <h3
-          className="text-sm font-medium text-foreground line-clamp-1 cursor-pointer hover:text-primary"
+          className="text-[13px] sm:text-sm font-semibold text-foreground line-clamp-1 cursor-pointer hover:text-primary transition-colors"
           onClick={() => onOpen(product.id)}
         >
           {product.title}
@@ -139,7 +134,7 @@ const CategoryProductCard = memo(function CategoryProductCard({
                 <Star key={i} className={`w-3 h-3 ${
                   i < Math.floor(product.rating) ? "fill-highlight-soft text-highlight-soft"
                   : i < product.rating ? "fill-charcoal-foreground text-highlight-soft"
-                  : "fill-gray-200 text-gray-400"
+                  : "fill-foreground/10 text-foreground/20"
                 }`} />
               ))}
               <span className="text-xs text-muted-foreground">({product.reviews})</span>
@@ -147,31 +142,31 @@ const CategoryProductCard = memo(function CategoryProductCard({
           ) : (
             <>
               {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-3 h-3 fill-gray-200 text-gray-400" />
+                <Star key={i} className="w-3 h-3 fill-foreground/10 text-foreground/20" />
               ))}
             </>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="text-sm font-bold text-foreground">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pb-3">
+          <span className="price-now text-[15px]">
             ₹{displayPrice.toLocaleString("en-IN")}
           </span>
           {displayOldPrice && displayOldPrice > product.price && (
-            <span className="text-xs text-muted-foreground line-through">
+            <span className="price-was text-xs">
               ₹{displayOldPrice.toLocaleString("en-IN")}
             </span>
           )}
           {displayDiscount && (
-            <span className="basis-full text-xs font-semibold text-highlight dark:text-highlight-soft">
-              {displayDiscount}% Off
+            <span className="chip-off">
+              {displayDiscount}% off
             </span>
           )}
         </div>
         <button
           onClick={() => onAddToCart(product)}
-          className="w-full mt-2 py-2 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors"
+          className="w-full !mt-auto py-2.5 rounded-[6px] border border-foreground/15 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground hover:bg-primary hover:border-primary hover:text-primary-foreground transition-colors"
         >
-          Add to Cart
+          Add to cart
         </button>
       </div>
     </div>
@@ -528,14 +523,14 @@ const CategoryPage = () => {
       {/* Subcategories */}
       {currentCategory && visibleSubOptions.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">
+          <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.24em] mb-3">
             Subcategories
           </h3>
           <div className="space-y-1">
             <button
               onClick={() => { setFilter("sub", ""); setMobileFiltersOpen(false); }}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                !activeSub ? "bg-primary text-white" : "text-foreground/80 hover:bg-muted"
+              className={`w-full text-left px-3 py-2 rounded-[6px] text-sm transition-colors ${
+                !activeSub ? "bg-primary/10 text-primary font-semibold shadow-[inset_2px_0_0_hsl(var(--primary))]" : "text-foreground/80 hover:bg-foreground/[0.05]"
               }`}
             >
               All {currentCategory.name}
@@ -551,14 +546,14 @@ const CategoryPage = () => {
                 <div className="flex items-center">
                   <button
                     onClick={() => { setFilter("sub", sub.slug); setMobileFiltersOpen(false); }}
-                    className={`flex-1 text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between gap-2 ${
+                    className={`flex-1 text-left px-3 py-2 rounded-[6px] text-sm transition-colors flex items-center justify-between gap-2 ${
                       activeSub === sub.slug
-                        ? "bg-primary text-white"
-                        : "text-foreground/80 hover:bg-muted"
+                        ? "bg-primary/10 text-primary font-semibold shadow-[inset_2px_0_0_hsl(var(--primary))]"
+                        : "text-foreground/80 hover:bg-foreground/[0.05]"
                     }`}
                   >
                     <span>{sub.name}</span>
-                    <span className={`text-[11px] ${activeSub === sub.slug ? "text-white/70" : "text-muted-foreground"}`}>
+                    <span className={`text-[11px] ${activeSub === sub.slug ? "text-primary/70" : "text-muted-foreground"}`}>
                       {subCounts.counts.get(sub.slug) || 0}
                     </span>
                   </button>
@@ -591,7 +586,7 @@ const CategoryPage = () => {
                             setFilters({ sub: sub.slug, subsub: child.slug });
                             setMobileFiltersOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center justify-between gap-2 ${
+                          className={`w-full text-left px-3 py-1.5 rounded-[6px] text-xs transition-colors flex items-center justify-between gap-2 ${
                             activeSubSub === child.slug
                               ? "bg-primary/10 text-primary font-medium"
                               : "text-muted-foreground hover:bg-muted"
@@ -615,7 +610,7 @@ const CategoryPage = () => {
 
       {/* Price Range */}
       <div>
-        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">
+        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.24em] mb-3">
           Price Range
         </h3>
         <div className="space-y-1">
@@ -626,10 +621,10 @@ const CategoryPage = () => {
                 setFilter("price", activePriceIdx === String(idx) ? "" : String(idx));
                 setMobileFiltersOpen(false);
               }}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`w-full text-left px-3 py-2 rounded-[6px] text-sm transition-colors ${
                 activePriceIdx === String(idx)
-                  ? "bg-primary text-white"
-                  : "text-foreground/80 hover:bg-muted"
+                  ? "bg-primary/10 text-primary font-semibold shadow-[inset_2px_0_0_hsl(var(--primary))]"
+                  : "text-foreground/80 hover:bg-foreground/[0.05]"
               }`}
             >
               {range.label}
@@ -642,7 +637,7 @@ const CategoryPage = () => {
       {activeFilterCount > 0 && (
         <button
           onClick={() => { clearAllFilters(); setMobileFiltersOpen(false); }}
-          className="w-full text-center py-2 text-sm text-primary hover:underline"
+          className="link-arrow mx-auto !flex w-fit"
         >
           Clear All Filters
         </button>
@@ -698,20 +693,23 @@ const CategoryPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen tx-paper flex flex-col">
       <Header />
       <CategoryIconNav />
 
       {/* Back button + title bar */}
-      <div className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+      <div className="tx-sheet tx-contour overflow-hidden border-b border-foreground/[0.08]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 lg:py-10 flex items-center lg:items-end gap-3 lg:gap-5">
           <button
             onClick={() => navigate(-1)}
-            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+            aria-label="Go back"
+            className="btn-round !h-9 !w-9 lg:!h-11 lg:!w-11 flex-shrink-0"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5" />
           </button>
-          <h1 className="text-lg font-semibold text-foreground">
+          <div className="min-w-0">
+          <p className="eyebrow-no mb-2 hidden lg:inline-flex"><b>{String(filteredProducts.length).padStart(2, "0")}</b><span>{showAll ? "The full range" : tagMeta ? "Curated" : "Collection"}</span></p>
+          <h1 className="text-lg lg:text-5xl font-semibold text-foreground leading-tight lg:block" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
             {currentCategory?.name || tagMeta?.label || "Products"}
             {activeSub && currentCategory && (
               <span className="text-muted-foreground font-normal">
@@ -720,21 +718,22 @@ const CategoryPage = () => {
               </span>
             )}
           </h1>
+          </div>
         </div>
       </div>
 
       {/* Mobile: Sort + Filter bar */}
-      <div className="lg:hidden sticky top-0 z-30 bg-background border-b border-border">
+      <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-foreground/[0.08]">
         <div className="flex items-center justify-between px-4 py-3">
-          <h1 className="text-lg font-bold text-foreground">
-            {currentCategory?.name || tagMeta?.label || "Products"}
-          </h1>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""}
+          </p>
           <div className="flex gap-2">
             {/* Sort */}
             <div className="relative">
               <button
                 onClick={() => setShowSortDropdown(!showSortDropdown)}
-                className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-xs font-medium text-foreground/80"
+                className="flex items-center gap-1.5 px-3.5 py-2 border border-foreground/15 rounded-[6px] text-[10px] font-bold uppercase tracking-[0.16em] text-foreground/85"
               >
                 Sort
                 <ChevronDown className="w-3 h-3" />
@@ -742,7 +741,7 @@ const CategoryPage = () => {
               {showSortDropdown && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowSortDropdown(false)} />
-                  <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg py-1 z-20 min-w-[160px]">
+                  <div className="tx-sheet absolute right-0 top-full mt-1.5 border border-foreground/10 rounded-[8px] shadow-[var(--shadow-panel)] py-1 z-20 min-w-[180px]">
                     {sortOptions.map((opt) => (
                       <button
                         key={opt.value}
@@ -752,7 +751,7 @@ const CategoryPage = () => {
                         }}
                         className={`w-full text-left px-4 py-2 text-sm ${
                           activeSortBy === opt.value
-                            ? "text-primary font-medium bg-primary/10"
+                            ? "text-primary font-semibold bg-primary/10"
                             : "text-foreground/80 hover:bg-muted"
                         }`}
                       >
@@ -767,7 +766,7 @@ const CategoryPage = () => {
             {/* Filter button (mobile) */}
             <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
               <SheetTrigger asChild>
-                <button className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-xs font-medium text-foreground/80 relative">
+                <button className="flex items-center gap-1.5 px-3.5 py-2 border border-foreground/15 rounded-[6px] text-[10px] font-bold uppercase tracking-[0.16em] text-foreground/85 relative">
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                   Filters
                   {activeFilterCount > 0 && (
@@ -777,7 +776,7 @@ const CategoryPage = () => {
                   )}
                 </button>
               </SheetTrigger>
-              <SheetContent side="bottom" className="h-[75vh] rounded-t-2xl">
+              <SheetContent side="bottom" className="tx-sheet h-[75vh] rounded-t-[var(--radius-panel)]">
                 <SheetHeader>
                   <SheetTitle>Filters</SheetTitle>
                 </SheetHeader>
@@ -792,13 +791,13 @@ const CategoryPage = () => {
         {activeFilterCount > 0 && (
           <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-hide">
             {activeSub && (
-              <span className="flex items-center gap-1 bg-primary/10 text-primary text-xs px-3 py-1 rounded-full whitespace-nowrap">
+              <span className="flex items-center gap-1 border border-primary/40 text-primary text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
                 {currentCategory?.subcategories.find((s) => s.slug === activeSub)?.name}
                 <X className="w-3 h-3 cursor-pointer" onClick={() => setFilter("sub", "")} />
               </span>
             )}
             {activePriceIdx && (
-              <span className="flex items-center gap-1 bg-primary/10 text-primary text-xs px-3 py-1 rounded-full whitespace-nowrap">
+              <span className="flex items-center gap-1 border border-primary/40 text-primary text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
                 {priceRanges[parseInt(activePriceIdx)]?.label}
                 <X className="w-3 h-3 cursor-pointer" onClick={() => setFilter("price", "")} />
               </span>
@@ -821,7 +820,7 @@ const CategoryPage = () => {
                 /* Collapsed rail */
                 <button
                   onClick={() => setDesktopFiltersCollapsed(false)}
-                  className="group w-10 h-10 mx-auto flex items-center justify-center rounded-lg border border-border bg-background hover:bg-primary/10 hover:border-primary/40 transition-colors"
+                  className="btn-round group relative mx-auto !flex"
                   aria-label="Show filters"
                   title="Show filters"
                 >
@@ -833,9 +832,9 @@ const CategoryPage = () => {
                   )}
                 </button>
               ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-foreground">Filters</h2>
+                <div className="panel tx-sheet space-y-2 p-5">
+                  <div className="flex items-center justify-between mb-5 pb-4 border-b border-foreground/[0.08]">
+                    <h2 className="text-xs font-bold uppercase tracking-[0.24em] text-foreground">Filters</h2>
                     <button
                       onClick={() => setDesktopFiltersCollapsed(true)}
                       className="p-1.5 rounded-md hover:bg-muted text-foreground/60 hover:text-foreground transition-colors"
@@ -848,13 +847,13 @@ const CategoryPage = () => {
 
                   {/* Sort */}
                   <div className="mb-4">
-                    <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-2">
+                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.24em] mb-2">
                       Sort By
                     </h3>
                     <select
                       value={activeSortBy}
                       onChange={(e) => setFilter("sort", e.target.value)}
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground/80 bg-background"
+                      className="w-full border border-foreground/15 rounded-[6px] px-3 py-2 text-sm text-foreground/85 bg-card focus:outline-none focus:border-primary"
                     >
                       {sortOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -874,9 +873,10 @@ const CategoryPage = () => {
           <div ref={resultsRef} className="flex-1 min-w-0 scroll-mt-32">
             {/* Desktop: result count + sort */}
             <div className="hidden lg:flex items-center justify-between mb-6">
-              <p className="text-sm text-muted-foreground">
-                {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""} found
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Showing {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""}
               </p>
+              <span className="h-px flex-1 ml-5 bg-gradient-to-r from-foreground/10 to-transparent" />
             </div>
 
             {loading ? (
@@ -886,14 +886,14 @@ const CategoryPage = () => {
             ) : filteredProducts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <ShoppingBag className="w-16 h-16 text-primary/30 mb-4" />
-                <h3 className="text-lg font-semibold text-foreground/80 mb-2">Products Coming Soon</h3>
+                <h3 className="text-xl font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Products coming soon</h3>
                 <p className="text-sm text-muted-foreground mb-4 max-w-sm">
                   We're adding exciting new products to this category. Check back soon for our latest collection!
                 </p>
                 {activeFilterCount > 0 && (
                   <button
                     onClick={clearAllFilters}
-                    className="text-sm text-primary hover:underline"
+                    className="link-arrow"
                   >
                     Clear all filters
                   </button>
@@ -901,7 +901,7 @@ const CategoryPage = () => {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
                   {visibleProducts.map((product) => (
                     <CategoryProductCard
                       key={product.id}

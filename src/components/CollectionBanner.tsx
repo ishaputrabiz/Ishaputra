@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useInView } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 // Shown only until the admin sets a "collection-wide" home banner.
 const collectionFallback =
-  "https://res.cloudinary.com/dcoimqij/image/upload/v1790515736/ishaputrabotanicals/demo/ovmyqmtzjk2j7qewbtug.jpg";
+  "https://res.cloudinary.com/dcoimqij/image/upload/v1790577310/ishaputrabotanicals/demo/vy5xnu9fvciboqxylemt.jpg";
 import {
   subscribeHomeBanners,
   type HomeBanner,
@@ -42,22 +43,22 @@ const CollectionBanner = () => {
           initial={{ opacity: 0 }}
           animate={isInView ? { opacity: 1 } : {}}
           transition={{ duration: 0.8 }}
-          className="relative overflow-hidden rounded-2xl"
+          className="relative overflow-hidden rounded-[var(--radius-panel)] bg-charcoal"
         >
           <SmartImage
             src={banner.imageUrl}
             alt={banner.title}
             className="w-full h-[300px] md:h-[420px] object-cover" preset="hero" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
           <div className="absolute inset-0 flex items-center">
             <div className="px-8 md:px-14">
               <div className="max-w-lg">
                 {banner.eyebrow && (
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-white/60 block mb-3 font-medium">
+                  <p className="eyebrow-no on-dark mb-4">
                     {banner.eyebrow}
-                  </span>
+                  </p>
                 )}
-                <h2 className="text-xl md:text-3xl font-semibold mb-3 text-white font-serif">
+                <h2 className="text-2xl md:text-4xl font-semibold leading-tight mb-3 text-white font-serif">
                   {banner.title}
                 </h2>
                 {banner.subtitle && (
@@ -67,9 +68,9 @@ const CollectionBanner = () => {
                 )}
                 <Link
                   to={banner.ctaLink}
-                  className="inline-flex items-center px-7 py-3 bg-white dark:bg-zinc-900 text-gray-900 dark:text-zinc-100 text-xs font-semibold tracking-wide rounded-full hover:bg-primary hover:text-white transition-colors"
+                  className="btn-copper"
                 >
-                  {banner.ctaLabel}
+                  {banner.ctaLabel} <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
             </div>

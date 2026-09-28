@@ -99,11 +99,8 @@ const BestSellers = () => {
 
   return (
     <section ref={ref} className="relative py-6 md:py-16">
-      <div className="pointer-events-none absolute inset-x-0 top-10 h-32 bg-[radial-gradient(circle,hsl(var(--highlight)/0.18)_0%,hsl(var(--highlight)/0)_72%)] blur-3xl" />
       <div className="container-custom">
-        <div className="relative overflow-hidden rounded-[34px] border border-cream-dark/80 bg-[linear-gradient(180deg,rgba(255,252,247,0.96)_0%,rgba(255,247,236,0.95)_55%,rgba(255,255,255,0.98)_100%)] px-4 py-5 shadow-[0_30px_90px_-65px_hsl(var(--highlight)/0.45)] dark:border-highlight/20 dark:bg-[linear-gradient(180deg,rgba(20,16,10,0.96)_0%,rgba(28,20,16,0.96)_55%,rgba(13,12,11,0.98)_100%)] dark:shadow-[0_38px_110px_-70px_rgba(0,0,0,0.88)] md:px-7 md:py-8">
-          <div className="pointer-events-none absolute -right-8 top-0 h-32 w-32 rounded-full bg-[radial-gradient(circle,hsl(var(--highlight)/0.28)_0%,hsl(var(--highlight)/0)_72%)] blur-2xl dark:bg-[radial-gradient(circle,hsl(var(--highlight)/0.18)_0%,hsl(var(--highlight)/0)_72%)]" />
-          <div className="pointer-events-none absolute left-12 bottom-0 h-28 w-40 rounded-full bg-[radial-gradient(circle,hsl(var(--primary)/0.12)_0%,hsl(var(--primary)/0)_75%)] blur-2xl dark:bg-[radial-gradient(circle,rgba(96,165,250,0.15)_0%,rgba(96,165,250,0)_75%)]" />
+        <div className="panel tx-sheet relative overflow-hidden px-4 py-5 md:px-8 md:py-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -112,10 +109,7 @@ const BestSellers = () => {
           className="mb-6 md:mb-8 hidden md:flex items-end justify-between"
         >
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="h-px w-8 bg-primary/50" />
-              <span className="text-[10px] uppercase tracking-[0.32em] text-primary/80 font-medium">Best Sellers</span>
-            </div>
+            <p className="eyebrow-no mb-3"><b>02</b><span>Best Sellers</span></p>
             <h2 className="text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
               Most loved right now
             </h2>
@@ -123,17 +117,14 @@ const BestSellers = () => {
           </div>
           <button
             onClick={() => navigate('/products?tag=best-sellers')}
-            className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+            className="link-arrow"
           >
             View All <ChevronRight className="w-4 h-4" />
           </button>
         </motion.div>
         {/* Mobile header */}
         <div className="mb-4 md:hidden px-1">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="h-px w-6 bg-primary/50" />
-            <span className="text-[10px] uppercase tracking-[0.32em] text-primary/80 font-medium">Best Sellers</span>
-          </div>
+          <p className="eyebrow-no mb-2"><b>02</b><span>Best Sellers</span></p>
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
               Signature Collection
@@ -144,7 +135,7 @@ const BestSellers = () => {
                 aria-label="Scroll best sellers left"
                 onClick={() => mobileBSScrollByPage('prev')}
                 disabled={!canMobileBSScroll}
-                className="w-8 h-8 rounded-full border border-border/70 bg-background/90 dark:bg-zinc-900/80 flex items-center justify-center active:scale-95 transition-transform disabled:cursor-default disabled:opacity-40"
+                className="btn-round !h-8 !w-8"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
@@ -153,13 +144,13 @@ const BestSellers = () => {
                 aria-label="Scroll best sellers right"
                 onClick={() => mobileBSScrollByPage('next')}
                 disabled={!canMobileBSScroll}
-                className="w-8 h-8 rounded-full border border-border/70 bg-background/90 dark:bg-zinc-900/80 flex items-center justify-center active:scale-95 transition-transform disabled:cursor-default disabled:opacity-40"
+                className="btn-round !h-8 !w-8"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => navigate('/products?tag=best-sellers')}
-                className="text-xs font-medium text-primary tracking-wide ml-1"
+                className="link-arrow ml-1"
               >
                 View All
               </button>
@@ -174,7 +165,7 @@ const BestSellers = () => {
               <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
                 {Array.from({ length: 4 }).map((_, index) => (
                   <div key={`skeleton-${index}`} className="animate-pulse flex-shrink-0 w-[150px]">
-                    <div className="bg-gray-200 dark:bg-zinc-800 rounded-2xl aspect-square mb-2"></div>
+                    <div className="bg-foreground/[0.06] rounded-[var(--radius-card)] aspect-square mb-2"></div>
                     <div className="h-3 bg-gray-200 dark:bg-zinc-800 rounded mb-1"></div>
                     <div className="h-3 bg-gray-200 dark:bg-zinc-800 rounded w-2/3"></div>
                   </div>
@@ -196,7 +187,7 @@ const BestSellers = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5 }}
                     onClick={() => navigate(`/product/${products[0].id}`)}
-                    className="relative mb-3 cursor-pointer overflow-hidden rounded-[26px] border border-highlight/30 bg-gradient-to-br from-cream via-cream to-cream shadow-[0_18px_48px_-26px_hsl(var(--highlight)/0.55)] dark:border-highlight/25 dark:from-charcoal dark:via-charcoal dark:to-charcoal dark:shadow-[0_18px_48px_-26px_rgba(0,0,0,0.85)]"
+                    className="card-product relative mb-3 cursor-pointer overflow-hidden"
                   >
                     <div className="flex">
                       <div className="relative w-[44%] overflow-hidden">
@@ -204,34 +195,32 @@ const BestSellers = () => {
                           src={products[0].image}
                           alt={products[0].title}
                           className="w-full h-full object-cover aspect-[4/5]" preset="detail" />
-                        <span className="absolute top-2 left-2 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[8px] font-bold tracking-wide text-black shadow-sm" style={{ background: 'linear-gradient(135deg, hsl(var(--highlight-soft)) 0%, hsl(var(--highlight)) 50%, hsl(var(--highlight)) 100%)' }}>
-                          ★ #1 BEST
-                        </span>
+                        <span className="absolute top-2 left-2 inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-[4px] bg-charcoal/85 text-[10px] font-bold tracking-[0.12em] text-highlight-soft backdrop-blur-sm">No. 01</span>
                       </div>
                       <div className="flex-1 p-4 flex flex-col justify-between">
                         <div>
-                          <p className="text-[9px] uppercase tracking-[0.28em] text-primary/80 font-semibold mb-1.5">Most Loved</p>
+                          <p className="eyebrow-no mb-2 !text-[9px]"><span>Most loved</span></p>
                           <h3 className="text-base font-semibold text-foreground line-clamp-2 mb-2 leading-snug" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                             {products[0].title}
                           </h3>
                           <div className="flex items-baseline gap-2 mb-3">
-                            <span className="text-lg font-bold text-foreground">₹{products[0].price.toLocaleString()}</span>
+                            <span className="price-now text-lg">₹{products[0].price.toLocaleString()}</span>
                             {products[0].oldPrice && products[0].oldPrice > products[0].price && (
-                              <span className="text-[11px] text-muted-foreground line-through">₹{products[0].oldPrice.toLocaleString()}</span>
+                              <span className="price-was text-[11px]">₹{products[0].oldPrice.toLocaleString()}</span>
                             )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={(e) => handleAddToCart(e, products[0])}
-                            className="flex-1 flex items-center justify-center gap-1.5 rounded-full bg-foreground/90 text-background py-2 text-[11px] font-semibold tracking-wide hover:bg-foreground transition-colors dark:bg-primary dark:text-white"
+                            className="btn-copper flex-1 !px-3 !py-2.5"
                           >
                             <ShoppingCart className="w-3.5 h-3.5" />
                             Add
                           </button>
                           <button
                             onClick={(e) => handleWishlistClick(e, products[0].id, products[0].title)}
-                            className="w-9 h-9 rounded-full bg-background/95 dark:bg-card/95 border border-border flex items-center justify-center"
+                            className="w-9 h-9 rounded-full border border-foreground/15 bg-card flex items-center justify-center"
                           >
                             <Heart className={`w-4 h-4 ${isInWishlist(products[0].id) ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
                           </button>
@@ -258,16 +247,16 @@ const BestSellers = () => {
                         viewport={{ once: true }}
                         transition={{ delay: Math.min(idx, 4) * 0.05, duration: 0.4 }}
                         onClick={() => navigate(`/product/${product.id}`)}
-                        className="group cursor-pointer flex-shrink-0 w-[150px] flex flex-col overflow-hidden rounded-[20px] border border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,249,240,0.98)_100%)] shadow-[0_12px_28px_-22px_hsl(var(--highlight)/0.45)] transition-all duration-300 active:scale-[0.98] dark:border-highlight/15 dark:bg-[linear-gradient(180deg,rgba(28,22,16,0.98)_0%,rgba(16,14,12,0.98)_100%)] dark:shadow-[0_14px_28px_-20px_rgba(0,0,0,0.7)]"
+                        className="card-product group cursor-pointer flex-shrink-0 w-[150px] flex flex-col overflow-hidden p-1.5 active:scale-[0.98]"
                       >
-                        <div className="relative aspect-square overflow-hidden bg-muted">
+                        <div className="tile-img relative aspect-square overflow-hidden">
                           <SmartImage
                             src={product.image}
                             alt={product.title}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" preset="card" />
                           {rank <= 5 && (
-                            <span className="absolute top-2 left-2 inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold text-black shadow-sm" style={{ background: 'linear-gradient(135deg, hsl(var(--highlight-soft)) 0%, hsl(var(--highlight)) 50%, hsl(var(--highlight)) 100%)' }}>
-                              #{rank}
+                            <span className="absolute top-2 left-2 inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-[4px] bg-charcoal/85 text-[10px] font-bold tracking-[0.12em] text-highlight-soft backdrop-blur-sm">
+                              {String(rank).padStart(2, '0')}
                             </span>
                           )}
                           <button
@@ -285,18 +274,18 @@ const BestSellers = () => {
                           <div className="mt-auto flex items-end justify-between">
                             <div>
                               <div className="flex flex-wrap items-center gap-1">
-                                <p className="text-sm font-bold text-foreground">₹{product.price.toLocaleString()}</p>
+                                <p className="price-now text-sm">₹{product.price.toLocaleString()}</p>
                                 {product.oldPrice && product.oldPrice > product.price && (
-                                  <p className="text-[9px] text-muted-foreground line-through">₹{product.oldPrice.toLocaleString()}</p>
+                                  <p className="price-was text-[9px]">₹{product.oldPrice.toLocaleString()}</p>
                                 )}
                               </div>
                               {product.discount && product.discount > 0 && (
-                                <p className="text-[9px] font-semibold text-highlight dark:text-highlight-soft">{product.discount}% Off</p>
+                                <p className="chip-off mt-1 w-fit !text-[9px]">{product.discount}% off</p>
                               )}
                             </div>
                             <button
                               onClick={(e) => handleAddToCart(e, product)}
-                              className="w-7 h-7 rounded-full bg-muted hover:bg-primary flex items-center justify-center transition-colors group/cart"
+                              className="w-8 h-8 rounded-full border border-foreground/15 hover:bg-primary hover:border-primary flex items-center justify-center transition-colors group/cart"
                               aria-label="Add to cart"
                             >
                               <ShoppingCart className="w-3.5 h-3.5 text-muted-foreground group-hover/cart:text-white" />
@@ -315,7 +304,7 @@ const BestSellers = () => {
             {loading ? (
               <div className="grid grid-cols-4 gap-4 pb-4">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={`desktop-skeleton-${index}`} className="animate-pulse rounded-[26px] border border-border bg-card p-3">
+                  <div key={`desktop-skeleton-${index}`} className="animate-pulse card-product p-3">
                     <div className="mb-3 aspect-square rounded-2xl bg-gray-200 dark:bg-zinc-800 dark:bg-muted" />
                     <div className="mb-2 h-4 rounded bg-gray-200 dark:bg-zinc-800 dark:bg-muted" />
                     <div className="h-4 w-2/3 rounded bg-gray-200 dark:bg-zinc-800 dark:bg-muted" />
@@ -329,7 +318,7 @@ const BestSellers = () => {
                 <p className="text-sm text-muted-foreground">Our most loved products will appear here. Check back shortly!</p>
               </div>
             ) : (
-              <div className="group/best-sellers relative overflow-hidden rounded-[28px] border border-border/60 bg-background/70 py-2 dark:border-highlight/12 dark:bg-white/[0.03]">
+              <div className="group/best-sellers relative overflow-hidden rounded-[var(--radius-card)] py-2">
                 <div
                   ref={desktopBSRef}
                   className="overflow-x-auto scrollbar-hide px-2 py-2"
@@ -345,8 +334,8 @@ const BestSellers = () => {
                           className="w-[230px] flex-shrink-0 cursor-pointer"
                           onClick={() => navigate(`/product/${product.id}`)}
                         >
-                          <div className="bg-card rounded-[26px] overflow-hidden h-full flex flex-col shadow-sm hover:shadow-xl transition-all duration-300 group border border-border">
-                            <div className="aspect-square overflow-hidden bg-muted relative">
+                          <div className="card-product overflow-hidden h-full flex flex-col group p-2.5">
+                            <div className="tile-img aspect-square overflow-hidden relative">
                               <SmartImage
                                 src={product.image}
                                 alt={product.title}
@@ -354,15 +343,15 @@ const BestSellers = () => {
 
                               {showRankBadge && (
                                 <div className="absolute top-2.5 left-2.5 z-10">
-                                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-bold tracking-tight text-black" style={{ background: 'linear-gradient(135deg, hsl(var(--highlight-soft)) 0%, hsl(var(--highlight)) 50%, hsl(var(--highlight)) 100%)', boxShadow: '0 2px 8px hsl(var(--highlight)/0.35)' }}>
-                                    #{sourceIndex + 1}
+                                  <span className={`inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-[4px] bg-charcoal/85 text-[10px] font-bold tracking-[0.12em] text-highlight-soft backdrop-blur-sm`}>
+                                    No. {String(sourceIndex + 1).padStart(2, '0')}
                                   </span>
                                 </div>
                               )}
 
                               <button
                                 onClick={(e) => handleWishlistClick(e, product.id, product.title)}
-                                className="absolute top-2.5 right-2.5 p-2 bg-background/95 dark:bg-card/95 backdrop-blur-sm rounded-full shadow-sm hover:shadow-md transition-all duration-200 z-10"
+                                className="absolute top-2.5 right-2.5 p-2 bg-card/90 backdrop-blur-sm rounded-full border border-foreground/10 transition-all duration-200 z-10 hover:border-primary/40"
                                 aria-label="Add to wishlist"
                               >
                                 <Heart 
@@ -375,7 +364,7 @@ const BestSellers = () => {
                               </button>
                             </div>
 
-                            <div className="p-4 flex flex-col flex-grow">
+                            <div className="px-1.5 pt-3.5 pb-1 flex flex-col flex-grow">
                               <h3 className="text-sm font-medium text-foreground line-clamp-1 mb-2">
                                 {product.title}
                               </h3>
@@ -384,25 +373,25 @@ const BestSellers = () => {
                                 <div className="flex items-end justify-between">
                                   <div>
                                     <div className="flex flex-wrap items-center gap-1.5">
-                                      <p className="text-lg font-bold text-foreground">
+                                      <p className="price-now text-lg">
                                         ₹{product.price.toLocaleString()}
                                       </p>
                                       {product.oldPrice && product.oldPrice > product.price && (
-                                        <p className="text-xs text-muted-foreground line-through">
+                                        <p className="price-was text-xs">
                                           ₹{product.oldPrice.toLocaleString()}
                                         </p>
                                       )}
                                     </div>
                                     {product.discount && product.discount > 0 && (
-                                      <p className="text-xs font-semibold text-highlight dark:text-highlight-soft">
-                                        {product.discount}% Off
+                                      <p className="chip-off mt-1.5 w-fit">
+                                        {product.discount}% off
                                       </p>
                                     )}
                                   </div>
 
                                   <button
                                     onClick={(e) => handleAddToCart(e, product)}
-                                    className="w-9 h-9 rounded-full bg-muted hover:bg-primary flex items-center justify-center transition-all duration-200 group/cart"
+                                    className="w-9 h-9 rounded-full border border-foreground/15 hover:bg-primary hover:border-primary flex items-center justify-center transition-all duration-200 group/cart"
                                     aria-label="Add to cart"
                                   >
                                     <ShoppingCart className="w-[18px] h-[18px] text-muted-foreground group-hover/cart:text-white transition-colors" />
@@ -424,7 +413,7 @@ const BestSellers = () => {
                     desktopBSScrollByPage("prev");
                   }}
                   disabled={!canDesktopBSScroll}
-                  className={`absolute left-4 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/92 text-foreground shadow-lg backdrop-blur transition-all duration-200 hover:scale-105 dark:border-white/10 dark:bg-zinc-900/90 ${canDesktopBSScroll ? 'pointer-events-none opacity-0 group-hover/best-sellers:pointer-events-auto group-hover/best-sellers:opacity-100' : 'pointer-events-none opacity-0'}`}
+                  className={`btn-round absolute left-4 top-1/2 z-20 !h-11 !w-11 -translate-y-1/2 !bg-card shadow-lg ${canDesktopBSScroll ? 'pointer-events-none opacity-0 group-hover/best-sellers:pointer-events-auto group-hover/best-sellers:opacity-100' : 'pointer-events-none opacity-0'}`}
                   aria-label="Show previous best sellers"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -437,7 +426,7 @@ const BestSellers = () => {
                     desktopBSScrollByPage("next");
                   }}
                   disabled={!canDesktopBSScroll}
-                  className={`absolute right-4 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/92 text-foreground shadow-lg backdrop-blur transition-all duration-200 hover:scale-105 dark:border-white/10 dark:bg-zinc-900/90 ${canDesktopBSScroll ? 'pointer-events-none opacity-0 group-hover/best-sellers:pointer-events-auto group-hover/best-sellers:opacity-100' : 'pointer-events-none opacity-0'}`}
+                  className={`btn-round absolute right-4 top-1/2 z-20 !h-11 !w-11 -translate-y-1/2 !bg-card shadow-lg ${canDesktopBSScroll ? 'pointer-events-none opacity-0 group-hover/best-sellers:pointer-events-auto group-hover/best-sellers:opacity-100' : 'pointer-events-none opacity-0'}`}
                   aria-label="Show next best sellers"
                 >
                   <ChevronRight className="h-4 w-4" />

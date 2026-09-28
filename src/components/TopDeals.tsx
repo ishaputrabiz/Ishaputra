@@ -125,15 +125,12 @@ const TopDeals = () => {
   return (
     <section className="py-6 md:py-14">
       <div className="container-custom">
-        <div className="rounded-[32px] border border-highlight/15 bg-[linear-gradient(180deg,hsl(var(--highlight)/0.08)_0%,rgba(255,255,255,0)_22%),linear-gradient(135deg,hsl(var(--primary)/0.04)_0%,rgba(255,255,255,0)_45%)] bg-card/70 shadow-[0_30px_70px_-55px_rgba(0,0,0,0.4)] px-3 py-4 md:px-6 md:py-8">
+        <div className="panel tx-sheet tx-contour overflow-hidden px-3 py-5 md:px-8 md:py-10">
 
         {/* ====== MOBILE: Horizontal scroll cards ====== */}
         <div className="md:hidden">
           <div className="mb-4 px-1">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="h-px w-6 bg-primary/50" />
-              <span className="text-[10px] uppercase tracking-[0.32em] text-primary/80 font-medium">Top Deals</span>
-            </div>
+            <p className="eyebrow-no mb-2"><b>01</b><span>Top Deals</span></p>
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                 Signature savings
@@ -144,7 +141,7 @@ const TopDeals = () => {
                   aria-label="Scroll deals left"
                   onClick={() => mobileScrollByPage('prev')}
                   disabled={!canMobileDealsScroll}
-                  className="w-8 h-8 rounded-full border border-border/70 bg-background/90 dark:bg-zinc-900/80 flex items-center justify-center active:scale-95 transition-transform disabled:cursor-default disabled:opacity-40"
+                  className="btn-round !h-8 !w-8"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
@@ -153,13 +150,13 @@ const TopDeals = () => {
                   aria-label="Scroll deals right"
                   onClick={() => mobileScrollByPage('next')}
                   disabled={!canMobileDealsScroll}
-                  className="w-8 h-8 rounded-full border border-border/70 bg-background/90 dark:bg-zinc-900/80 flex items-center justify-center active:scale-95 transition-transform disabled:cursor-default disabled:opacity-40"
+                  className="btn-round !h-8 !w-8"
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => navigate('/products?tag=top-deals')}
-                  className="text-xs font-medium text-primary tracking-wide ml-1"
+                  className="link-arrow ml-1"
                 >
                   View All
                 </button>
@@ -177,8 +174,8 @@ const TopDeals = () => {
                 className="flex-shrink-0 w-[150px] cursor-pointer"
                 onClick={() => navigate(`/product/${product.id}`)}
               >
-                <div className="bg-card rounded-2xl overflow-hidden shadow-sm border border-border/70">
-                  <div className="aspect-square overflow-hidden bg-muted relative">
+                <div className="card-product overflow-hidden p-1.5">
+                  <div className="tile-img aspect-square overflow-hidden relative">
                     <SmartImage src={product.image} alt={product.title} className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" preset="card" />
                     <button
                       onClick={(e) => handleWishlistClick(e, product.id, product.title)}
@@ -188,20 +185,20 @@ const TopDeals = () => {
                     </button>
                   </div>
                   <div className="p-2.5">
-                    <p className="text-[11px] text-muted-foreground line-clamp-1 mb-0.5">{product.title}</p>
+                    <p className="text-[11px] font-medium text-foreground/80 line-clamp-1 mb-1">{product.title}</p>
                     <div className="flex items-end justify-between gap-1">
                       <div className="flex flex-col min-w-0">
-                        <p className="text-sm font-bold text-foreground leading-tight">₹{product.price.toLocaleString()}</p>
+                        <p className="price-now text-sm leading-tight">₹{product.price.toLocaleString()}</p>
                         {product.oldPrice && product.oldPrice > product.price && (
-                          <p className="text-[10px] text-muted-foreground line-through leading-tight">₹{product.oldPrice.toLocaleString()}</p>
+                          <p className="price-was text-[10px] leading-tight">₹{product.oldPrice.toLocaleString()}</p>
                         )}
                         {product.discount && product.discount > 0 && (
-                          <p className="text-[10px] font-semibold text-highlight dark:text-highlight-soft leading-tight">{product.discount}% Off</p>
+                          <p className="chip-off mt-1 w-fit">{product.discount}% off</p>
                         )}
                       </div>
                       <button
                         onClick={(e) => handleAddToCart(e, product)}
-                        className="w-7 h-7 rounded-full bg-muted hover:bg-primary flex items-center justify-center transition-colors group/cart flex-shrink-0"
+                        className="w-8 h-8 rounded-full border border-foreground/15 hover:bg-primary hover:border-primary flex items-center justify-center transition-colors group/cart flex-shrink-0"
                       >
                         <ShoppingCart className="w-3.5 h-3.5 text-muted-foreground group-hover/cart:text-white transition-colors" />
                       </button>
@@ -217,12 +214,7 @@ const TopDeals = () => {
         <div className="hidden md:block">
           <div className="flex items-end justify-between mb-8">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="h-px w-8 bg-primary/50" />
-                <span className="text-[10px] uppercase tracking-[0.32em] text-primary/80 font-medium">
-                  Top Deals
-                </span>
-              </div>
+              <p className="eyebrow-no mb-3"><b>01</b><span>Top Deals</span></p>
               <h2 className="text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                 Handpicked savings
               </h2>
@@ -230,25 +222,25 @@ const TopDeals = () => {
             </div>
             <button 
               onClick={() => navigate('/products?tag=top-deals')}
-              className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+              className="link-arrow"
             >
               View All <ChevronRight className="w-4 h-4" />
             </button>
           </div>
           
-          <div className="flex gap-4 rounded-3xl overflow-hidden" style={{ minHeight: 400 }}>
+          <div className="flex gap-5" style={{ minHeight: 420 }}>
             {/* Left: Featured Product Banner */}
             <div 
-              className="w-[38%] relative rounded-3xl overflow-hidden cursor-pointer group"
+              className="w-[38%] relative rounded-[var(--radius-card)] overflow-hidden cursor-pointer group"
               onClick={() => navigate(`/product/${featuredProduct.id}`)}
             >
               <SmartImage 
                 src={featuredProduct.image} 
                 alt={featuredProduct.title}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" preset="detail" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
               <div className="relative z-10 h-full flex flex-col justify-end p-8">
-                <span className="text-[10px] uppercase tracking-[0.25em] text-white/60 mb-2 font-light">Featured Collection</span>
+                <span className="eyebrow-no mb-3 text-white/70 [&_b]:text-highlight-soft"><b>★</b>Deal of the week</span>
                 <h2 className="text-2xl font-semibold text-white mb-1" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                   {featuredProduct.title}
                 </h2>
@@ -259,7 +251,7 @@ const TopDeals = () => {
                   )}
                 </div>
                 <button 
-                  className="bg-white dark:bg-zinc-900 text-gray-900 dark:text-zinc-100 px-7 py-3 rounded-full text-sm font-medium hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 transition-all duration-300 w-fit shadow-lg"
+                  className="btn-line w-fit text-white hover:bg-white hover:text-charcoal"
                   onClick={(e) => { e.stopPropagation(); navigate(`/product/${featuredProduct.id}`); }}
                 >
                   Shop Now
@@ -269,7 +261,7 @@ const TopDeals = () => {
 
             {/* Right: Product Cards Grid */}
             <div
-              className="w-[62%] rounded-3xl border border-white/50 dark:border-border/70 bg-background/80 p-6 flex flex-col justify-between shadow-inner"
+              className="w-[62%] rounded-[var(--radius-card)] border border-foreground/[0.06] bg-background/40 p-6 flex flex-col justify-between"
               onMouseEnter={() => { desktopHoverRef.current = true; }}
               onMouseLeave={() => { desktopHoverRef.current = false; }}
             >
@@ -293,10 +285,10 @@ const TopDeals = () => {
                   <motion.div 
                     key={product.id}
                     initial={false}
-                    className="bg-card rounded-2xl p-3 cursor-pointer hover:shadow-lg transition-all duration-300 flex flex-col group flex-none w-[190px] lg:w-[205px] snap-start"
+                    className="card-product p-2.5 cursor-pointer flex flex-col group flex-none w-[190px] lg:w-[205px] snap-start"
                     onClick={() => navigate(`/product/${product.id}`)}
                   >
-                    <div className="aspect-square rounded-xl overflow-hidden bg-muted mb-2.5 relative">
+                    <div className="tile-img aspect-square overflow-hidden mb-3 relative">
                       <SmartImage src={product.image} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" preset="card" />
                       <button
                         onClick={(e) => handleWishlistClick(e, product.id, product.title)}
@@ -306,17 +298,17 @@ const TopDeals = () => {
                       </button>
                     </div>
                     <div className="mt-auto">
-                      <p className="text-[11px] text-muted-foreground line-clamp-1 mb-1">{product.title}</p>
+                      <p className="text-[12px] font-medium text-foreground/85 line-clamp-1 mb-1.5">{product.title}</p>
                       <div className="flex items-center justify-between gap-1.5">
                         <div className="flex flex-col min-w-0 overflow-hidden">
-                          <span className="text-sm font-bold text-foreground truncate">₹{product.price.toLocaleString()}</span>
+                          <span className="price-now text-sm truncate">₹{product.price.toLocaleString()}</span>
                           {product.oldPrice && product.oldPrice > product.price && (
-                            <span className="text-[10px] text-muted-foreground line-through truncate">₹{product.oldPrice.toLocaleString()}</span>
+                            <span className="price-was text-[10px] truncate">₹{product.oldPrice.toLocaleString()}</span>
                           )}
                         </div>
                         <button
                           onClick={(e) => handleAddToCart(e, product)}
-                          className="w-8 h-8 rounded-full bg-muted hover:bg-primary flex items-center justify-center transition-colors group/cart flex-shrink-0 ml-1"
+                          className="w-8 h-8 rounded-full border border-foreground/15 hover:bg-primary hover:border-primary flex items-center justify-center transition-colors group/cart flex-shrink-0 ml-1"
                         >
                           <ShoppingCart className="w-[16px] h-[16px] text-muted-foreground group-hover/cart:text-white transition-colors" />
                         </button>
@@ -333,7 +325,7 @@ const TopDeals = () => {
                     onClick={() => handleManualPage('prev')}
                     disabled={!canDesktopDealsScroll}
                     aria-label="Previous deals"
-                    className="w-10 h-10 rounded-full border border-border bg-card flex items-center justify-center hover:bg-muted hover:border-border transition-all duration-200 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="btn-round"
                   >
                     <ChevronLeft className="w-4 h-4 text-muted-foreground" />
                   </button>
@@ -341,14 +333,14 @@ const TopDeals = () => {
                     onClick={() => handleManualPage('next')}
                     disabled={!canDesktopDealsScroll}
                     aria-label="Next deals"
-                    className="w-10 h-10 rounded-full border border-border bg-card flex items-center justify-center hover:bg-muted hover:border-border transition-all duration-200 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="btn-round"
                   >
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </div>
                 <button 
                   onClick={() => navigate('/products?tag=top-deals')}
-                  className="bg-primary text-white px-8 py-3 rounded-full text-sm font-medium hover:bg-primary/90 transition-all duration-300 shadow-md"
+                  className="btn-copper"
                 >
                   View Collection
                 </button>

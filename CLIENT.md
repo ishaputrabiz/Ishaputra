@@ -108,17 +108,46 @@
 - Texture: a subtle film-grain overlay (`body::after`, `--grain-opacity`).
 - Logo: the deep-bronze version (brightness 0.72) on light backgrounds, the original on dark. The favicon and app icons use the monogram.
 - Loading screen (mobile only): the monogram is revealed bottom-up with a copper light sweep, the tagline settles in, and a copper progress line runs underneath. It respects reduced motion.
-- Per page: Step 2.
-    - Noted for Step 2: the copper marquee band is bold in dark mode; the product page's "more" link is still blue; the black "Buy" button is low-contrast in dark mode; product specifications (net quantity, ingredients) don't show on the product page yet.
+- Step 2 design language, "the modern apothecary" (all in the Ishaputra block at the end of `src/index.css`, no image files):
+    - **Surfaces:**
+        - `tx-paper`: cream paper with mottling and fibres, the page background.
+        - `tx-sheet`: a lighter sheet for panels.
+        - `tx-slate`: charcoal stone for dark bands (Featured, marquee, testimonials, footer, feature icons).
+        - `tx-contour`: faint topographic rings, used in place of leaves or mandalas.
+        - In dark mode, paper turns into soft slate.
+    - **Shapes:** panels 18px, cards 12px, buttons 6px (squared-off, masculine). Round is kept only for icon buttons.
+    - **Numbered eyebrows:** "01 Top deals" through "10 Watch" run down the home page (`eyebrow-no`, plus `eyebrow-center` and `on-dark`).
+    - **Buttons:**
+        - `btn-copper`: the main call to action, tracked caps with a foil sweep on hover.
+        - `btn-line`: the outline version, used on photos.
+        - `link-arrow`: "View all" links.
+    - **Cards:** `card-product` lifts and gains a copper edge on hover. `tile-img` is a lit plinth, so mixed product photos sit together. Prices use `price-now`, `price-was` and `chip-off`. Labels on photos use `tag-dark` ("No. 01", "New").
+    - **Home:**
+        - The hero is full-bleed with no frame.
+        - The marquee alternates solid and hollow copper type.
+        - The footer ends with a hollow "ISHAPUTRA" wordmark.
+        - The collection banner now shows apothecary vials, replacing the spice bowls (Pexels 7978130).
+    - **Products page:**
+        - Big title band on paper with a product count.
+        - Filters in a panel; the selected filter has a copper rule.
+        - Hairline "Add to cart" buttons.
+        - The price filter uses wellness price bands (Under ₹400 up to Above ₹2,000). They now live in `BRAND.priceRanges`; the old bands were jewellery ones (Under ₹5,000 up to Above ₹1,00,000).
+    - **Product page:**
+        - Gallery on a plinth with a "01 / 04" counter.
+        - Category eyebrow and a large heading-font title.
+        - Every specification shows as a spec sheet (net quantity, key ingredients, how to use).
+        - Copper "Buy now", which fixes the low-contrast black button in dark mode.
+        - "Read more" link, which replaces the blue "more".
+        - Squared trust badges and review cards.
 
 ## Progress
 - [x] Step 0 safe preview (2026-09-23): home, products and product pages show demo content on Ishaputra Firebase; only the YouTube section is hidden (no videos yet)
 - [ ] Step 1 new look: done 2026-09-27, waiting for client review
-- [ ] Step 2: Home, Products, Product detail, Checkout, Profile, remaining pages
+- [ ] Step 2: Home, Products, Product detail done 2026-09-28 (textures and UI); next Checkout, Profile, remaining pages
 - [ ] Step 2B features   - [ ] Step 3 accounts   - [ ] Step 4 test and publish   - [ ] Step 5 client changes
 
 ## Next step
-Client reviews the Step 1 look (light and dark, mobile and desktop). After their OK: Step 2, starting with the Home page.
+Review the Step 2 Home, Products and Product pages (light and dark, mobile and desktop). After that: Checkout, then Profile, then the remaining pages.
 
 ## Open questions
 - Real business details to replace the dummy ones in `src/config/brand.ts`: legal name, address, phone, WhatsApp, email, hours, GSTIN, domain, social links (blocking for launch, not for review)

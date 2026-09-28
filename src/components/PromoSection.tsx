@@ -63,9 +63,6 @@ const PromoSection = () => {
 
   return (
     <section ref={ref} className="relative w-full py-12 md:py-20">
-      {/* ambient gold/maroon glow */}
-      <div className="pointer-events-none absolute inset-x-0 top-10 h-48 bg-[radial-gradient(ellipse_at_center,hsl(var(--highlight)/0.14)_0%,hsl(var(--highlight)/0)_70%)] blur-3xl" />
-
       <div className="container-custom">
         {/* Header */}
         <div className="mb-6 md:mb-10 flex items-end justify-between gap-4 px-1 md:px-0">
@@ -74,12 +71,7 @@ const PromoSection = () => {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.55 }}
           >
-            <div className="flex items-center gap-2 mb-2">
-              <span className="h-px w-8 bg-primary/50" />
-              <span className="text-[10px] uppercase tracking-[0.32em] text-primary/80 font-medium">
-                The Ishaputra Edit
-              </span>
-            </div>
+            <p className="eyebrow-no mb-3"><b>08</b><span>The Ishaputra edit</span></p>
             <h2
               className="text-2xl md:text-4xl font-semibold text-foreground"
               style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
@@ -101,7 +93,7 @@ const PromoSection = () => {
               aria-label="Scroll collections left"
               onClick={() => scrollByPage("prev")}
               disabled={!canScroll}
-              className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-border/70 bg-background/80 dark:bg-zinc-900/80 backdrop-blur flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-colors shadow-sm disabled:cursor-default disabled:opacity-40"
+              className="btn-round !h-9 !w-9 md:!h-11 md:!w-11"
             >
               <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
             </button>
@@ -134,7 +126,7 @@ const PromoSection = () => {
                 initial={{ opacity: 0, y: 24 }}
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.55, delay: Math.min(idx * 0.06, 0.4) }}
-                className="group relative flex-shrink-0 w-[78vw] sm:w-[58vw] md:w-[420px] lg:w-[460px] aspect-[4/5] md:aspect-[3/4] rounded-[28px] overflow-hidden border border-white/40 dark:border-white/5 shadow-[0_24px_60px_-30px_rgba(60,30,10,0.55)] dark:shadow-[0_28px_70px_-32px_rgba(0,0,0,0.85)]"
+                className="group relative flex-shrink-0 w-[78vw] sm:w-[58vw] md:w-[420px] lg:w-[460px] aspect-[4/5] md:aspect-[3/4] rounded-[var(--radius-card)] overflow-hidden border border-foreground/[0.08] bg-charcoal shadow-[var(--shadow-panel)]"
               >
                 <SmartImage
                   src={card.imageUrl}
@@ -144,13 +136,12 @@ const PromoSection = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
 
                 {/* gold corner accent */}
-                <div className="absolute top-4 right-4 flex items-center gap-1.5 rounded-full bg-white/15 dark:bg-white/10 backdrop-blur-md border border-white/25 px-2.5 py-1 text-[9px] uppercase tracking-[0.22em] text-white font-semibold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-highlight/40 shadow-[0_0_6px_hsl(var(--highlight-soft)/0.9)]" />
-                  Curated
+                <div className="tag-dark absolute top-4 right-4">
+                  No. {String((idx % cards.length) + 1).padStart(2, "0")}
                 </div>
 
                 <div className="absolute inset-x-0 bottom-0 p-5 md:p-7 lg:p-8">
-                  <span className="block text-[10px] uppercase tracking-[0.28em] text-white/75 font-medium mb-2">
+                  <span className="eyebrow-no on-dark mb-3">
                     {card.eyebrow}
                   </span>
                   <h3
@@ -164,7 +155,7 @@ const PromoSection = () => {
                   </p>
                   <Link
                     to={card.ctaLink}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-zinc-100 text-gray-900 text-[11px] md:text-xs font-semibold tracking-wide rounded-full hover:bg-primary hover:text-white transition-colors shadow-md"
+                    className="btn-line text-white hover:bg-white hover:text-charcoal"
                   >
                     {card.ctaLabel}
                     <ArrowRight className="w-3.5 h-3.5" />

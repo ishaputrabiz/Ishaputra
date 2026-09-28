@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
 
 const phrases = [
   "Pure Wellness For A Stronger You",
@@ -17,7 +16,7 @@ const MarqueeBand = () => {
   const duplicatedPhrases = [...phrases, ...phrases, ...phrases];
 
   return (
-    <section className="py-3 md:py-4 bg-primary overflow-hidden">
+    <section className="tx-slate border-y border-highlight-soft/20 py-3.5 md:py-5 overflow-hidden">
       <div className="relative">
         <motion.div
           className="flex items-center gap-10 whitespace-nowrap"
@@ -35,10 +34,13 @@ const MarqueeBand = () => {
         >
           {duplicatedPhrases.map((phrase, index) => (
             <div key={index} className="flex items-center gap-10">
-              <span className="text-sm md:text-base font-light text-white/90 tracking-[0.15em] uppercase">
+              <span
+                className={`text-sm md:text-lg font-semibold uppercase tracking-[0.14em] ${index % 2 ? "text-outline" : "text-charcoal-foreground/90"}`}
+                style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
+              >
                 {phrase}
               </span>
-              <Sparkles className="w-3.5 h-3.5 text-white/50 flex-shrink-0" />
+              <span className="sep-diamond" />
             </div>
           ))}
         </motion.div>

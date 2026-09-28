@@ -110,7 +110,7 @@ const TrendProducts = () => {
     canDesktopNAScroll && products.length > 1 ? [...products, ...products] : products;
 
   return (
-    <section ref={ref} className="py-4 md:py-12 bg-[linear-gradient(180deg,hsl(var(--highlight)/0.04)_0%,hsl(var(--primary)/0.02)_100%)] dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]">
+    <section ref={ref} className="tx-contour py-6 md:py-16">
       <div className="container-custom">
         {/* Header */}
         <motion.div
@@ -120,21 +120,19 @@ const TrendProducts = () => {
           className="mb-3 md:mb-8 hidden md:flex md:items-end md:justify-between"
         >
           <div>
-            <h2 className="text-2xl md:text-3xl font-semibold text-foreground font-serif">
+            <p className="eyebrow-no mb-3"><b>04</b><span>New arrivals</span></p>
+            <h2 className="text-3xl lg:text-4xl font-semibold text-foreground font-serif">
               New Arrivals
             </h2>
             <p className="text-sm text-muted-foreground mt-1 font-light">Fresh formulations, just in</p>
           </div>
-          <button onClick={() => navigate('/products?tag=new-arrivals')} className="text-sm text-primary font-medium hover:underline underline-offset-4 flex items-center gap-1">
+          <button onClick={() => navigate('/products?tag=new-arrivals')} className="link-arrow">
             View All <ChevronRight className="w-4 h-4" />
           </button>
         </motion.div>
         {/* Mobile header without animation */}
         <div className="mb-3 md:mb-6 md:hidden px-1">
-          <div className="mb-1.5 flex items-center gap-2">
-            <span className="h-px w-6 bg-primary/50" />
-            <span className="text-[10px] font-medium uppercase tracking-[0.32em] text-primary/80">New Arrivals</span>
-          </div>
+          <p className="eyebrow-no mb-2"><b>04</b><span>New arrivals</span></p>
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground font-serif">
               Freshly dropped
@@ -145,7 +143,7 @@ const TrendProducts = () => {
                 aria-label="Scroll new arrivals left"
                 onClick={() => mobileScrollByPage('prev')}
                 disabled={!canMobileScroll}
-                className="w-8 h-8 rounded-full border border-border/70 bg-background/90 dark:bg-zinc-900/80 flex items-center justify-center active:scale-95 transition-transform disabled:cursor-default disabled:opacity-40"
+                className="btn-round !h-8 !w-8"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
@@ -154,11 +152,11 @@ const TrendProducts = () => {
                 aria-label="Scroll new arrivals right"
                 onClick={() => mobileScrollByPage('next')}
                 disabled={!canMobileScroll}
-                className="w-8 h-8 rounded-full border border-border/70 bg-background/90 dark:bg-zinc-900/80 flex items-center justify-center active:scale-95 transition-transform disabled:cursor-default disabled:opacity-40"
+                className="btn-round !h-8 !w-8"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
-              <button onClick={() => navigate('/products?tag=new-arrivals')} className="text-xs text-primary font-medium ml-1">
+              <button onClick={() => navigate('/products?tag=new-arrivals')} className="link-arrow ml-1">
                 View All
               </button>
             </div>
@@ -174,7 +172,7 @@ const TrendProducts = () => {
                 {Array.from({ length: 4 }).map((_, index) => (
                   <div key={`skeleton-${index}`} className="flex-shrink-0 w-[150px]">
                     <div className="animate-pulse">
-                      <div className="bg-gray-200 dark:bg-zinc-800 dark:bg-muted rounded-2xl aspect-square mb-2"></div>
+                      <div className="bg-foreground/[0.06] rounded-[var(--radius-card)] aspect-square mb-2"></div>
                       <div className="h-3 bg-gray-200 dark:bg-zinc-800 dark:bg-muted rounded mb-1"></div>
                       <div className="h-3 bg-gray-200 dark:bg-zinc-800 dark:bg-muted rounded w-2/3"></div>
                     </div>
@@ -197,16 +195,16 @@ const TrendProducts = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5 }}
                     onClick={() => navigate(`/product/${displayProducts[0].id}`)}
-                    className="relative mb-3 cursor-pointer overflow-hidden rounded-[26px] aspect-[16/10] shadow-[0_20px_44px_-26px_rgba(0,0,0,0.5)]"
+                    className="relative mb-3 cursor-pointer overflow-hidden rounded-[var(--radius-card)] aspect-[16/10] border border-foreground/10"
                   >
                     <SmartImage
                       src={displayProducts[0].image}
                       alt={displayProducts[0].title}
                       className="absolute inset-0 w-full h-full object-cover" preset="detail" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-                    <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/25 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-white">
-                      <span className="w-1.5 h-1.5 rounded-full bg-highlight/40 animate-pulse" />
-                      Just In
+                    <div className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-[4px] bg-charcoal/85 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-highlight-soft backdrop-blur-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-highlight-soft animate-pulse" />
+                      Just in
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleWishlistClick(e, displayProducts[0].id, displayProducts[0].title); }}
@@ -227,7 +225,7 @@ const TrendProducts = () => {
                         </div>
                         <button
                           onClick={(e) => handleAddToCart(e, displayProducts[0])}
-                          className="inline-flex items-center gap-1.5 rounded-full bg-white dark:bg-zinc-900 text-black px-4 py-1.5 text-[11px] font-semibold tracking-wide shadow-lg active:scale-95 transition-transform"
+                          className="btn-copper !px-4 !py-2"
                         >
                           <ShoppingCart className="w-3.5 h-3.5" />
                           Add
@@ -249,13 +247,13 @@ const TrendProducts = () => {
                       className="w-[148px] flex-shrink-0 cursor-pointer"
                       onClick={() => navigate(`/product/${product.id}`)}
                     >
-                      <div className="flex h-full flex-col overflow-hidden rounded-[20px] border border-border/70 bg-card shadow-[0_12px_28px_-22px_hsl(var(--highlight)/0.4)] dark:border-highlight/15 dark:shadow-[0_14px_28px_-20px_rgba(0,0,0,0.7)]">
-                        <div className="aspect-square overflow-hidden bg-secondary/50 dark:bg-muted relative">
+                      <div className="card-product flex h-full flex-col overflow-hidden p-1.5">
+                        <div className="tile-img aspect-square overflow-hidden relative">
                           <SmartImage
                             src={product.image}
                             alt={product.title}
                             className="w-full h-full object-cover" preset="card" />
-                          <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-highlight/10 text-highlight border border-highlight/30 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.18em] dark:bg-highlight/8 dark:text-highlight dark:border-highlight/42">
+                          <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-[4px] bg-charcoal/85 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-highlight-soft backdrop-blur-sm">
                             New
                           </span>
                           <button
@@ -273,18 +271,18 @@ const TrendProducts = () => {
                           <div className="mt-auto flex items-end justify-between">
                             <div>
                               <div className="flex flex-wrap items-center gap-1">
-                                <p className="text-sm font-bold text-foreground">₹{product.price.toLocaleString()}</p>
+                                <p className="price-now text-sm">₹{product.price.toLocaleString()}</p>
                                 {product.oldPrice && product.oldPrice > product.price && (
-                                  <p className="text-[9px] text-muted-foreground line-through">₹{product.oldPrice.toLocaleString()}</p>
+                                  <p className="price-was text-[9px]">₹{product.oldPrice.toLocaleString()}</p>
                                 )}
                               </div>
                               {product.discount && product.discount > 0 && (
-                                <p className="text-[9px] font-semibold text-highlight dark:text-highlight-soft">{product.discount}% Off</p>
+                                <p className="chip-off mt-1 w-fit !text-[9px]">{product.discount}% off</p>
                               )}
                             </div>
                             <button
                               onClick={(e) => handleAddToCart(e, product)}
-                              className="w-7 h-7 rounded-full bg-muted hover:bg-primary flex items-center justify-center transition-colors group/cart"
+                              className="w-8 h-8 rounded-full border border-foreground/15 hover:bg-primary hover:border-primary flex items-center justify-center transition-colors group/cart"
                               aria-label="Add to cart"
                             >
                               <ShoppingCart className="w-3.5 h-3.5 text-muted-foreground group-hover/cart:text-white" />
@@ -303,7 +301,7 @@ const TrendProducts = () => {
             {loading ? (
               <div className="grid grid-cols-4 gap-4 pb-4">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={`desktop-skeleton-${index}`} className="animate-pulse rounded-[26px] border border-border bg-card p-3">
+                  <div key={`desktop-skeleton-${index}`} className="animate-pulse card-product p-3">
                     <div className="mb-3 aspect-square rounded-2xl bg-gray-200 dark:bg-zinc-800 dark:bg-muted" />
                     <div className="mb-2 h-4 rounded bg-gray-200 dark:bg-zinc-800 dark:bg-muted" />
                     <div className="h-4 w-2/3 rounded bg-gray-200 dark:bg-zinc-800 dark:bg-muted" />
@@ -317,7 +315,7 @@ const TrendProducts = () => {
                 <p className="text-sm text-muted-foreground">New formulations are on their way. Stay tuned!</p>
               </div>
             ) : (
-              <div className="group/new-arrivals relative overflow-hidden rounded-[28px] border border-border/60 bg-background/70 py-2 dark:border-highlight/12 dark:bg-white/[0.03]">
+              <div className="group/new-arrivals relative overflow-hidden py-2">
                 <div
                   ref={desktopNARef}
                   className="overflow-x-auto scrollbar-hide px-2 py-2"
@@ -329,15 +327,15 @@ const TrendProducts = () => {
                         className="w-[230px] flex-shrink-0 cursor-pointer"
                         onClick={() => navigate(`/product/${product.id}`)}
                       >
-                        <div className="group flex h-full flex-col overflow-hidden rounded-[26px] border border-border bg-card shadow-sm transition-all duration-300 hover:shadow-xl">
-                          <div className="relative aspect-square overflow-hidden bg-secondary/50 dark:bg-muted">
+                        <div className="card-product group flex h-full flex-col overflow-hidden p-2.5">
+                          <div className="tile-img relative aspect-square overflow-hidden">
                             <SmartImage
                               src={product.image}
                               alt={product.title}
                               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" preset="card" />
                             <button
                               onClick={(e) => handleWishlistClick(e, product.id, product.title)}
-                              className="absolute right-2.5 top-2.5 rounded-full bg-background/95 p-2 shadow-sm backdrop-blur-sm transition-all duration-200 hover:shadow-md dark:bg-card/95"
+                              className="absolute right-2.5 top-2.5 rounded-full border border-foreground/10 bg-card/90 p-2 backdrop-blur-sm transition-all duration-200 hover:border-primary/40"
                               aria-label="Add to wishlist"
                             >
                               <Heart
@@ -350,29 +348,29 @@ const TrendProducts = () => {
                             </button>
                           </div>
 
-                          <div className="flex flex-grow flex-col p-4">
+                          <div className="flex flex-grow flex-col px-1.5 pt-3.5 pb-1">
                             <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                              <span className="inline-flex items-center gap-1 rounded-full border border-highlight/30 bg-highlight/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.22em] text-highlight dark:border-highlight/42 dark:bg-highlight/8 dark:text-highlight">
+                              <span className="inline-flex items-center gap-1 rounded-[4px] bg-charcoal/85 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-highlight-soft backdrop-blur-sm">
                                 <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
                                 New
                               </span>
                               {product.discount && product.discount > 0 && (
-                                <span className="inline-flex rounded-full border border-highlight/30 bg-highlight/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-highlight dark:border-highlight-soft/30 dark:bg-highlight-soft/10 dark:text-highlight-soft">
-                                  {product.discount}% Off
+                                <span className="chip-off">
+                                  {product.discount}% off
                                 </span>
                               )}
                             </div>
                             <h3 className="mb-2 line-clamp-1 text-sm font-medium text-foreground">{product.title}</h3>
                             <div className="mt-auto flex items-end justify-between">
                               <div>
-                                <p className="text-lg font-bold text-foreground">₹{product.price.toLocaleString()}</p>
+                                <p className="price-now text-lg">₹{product.price.toLocaleString()}</p>
                                 {product.oldPrice && product.oldPrice > product.price && (
-                                  <p className="text-xs text-muted-foreground line-through">₹{product.oldPrice.toLocaleString()}</p>
+                                  <p className="price-was text-xs">₹{product.oldPrice.toLocaleString()}</p>
                                 )}
                               </div>
                               <button
                                 onClick={(e) => handleAddToCart(e, product)}
-                                className="group/cart flex h-9 w-9 items-center justify-center rounded-full bg-muted transition-colors duration-200 hover:bg-primary"
+                                className="group/cart flex h-9 w-9 items-center justify-center rounded-full border border-foreground/15 transition-colors duration-200 hover:bg-primary hover:border-primary"
                                 aria-label="Add to cart"
                               >
                                 <ShoppingCart className="h-[18px] w-[18px] text-muted-foreground group-hover/cart:text-white" />
@@ -392,7 +390,7 @@ const TrendProducts = () => {
                     desktopNAScrollByPage("prev");
                   }}
                   disabled={!canDesktopNAScroll}
-                  className={`absolute left-4 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/92 text-foreground shadow-lg backdrop-blur transition-all duration-200 hover:scale-105 dark:border-white/10 dark:bg-zinc-900/90 ${canDesktopNAScroll ? 'pointer-events-none opacity-0 group-hover/new-arrivals:pointer-events-auto group-hover/new-arrivals:opacity-100' : 'pointer-events-none opacity-0'}`}
+                  className={`btn-round absolute left-4 top-1/2 z-20 !h-11 !w-11 -translate-y-1/2 !bg-card shadow-lg ${canDesktopNAScroll ? 'pointer-events-none opacity-0 group-hover/new-arrivals:pointer-events-auto group-hover/new-arrivals:opacity-100' : 'pointer-events-none opacity-0'}`}
                   aria-label="Show previous new arrivals"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -405,7 +403,7 @@ const TrendProducts = () => {
                     desktopNAScrollByPage("next");
                   }}
                   disabled={!canDesktopNAScroll}
-                  className={`absolute right-4 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/92 text-foreground shadow-lg backdrop-blur transition-all duration-200 hover:scale-105 dark:border-white/10 dark:bg-zinc-900/90 ${canDesktopNAScroll ? 'pointer-events-none opacity-0 group-hover/new-arrivals:pointer-events-auto group-hover/new-arrivals:opacity-100' : 'pointer-events-none opacity-0'}`}
+                  className={`btn-round absolute right-4 top-1/2 z-20 !h-11 !w-11 -translate-y-1/2 !bg-card shadow-lg ${canDesktopNAScroll ? 'pointer-events-none opacity-0 group-hover/new-arrivals:pointer-events-auto group-hover/new-arrivals:opacity-100' : 'pointer-events-none opacity-0'}`}
                   aria-label="Show next new arrivals"
                 >
                   <ChevronRight className="h-4 w-4" />

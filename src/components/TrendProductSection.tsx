@@ -74,7 +74,8 @@ const TrendProductSection = () => {
 
   const featuredProduct = products[0];
   const restProducts = products.slice(1);
-  const productsPerPage = 4;
+  // Three beside the featured tile fill the desktop bento (see the grid below).
+  const productsPerPage = 3;
   const totalPages = Math.max(1, Math.ceil(restProducts.length / productsPerPage));
   const visibleProducts = restProducts.slice(
     currentPage * productsPerPage,
@@ -89,17 +90,20 @@ const TrendProductSection = () => {
       <div className="container-custom">
         {/* Mobile */}
         <div className="md:hidden">
-          <div className="flex items-center justify-between mb-4 px-1">
+          <div className="flex items-end justify-between mb-4 px-1">
+            <div>
+            <p className="eyebrow-no mb-2"><b>05</b><span>This week</span></p>
             <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
               Trending Now
             </h2>
+            </div>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 aria-label="Scroll trending left"
                 onClick={() => mobileScrollByPage('prev')}
                 disabled={!canMobileTrendingScroll}
-                className="w-8 h-8 rounded-full border border-border/70 bg-background/90 dark:bg-zinc-900/80 flex items-center justify-center active:scale-95 transition-transform disabled:cursor-default disabled:opacity-40"
+                className="btn-round !h-8 !w-8"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
@@ -108,11 +112,11 @@ const TrendProductSection = () => {
                 aria-label="Scroll trending right"
                 onClick={() => mobileScrollByPage('next')}
                 disabled={!canMobileTrendingScroll}
-                className="w-8 h-8 rounded-full border border-border/70 bg-background/90 dark:bg-zinc-900/80 flex items-center justify-center active:scale-95 transition-transform disabled:cursor-default disabled:opacity-40"
+                className="btn-round !h-8 !w-8"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
-              <button onClick={() => navigate('/products?tag=trending')} className="text-xs font-medium text-primary tracking-wide ml-1">
+              <button onClick={() => navigate('/products?tag=trending')} className="link-arrow ml-1">
                 View All
               </button>
             </div>
@@ -128,31 +132,31 @@ const TrendProductSection = () => {
                 className="flex-shrink-0 w-[150px] cursor-pointer"
                 onClick={() => navigate(`/product/${product.id}`)}
               >
-                <div className="bg-card rounded-2xl overflow-hidden shadow-sm border border-border/70 h-full flex flex-col">
-                  <div className="aspect-square overflow-hidden bg-muted relative">
+                <div className="card-product overflow-hidden h-full flex flex-col p-1.5">
+                  <div className="tile-img aspect-square overflow-hidden relative">
                     <SmartImage src={product.image} alt={product.title} className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" preset="card" />
                     <button
                       onClick={(e) => handleWishlistClick(e, product.id, product.title)}
-                      className="absolute top-2 right-2 p-1.5 bg-background/95 dark:bg-card/95 rounded-full shadow-sm"
+                      className="absolute top-2 right-2 p-1.5 bg-card/90 rounded-full border border-foreground/10"
                     >
                       <Heart className={`w-3.5 h-3.5 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
                     </button>
                   </div>
                   <div className="p-2.5 flex flex-col flex-grow">
-                    <p className="text-[11px] text-muted-foreground line-clamp-1 mb-0.5">{product.title}</p>
+                    <p className="text-[11px] font-medium text-foreground/80 line-clamp-1 mb-1">{product.title}</p>
                     <div className="mt-auto flex items-end justify-between gap-1">
                       <div className="flex flex-col min-w-0">
-                        <p className="text-sm font-bold text-foreground leading-tight">₹{product.price.toLocaleString()}</p>
+                        <p className="price-now text-sm leading-tight">₹{product.price.toLocaleString()}</p>
                         {product.oldPrice && product.oldPrice > product.price && (
-                          <p className="text-[10px] text-muted-foreground line-through leading-tight">₹{product.oldPrice.toLocaleString()}</p>
+                          <p className="price-was text-[10px] leading-tight">₹{product.oldPrice.toLocaleString()}</p>
                         )}
                         {product.discount && product.discount > 0 && (
-                          <p className="text-[10px] font-semibold text-highlight dark:text-highlight-soft leading-tight">{product.discount}% Off</p>
+                          <p className="chip-off mt-1 w-fit">{product.discount}% off</p>
                         )}
                       </div>
                       <button
                         onClick={(e) => handleAddToCart(e, product)}
-                        className="w-7 h-7 rounded-full bg-muted hover:bg-primary flex items-center justify-center transition-colors group/cart flex-shrink-0"
+                        className="w-8 h-8 rounded-full border border-foreground/15 hover:bg-primary hover:border-primary flex items-center justify-center transition-colors group/cart flex-shrink-0"
                       >
                         <ShoppingCart className="w-3.5 h-3.5 text-muted-foreground group-hover/cart:text-white transition-colors" />
                       </button>
@@ -168,13 +172,12 @@ const TrendProductSection = () => {
         <div className="hidden md:block">
           <div className="flex items-end justify-between mb-8">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="relative inline-flex w-2 h-2">
+              <p className="eyebrow-no mb-3"><b>05</b><span className="inline-flex items-center gap-2">Live this week
+                <span className="relative inline-flex w-1.5 h-1.5">
                   <span className="absolute inset-0 rounded-full bg-primary opacity-60 animate-ping" />
-                  <span className="relative inline-flex rounded-full w-2 h-2 bg-primary" />
-                </span>
-                <span className="text-[10px] uppercase tracking-[0.3em] text-primary font-medium">Live</span>
-              </div>
+                  <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-primary" />
+                </span></span>
+              </p>
               <h2 className="text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                 Trending Now
               </h2>
@@ -185,31 +188,32 @@ const TrendProductSection = () => {
                 onClick={prevPage}
                 disabled={totalPages <= 1}
                 aria-label="Previous trending products"
-                className="w-10 h-10 rounded-full border border-border bg-card flex items-center justify-center hover:bg-muted transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-round"
               >
-                <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={nextPage}
                 disabled={totalPages <= 1}
                 aria-label="Next trending products"
-                className="w-10 h-10 rounded-full border border-border bg-card flex items-center justify-center hover:bg-muted transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-round"
               >
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                <ChevronRight className="w-4 h-4" />
               </button>
-              <button onClick={() => navigate('/products?tag=trending')} className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 ml-2">
+              <button onClick={() => navigate('/products?tag=trending')} className="link-arrow ml-2">
                 View All <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Bento grid: 4 cols x 2 rows. Big tile spans 2x2, two tall on right span 1x2, three small fill the bottom */}
+          {/* Bento grid: 4 cols x 2 rows. Big tile spans 2x2, one wide tile top-right, two small below it.
+              That is all 8 cells: a fifth tile would fall into an implicit, zero-height third row. */}
           {(() => {
-            const tiles = [featuredProduct, ...visibleProducts].slice(0, 5);
+            const tiles = [featuredProduct, ...visibleProducts].slice(0, 4);
             return (
               <div className="grid grid-cols-4 grid-rows-2 gap-4" style={{ height: 540 }}>
                 {tiles.map((product, idx) => {
-                  // 0 = big (2x2), 1 = top-right wide (2x1), 2 = mid-right (1x1), 3 = bottom-mid (1x1), 4 = bottom-right (1x1)
+                  // 0 = big (2x2), 1 = top-right wide (2x1), 2 and 3 = bottom-right (1x1 each)
                   const layoutClass =
                     idx === 0 ? 'col-span-2 row-span-2' :
                     idx === 1 ? 'col-span-2 row-span-1' :
@@ -222,7 +226,7 @@ const TrendProductSection = () => {
                       whileInView={{ opacity: 1, scale: 1 }}
                       viewport={{ once: true }}
                       transition={{ delay: idx * 0.07, duration: 0.4 }}
-                      className={`relative cursor-pointer group rounded-2xl overflow-hidden ${layoutClass}`}
+                      className={`relative cursor-pointer group rounded-[var(--radius-card)] overflow-hidden border border-foreground/[0.06] bg-charcoal ${layoutClass}`}
                       onClick={() => navigate(`/product/${product.id}`)}
                     >
                       <SmartImage
@@ -232,26 +236,24 @@ const TrendProductSection = () => {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
                       {/* Trending rank badge */}
-                      <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 bg-white/95 backdrop-blur px-2.5 py-1 rounded-full shadow">
+                      <div className={`absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 h-6 px-2 rounded-[4px] bg-charcoal/85 text-[10px] font-bold tracking-[0.12em] text-highlight-soft backdrop-blur-sm`}>
                         <span className="relative inline-flex w-1.5 h-1.5">
-                          <span className="absolute inset-0 rounded-full bg-red-500 opacity-60 animate-ping" />
-                          <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-red-500" />
+                          <span className="absolute inset-0 rounded-full bg-highlight-soft opacity-60 animate-ping" />
+                          <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-highlight-soft" />
                         </span>
-                        <span className="text-[10px] font-bold text-gray-900 tracking-wider">#{idx + 1}</span>
+                        <span>No. {String(idx + 1).padStart(2, '0')}</span>
                       </div>
 
                       <button
                         onClick={(e) => handleWishlistClick(e, product.id, product.title)}
-                        className="absolute top-3 right-3 z-10 p-2 bg-white/95 backdrop-blur rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-3 right-3 z-10 p-2 bg-black/35 backdrop-blur rounded-full border border-white/25 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        <Heart className={`w-3.5 h-3.5 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
+                        <Heart className={`w-3.5 h-3.5 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
                       </button>
 
                       <div className="absolute inset-x-0 bottom-0 z-10 p-4 lg:p-5">
                         {idx === 0 && (
-                          <span className="text-[10px] uppercase tracking-[0.25em] text-white/70 mb-1 font-light block">
-                            Top Trending
-                          </span>
+                          <span className="eyebrow-no mb-2 !text-white/70 [&_b]:!text-highlight-soft"><b>★</b>Top trending</span>
                         )}
                         <h3 className={`font-semibold text-white line-clamp-2 ${idx === 0 ? 'text-xl mb-2' : 'text-sm mb-1'}`} style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                           {product.title}
@@ -265,14 +267,14 @@ const TrendProductSection = () => {
                           </div>
                           <button
                             onClick={(e) => handleAddToCart(e, product)}
-                            className="w-8 h-8 rounded-full bg-white/20 hover:bg-primary backdrop-blur flex items-center justify-center transition-colors group/cart flex-shrink-0"
+                            className="w-8 h-8 rounded-full border border-white/30 bg-white/10 hover:bg-primary hover:border-primary backdrop-blur flex items-center justify-center transition-colors group/cart flex-shrink-0"
                           >
                             <ShoppingCart className="w-3.5 h-3.5 text-white transition-colors" />
                           </button>
                         </div>
                         {idx === 0 && (
                           <button
-                            className="mt-3 bg-white text-gray-900 px-5 py-2 rounded-full text-xs font-medium hover:bg-gray-100 transition-all w-fit shadow-lg"
+                            className="btn-line mt-4 w-fit text-white hover:bg-white hover:text-charcoal"
                             onClick={(e) => { e.stopPropagation(); navigate(`/product/${product.id}`); }}
                           >
                             Shop Now

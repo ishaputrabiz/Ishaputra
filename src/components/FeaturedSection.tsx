@@ -84,7 +84,7 @@ const FeaturedSection = () => {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ delay: idx * 0.08, duration: 0.4 }}
-      className="relative h-full min-h-[248px] cursor-pointer group rounded-[28px] overflow-hidden"
+      className="relative h-full min-h-[248px] cursor-pointer group rounded-[var(--radius-card)] overflow-hidden border border-white/10"
       onClick={() => navigate(`/product/${product.id}`)}
     >
       <SmartImage
@@ -95,14 +95,14 @@ const FeaturedSection = () => {
 
       <button
         onClick={(e) => handleWishlistClick(e, product.id, product.title)}
-        className="absolute top-3 right-3 z-10 p-2 bg-white/95 backdrop-blur rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute top-3 right-3 z-10 p-2 bg-black/35 backdrop-blur rounded-full border border-white/25 opacity-0 group-hover:opacity-100 transition-opacity"
       >
-        <Heart className={`w-3.5 h-3.5 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
+        <Heart className={`w-3.5 h-3.5 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
       </button>
 
       <div className="absolute inset-x-0 bottom-0 z-10 p-5 lg:p-6">
-        <p className="text-[10px] uppercase tracking-[0.24em] text-white/70 mb-1 font-light">
-          {compact ? `Spotlight 0${idx + 1}` : `Featured 0${idx + 1}`}
+        <p className="eyebrow-no mb-2 !text-white/70 [&_b]:!text-highlight-soft">
+          <b>{String(idx + 1).padStart(2, "0")}</b>{compact ? "Spotlight" : "Featured"}
         </p>
         <h3 className={`${compact ? "text-lg lg:text-xl" : "text-xl"} font-semibold text-white mb-2 line-clamp-2`} style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
           {product.title}
@@ -116,7 +116,7 @@ const FeaturedSection = () => {
           </div>
           <button
             onClick={(e) => handleAddToCart(e, product)}
-            className="w-9 h-9 rounded-full bg-white/20 hover:bg-primary backdrop-blur flex items-center justify-center transition-colors group/cart flex-shrink-0"
+            className="w-9 h-9 rounded-full border border-white/30 bg-white/10 hover:bg-primary hover:border-primary backdrop-blur flex items-center justify-center transition-colors group/cart flex-shrink-0"
           >
             <ShoppingCart className="w-[18px] h-[18px] text-white transition-colors" />
           </button>
@@ -127,27 +127,21 @@ const FeaturedSection = () => {
 
   return (
     <section className="relative py-6 md:py-16">
-      <div className="pointer-events-none absolute inset-x-0 top-10 h-36 bg-[radial-gradient(circle,hsl(var(--highlight)/0.14)_0%,hsl(var(--highlight)/0)_72%)] blur-3xl" />
       <div className="container-custom">
-        <div className="relative overflow-hidden rounded-[36px] border border-cream-dark/80 bg-[linear-gradient(180deg,rgba(255,253,248,0.98)_0%,rgba(255,255,255,0.98)_42%,rgba(255,246,232,0.95)_100%)] px-4 py-5 shadow-[0_34px_100px_-70px_hsl(var(--highlight)/0.55)] dark:border-highlight/20 dark:bg-[linear-gradient(180deg,rgba(18,17,15,0.98)_0%,rgba(24,20,17,0.98)_42%,rgba(12,12,11,0.98)_100%)] dark:shadow-[0_40px_120px_-74px_rgba(0,0,0,0.9)] md:px-7 md:py-8">
-          <div className="pointer-events-none absolute -left-8 top-8 h-28 w-28 rounded-full bg-[radial-gradient(circle,hsl(var(--primary)/0.12)_0%,hsl(var(--primary)/0)_75%)] blur-2xl dark:bg-[radial-gradient(circle,rgba(96,165,250,0.12)_0%,rgba(96,165,250,0)_75%)]" />
-          <div className="pointer-events-none absolute right-0 top-0 h-36 w-36 rounded-full bg-[radial-gradient(circle,hsl(var(--highlight)/0.24)_0%,hsl(var(--highlight)/0)_72%)] blur-2xl dark:bg-[radial-gradient(circle,hsl(var(--highlight)/0.18)_0%,hsl(var(--highlight)/0)_72%)]" />
+        <div className="panel tx-slate relative overflow-hidden px-4 py-5 text-charcoal-foreground md:px-8 md:py-10">
         {/* Mobile */}
         <div className="md:hidden">
           <div className="mb-4 px-1">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="h-px w-6 bg-primary/50" />
-              <span className="text-[10px] uppercase tracking-[0.32em] text-primary/80 font-medium">Featured</span>
-            </div>
+            <p className="eyebrow-no !text-charcoal-foreground/60 [&_b]:!text-highlight-soft mb-2"><b>03</b><span>Featured</span></p>
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
+              <h2 className="text-xl font-semibold text-charcoal-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                 The spotlight edit
               </h2>
-              <button onClick={() => navigate('/products?tag=featured')} className="text-xs font-medium text-primary tracking-wide">
+              <button onClick={() => navigate('/products?tag=featured')} className="link-arrow !text-charcoal-foreground">
                 View All
               </button>
             </div>
-            <p className="text-xs text-muted-foreground/90">Our editors’ picks for the modern man’s routine.</p>
+            <p className="mt-1 text-xs text-charcoal-foreground/60">Our editors’ picks for the modern man’s routine.</p>
           </div>
 
           <div className="space-y-4">
@@ -155,15 +149,13 @@ const FeaturedSection = () => {
               initial={{ opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="relative min-h-[304px] cursor-pointer overflow-hidden rounded-[30px] border border-white/40 shadow-[0_26px_60px_-36px_rgba(0,0,0,0.58)]"
+              className="relative min-h-[304px] cursor-pointer overflow-hidden rounded-[var(--radius-card)] border border-white/10"
               onClick={() => navigate(`/product/${featuredProduct.id}`)}
             >
               <SmartImage src={featuredProduct.image} alt={featuredProduct.title} className="absolute inset-0 w-full h-full object-cover" preset="detail" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-                <span className="inline-flex rounded-full border border-white/20 bg-white/10 backdrop-blur px-3 py-1 text-[10px] uppercase tracking-[0.26em] text-white/80 mb-3">
-                  Editor's Pick
-                </span>
+                <p className="eyebrow-no mb-3 !text-white/70 [&_b]:!text-highlight-soft"><b>01</b>Editor's pick</p>
                 <h3 className="text-2xl font-semibold mb-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                   {featuredProduct.title}
                 </h3>
@@ -187,8 +179,8 @@ const FeaturedSection = () => {
                   className="cursor-pointer"
                   onClick={() => navigate(`/product/${product.id}`)}
                 >
-                  <div className="overflow-hidden rounded-[24px] border border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(255,249,240,0.98)_100%)] shadow-[0_18px_42px_-28px_hsl(var(--highlight)/0.48)] dark:border-highlight/12 dark:bg-[linear-gradient(180deg,rgba(30,25,19,0.98)_0%,rgba(17,15,13,0.98)_100%)] dark:shadow-[0_24px_48px_-34px_rgba(0,0,0,0.82)]">
-                    <div className="aspect-[4/4.5] overflow-hidden bg-muted relative">
+                  <div className="card-product overflow-hidden p-1.5">
+                    <div className="tile-img aspect-[4/4.5] overflow-hidden relative">
                       <SmartImage src={product.image} alt={product.title} className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" preset="card" />
                       <button
                         onClick={(e) => handleWishlistClick(e, product.id, product.title)}
@@ -198,12 +190,12 @@ const FeaturedSection = () => {
                       </button>
                     </div>
                     <div className="p-3">
-                      <p className="text-[11px] text-muted-foreground line-clamp-1 mb-1">{product.title}</p>
+                      <p className="text-[11px] font-medium text-foreground/80 line-clamp-1 mb-1">{product.title}</p>
                       <div className="flex items-center justify-between gap-1">
-                        <p className="text-sm font-bold text-foreground">₹{product.price.toLocaleString()}</p>
+                        <p className="price-now text-sm">₹{product.price.toLocaleString()}</p>
                         <button
                           onClick={(e) => handleAddToCart(e, product)}
-                          className="w-7 h-7 rounded-full bg-muted hover:bg-primary flex items-center justify-center transition-colors group/cart flex-shrink-0"
+                          className="w-8 h-8 rounded-full border border-foreground/15 hover:bg-primary hover:border-primary flex items-center justify-center transition-colors group/cart flex-shrink-0"
                         >
                           <ShoppingCart className="w-3.5 h-3.5 text-muted-foreground group-hover/cart:text-white transition-colors" />
                         </button>
@@ -221,21 +213,21 @@ const FeaturedSection = () => {
           <div className="flex items-end justify-between mb-8">
             <div className="flex items-end gap-4">
               <div>
-                <span className="text-[10px] uppercase tracking-[0.3em] text-primary font-medium">Editor's Picks</span>
-                <h2 className="text-3xl lg:text-4xl font-semibold text-foreground mt-1" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
+                <p className="eyebrow-no !text-charcoal-foreground/60 [&_b]:!text-highlight-soft"><b>03</b><span>Editor's picks</span></p>
+                <h2 className="text-3xl lg:text-4xl font-semibold text-charcoal-foreground mt-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                   Featured
                 </h2>
               </div>
-              <span className="hidden lg:block h-px flex-1 bg-gradient-to-r from-primary/40 via-primary/20 to-transparent mb-3 ml-2" style={{ minWidth: 80 }} />
+              <span className="hidden lg:block h-px flex-1 bg-gradient-to-r from-highlight-soft/50 via-highlight-soft/15 to-transparent mb-3 ml-2" style={{ minWidth: 120 }} />
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={prevPage} className="w-10 h-10 rounded-full border border-border bg-card flex items-center justify-center hover:bg-muted transition-all shadow-sm">
-                <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+              <button onClick={prevPage} className="btn-round !border-white/20 !bg-white/5 !text-charcoal-foreground">
+                <ChevronLeft className="w-4 h-4" />
               </button>
-              <button onClick={nextPage} className="w-10 h-10 rounded-full border border-border bg-card flex items-center justify-center hover:bg-muted transition-all shadow-sm">
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              <button onClick={nextPage} className="btn-round !border-white/20 !bg-white/5 !text-charcoal-foreground">
+                <ChevronRight className="w-4 h-4" />
               </button>
-              <button onClick={() => navigate('/products?tag=featured')} className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1 ml-2">
+              <button onClick={() => navigate('/products?tag=featured')} className="link-arrow ml-2 !text-charcoal-foreground">
                 View All <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -248,7 +240,7 @@ const FeaturedSection = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4 }}
-                className="relative rounded-[32px] overflow-hidden cursor-pointer group min-h-[520px]"
+                className="relative rounded-[var(--radius-card)] overflow-hidden cursor-pointer group min-h-[520px] border border-white/10"
                 onClick={() => navigate(`/product/${featuredProduct.id}`)}
               >
                 <SmartImage
@@ -257,9 +249,7 @@ const FeaturedSection = () => {
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" preset="detail" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 z-10 p-8 text-white">
-                  <span className="inline-flex rounded-full border border-white/20 bg-white/10 backdrop-blur px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white/80 mb-4">
-                    Featured
-                  </span>
+                  <p className="eyebrow-no mb-4 !text-white/70 [&_b]:!text-highlight-soft"><b>01</b>Featured</p>
                   <h3 className="text-3xl font-semibold mb-3 line-clamp-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                     {featuredProduct.title}
                   </h3>
@@ -270,10 +260,10 @@ const FeaturedSection = () => {
                     )}
                   </div>
                   <button
-                    className="bg-white text-gray-900 px-6 py-2.5 rounded-full text-sm font-medium hover:bg-gray-100 transition-all shadow-lg"
+                    className="btn-line text-white hover:bg-white hover:text-charcoal"
                     onClick={(e) => { e.stopPropagation(); navigate(`/product/${featuredProduct.id}`); }}
                   >
-                    Explore Piece
+                    Explore
                   </button>
                 </div>
               </motion.div>

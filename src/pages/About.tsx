@@ -17,7 +17,7 @@ const PHOTOS = {
   hero: `${CLD}/v1790515738/ishaputrabotanicals/demo/byd8pu2yr0ggnuzjjuki.jpg`,
   storyA: `${CLD}/v1790515740/ishaputrabotanicals/demo/sx0mm5t33bz08fvtoohs.jpg`,
   storyB: `${CLD}/v1790515741/ishaputrabotanicals/demo/wmlgtuuqefyx1cui5c4o.jpg`,
-  collection: `${CLD}/v1790515742/ishaputrabotanicals/demo/vzav3ydug30xswtpvl6w.jpg`,
+  collection: `${CLD}/v1790577312/ishaputrabotanicals/demo/u9hy798tpsm63hcgoenf.jpg`,
   craft: `${CLD}/v1790515743/ishaputrabotanicals/demo/cdcrb0q48xmdi9givh1x.jpg`,
   ritual: `${CLD}/v1790515745/ishaputrabotanicals/demo/rhcmvbepwkogypbc0kip.jpg`,
   energy: `${CLD}/v1790515728/ishaputrabotanicals/demo/xg0ugfrhcptxlhfaefnm.jpg`,
