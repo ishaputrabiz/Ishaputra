@@ -66,5 +66,7 @@ export const BRAND = {
   storageKeys: {
     theme: 'ishaputra-theme',
     searchHistory: 'ishaputra_search_history',
+    cart: 'ishaputra_cart',
+    wishlist: 'ishaputra_wishlist',
   },
 } as const;

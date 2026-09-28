@@ -326,7 +326,7 @@ const ShoppingCart = () => {
                           className="flex gap-4 py-5 group"
                         >
                           {/* Product Image */}
-                          <div className="relative w-[88px] h-[88px] bg-muted rounded-xl overflow-hidden flex-shrink-0 ring-1 ring-border">
+                          <div className="relative w-[88px] h-[88px] bg-muted rounded-[10px] overflow-hidden flex-shrink-0 ring-1 ring-border">
                             <SmartImage
                               src={item.image}
                               alt={item.name}
@@ -421,7 +421,7 @@ const ShoppingCart = () => {
                     </h3>
 
                     {/* Apply Coupon Section */}
-                    <div className="bg-background rounded-xl border border-border overflow-hidden">
+                    <div className="bg-background rounded-[10px] border border-border overflow-hidden">
                       <button
                         onClick={() => setIsCouponExpanded(!isCouponExpanded)}
                         className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-muted transition-colors"
@@ -441,7 +441,7 @@ const ShoppingCart = () => {
                           {pricing.appliedCoupon ? (
                             <div className="flex items-center justify-between gap-2 pt-3">
                               <div className="text-sm text-foreground">
-                                <span className="font-semibold text-green-600">{pricing.appliedCoupon.code}</span>{' '}
+                                <span className="font-semibold text-primary">{pricing.appliedCoupon.code}</span>{' '}
                                 <span className="text-muted-foreground">applied</span>
                               </div>
                               <button
@@ -489,12 +489,12 @@ const ShoppingCart = () => {
                       {discount > 0 && (
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Coupon Discount</span>
-                          <span className="text-green-600 font-medium">− ₹ {discount.toLocaleString()}</span>
+                          <span className="text-primary font-medium">− ₹ {discount.toLocaleString()}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Delivery</span>
-                        <span className={freeDelivery ? 'text-green-600 font-medium' : 'text-foreground'}>
+                        <span className={freeDelivery ? 'text-primary font-medium' : 'text-foreground'}>
                           {freeDelivery ? 'FREE' : `₹ ${deliveryCharge.toLocaleString()}`}
                         </span>
                       </div>
@@ -502,7 +502,7 @@ const ShoppingCart = () => {
                           a catalogue with no delivery charge at all is not a
                           "free delivery offer". */}
                       {freeDelivery && pricing.deliveryBeforeFree > 0 && (
-                        <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 dark:bg-green-950/30 dark:text-green-400 px-3 py-1.5 rounded-md">
+                        <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/[0.06] px-3 py-1.5 rounded-md">
                           <span>🎉</span>
                           <span>Free delivery on orders above ₹{pricing.delivery?.freeDeliveryAbove?.toLocaleString() ?? '999'}!</span>
                         </div>
@@ -526,7 +526,7 @@ const ShoppingCart = () => {
                       {discount > 0 && (
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">You Save</span>
-                          <span className="text-green-600 font-medium">+ ₹ {discount.toLocaleString()}</span>
+                          <span className="text-primary font-medium">+ ₹ {discount.toLocaleString()}</span>
                         </div>
                       )}
                     </div>

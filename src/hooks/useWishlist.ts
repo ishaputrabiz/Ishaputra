@@ -8,8 +8,9 @@ import {
   removeWishlistItem as removeWishlistItemRemote,
   subscribeToUserWishlist,
 } from '@/services/wishlistService';
+import { BRAND } from '@/config/brand';
 
-const WISHLIST_STORAGE_KEY = 'sree_rasthu_wishlist';
+const WISHLIST_STORAGE_KEY = BRAND.storageKeys.wishlist;
 const WISHLIST_UPDATED_EVENT = 'wishlist-updated';
 
 interface WishlistItem {

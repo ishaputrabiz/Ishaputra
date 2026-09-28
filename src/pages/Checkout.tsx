@@ -89,7 +89,7 @@ const UnavailableItemsNotice = ({
   const affected = items.filter((i) => unavailable[i.id]);
   if (affected.length === 0) return null;
   return (
-    <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900 dark:border-orange-900/50 dark:bg-orange-950/40 dark:text-orange-200">
+    <div className="rounded-[10px] border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900 dark:border-orange-900/50 dark:bg-orange-950/40 dark:text-orange-200">
       <p className="font-semibold">
         {affected.length === 1 ? '1 item in your cart' : `${affected.length} items in your cart`} can no longer be ordered
       </p>
@@ -141,20 +141,20 @@ const SlideToPayButton = ({ amount, onComplete }: { amount: string; onComplete: 
   return (
     <motion.div
       ref={constraintsRef}
-      className="relative h-14 rounded-full overflow-hidden bg-gradient-to-r from-green-500 to-green-600 shadow-lg shadow-green-500/30"
+      className="tx-slate relative h-14 rounded-[8px] overflow-hidden border border-highlight-soft/25 shadow-lg shadow-black/20"
       style={{ opacity: backgroundOpacity }}
     >
       {/* Text */}
       <motion.div
-        className="absolute inset-0 flex items-center justify-center text-white font-semibold text-base pointer-events-none"
+        className="absolute inset-0 flex items-center justify-center pl-10 text-charcoal-foreground text-[11px] font-bold uppercase tracking-[0.2em] pointer-events-none"
         style={{ opacity: textOpacity, fontFamily: "var(--font-body)" }}
       >
-        {amount === 'Place Order' ? 'Slide to Place Order' : `Slide to Pay | ${amount}`}
+        {amount === 'Place Order' ? 'Slide to Place Order' : `Slide to pay · ${amount}`}
       </motion.div>
 
       {/* Check mark on complete */}
       <motion.div
-        className="absolute inset-0 flex items-center justify-center text-white font-semibold text-base pointer-events-none"
+        className="absolute inset-0 flex items-center justify-center pl-10 text-charcoal-foreground text-[11px] font-bold uppercase tracking-[0.2em] pointer-events-none"
         style={{ opacity: checkOpacity, fontFamily: "var(--font-body)" }}
       >
         {amount === 'Place Order' ? '✓ Placing Order...' : '✓ Processing...'}
@@ -169,11 +169,11 @@ const SlideToPayButton = ({ amount, onComplete }: { amount: string; onComplete: 
           dragMomentum={false}
           onDragEnd={handleDragEnd}
           style={{ x }}
-          className="absolute left-1 top-1 w-12 h-12 rounded-full bg-white dark:bg-zinc-900 shadow-md flex items-center justify-center cursor-grab active:cursor-grabbing z-10"
+          className="absolute left-1 top-1 w-12 h-12 rounded-[6px] bg-primary shadow-md flex items-center justify-center cursor-grab active:cursor-grabbing z-10"
           whileTap={{ scale: 0.95 }}
         >
-          <ChevronRight className="w-5 h-5 text-green-600" />
-          <ChevronRight className="w-5 h-5 text-green-600 -ml-3" />
+          <ChevronRight className="w-5 h-5 text-primary-foreground" />
+          <ChevronRight className="w-5 h-5 text-primary-foreground -ml-3" />
         </motion.div>
       )}
     </motion.div>
@@ -392,6 +392,8 @@ const MobileCheckout = () => {
   const deliveryCharge = pricing.deliveryCharge;
   const taxAmount = pricing.gstAmount;
   const gstLabel = `GST (${pricing.gst.rate}%${pricing.gst.inclusive ? ' included' : ''})`;
+  // Admin > Commerce settings: GST on, and "show GST line in cart/checkout" on.
+  const showGstLine = pricing.gst.enabled && pricing.gst.displayInline;
   const savings = items.reduce((acc, item) => {
     // Only count a saving when the product genuinely has a higher MRP.
     const originalPrice = item.originalPrice && item.originalPrice > item.price ? item.originalPrice : 0;
@@ -602,13 +604,13 @@ const MobileCheckout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 flex flex-col pb-24" style={{ fontFamily: "var(--font-body)" }}>
+    <div className="min-h-screen tx-paper flex flex-col pb-24" style={{ fontFamily: "var(--font-body)" }}>
       {/* ─── Header with gradient ─── */}
-      <div className="bg-white dark:bg-zinc-900 sticky top-0 z-50 shadow-sm">
+      <div className="bg-background/95 backdrop-blur sticky top-0 z-50 border-b border-foreground/[0.08]">
         {/* Top bar */}
         <div className="flex items-center justify-between px-4 py-3">
           <button onClick={handleBack} className="p-1">
-            <ArrowLeft className="w-6 h-6 text-gray-800 dark:text-zinc-200" />
+            <ArrowLeft className="w-6 h-6 text-foreground" />
           </button>
           <img
             src={resolvedTheme === 'dark' ? '/white_logo.png' : '/black_logo.png'}
@@ -639,12 +641,12 @@ const MobileCheckout = () => {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-[70] bg-white dark:bg-zinc-900 rounded-t-3xl max-h-[85vh] overflow-hidden"
+              className="fixed bottom-0 left-0 right-0 z-[70] bg-card rounded-t-[var(--radius-panel)] max-h-[85vh] overflow-hidden"
               style={{ fontFamily: "var(--font-body)" }}
             >
-              <div className="p-4 border-b border-gray-200 dark:border-zinc-800">
+              <div className="p-4 border-b border-foreground/[0.08]">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
+                  <h3 className="text-lg font-bold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                     Select Delivery Address
                   </h3>
                   <div className="flex items-center gap-2">
@@ -652,7 +654,7 @@ const MobileCheckout = () => {
                       <button
                         type="button"
                         onClick={() => setShowAddressForm(true)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg font-semibold text-sm transition-colors"
+                        className="flex items-center gap-1 px-3 py-1.5 text-primary hover:bg-primary/10 rounded-lg font-semibold text-sm transition-colors"
                       >
                         <Plus className="w-4 h-4" />
                         Add
@@ -660,9 +662,9 @@ const MobileCheckout = () => {
                     )}
                     <button
                       onClick={handleCloseAddressSelector}
-                      className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+                      className="p-1.5 hover:bg-foreground/[0.06] rounded-full transition-colors"
                     >
-                      <X className="w-5 h-5 text-gray-600 dark:text-zinc-400" />
+                      <X className="w-5 h-5 text-muted-foreground" />
                     </button>
                   </div>
                 </div>
@@ -672,15 +674,15 @@ const MobileCheckout = () => {
                 {showAddressForm || addresses.length === 0 ? (
                   /* Address Form */
                   <form onSubmit={handleFormSubmit} className="space-y-4">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                      <p className="text-xs text-blue-900 font-medium">
+                    <div className="bg-primary/5 border border-primary/25 rounded-lg p-3 mb-4">
+                      <p className="text-xs text-foreground/80 font-medium">
                         Add a new delivery address for your order
                       </p>
                     </div>
                     
                     {/* Full Name */}
                     <div>
-                      <Label htmlFor="mobile-fullName" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-1.5 block">
+                      <Label htmlFor="mobile-fullName" className="text-sm font-semibold text-foreground/80 mb-1.5 block">
                         Full Name *
                       </Label>
                       <Input
@@ -689,14 +691,14 @@ const MobileCheckout = () => {
                         value={formData.fullName}
                         onChange={handleInputChange}
                         placeholder="Enter your full name"
-                        className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500"
+                        className="h-11 border-foreground/15 focus:border-primary"
                         required
                       />
                     </div>
 
                     {/* Phone Number */}
                     <div>
-                      <Label htmlFor="mobile-phoneNumber" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-1.5 block">
+                      <Label htmlFor="mobile-phoneNumber" className="text-sm font-semibold text-foreground/80 mb-1.5 block">
                         Phone Number *
                       </Label>
                       <Input
@@ -706,7 +708,7 @@ const MobileCheckout = () => {
                         value={formData.phoneNumber}
                         onChange={handleInputChange}
                         placeholder="10-digit mobile number"
-                        className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500"
+                        className="h-11 border-foreground/15 focus:border-primary"
                         maxLength={10}
                         required
                       />
@@ -715,7 +717,7 @@ const MobileCheckout = () => {
                     {/* Pin Code & Locality */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label htmlFor="mobile-pinCode" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-1.5 block">
+                        <Label htmlFor="mobile-pinCode" className="text-sm font-semibold text-foreground/80 mb-1.5 block">
                           Pin Code *
                         </Label>
                         <Input
@@ -725,12 +727,12 @@ const MobileCheckout = () => {
                           onChange={handleInputChange}
                           placeholder="6-digit"
                           maxLength={6}
-                          className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500"
+                          className="h-11 border-foreground/15 focus:border-primary"
                           required
                         />
                       </div>
                       <div>
-                        <Label htmlFor="mobile-locality" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-1.5 block">
+                        <Label htmlFor="mobile-locality" className="text-sm font-semibold text-foreground/80 mb-1.5 block">
                           Locality
                         </Label>
                         <Input
@@ -739,14 +741,14 @@ const MobileCheckout = () => {
                           value={formData.locality}
                           onChange={handleInputChange}
                           placeholder="Area"
-                          className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500"
+                          className="h-11 border-foreground/15 focus:border-primary"
                         />
                       </div>
                     </div>
 
                     {/* Address */}
                     <div>
-                      <Label htmlFor="mobile-address" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-1.5 block">
+                      <Label htmlFor="mobile-address" className="text-sm font-semibold text-foreground/80 mb-1.5 block">
                         Address (Area and Street) *
                       </Label>
                       <Input
@@ -755,7 +757,7 @@ const MobileCheckout = () => {
                         value={formData.address}
                         onChange={handleInputChange}
                         placeholder="House No., Building, Street"
-                        className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500"
+                        className="h-11 border-foreground/15 focus:border-primary"
                         required
                       />
                     </div>
@@ -763,7 +765,7 @@ const MobileCheckout = () => {
                     {/* City & State */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label htmlFor="mobile-city" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-1.5 block">
+                        <Label htmlFor="mobile-city" className="text-sm font-semibold text-foreground/80 mb-1.5 block">
                           City *
                         </Label>
                         <Input
@@ -772,12 +774,12 @@ const MobileCheckout = () => {
                           value={formData.city}
                           onChange={handleInputChange}
                           placeholder="City"
-                          className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500"
+                          className="h-11 border-foreground/15 focus:border-primary"
                           required
                         />
                       </div>
                       <div>
-                        <Label htmlFor="mobile-state" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-1.5 block">
+                        <Label htmlFor="mobile-state" className="text-sm font-semibold text-foreground/80 mb-1.5 block">
                           State *
                         </Label>
                         <Input
@@ -786,7 +788,7 @@ const MobileCheckout = () => {
                           value={formData.state}
                           onChange={handleInputChange}
                           placeholder="State"
-                          className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500"
+                          className="h-11 border-foreground/15 focus:border-primary"
                           required
                         />
                       </div>
@@ -801,9 +803,9 @@ const MobileCheckout = () => {
                         onChange={(e) =>
                           setFormData((prev) => ({ ...prev, isDefault: e.target.checked }))
                         }
-                        className="w-4 h-4 text-blue-600 border-gray-300 dark:border-zinc-700 rounded focus:ring-blue-500"
+                        className="w-4 h-4 accent-primary border-foreground/15 rounded focus:ring-primary"
                       />
-                      <Label htmlFor="mobile-isDefault" className="text-sm font-medium text-gray-700 dark:text-zinc-300 cursor-pointer">
+                      <Label htmlFor="mobile-isDefault" className="text-sm font-medium text-foreground/80 cursor-pointer">
                         Set as default shipping address
                       </Label>
                     </div>
@@ -813,7 +815,7 @@ const MobileCheckout = () => {
                         type="button"
                         variant="link"
                         onClick={() => setShowAddressForm(false)}
-                        className="text-blue-600 p-0 h-auto text-sm"
+                        className="text-primary p-0 h-auto text-sm"
                       >
                         ← Back to saved addresses
                       </Button>
@@ -825,10 +827,10 @@ const MobileCheckout = () => {
                     {addresses.map((address) => (
                       <label
                         key={address.id}
-                        className={`block p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        className={`block p-4 rounded-[10px] border-2 cursor-pointer transition-all ${
                           tempSelectedAddress?.id === address.id
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 bg-white'
+                            ? 'border-primary bg-primary/5'
+                            : 'border-foreground/[0.08] bg-card'
                         }`}
                       >
                         <div className="flex items-start gap-3">
@@ -838,23 +840,23 @@ const MobileCheckout = () => {
                             name="mobileSelectedAddress"
                             checked={tempSelectedAddress?.id === address.id}
                             onChange={() => setTempSelectedAddress(address)}
-                            className="mt-1 w-4 h-4 text-blue-600 border-gray-300 dark:border-zinc-700 focus:ring-blue-500"
+                            className="mt-1 w-4 h-4 accent-primary border-foreground/15 focus:ring-primary"
                           />
                           
                           {/* Address Details */}
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="font-bold text-gray-900 dark:text-zinc-100 uppercase text-sm">
+                              <span className="font-bold text-foreground uppercase text-sm">
                                 {address.fullName}
                               </span>
                               {address.isDefault && (
-                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase">
+                                <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded uppercase">
                                   Home
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-gray-600 dark:text-zinc-400 mb-1">{address.phoneNumber}</p>
-                            <p className="text-xs text-gray-700 dark:text-zinc-300 leading-relaxed">
+                            <p className="text-xs text-muted-foreground mb-1">{address.phoneNumber}</p>
+                            <p className="text-xs text-foreground/80 leading-relaxed">
                               {address.address}
                               {address.locality && `, ${address.locality}`}, {address.city}, {address.state} - {address.pinCode}
                             </p>
@@ -867,12 +869,12 @@ const MobileCheckout = () => {
               </div>
               
               {/* Footer Buttons */}
-              <div className="p-4 border-t border-gray-200 dark:border-zinc-800 flex gap-3">
+              <div className="p-4 border-t border-foreground/[0.08] flex gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleCloseAddressSelector}
-                  className="flex-1 h-11 text-sm font-semibold border-gray-300 dark:border-zinc-700"
+                  className="flex-1 h-11 text-sm font-semibold border-foreground/15"
                 >
                   Cancel
                 </Button>
@@ -881,7 +883,7 @@ const MobileCheckout = () => {
                     type="button"
                     onClick={handleFormSubmit}
                     disabled={formLoading}
-                    className="flex-1 h-11 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white"
+                    className="flex-1 h-11 text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-[6px]"
                   >
                     {formLoading ? (
                       <>
@@ -897,7 +899,7 @@ const MobileCheckout = () => {
                     type="button"
                     onClick={handleDeliverHere}
                     disabled={!tempSelectedAddress}
-                    className="flex-1 h-11 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                    className="flex-1 h-11 text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-[6px] disabled:opacity-50"
                   >
                     Deliver Here
                   </Button>
@@ -915,82 +917,82 @@ const MobileCheckout = () => {
         <div className="px-4 pt-4 pb-3">
           <div className="relative flex justify-between">
             {/* Gray background rail: from center of step 1 to center of step 4 */}
-            <div className="absolute top-4 h-0.5 bg-gray-200" style={{ left: '12.5%', right: '12.5%' }} />
+            <div className="absolute top-4 h-0.5 bg-foreground/10" style={{ left: '12.5%', right: '12.5%' }} />
             {/* Green active rail: grows from step 1 center toward step 4 center */}
             <div
-              className="absolute top-4 h-0.5 bg-green-500 transition-all duration-300"
+              className="absolute top-4 h-0.5 bg-primary transition-all duration-300"
               style={{ left: '12.5%', width: `calc((100% - 25%) * ${(currentStep - 1) / 3})` }}
             />
 
             {/* Step 1: Cart */}
             <div className="relative z-10 flex flex-col items-center w-1/4">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                currentStep >= 1 ? 'bg-green-500' : 'bg-gray-200'
+                currentStep >= 1 ? 'bg-primary' : 'bg-foreground/10'
               }`}>
                 {currentStep > 1 ? (
                   <Check className="w-4 h-4 text-white" />
                 ) : (
                   <span className={`text-xs font-bold ${
-                    currentStep === 1 ? 'text-white' : 'text-gray-500'
+                    currentStep === 1 ? 'text-white' : 'text-muted-foreground'
                   }`}>1</span>
                 )}
               </div>
-              <span className={`text-xs mt-1 ${
-                currentStep >= 1 ? 'text-green-600 font-semibold' : 'text-gray-400'
+              <span className={`text-[10px] uppercase tracking-[0.14em] mt-1.5 ${
+                currentStep >= 1 ? 'text-primary font-semibold' : 'text-muted-foreground/70'
               }`}>Cart</span>
             </div>
 
             {/* Step 2: Checkout */}
             <div className="relative z-10 flex flex-col items-center w-1/4">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                currentStep >= 2 ? 'bg-green-500' : 'bg-gray-200'
+                currentStep >= 2 ? 'bg-primary' : 'bg-foreground/10'
               }`}>
                 {currentStep > 2 ? (
                   <Check className="w-4 h-4 text-white" />
                 ) : (
                   <span className={`text-xs font-bold ${
-                    currentStep === 2 ? 'text-white' : 'text-gray-500'
+                    currentStep === 2 ? 'text-white' : 'text-muted-foreground'
                   }`}>2</span>
                 )}
               </div>
-              <span className={`text-xs mt-1 ${
-                currentStep >= 2 ? 'text-green-600 font-semibold' : 'text-gray-400'
+              <span className={`text-[10px] uppercase tracking-[0.14em] mt-1.5 ${
+                currentStep >= 2 ? 'text-primary font-semibold' : 'text-muted-foreground/70'
               }`}>Checkout</span>
             </div>
 
             {/* Step 3: Payment */}
             <div className="relative z-10 flex flex-col items-center w-1/4">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                currentStep >= 3 ? 'bg-green-500' : 'bg-gray-200'
+                currentStep >= 3 ? 'bg-primary' : 'bg-foreground/10'
               }`}>
                 {currentStep > 3 ? (
                   <Check className="w-4 h-4 text-white" />
                 ) : (
                   <span className={`text-xs font-bold ${
-                    currentStep === 3 ? 'text-white' : 'text-gray-500'
+                    currentStep === 3 ? 'text-white' : 'text-muted-foreground'
                   }`}>3</span>
                 )}
               </div>
-              <span className={`text-xs mt-1 ${
-                currentStep >= 3 ? 'text-green-600 font-semibold' : 'text-gray-400'
+              <span className={`text-[10px] uppercase tracking-[0.14em] mt-1.5 ${
+                currentStep >= 3 ? 'text-primary font-semibold' : 'text-muted-foreground/70'
               }`}>Payment</span>
             </div>
 
             {/* Step 4: Confirm */}
             <div className="relative z-10 flex flex-col items-center w-1/4">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                currentStep >= 4 ? 'bg-green-500' : 'bg-gray-200'
+                currentStep >= 4 ? 'bg-primary' : 'bg-foreground/10'
               }`}>
                 {currentStep > 4 ? (
                   <Check className="w-4 h-4 text-white" />
                 ) : (
                   <span className={`text-xs font-bold ${
-                    currentStep === 4 ? 'text-white' : 'text-gray-500'
+                    currentStep === 4 ? 'text-white' : 'text-muted-foreground'
                   }`}>4</span>
                 )}
               </div>
-              <span className={`text-xs mt-1 ${
-                currentStep >= 4 ? 'text-green-600 font-semibold' : 'text-gray-400'
+              <span className={`text-[10px] uppercase tracking-[0.14em] mt-1.5 ${
+                currentStep >= 4 ? 'text-primary font-semibold' : 'text-muted-foreground/70'
               }`}>Confirm</span>
             </div>
           </div>
@@ -1003,11 +1005,11 @@ const MobileCheckout = () => {
             {/* Empty Cart State */}
             {items.length === 0 && !cartLoading && (
               <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-                <div className="w-24 h-24 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center mb-5">
-                  <ShoppingBag className="w-10 h-10 text-gray-400 dark:text-zinc-500" strokeWidth={1.5} />
+                <div className="w-24 h-24 rounded-full bg-foreground/[0.06] flex items-center justify-center mb-5">
+                  <ShoppingBag className="w-10 h-10 text-muted-foreground/70" strokeWidth={1.5} />
                 </div>
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-zinc-100 mb-2" style={{ fontFamily: "var(--font-body)" }}>Your cart is empty</h2>
-                <p className="text-sm text-gray-500 dark:text-zinc-400 mb-6">Add a daily ritual to get started</p>
+                <h2 className="text-xl font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-body)" }}>Your cart is empty</h2>
+                <p className="text-sm text-muted-foreground mb-6">Add a daily ritual to get started</p>
                 <button
                   onClick={() => navigate('/')}
                   className="px-6 py-3 bg-primary text-white text-sm font-semibold rounded-full shadow-sm active:scale-95 transition-transform"
@@ -1020,11 +1022,11 @@ const MobileCheckout = () => {
             {/* Cart Items */}
             {items.length > 0 && (<>
             <div className="px-4 pt-4 pb-2 space-y-3">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Your Cart</h2>
+              <h2 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Your Cart</h2>
               <UnavailableItemsNotice items={items} unavailable={unavailable} onRemove={removeFromCart} />
             </div>
-            <div className="mx-4 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden mb-4">
-              <div className="divide-y divide-gray-50 dark:divide-zinc-800">
+            <div className="mx-4 tx-sheet rounded-[var(--radius-card)] border border-foreground/[0.08] shadow-[var(--shadow-panel)] overflow-hidden mb-4">
+              <div className="divide-y divide-foreground/[0.06]">
                 <AnimatePresence>
                   {items.map((item) => {
                     // Show the strike-through MRP only when the product genuinely has one.
@@ -1038,36 +1040,36 @@ const MobileCheckout = () => {
                         transition={{ duration: 0.2 }}
                         className="flex items-center gap-3 px-4 py-4"
                       >
-                        <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-zinc-800 ring-1 ring-gray-100 dark:ring-zinc-700">
+                        <div className="w-20 h-20 rounded-[var(--radius-card)] overflow-hidden flex-shrink-0 bg-foreground/[0.03] ring-1 ring-foreground/[0.06]">
                           <SmartImage src={item.image} alt={item.name} className="w-full h-full object-cover" preset="thumb" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-base font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2 leading-snug" style={{ fontFamily: "var(--font-body)" }}>{item.name}</h4>
+                          <h4 className="text-base font-semibold text-foreground line-clamp-2 leading-snug" style={{ fontFamily: "var(--font-body)" }}>{item.name}</h4>
                           <UnavailableTag reason={unavailable[item.id]} />
                           <div className="mt-1.5">
-                            <span className="text-base font-bold text-gray-900 dark:text-zinc-100 whitespace-nowrap" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(item.price)}</span>
+                            <span className="text-base font-bold text-foreground whitespace-nowrap" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(item.price)}</span>
                             {origPrice && (
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                <span className="text-xs text-gray-400 dark:text-zinc-500 line-through whitespace-nowrap" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(origPrice)}</span>
-                                <span className="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full whitespace-nowrap">{Math.round((1 - item.price / origPrice) * 100)}% OFF</span>
+                                <span className="text-xs text-muted-foreground/70 line-through whitespace-nowrap" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(origPrice)}</span>
+                                <span className="text-[10px] font-bold text-primary bg-primary/[0.06] px-1.5 py-0.5 rounded-full whitespace-nowrap">{Math.round((1 - item.price / origPrice) * 100)}% OFF</span>
                               </div>
                             )}
                           </div>
                           <div className="mt-2 flex items-center gap-1.5">
                             <button
                               onClick={() => item.quantity === 1 ? removeFromCart(item.id) : updateQuantity(item.id, item.quantity - 1)}
-                              className="w-7 h-7 flex items-center justify-center bg-transparent border border-gray-900/20 dark:border-zinc-100/20 hover:bg-gray-900/5 rounded-full transition-colors"
+                              className="w-7 h-7 flex items-center justify-center bg-transparent border border-foreground/20 hover:bg-foreground/5 rounded-full transition-colors"
                             >
-                              <Minus className="w-3 h-3 text-gray-900 dark:text-zinc-100" strokeWidth={2.5} />
+                              <Minus className="w-3 h-3 text-foreground" strokeWidth={2.5} />
                             </button>
-                            <div className="w-7 h-7 flex items-center justify-center bg-gray-900 dark:bg-zinc-100 rounded-full">
-                              <span className="text-xs font-bold text-white dark:text-zinc-900" style={{ fontFamily: "var(--font-body)" }}>{item.quantity}</span>
+                            <div className="w-7 h-7 flex items-center justify-center bg-foreground rounded-full">
+                              <span className="text-xs font-bold text-background" style={{ fontFamily: "var(--font-body)" }}>{item.quantity}</span>
                             </div>
                             <button
                               onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              className="w-7 h-7 flex items-center justify-center bg-transparent border border-gray-900/20 dark:border-zinc-100/20 hover:bg-gray-900/5 rounded-full transition-colors"
+                              className="w-7 h-7 flex items-center justify-center bg-transparent border border-foreground/20 hover:bg-foreground/5 rounded-full transition-colors"
                             >
-                              <Plus className="w-3 h-3 text-gray-900 dark:text-zinc-100" strokeWidth={2.5} />
+                              <Plus className="w-3 h-3 text-foreground" strokeWidth={2.5} />
                             </button>
                           </div>
                         </div>
@@ -1079,9 +1081,9 @@ const MobileCheckout = () => {
                             <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
                           </button>
                           <div className="text-right">
-                            <p className="text-sm font-bold text-gray-900 dark:text-zinc-100 whitespace-nowrap" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(item.price * item.quantity)}</p>
+                            <p className="text-sm font-bold text-foreground whitespace-nowrap" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(item.price * item.quantity)}</p>
                             {item.quantity > 1 && (
-                              <p className="text-[10px] text-gray-400 dark:text-zinc-500 whitespace-nowrap" style={{ fontFamily: "var(--font-body)" }}>{item.quantity} × {formatPrice(item.price)}</p>
+                              <p className="text-[10px] text-muted-foreground/70 whitespace-nowrap" style={{ fontFamily: "var(--font-body)" }}>{item.quantity} × {formatPrice(item.price)}</p>
                             )}
                           </div>
                         </div>
@@ -1096,10 +1098,10 @@ const MobileCheckout = () => {
             <div className="mx-4 mb-4">
               <button
                 onClick={() => navigate('/')}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-white dark:bg-zinc-900 border border-dashed border-gray-200 dark:border-zinc-700 rounded-2xl hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-card border border-dashed border-foreground/[0.08] rounded-[var(--radius-card)] hover:bg-foreground/[0.04] transition-colors"
               >
-                <span className="text-sm text-gray-500 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>Missed something?</span>
-                <span className="text-sm font-semibold text-green-600" style={{ fontFamily: "var(--font-body)" }}>Add more items</span>
+                <span className="text-sm text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>Missed something?</span>
+                <span className="text-sm font-semibold text-primary" style={{ fontFamily: "var(--font-body)" }}>Add more items</span>
               </button>
             </div>
 
@@ -1109,21 +1111,21 @@ const MobileCheckout = () => {
               const visibleMobileOffers = showAllOffers ? activeOffers : activeOffers.slice(0, 2);
               return (
                 <div className="mx-4 mb-4">
-                  <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-4">
+                  <div className="tx-sheet rounded-[var(--radius-card)] border border-foreground/[0.08] shadow-[var(--shadow-panel)] p-4">
                     <button
                       onClick={() => setShowOffers((prev) => !prev)}
                       className="flex items-center justify-between w-full"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center">
-                          <Tag className="w-3.5 h-3.5 text-gray-700 dark:text-zinc-300" />
+                        <div className="w-7 h-7 rounded-full bg-foreground/[0.06] flex items-center justify-center">
+                          <Tag className="w-3.5 h-3.5 text-foreground/80" />
                         </div>
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
+                        <h3 className="text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                           Available Offers ({activeOffers.length})
                         </h3>
                       </div>
                       <ChevronDown
-                        className={`w-4 h-4 text-gray-500 dark:text-zinc-400 transition-transform ${showOffers ? 'rotate-180' : ''}`}
+                        className={`w-4 h-4 text-muted-foreground transition-transform ${showOffers ? 'rotate-180' : ''}`}
                       />
                     </button>
                     {showOffers && (
@@ -1137,21 +1139,21 @@ const MobileCheckout = () => {
                           const min = c.minOrderValue ? ` on orders above ₹${c.minOrderValue.toLocaleString('en-IN')}` : '';
                           const isApplied = pricing.appliedCoupon?.code === c.code;
                           return (
-                            <div key={c.id} className="rounded-xl border border-dashed border-green-300 dark:border-green-800 bg-green-50/60 dark:bg-green-900/15 p-3">
+                            <div key={c.id} className="rounded-[10px] border border-dashed border-primary/35 bg-primary/[0.05] p-3">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-bold text-green-700 dark:text-green-400 tracking-wide" style={{ fontFamily: "var(--font-body)" }}>{c.code}</span>
-                                    <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 rounded-full">{value}</span>
+                                    <span className="text-xs font-bold text-primary tracking-wide" style={{ fontFamily: "var(--font-body)" }}>{c.code}</span>
+                                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">{value}</span>
                                   </div>
-                                  <p className="text-[11px] text-gray-600 dark:text-zinc-400 mt-0.5 leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
+                                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
                                     {c.description || `Save ${value.toLowerCase()}`}{min}
                                   </p>
                                 </div>
                                 <button
                                   onClick={() => { if (!isApplied) pricing.applyCoupon(c.code); }}
                                   disabled={isApplied || pricing.couponLoading}
-                                  className={`flex-shrink-0 h-8 px-3 rounded-lg text-xs font-bold transition-colors ${isApplied ? 'bg-green-600 text-white' : 'bg-gray-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-gray-800 dark:hover:bg-white'}`}
+                                  className={`flex-shrink-0 h-8 px-3 rounded-lg text-xs font-bold transition-colors ${isApplied ? 'bg-primary/15 text-primary' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
                                   style={{ fontFamily: "var(--font-body)" }}
                                 >
                                   {isApplied ? '✓ Applied' : pricing.couponLoading ? 'Checking…' : 'APPLY'}
@@ -1163,7 +1165,7 @@ const MobileCheckout = () => {
                         {activeOffers.length > 2 && (
                           <button
                             onClick={() => setShowAllOffers((prev) => !prev)}
-                            className="text-xs font-semibold text-green-600 hover:text-green-700 mt-1"
+                            className="text-xs font-semibold text-primary hover:text-primary/80 mt-1"
                             style={{ fontFamily: "var(--font-body)" }}
                           >
                             {showAllOffers ? 'Show Less' : `Show ${activeOffers.length - 2} More`}
@@ -1178,15 +1180,15 @@ const MobileCheckout = () => {
 
             {/* Coupon Section */}
             <div className="mx-4 mb-4">
-              <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-4">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>Apply Coupon</h3>
+              <div className="tx-sheet rounded-[var(--radius-card)] border border-foreground/[0.08] shadow-[var(--shadow-panel)] p-4">
+                <h3 className="text-sm font-semibold text-foreground mb-3" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Apply Coupon</h3>
                 {pricing.appliedCoupon ? (
-                  <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-3 py-2.5">
+                  <div className="flex items-center justify-between bg-primary/[0.06] border border-primary/25 rounded-[10px] px-3 py-2.5">
                     <div className="flex items-center gap-2">
-                      <Tag className="w-4 h-4 text-green-600" />
+                      <Tag className="w-4 h-4 text-primary" />
                       <div>
-                        <span className="text-sm font-bold text-green-700 dark:text-green-400" style={{ fontFamily: "var(--font-body)" }}>{pricing.appliedCoupon.code}</span>
-                        <p className="text-xs text-green-600 dark:text-green-500" style={{ fontFamily: "var(--font-body)" }}>− {formatPrice(discount)} saved</p>
+                        <span className="text-sm font-bold text-primary" style={{ fontFamily: "var(--font-body)" }}>{pricing.appliedCoupon.code}</span>
+                        <p className="text-xs text-primary" style={{ fontFamily: "var(--font-body)" }}>− {formatPrice(discount)} saved</p>
                       </div>
                     </div>
                     <button
@@ -1202,14 +1204,14 @@ const MobileCheckout = () => {
                       value={couponInput}
                       onChange={e => setCouponInput(e.target.value.toUpperCase())}
                       placeholder="Enter coupon code"
-                      className="flex-1 min-w-0 h-10 px-3 text-sm bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/20 dark:focus:ring-zinc-100/20 text-gray-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-500"
+                      className="flex-1 min-w-0 h-10 px-3 text-sm bg-foreground/[0.03] border border-foreground/[0.08] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-primary/30 text-foreground placeholder:text-muted-foreground/70"
                       style={{ fontFamily: "var(--font-body)" }}
                       onKeyDown={e => { if (e.key === 'Enter' && couponInput.trim()) handleApplyCoupon(); }}
                     />
                     <button
                       onClick={handleApplyCoupon}
                       disabled={pricing.couponLoading || !couponInput.trim()}
-                      className="h-10 px-4 text-sm font-semibold text-white bg-gray-900 dark:bg-zinc-100 dark:text-zinc-900 rounded-xl disabled:opacity-50 transition-colors flex-shrink-0 whitespace-nowrap"
+                      className="h-10 px-4 text-[11px] font-bold uppercase tracking-[0.16em] text-primary-foreground bg-primary hover:bg-primary/90 rounded-[6px] disabled:opacity-50 transition-colors flex-shrink-0 whitespace-nowrap"
                       style={{ fontFamily: "var(--font-body)" }}
                     >
                       {pricing.couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
@@ -1224,33 +1226,37 @@ const MobileCheckout = () => {
 
             {/* Bill Summary */}
             <div className="mx-4 mb-4">
-              <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-4">
-                <h3 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>Bill Summary</h3>
+              <div className="tx-sheet rounded-[var(--radius-card)] border border-foreground/[0.08] shadow-[var(--shadow-panel)] p-4">
+                <h3 className="text-base font-bold text-foreground mb-3" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Bill Summary</h3>
                 <div className="space-y-2.5">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>Item Total</span>
-                    <span className="text-gray-900 dark:text-zinc-100 font-medium" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(subtotal)}</span>
+                    <span className="text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>Item Total</span>
+                    <span className="text-foreground font-medium" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>Delivery Fee</span>
-                    <span className={`font-medium ${deliveryCharge === 0 ? 'text-green-600' : 'text-gray-900 dark:text-zinc-100'}`} style={{ fontFamily: "var(--font-body)" }}>
+                    <span className="text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>Delivery Fee</span>
+                    <span className={`font-medium ${deliveryCharge === 0 ? 'text-primary' : 'text-foreground'}`} style={{ fontFamily: "var(--font-body)" }}>
                       {deliveryCharge === 0 ? 'FREE' : formatPrice(deliveryCharge)}
                     </span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-green-600" style={{ fontFamily: "var(--font-body)" }}>Coupon Discount</span>
-                      <span className="text-green-600 font-medium" style={{ fontFamily: "var(--font-body)" }}>− {formatPrice(discount)}</span>
+                      <span className="text-primary" style={{ fontFamily: "var(--font-body)" }}>Coupon Discount</span>
+                      <span className="text-primary font-medium" style={{ fontFamily: "var(--font-body)" }}>− {formatPrice(discount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>{gstLabel}</span>
-                    <span className="text-gray-900 dark:text-zinc-100 font-medium" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(taxAmount)}</span>
+                  {showGstLine && (
+
+                    <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>{gstLabel}</span>
+                    <span className="text-foreground font-medium" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(taxAmount)}</span>
                   </div>
-                  <div className="h-px bg-gray-200 dark:bg-zinc-800 my-2" />
+
+                  )}
+                  <div className="h-px bg-foreground/10 my-2" />
                   <div className="flex justify-between items-center">
-                    <span className="text-base font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>To Pay</span>
-                    <span className="text-lg font-bold text-green-600" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(total)}</span>
+                    <span className="text-base font-bold text-foreground" style={{ fontFamily: "var(--font-body)" }}>To Pay</span>
+                    <span className="text-lg font-bold text-primary" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(total)}</span>
                   </div>
                 </div>
               </div>
@@ -1266,29 +1272,29 @@ const MobileCheckout = () => {
         <div className="px-4 pt-4 pb-2">
           <button
             onClick={handleOpenAddressSelector}
-            className="w-full flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-zinc-800 dark:bg-zinc-900 rounded-lg transition-colors"
+            className="w-full flex items-center gap-2 hover:bg-foreground/[0.04] rounded-lg transition-colors"
           >
-            <MapPin className="w-4 h-4 text-gray-600 dark:text-zinc-400 flex-shrink-0" />
+            <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <div className="flex-1 min-w-0 text-left">
               {selectedAddress ? (
                 <>
                   <div className="flex items-center gap-1">
-                    <span className="text-gray-900 dark:text-zinc-100 font-semibold text-sm" style={{ fontFamily: "var(--font-body)" }}>
+                    <span className="text-foreground font-semibold text-sm" style={{ fontFamily: "var(--font-body)" }}>
                       {selectedAddress.fullName.toUpperCase()}
                     </span>
-                    <ChevronDown className="w-3.5 h-3.5 text-gray-600 dark:text-zinc-400" />
+                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
                   </div>
-                  <p className="text-gray-600 dark:text-zinc-400 text-xs truncate" style={{ fontFamily: "var(--font-body)" }}>
+                  <p className="text-muted-foreground text-xs truncate" style={{ fontFamily: "var(--font-body)" }}>
                     {selectedAddress.address}, {selectedAddress.city}
                   </p>
                 </>
               ) : (
                 <>
                   <div className="flex items-center gap-1">
-                    <span className="text-gray-900 dark:text-zinc-100 font-semibold text-sm" style={{ fontFamily: "var(--font-body)" }}>ADD ADDRESS</span>
-                    <Plus className="w-3.5 h-3.5 text-gray-600 dark:text-zinc-400" />
+                    <span className="text-foreground font-semibold text-sm" style={{ fontFamily: "var(--font-body)" }}>ADD ADDRESS</span>
+                    <Plus className="w-3.5 h-3.5 text-muted-foreground" />
                   </div>
-                  <p className="text-gray-600 dark:text-zinc-400 text-xs" style={{ fontFamily: "var(--font-body)" }}>Tap to add your delivery address</p>
+                  <p className="text-muted-foreground text-xs" style={{ fontFamily: "var(--font-body)" }}>Tap to add your delivery address</p>
                 </>
               )}
             </div>
@@ -1297,31 +1303,31 @@ const MobileCheckout = () => {
 
         {/* Compact Order Summary (step 2 — no duplicate full items list) */}
         <div className="mx-4 mt-3 mb-3">
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm px-4 py-3 flex items-center gap-3">
+          <div className="tx-sheet rounded-[var(--radius-card)] border border-foreground/[0.08] shadow-[var(--shadow-panel)] px-4 py-3 flex items-center gap-3">
             {/* Item thumbnails */}
             <div className="flex -space-x-2">
               {items.slice(0, 3).map((item, idx) => (
-                <div key={item.id} className="w-14 h-14 rounded-full overflow-hidden border-2 border-white dark:border-zinc-900 flex-shrink-0" style={{ zIndex: 3 - idx }}>
+                <div key={item.id} className="w-14 h-14 rounded-full overflow-hidden border-2 border-card flex-shrink-0" style={{ zIndex: 3 - idx }}>
                   <SmartImage src={item.image} alt={item.name} className="w-full h-full object-cover" preset="thumb" />
                 </div>
               ))}
               {items.length > 3 && (
-                <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-zinc-800 border-2 border-white dark:border-zinc-900 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-gray-600 dark:text-zinc-400">+{items.length - 3}</span>
+                <div className="w-14 h-14 rounded-full bg-foreground/[0.06] border-2 border-card flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-bold text-muted-foreground">+{items.length - 3}</span>
                 </div>
               )}
             </div>
             {/* Count + total */}
             <div className="flex-1 min-w-0">
-              <p className="text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
+              <p className="text-base font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                 {totalItems} item{totalItems !== 1 ? 's' : ''}
               </p>
-              <p className="text-sm text-gray-500 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>Total: {formatPrice(total)}</p>
+              <p className="text-sm text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>Total: {formatPrice(total)}</p>
             </div>
             {/* Edit cart link */}
             <button
               onClick={() => setCurrentStep(1)}
-              className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex-shrink-0"
+              className="text-xs font-semibold text-primary flex-shrink-0"
               style={{ fontFamily: "var(--font-body)" }}
             >
               Edit
@@ -1331,32 +1337,38 @@ const MobileCheckout = () => {
 
         {/* Bill Summary */}
         <div className="mx-4 mb-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden p-4">
-            <h3 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>Bill Summary</h3>
+          <div className="tx-sheet rounded-[var(--radius-card)] border border-foreground/[0.08] shadow-[var(--shadow-panel)] overflow-hidden p-4">
+            <h3 className="text-base font-bold text-foreground mb-3" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Bill Summary</h3>
             
             <div className="space-y-2.5">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>Item Total</span>
-                <span className="text-gray-900 dark:text-zinc-100 font-medium" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(subtotal)}</span>
+                <span className="text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>Item Total</span>
+                <span className="text-foreground font-medium" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(subtotal)}</span>
               </div>
               
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>Delivery Fee</span>
-                <span className={`font-medium ${deliveryCharge === 0 ? 'text-green-600' : 'text-gray-900'}`} style={{ fontFamily: "var(--font-body)" }}>
+                <span className="text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>Delivery Fee</span>
+                <span className={`font-medium ${deliveryCharge === 0 ? 'text-primary' : 'text-foreground'}`} style={{ fontFamily: "var(--font-body)" }}>
                   {deliveryCharge === 0 ? 'FREE' : formatPrice(deliveryCharge)}
                 </span>
               </div>
               
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>{gstLabel}</span>
-                <span className="text-gray-900 dark:text-zinc-100 font-medium" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(taxAmount)}</span>
+              {showGstLine && (
+
+              
+                <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>{gstLabel}</span>
+                <span className="text-foreground font-medium" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(taxAmount)}</span>
               </div>
 
-              <div className="h-px bg-gray-200 dark:bg-zinc-800 my-2" />
+              
+              )}
+
+              <div className="h-px bg-foreground/10 my-2" />
 
               <div className="flex justify-between items-center">
-                <span className="text-base font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>To Pay</span>
-                <span className="text-lg font-bold text-green-600" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(total)}</span>
+                <span className="text-base font-bold text-foreground" style={{ fontFamily: "var(--font-body)" }}>To Pay</span>
+                <span className="text-lg font-bold text-primary" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(total)}</span>
               </div>
             </div>
           </div>
@@ -1367,7 +1379,7 @@ const MobileCheckout = () => {
           <div className="mb-4">
             <div className="px-4 flex items-center gap-2 mb-3">
               <Sparkles className="w-5 h-5 text-highlight" />
-              <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Your last minute add-ons</h3>
+              <h3 className="text-base font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Your last minute add-ons</h3>
             </div>
 
             {/* Horizontal scroll products */}
@@ -1375,17 +1387,17 @@ const MobileCheckout = () => {
               {suggestedProducts.map((product) => (
                 <motion.div
                   key={product.id}
-                  className="flex-shrink-0 w-[130px] bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden border border-gray-100 dark:border-zinc-800 shadow-sm"
+                  className="flex-shrink-0 w-[130px] bg-card rounded-[var(--radius-card)] overflow-hidden border border-foreground/[0.06] shadow-sm"
                   whileTap={{ scale: 0.97 }}
                 >
                   {/* Image with discount badge */}
-                  <div className="relative w-full h-[110px] bg-gray-50 dark:bg-zinc-900">
+                  <div className="relative w-full h-[110px] bg-foreground/[0.03]">
                     <SmartImage
                       src={product.image}
                       alt={product.title}
                       className="w-full h-full object-cover" preset="card" />
                     {product.discount && (
-                      <div className="absolute top-2 left-2 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ fontFamily: "var(--font-body)" }}>
+                      <div className="absolute top-2 left-2 bg-charcoal/85 text-highlight-soft text-[9px] font-bold px-1.5 py-0.5 rounded-[4px]" style={{ fontFamily: "var(--font-body)" }}>
                         {product.discount}%<br />OFF
                       </div>
                     )}
@@ -1401,21 +1413,21 @@ const MobileCheckout = () => {
                           stock: product.stock,
                         });
                       }}
-                      className="absolute top-2 right-2 w-7 h-7 bg-white dark:bg-zinc-900 rounded-full shadow-md flex items-center justify-center border border-gray-100 dark:border-zinc-800 hover:bg-green-50 transition-colors"
+                      className="absolute top-2 right-2 w-7 h-7 bg-card rounded-full shadow-md flex items-center justify-center border border-foreground/[0.06] hover:bg-primary/10 transition-colors"
                     >
-                      <Plus className="w-4 h-4 text-green-600" strokeWidth={2.5} />
+                      <Plus className="w-4 h-4 text-primary" strokeWidth={2.5} />
                     </button>
                   </div>
 
                   {/* Info */}
                   <div className="p-2.5">
-                    <h4 className="text-xs font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2 leading-tight min-h-[28px]" style={{ fontFamily: "var(--font-body)" }}>
+                    <h4 className="text-xs font-semibold text-foreground line-clamp-2 leading-tight min-h-[28px]" style={{ fontFamily: "var(--font-body)" }}>
                       {product.title}
                     </h4>
                     <div className="mt-1.5 flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(product.price)}</span>
+                      <span className="text-xs font-bold text-foreground" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(product.price)}</span>
                       {product.oldPrice && (
-                        <span className="text-[10px] text-gray-400 dark:text-zinc-500 line-through" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(product.oldPrice)}</span>
+                        <span className="text-[10px] text-muted-foreground/70 line-through" style={{ fontFamily: "var(--font-body)" }}>{formatPrice(product.oldPrice)}</span>
                       )}
                     </div>
                   </div>
@@ -1428,12 +1440,12 @@ const MobileCheckout = () => {
       </div>
 
       {/* ─── Bottom Fixed Section ─── */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t border-foreground/[0.08] shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
         <div className="px-4 py-3">
           {currentStep === 1 ? (
             items.length > 0 && <button
               onClick={() => setCurrentStep(2)}
-              className="w-full h-14 bg-gray-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-semibold text-sm rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+              className="btn-copper w-full h-14 !text-[12px] gap-2 active:scale-[0.98]"
               style={{ fontFamily: "var(--font-body)" }}
             >
               Proceed to Checkout
@@ -1464,20 +1476,20 @@ const MobileCheckout = () => {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed inset-0 z-[80] bg-[linear-gradient(180deg,hsl(var(--highlight)/0.08)_0%,rgba(255,255,255,1)_18%),linear-gradient(135deg,hsl(var(--primary)/0.04)_0%,rgba(255,255,255,1)_52%)] dark:bg-zinc-950"
+            className="fixed inset-0 z-[80] tx-paper"
             style={{ fontFamily: "var(--font-body)" }}
           >
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-white/85 dark:bg-zinc-900/85 backdrop-blur border-b border-highlight/15 px-4 py-3">
+            <div className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b border-foreground/[0.08] px-4 py-3">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { setShowPaymentDetails(false); setSlideResetKey(k => k + 1); }}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+                  className="p-1 hover:bg-foreground/[0.06] rounded-full transition-colors"
                 >
-                  <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-zinc-300" />
+                  <ArrowLeft className="w-5 h-5 text-foreground/80" />
                 </button>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-zinc-100">Payment Details</h2>
+                  <h2 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Payment Details</h2>
                 </div>
               </div>
             </div>
@@ -1487,57 +1499,57 @@ const MobileCheckout = () => {
               <div className="px-4 pt-4 pb-3">
                 <div className="relative flex justify-between">
                   {/* Gray background rail */}
-                  <div className="absolute top-4 h-0.5 bg-gray-200 dark:bg-zinc-700" style={{ left: '12.5%', right: '12.5%' }} />
+                  <div className="absolute top-4 h-0.5 bg-foreground/10" style={{ left: '12.5%', right: '12.5%' }} />
                   {/* Green active rail (steps 1-3 done, step 4 pending) */}
-                  <div className="absolute top-4 h-0.5 bg-green-500" style={{ left: '12.5%', width: '50%' }} />
+                  <div className="absolute top-4 h-0.5 bg-primary" style={{ left: '12.5%', width: '50%' }} />
 
                   {/* Step 1: Cart */}
                   <div className="relative z-10 flex flex-col items-center w-1/4">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-green-500">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary">
                       <Check className="w-4 h-4 text-white" />
                     </div>
-                    <span className="text-xs mt-1 text-green-600 font-semibold">Cart</span>
+                    <span className="text-[10px] uppercase tracking-[0.14em] mt-1.5 text-primary font-semibold">Cart</span>
                   </div>
 
                   {/* Step 2: Checkout */}
                   <div className="relative z-10 flex flex-col items-center w-1/4">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-green-500">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary">
                       <Check className="w-4 h-4 text-white" />
                     </div>
-                    <span className="text-xs mt-1 text-green-600 font-semibold">Checkout</span>
+                    <span className="text-[10px] uppercase tracking-[0.14em] mt-1.5 text-primary font-semibold">Checkout</span>
                   </div>
 
                   {/* Step 3: Payment */}
                   <div className="relative z-10 flex flex-col items-center w-1/4">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-green-500">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary">
                       <span className="text-xs font-bold text-white">3</span>
                     </div>
-                    <span className="text-xs mt-1 text-green-600 font-semibold">Payment</span>
+                    <span className="text-[10px] uppercase tracking-[0.14em] mt-1.5 text-primary font-semibold">Payment</span>
                   </div>
 
                   {/* Step 4: Confirm */}
                   <div className="relative z-10 flex flex-col items-center w-1/4">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-200 dark:bg-zinc-800">
-                      <span className="text-xs font-bold text-gray-500 dark:text-zinc-500">4</span>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-foreground/10">
+                      <span className="text-xs font-bold text-muted-foreground">4</span>
                     </div>
-                    <span className="text-xs mt-1 text-gray-400 dark:text-zinc-500">Confirm</span>
+                    <span className="text-[10px] uppercase tracking-[0.14em] mt-1.5 text-muted-foreground/70">Confirm</span>
                   </div>
                 </div>
               </div>
 
               {/* Payment Method */}
               <div className="px-4 py-4">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-100 mb-4">Payment Method</h3>
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-3">Payment method</h3>
                 <div className="space-y-3">
                   {/* Razorpay — Cards, UPI, Wallets & Net Banking */}
-                  <label className="flex items-center justify-between p-3 border border-gray-200 dark:border-zinc-800 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 dark:bg-zinc-900 transition-colors">
+                  <label className="flex items-center justify-between p-3.5 border-2 border-primary bg-primary/5 rounded-[10px] cursor-pointer transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center">
-                        <CreditCard className="w-4 h-4 text-gray-600 dark:text-zinc-400" />
+                      <div className="w-9 h-9 bg-primary rounded-[8px] flex items-center justify-center">
+                        <CreditCard className="w-4 h-4 text-primary-foreground" />
                       </div>
                       <div>
-                        <span className="block text-sm font-medium text-gray-900 dark:text-zinc-100">Pay Online (Razorpay)</span>
-                        <span className="text-xs text-gray-500 dark:text-zinc-400">Cards, UPI, Wallets & Net Banking</span>
+                        <span className="block text-sm font-medium text-foreground">Pay Online (Razorpay)</span>
+                        <span className="text-xs text-muted-foreground">Cards, UPI, Wallets & Net Banking</span>
                       </div>
                     </div>
                     <input
@@ -1546,44 +1558,44 @@ const MobileCheckout = () => {
                       value="Razorpay"
                       checked={selectedPaymentMethod === 'Razorpay'}
                       onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 dark:border-zinc-700 focus:ring-blue-500"
+                      className="w-4 h-4 accent-primary border-foreground/15 focus:ring-primary"
                     />
                   </label>
                 </div>
               </div>
 
               {/* Order Details */}
-              <div className="px-4 py-4 border-t border-gray-100 dark:border-zinc-800">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-100 mb-4">Order Details</h3>
+              <div className="px-4 py-4 border-t border-foreground/[0.06]">
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-3">Order details</h3>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600 dark:text-zinc-400">Sub Total (include vat and tax)</span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-zinc-100">{formatPrice(subtotal)}</span>
+                    <span className="text-xs text-muted-foreground">Subtotal</span>
+                    <span className="text-sm font-semibold text-foreground">{formatPrice(subtotal)}</span>
                   </div>
                   <Separator className="my-2" />
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-gray-900 dark:text-zinc-100">Total (include vat and tax)</span>
-                    <span className="text-lg font-bold text-gray-900 dark:text-zinc-100">{formatPrice(total)}</span>
+                    <span className="text-sm font-bold text-foreground">Total (incl. taxes)</span>
+                    <span className="text-lg font-bold text-foreground">{formatPrice(total)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Selected Items */}
-              <div className="px-4 py-4 border-t border-gray-100 dark:border-zinc-800">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-100 mb-4">Selected item</h3>
+              <div className="px-4 py-4 border-t border-foreground/[0.06]">
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-3">In this order</h3>
                 <div className="space-y-3">
                   {items.slice(0, 1).map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl p-3">
-                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-zinc-900">
+                    <div key={item.id} className="flex items-center gap-3 bg-card border border-foreground/[0.08] rounded-[10px] p-3">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-foreground/[0.03]">
                         <SmartImage src={item.image} alt={item.name} className="w-full h-full object-cover" preset="thumb" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-xs font-semibold text-gray-900 dark:text-zinc-100 line-clamp-1">{item.name}</h4>
+                        <h4 className="text-xs font-semibold text-foreground line-clamp-1">{item.name}</h4>
                       </div>
                     </div>
                   ))}
                   {items.length > 1 && (
-                    <p className="text-xs text-gray-500 dark:text-zinc-500">+ {items.length - 1} more item{items.length > 2 ? 's' : ''}</p>
+                    <p className="text-xs text-muted-foreground">+ {items.length - 1} more item{items.length > 2 ? 's' : ''}</p>
                   )}
                 </div>
               </div>
@@ -1594,10 +1606,10 @@ const MobileCheckout = () => {
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3, type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 left-0 right-0 bg-white/88 dark:bg-zinc-900/88 backdrop-blur border-t border-highlight/15 p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]"
+              className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur border-t border-foreground/[0.08] p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]"
             >
               {isPlacingOrder ? (
-                <div className="h-14 rounded-full flex items-center justify-center bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold">
+                <div className="tx-slate h-14 rounded-[8px] flex items-center justify-center text-charcoal-foreground text-[11px] font-bold uppercase tracking-[0.2em]">
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
                   Placing Order...
                 </div>
@@ -1669,8 +1681,8 @@ const MobileCheckout = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.9 }}
-              className="text-white text-2xl font-bold mt-6 text-center px-6"
-              style={{ fontFamily: "var(--font-body)", textShadow: '0 2px 12px hsl(var(--highlight)/0.6)' }}
+              className="text-white text-2xl font-semibold mt-6 text-center px-6"
+              style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)", textShadow: '0 2px 12px hsl(var(--highlight)/0.6)' }}
             >
               Order Placed Successfully!
             </motion.h2>
@@ -1695,20 +1707,20 @@ const MobileCheckout = () => {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed inset-0 z-[90] bg-white dark:bg-zinc-900 overflow-y-auto"
+            className="fixed inset-0 z-[90] bg-card overflow-y-auto"
             style={{ fontFamily: "var(--font-body)" }}
           >
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800">
+            <div className="sticky top-0 z-10 bg-card border-b border-foreground/[0.08]">
               <MobileHeader />
               <div className="flex items-center gap-3 px-4 py-2">
                 <button
                   onClick={() => navigate('/', { replace: true })}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+                  className="p-1 hover:bg-foreground/[0.06] rounded-full transition-colors"
                 >
-                  <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-zinc-300" />
+                  <ArrowLeft className="w-5 h-5 text-foreground/80" />
                 </button>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Order Placed</h2>
+                <h2 className="text-lg font-bold text-foreground" style={{ fontFamily: "var(--font-body)" }}>Order Placed</h2>
               </div>
             </div>
 
@@ -1719,7 +1731,7 @@ const MobileCheckout = () => {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 15 }}
-                  className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center"
+                  className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center"
                 >
                   <motion.div
                     initial={{ scale: 0 }}
@@ -1732,7 +1744,7 @@ const MobileCheckout = () => {
                       repeatDelay: 0.5,
                       repeatType: 'loop'
                     }}
-                    className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center"
+                    className="w-16 h-16 rounded-full bg-primary flex items-center justify-center"
                   >
                     <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <motion.path
@@ -1754,8 +1766,8 @@ const MobileCheckout = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
-                className="text-xl font-bold text-teal-600 text-center mb-3"
-                style={{ fontFamily: "var(--font-body)" }}
+                className="text-2xl font-semibold text-foreground text-center mb-3"
+                style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
               >
                 Order Placed Successfully!
               </motion.h3>
@@ -1763,7 +1775,7 @@ const MobileCheckout = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
-                className="text-sm text-gray-600 dark:text-zinc-400 text-center mb-6"
+                className="text-sm text-muted-foreground text-center mb-6"
                 style={{ fontFamily: "var(--font-body)" }}
               >
                 Payment is successfully processed and your Order is on the way.
@@ -1771,12 +1783,12 @@ const MobileCheckout = () => {
 
               {/* Order Details */}
               <div className="mb-6">
-                <h4 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>Order Placed</h4>
-                <div className="bg-gray-50 dark:bg-zinc-900 rounded-lg p-4 space-y-2">
-                  <p className="text-sm text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
+                <h4 className="text-base font-bold text-foreground mb-3" style={{ fontFamily: "var(--font-body)" }}>Order Placed</h4>
+                <div className="bg-foreground/[0.03] rounded-lg p-4 space-y-2">
+                  <p className="text-sm text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                     Your order # is: <span className="font-bold">{orderId}</span>
                   </p>
-                  <p className="text-xs text-gray-600 dark:text-zinc-400" style={{ fontFamily: "var(--font-body)" }}>
+                  <p className="text-xs text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>
                     Payment is successfully processed and your Order is on the way.
                   </p>
                 </div>
@@ -1785,8 +1797,8 @@ const MobileCheckout = () => {
               {/* Shipping Address */}
               {selectedAddress && (
                 <div className="mb-6">
-                  <h4 className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2" style={{ fontFamily: "var(--font-body)" }}>This order will be shipped to:</h4>
-                  <p className="text-xs text-gray-600 dark:text-zinc-400 leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
+                  <h4 className="text-sm font-semibold text-foreground/80 mb-2" style={{ fontFamily: "var(--font-body)" }}>This order will be shipped to:</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed" style={{ fontFamily: "var(--font-body)" }}>
                     {selectedAddress.address}
                     {selectedAddress.locality && `, ${selectedAddress.locality}`},<br />
                     {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pinCode}
@@ -1796,23 +1808,23 @@ const MobileCheckout = () => {
 
               {/* Payment Method */}
               <div className="mb-6">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2" style={{ fontFamily: "var(--font-body)" }}>Payment Method</h4>
-                <p className="text-xs text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>{selectedPaymentMethod}</p>
+                <h4 className="text-sm font-semibold text-foreground/80 mb-2" style={{ fontFamily: "var(--font-body)" }}>Payment Method</h4>
+                <p className="text-xs text-foreground" style={{ fontFamily: "var(--font-body)" }}>{selectedPaymentMethod}</p>
               </div>
 
               {/* Order Summary */}
               <div className="mb-6">
-                <h4 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>Order Summary</h4>
+                <h4 className="text-base font-bold text-foreground mb-3" style={{ fontFamily: "var(--font-body)" }}>Order Summary</h4>
                 <div className="space-y-3">
                   {/* First Item */}
                   {orderedItems.length > 0 && (
-                    <div className="flex gap-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-3">
-                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-zinc-900">
+                    <div className="flex gap-3 bg-card border border-foreground/[0.08] rounded-lg p-3">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-foreground/[0.03]">
                         <SmartImage src={orderedItems[0].image} alt={orderedItems[0].name} className="w-full h-full object-cover" preset="thumb" />
                       </div>
                       <div className="flex-1">
-                        <h5 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2 mb-1" style={{ fontFamily: "var(--font-body)" }}>{orderedItems[0].name}</h5>
-                        <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium" style={{ fontFamily: "var(--font-body)" }}>Qty: {orderedItems[0].quantity}</p>
+                        <h5 className="text-sm font-semibold text-foreground line-clamp-2 mb-1" style={{ fontFamily: "var(--font-body)" }}>{orderedItems[0].name}</h5>
+                        <p className="text-xs text-muted-foreground font-medium" style={{ fontFamily: "var(--font-body)" }}>Qty: {orderedItems[0].quantity}</p>
                       </div>
                     </div>
                   )}
@@ -1830,13 +1842,13 @@ const MobileCheckout = () => {
                             className="space-y-3 overflow-hidden"
                           >
                             {orderedItems.slice(1).map((item) => (
-                              <div key={item.id} className="flex gap-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-3">
-                                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-zinc-900">
+                              <div key={item.id} className="flex gap-3 bg-card border border-foreground/[0.08] rounded-lg p-3">
+                                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-foreground/[0.03]">
                                   <SmartImage src={item.image} alt={item.name} className="w-full h-full object-cover" preset="thumb" />
                                 </div>
                                 <div className="flex-1">
-                                  <h5 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2 mb-1" style={{ fontFamily: "var(--font-body)" }}>{item.name}</h5>
-                                  <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium" style={{ fontFamily: "var(--font-body)" }}>Qty: {item.quantity}</p>
+                                  <h5 className="text-sm font-semibold text-foreground line-clamp-2 mb-1" style={{ fontFamily: "var(--font-body)" }}>{item.name}</h5>
+                                  <p className="text-xs text-muted-foreground font-medium" style={{ fontFamily: "var(--font-body)" }}>Qty: {item.quantity}</p>
                                 </div>
                               </div>
                             ))}
@@ -1847,7 +1859,7 @@ const MobileCheckout = () => {
                       {/* Dropdown Toggle Button */}
                       <button
                         onClick={() => setShowAllItems(!showAllItems)}
-                        className="w-full flex items-center justify-center gap-2 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="w-full flex items-center justify-center gap-2 py-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
                       >
                         <span className="text-sm font-medium" style={{ fontFamily: "var(--font-body)" }}>
                           {showAllItems ? 'Show Less' : `+ ${orderedItems.length - 1} more item${orderedItems.length > 2 ? 's' : ''}`}
@@ -1861,13 +1873,13 @@ const MobileCheckout = () => {
             </div>
 
             {/* Bottom Buttons */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800 p-4 flex gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+            <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-foreground/[0.06] p-4 flex gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
               <Button
                 onClick={() => {
                   navigate(`/account/orders/${firestoreOrderId ?? orderId}`);
                 }}
                 variant="outline"
-                className="flex-1 h-12 border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-zinc-100 font-semibold text-sm rounded-lg"
+                className="flex-1 h-12 border-foreground/15 text-foreground font-semibold text-sm rounded-lg"
                 style={{ fontFamily: "var(--font-body)" }}
               >
                 TRACK ORDER
@@ -1880,7 +1892,7 @@ const MobileCheckout = () => {
                     navigate('/');
                   }
                 }}
-                className="flex-1 h-12 bg-transparent hover:bg-green-50 active:bg-green-100 text-green-600 font-semibold text-sm rounded-lg border-2 border-green-500 transition-all hover:scale-105 active:scale-95"
+                className="flex-1 h-12 bg-transparent hover:bg-primary/10 active:bg-primary/15 text-primary font-semibold text-sm rounded-lg border-2 border-primary transition-all hover:scale-105 active:scale-95"
                 style={{ fontFamily: "var(--font-body)" }}
               >
                 DONE
@@ -2080,6 +2092,8 @@ const Checkout = () => {
   const deliveryCharge = pricing.deliveryCharge;
   const taxAmount = pricing.gstAmount;
   const gstLabel = `GST (${pricing.gst.rate}%${pricing.gst.inclusive ? ' included' : ''})`;
+  // Admin > Commerce settings: GST on, and "show GST line in cart/checkout" on.
+  const showGstLine = pricing.gst.enabled && pricing.gst.displayInline;
   const discount = pricing.discount;
   const desktopTotal = pricing.total;
 
@@ -2288,25 +2302,24 @@ const Checkout = () => {
   const donationAmounts: number[] = [];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen tx-paper">
       <Header />
       
       <div className="container mx-auto px-4 py-8 max-w-6xl" style={{ fontFamily: "var(--font-body)" }}>
         {/* Back Button */}
         <button
           onClick={handleBack}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
-          style={{ fontFamily: "var(--font-body)" }}
+          className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground hover:text-primary mb-6 transition-colors"
         >
-          <ArrowLeft className="w-5 h-5" />
-          <span>Back to Cart</span>
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back</span>
         </button>
 
         {/* Secure badge */}
         <div className="flex items-center justify-end mb-8" style={{ fontFamily: "var(--font-body)" }}>
           <div className="flex items-center gap-2 text-sm">
-            <Shield className="w-4 h-4 text-green-600" />
-            <span className="font-medium text-green-600">100% SECURE</span>
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="font-medium text-primary">100% SECURE</span>
           </div>
         </div>
 
@@ -2314,17 +2327,17 @@ const Checkout = () => {
           {/* Left Column - Address & Offers */}
           <div className="lg:col-span-2 space-y-6">
             {/* Delivery Address */}
-            <div className="bg-card border border-border rounded-lg p-6">
+            <div className="tx-sheet border border-foreground/[0.08] rounded-[var(--radius-panel)] shadow-[var(--shadow-panel)] p-6">
               {selectedAddress ? (
                 <>
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-body)" }}>
+                    <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                       Deliver to: {selectedAddress.fullName}, {selectedAddress.pinCode}
                     </h2>
                     <Button
                       variant="outline"
                       onClick={handleOpenAddressSelector}
-                      className="text-highlight border-yellow-600 hover:bg-highlight/10 font-semibold uppercase"
+                      className="text-primary border-primary/50 hover:bg-primary/10 hover:text-primary text-[11px] font-bold uppercase tracking-[0.16em] rounded-[6px]"
                       style={{ fontFamily: "var(--font-body)" }}
                     >
                       CHANGE ADDRESS
@@ -2341,12 +2354,12 @@ const Checkout = () => {
                 </>
               ) : (
                 <div className="text-center py-8">
-                  <MapPin className="w-12 h-12 text-gray-400 dark:text-zinc-500 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-zinc-100 mb-2">No Address Saved</h3>
-                  <p className="text-gray-600 dark:text-zinc-400 mb-4">Add a delivery address to continue</p>
+                  <MapPin className="w-12 h-12 text-muted-foreground/70 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>No address saved yet</h3>
+                  <p className="text-muted-foreground mb-4">Add a delivery address to continue</p>
                   <Button
                     onClick={handleOpenAddressSelector}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    className="btn-copper h-auto py-3 text-[11px] font-bold rounded-[6px]"
                   >
                     Add New Address
                   </Button>
@@ -2370,17 +2383,17 @@ const Checkout = () => {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       onClick={(e) => e.stopPropagation()}
-                      className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden mx-4"
+                      className="bg-card rounded-[var(--radius-card)] shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden mx-4"
                       style={{ fontFamily: "var(--font-body)" }}
                     >
                     {/* Header */}
-                    <div className="p-6 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between">
-                      <h3 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Select Delivery Address</h3>
+                    <div className="p-6 border-b border-foreground/[0.08] flex items-center justify-between">
+                      <h3 className="text-2xl font-bold text-foreground">Select Delivery Address</h3>
                       <button
                         onClick={handleCloseAddressSelector}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+                        className="p-2 hover:bg-foreground/[0.06] rounded-full transition-colors"
                       >
-                        <X className="w-6 h-6 text-gray-600 dark:text-zinc-400" />
+                        <X className="w-6 h-6 text-muted-foreground" />
                       </button>
                     </div>
                     
@@ -2389,15 +2402,15 @@ const Checkout = () => {
                       {showAddressForm || addresses.length === 0 ? (
                         /* Address Form */
                         <form onSubmit={handleFormSubmit} className="space-y-5">
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                            <p className="text-sm text-blue-900 font-medium">
+                          <div className="bg-primary/5 border border-primary/25 rounded-lg p-4 mb-6">
+                            <p className="text-sm text-foreground/80 font-medium">
                               ℹ️ Add a new delivery address for your order
                             </p>
                           </div>
                           
                           {/* Full Name */}
                           <div>
-                            <Label htmlFor="fullName" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2 block">
+                            <Label htmlFor="fullName" className="text-sm font-semibold text-foreground/80 mb-2 block">
                               Full Name *
                             </Label>
                             <Input
@@ -2406,14 +2419,14 @@ const Checkout = () => {
                               value={formData.fullName}
                               onChange={handleInputChange}
                               placeholder="Enter your full name"
-                              className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                              className="h-11 border-foreground/15 focus:border-primary focus:ring-primary"
                               required
                             />
                           </div>
 
                           {/* Phone Number */}
                           <div>
-                            <Label htmlFor="phoneNumber" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2 block">
+                            <Label htmlFor="phoneNumber" className="text-sm font-semibold text-foreground/80 mb-2 block">
                               Phone Number *
                             </Label>
                             <Input
@@ -2423,7 +2436,7 @@ const Checkout = () => {
                               value={formData.phoneNumber}
                               onChange={handleInputChange}
                               placeholder="10-digit mobile number"
-                              className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                              className="h-11 border-foreground/15 focus:border-primary focus:ring-primary"
                               maxLength={10}
                               required
                             />
@@ -2432,7 +2445,7 @@ const Checkout = () => {
                           {/* Pin Code & Locality */}
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <Label htmlFor="pinCode" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2 block">
+                              <Label htmlFor="pinCode" className="text-sm font-semibold text-foreground/80 mb-2 block">
                                 Pin Code *
                               </Label>
                               <Input
@@ -2442,12 +2455,12 @@ const Checkout = () => {
                                 onChange={handleInputChange}
                                 placeholder="6-digit PIN"
                                 maxLength={6}
-                                className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                                className="h-11 border-foreground/15 focus:border-primary focus:ring-primary"
                                 required
                               />
                             </div>
                             <div>
-                              <Label htmlFor="locality" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2 block">
+                              <Label htmlFor="locality" className="text-sm font-semibold text-foreground/80 mb-2 block">
                                 Locality
                               </Label>
                               <Input
@@ -2456,14 +2469,14 @@ const Checkout = () => {
                                 value={formData.locality}
                                 onChange={handleInputChange}
                                 placeholder="Area/Locality"
-                                className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                                className="h-11 border-foreground/15 focus:border-primary focus:ring-primary"
                               />
                             </div>
                           </div>
 
                           {/* Address */}
                           <div>
-                            <Label htmlFor="address" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2 block">
+                            <Label htmlFor="address" className="text-sm font-semibold text-foreground/80 mb-2 block">
                               Address (Area and Street) *
                             </Label>
                             <Input
@@ -2472,7 +2485,7 @@ const Checkout = () => {
                               value={formData.address}
                               onChange={handleInputChange}
                               placeholder="House No., Building, Street"
-                              className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                              className="h-11 border-foreground/15 focus:border-primary focus:ring-primary"
                               required
                             />
                           </div>
@@ -2480,7 +2493,7 @@ const Checkout = () => {
                           {/* City & State */}
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <Label htmlFor="city" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2 block">
+                              <Label htmlFor="city" className="text-sm font-semibold text-foreground/80 mb-2 block">
                                 City *
                               </Label>
                               <Input
@@ -2489,12 +2502,12 @@ const Checkout = () => {
                                 value={formData.city}
                                 onChange={handleInputChange}
                                 placeholder="City"
-                                className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                                className="h-11 border-foreground/15 focus:border-primary focus:ring-primary"
                                 required
                               />
                             </div>
                             <div>
-                              <Label htmlFor="state" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2 block">
+                              <Label htmlFor="state" className="text-sm font-semibold text-foreground/80 mb-2 block">
                                 State *
                               </Label>
                               <Input
@@ -2503,7 +2516,7 @@ const Checkout = () => {
                                 value={formData.state}
                                 onChange={handleInputChange}
                                 placeholder="State"
-                                className="h-11 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                                className="h-11 border-foreground/15 focus:border-primary focus:ring-primary"
                                 required
                               />
                             </div>
@@ -2518,9 +2531,9 @@ const Checkout = () => {
                               onChange={(e) =>
                                 setFormData((prev) => ({ ...prev, isDefault: e.target.checked }))
                               }
-                              className="w-5 h-5 text-blue-600 border-gray-300 dark:border-zinc-700 rounded focus:ring-blue-500"
+                              className="w-5 h-5 accent-primary border-foreground/15 rounded focus:ring-primary"
                             />
-                            <Label htmlFor="isDefault" className="text-sm font-medium text-gray-700 dark:text-zinc-300 cursor-pointer">
+                            <Label htmlFor="isDefault" className="text-sm font-medium text-foreground/80 cursor-pointer">
                               Set as default shipping address
                             </Label>
                           </div>
@@ -2530,7 +2543,7 @@ const Checkout = () => {
                               type="button"
                               variant="link"
                               onClick={() => setShowAddressForm(false)}
-                              className="text-blue-600 p-0 h-auto"
+                              className="text-primary p-0 h-auto"
                             >
                               ← Back to saved addresses
                             </Button>
@@ -2540,16 +2553,16 @@ const Checkout = () => {
                         /* Saved Addresses List */
                         <div className="space-y-1">
                           <div className="mb-4">
-                            <h4 className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-3">Saved Addresses</h4>
+                            <h4 className="text-sm font-semibold text-foreground/80 mb-3">Saved Addresses</h4>
                           </div>
                           
                           {addresses.map((address) => (
                             <label
                               key={address.id}
-                              className={`block p-4 rounded-xl border-2 cursor-pointer transition-all mb-3 ${
+                              className={`block p-4 rounded-[10px] border-2 cursor-pointer transition-all mb-3 ${
                                 tempSelectedAddress?.id === address.id
-                                  ? 'border-blue-500 bg-blue-50'
-                                  : 'border-gray-200 hover:border-gray-300 bg-white'
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-foreground/[0.08] hover:border-foreground/25 bg-card'
                               }`}
                             >
                               <div className="flex items-start gap-3">
@@ -2559,23 +2572,23 @@ const Checkout = () => {
                                   name="selectedAddress"
                                   checked={tempSelectedAddress?.id === address.id}
                                   onChange={() => setTempSelectedAddress(address)}
-                                  className="mt-1 w-5 h-5 text-blue-600 border-gray-300 dark:border-zinc-700 focus:ring-blue-500"
+                                  className="mt-1 w-5 h-5 accent-primary border-foreground/15 focus:ring-primary"
                                 />
                                 
                                 {/* Address Details */}
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-bold text-gray-900 dark:text-zinc-100 uppercase text-sm">
+                                    <span className="font-bold text-foreground uppercase text-sm">
                                       {address.fullName}
                                     </span>
                                     {address.isDefault && (
-                                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase">
+                                      <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded uppercase">
                                         Home
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-sm text-gray-600 dark:text-zinc-400 mb-1">{address.phoneNumber}</p>
-                                  <p className="text-sm text-gray-700 dark:text-zinc-300 leading-relaxed">
+                                  <p className="text-sm text-muted-foreground mb-1">{address.phoneNumber}</p>
+                                  <p className="text-sm text-foreground/80 leading-relaxed">
                                     {address.address}
                                     {address.locality && `, ${address.locality}`}, {address.city}, {address.state} - {address.pinCode}
                                   </p>
@@ -2588,7 +2601,7 @@ const Checkout = () => {
                           <button
                             type="button"
                             onClick={() => setShowAddressForm(true)}
-                            className="w-full mt-4 p-4 border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-xl text-blue-600 font-semibold hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                            className="w-full mt-4 p-4 border-2 border-dashed border-foreground/15 rounded-[10px] text-primary font-semibold hover:border-primary/60 hover:bg-primary/10 transition-colors"
                           >
                             + Add New Address
                           </button>
@@ -2597,12 +2610,12 @@ const Checkout = () => {
                     </div>
                     
                     {/* Footer Buttons */}
-                    <div className="p-6 border-t border-gray-200 dark:border-zinc-800 flex gap-3">
+                    <div className="p-6 border-t border-foreground/[0.08] flex gap-3">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={handleCloseAddressSelector}
-                        className="flex-1 h-12 text-base font-semibold border-gray-300 dark:border-zinc-700"
+                        className="flex-1 h-12 text-base font-semibold border-foreground/15"
                       >
                         Cancel
                       </Button>
@@ -2611,7 +2624,7 @@ const Checkout = () => {
                           type="button"
                           onClick={handleFormSubmit}
                           disabled={formLoading}
-                          className="flex-1 h-12 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white"
+                          className="flex-1 h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-[6px]"
                         >
                           {formLoading ? (
                             <>
@@ -2627,7 +2640,7 @@ const Checkout = () => {
                           type="button"
                           onClick={handleDeliverHere}
                           disabled={!tempSelectedAddress}
-                          className="flex-1 h-12 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex-1 h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-[6px] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Deliver Here
                         </Button>
@@ -2641,7 +2654,7 @@ const Checkout = () => {
 
             {/* Available Offers */}
             {pricing.redeemableCoupons.length > 0 && (
-            <div className="bg-card border border-border rounded-lg p-6">
+            <div className="tx-sheet border border-foreground/[0.08] rounded-[var(--radius-panel)] shadow-[var(--shadow-panel)] p-6">
               <button
                 onClick={() => setShowOffers(!showOffers)}
                 className="flex items-center justify-between w-full mb-4"
@@ -2650,7 +2663,7 @@ const Checkout = () => {
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
                     <Tag className="w-4 h-4" />
                   </div>
-                  <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-body)" }}>Available Offers</h2>
+                  <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Available Offers</h2>
                 </div>
                 <ChevronDown
                   className={`w-5 h-5 transition-transform ${showOffers ? 'rotate-180' : ''}`}
@@ -2668,18 +2681,18 @@ const Checkout = () => {
                     const min = c.minOrderValue ? ` on orders above ₹${c.minOrderValue.toLocaleString('en-IN')}` : '';
                     const isApplied = pricing.appliedCoupon?.code === c.code;
                     return (
-                      <div key={c.id} className="flex items-center justify-between gap-4 rounded-xl border border-dashed border-green-300 dark:border-green-800 bg-green-50/60 dark:bg-green-900/15 p-3">
+                      <div key={c.id} className="flex items-center justify-between gap-4 rounded-[10px] border border-dashed border-primary/35 bg-primary/[0.05] p-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-green-700 dark:text-green-400 tracking-wide">{c.code}</span>
-                            <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded-full">{value}</span>
+                            <span className="text-sm font-bold text-primary tracking-wide">{c.code}</span>
+                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">{value}</span>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">{c.description || `Save ${value.toLowerCase()}`}{min}</p>
                         </div>
                         <button
                           onClick={() => { if (!isApplied) pricing.applyCoupon(c.code); }}
                           disabled={isApplied || pricing.couponLoading}
-                          className={`flex-shrink-0 h-9 px-4 rounded-lg text-sm font-bold transition-colors ${isApplied ? 'bg-green-600 text-white' : 'bg-foreground text-background hover:opacity-90'}`}
+                          className={`flex-shrink-0 h-9 px-4 rounded-lg text-sm font-bold transition-colors ${isApplied ? 'bg-primary/15 text-primary' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
                         >
                           {isApplied ? '✓ Applied' : pricing.couponLoading ? 'Checking…' : 'APPLY'}
                         </button>
@@ -2702,15 +2715,15 @@ const Checkout = () => {
             )}
 
             {/* Cart Items */}
-            <div className="bg-card border border-border rounded-lg p-6">
+            <div className="tx-sheet border border-foreground/[0.08] rounded-[var(--radius-panel)] shadow-[var(--shadow-panel)] p-6">
               {items.some((i) => unavailable[i.id]) && (
                 <div className="mb-4">
                   <UnavailableItemsNotice items={items} unavailable={unavailable} onRemove={removeFromCart} />
                 </div>
               )}
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-body)" }}>
-                  {items.length}/{items.length} ITEMS SELECTED
+                <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  {items.length}/{items.length} items selected
                 </h2>
                 <div className="flex gap-4" style={{ fontFamily: "var(--font-body)" }}>
                   {/*
@@ -2766,7 +2779,7 @@ const Checkout = () => {
                             <span className="text-sm text-muted-foreground line-through">
                               {formatPrice(item.originalPrice)}
                             </span>
-                            <span className="text-sm text-green-600 font-medium">
+                            <span className="text-sm text-primary font-medium">
                               {Math.round((1 - item.price / item.originalPrice) * 100)}% OFF
                             </span>
                           </>
@@ -2831,7 +2844,7 @@ const Checkout = () => {
                       </div>
                       <div className="flex items-center gap-2 mt-2 text-sm">
                         <div className="flex items-center gap-1">
-                          <svg className="w-4 h-4 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                          <svg className="w-4 h-4 text-primary" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
                           </svg>
                           <span className="text-muted-foreground">7 days</span>
@@ -2848,16 +2861,16 @@ const Checkout = () => {
           {/* Right Column - Coupons & Price Details */}
           <div className="space-y-6">
             {/* Coupons */}
-            <div className="bg-card border border-border rounded-lg p-6">
+            <div className="tx-sheet border border-foreground/[0.08] rounded-[var(--radius-panel)] shadow-[var(--shadow-panel)] p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Tag className="w-5 h-5" />
-                <h3 className="font-semibold" style={{ fontFamily: "var(--font-body)" }}>Apply Coupons</h3>
+                <h3 className="font-semibold" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Apply Coupons</h3>
               </div>
               {pricing.appliedCoupon ? (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-green-50 border border-green-200">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-primary/[0.06] border border-primary/25">
                   <div>
-                    <div className="font-mono font-semibold text-green-700">{pricing.appliedCoupon.code}</div>
-                    <div className="text-xs text-green-700">You saved {formatPrice(pricing.discount)}</div>
+                    <div className="font-mono font-semibold text-primary">{pricing.appliedCoupon.code}</div>
+                    <div className="text-xs text-primary">You saved {formatPrice(pricing.discount)}</div>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => { pricing.removeCoupon(); setCouponCode(''); }}>Remove</Button>
                 </div>
@@ -2873,7 +2886,7 @@ const Checkout = () => {
                     />
                     <Button
                       variant="outline"
-                      className="text-primary border-primary min-w-[104px]"
+                      className="text-primary border-primary/60 hover:bg-primary/10 hover:text-primary min-w-[104px] text-[11px] font-bold tracking-[0.16em] rounded-[6px]"
                       style={{ fontFamily: "var(--font-body)" }}
                       disabled={pricing.couponLoading || !couponCode.trim()}
                       onClick={async () => {
@@ -2903,8 +2916,8 @@ const Checkout = () => {
             </div>
 
             {/* Price Details */}
-            <div className="bg-card border border-border rounded-lg p-6 sticky top-4">
-              <h3 className="font-semibold mb-4" style={{ fontFamily: "var(--font-body)" }}>PRICE DETAILS ({items.length} Item{items.length > 1 ? 's' : ''})</h3>
+            <div className="tx-sheet border border-foreground/[0.08] rounded-[var(--radius-panel)] shadow-[var(--shadow-panel)] p-6 sticky top-4">
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-5">Price details ({items.length} Item{items.length > 1 ? 's' : ''})</h3>
               
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
@@ -2914,7 +2927,7 @@ const Checkout = () => {
 
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Delivery Fee</span>
-                  <span className={deliveryCharge === 0 ? 'text-green-600' : ''}>
+                  <span className={deliveryCharge === 0 ? 'text-primary' : ''}>
                     {deliveryCharge === 0 ? (
                       <span className="flex items-center gap-1">
                         {/* Strike through the real configured charge, not a
@@ -2932,20 +2945,26 @@ const Checkout = () => {
                   </span>
                 </div>
 
-                <div className="flex justify-between text-sm">
+                {showGstLine && (
+
+
+                  <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{gstLabel}</span>
                   <span>{formatPrice(taxAmount)}</span>
                 </div>
 
+
+                )}
+
                 {discount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Coupon Discount</span>
-                    <span className="text-green-600">- {formatPrice(discount)}</span>
+                    <span className="text-primary">- {formatPrice(discount)}</span>
                   </div>
                 )}
 
                 {pricing.freeDelivery && pricing.deliveryBeforeFree > 0 && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
+                  <div className="bg-primary/[0.06] border border-primary/25 rounded-lg p-3 text-sm text-primary">
                     🎉 You're saving {formatPrice(pricing.deliveryBeforeFree)} on delivery!
                   </div>
                 )}
@@ -2959,7 +2978,7 @@ const Checkout = () => {
               </div>
 
               <Button
-                className="w-full mt-6 bg-foreground text-background hover:bg-foreground/90 py-6 text-base font-semibold rounded-md"
+                className="btn-copper w-full mt-6 h-auto py-4 text-[12px] font-bold rounded-[6px]"
                 style={{ fontFamily: "var(--font-body)" }}
                 onClick={() => {
                   if (!selectedAddress) {
@@ -2979,7 +2998,7 @@ const Checkout = () => {
               {/* Trust Badges */}
               <div className="mt-4 pt-4 border-t border-border" style={{ fontFamily: "var(--font-body)" }}>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                  <Shield className="w-4 h-4 text-green-600" />
+                  <Shield className="w-4 h-4 text-primary" />
                   <span>100% Secure Checkout</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -3013,21 +3032,21 @@ const Checkout = () => {
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="fixed inset-0 z-[90] flex items-center justify-center p-8"
             >
-              <div className="w-full max-w-md max-h-[92vh] overflow-y-auto rounded-3xl bg-white dark:bg-zinc-950 shadow-[0_40px_120px_-50px_rgba(0,0,0,0.8)] ring-1 ring-black/5 dark:ring-white/10" style={{ fontFamily: "var(--font-body)" }}>
+              <div className="w-full max-w-md max-h-[92vh] overflow-y-auto rounded-[var(--radius-panel)] tx-sheet shadow-[0_40px_120px_-50px_rgba(0,0,0,0.8)] ring-1 ring-foreground/10" style={{ fontFamily: "var(--font-body)" }}>
                 {/* Header */}
-                <div className="sticky top-0 z-10 bg-white/95 dark:bg-zinc-950/95 backdrop-blur border-b border-gray-100 dark:border-zinc-800 px-6 py-4">
+                <div className="sticky top-0 z-10 bg-card/95 backdrop-blur border-b border-foreground/[0.06] px-6 py-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-lg font-bold text-gray-900 dark:text-zinc-100">Complete your order</h2>
-                      <p className="text-xs text-gray-500 dark:text-zinc-400 flex items-center gap-1 mt-0.5">
-                        <Shield className="w-3 h-3 text-green-600" /> 100% secure & encrypted
+                      <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Complete your order</h2>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Shield className="w-3 h-3 text-primary" /> 100% secure & encrypted
                       </p>
                     </div>
                     <button
                       onClick={() => setShowPaymentDetails(false)}
-                      className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+                      className="p-2 hover:bg-foreground/[0.06] rounded-full transition-colors"
                     >
-                      <X className="w-5 h-5 text-gray-500 dark:text-zinc-400" />
+                      <X className="w-5 h-5 text-muted-foreground" />
                     </button>
                   </div>
                 </div>
@@ -3037,20 +3056,20 @@ const Checkout = () => {
                   <div className="space-y-2.5">
                     {items.slice(0, showAllItems ? items.length : 2).map((item) => (
                       <div key={item.id} className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-zinc-900 ring-1 ring-gray-100 dark:ring-zinc-800">
+                        <div className="w-12 h-12 rounded-[10px] overflow-hidden flex-shrink-0 bg-foreground/[0.03] ring-1 ring-foreground/[0.06]">
                           <SmartImage src={item.image} alt={item.name} className="w-full h-full object-cover" preset="thumb" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium text-gray-900 dark:text-zinc-100 truncate">{item.name}</h4>
-                          <p className="text-xs text-gray-500 dark:text-zinc-400">Qty: {item.quantity}</p>
+                          <h4 className="text-sm font-medium text-foreground truncate">{item.name}</h4>
+                          <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
                         </div>
-                        <span className="text-sm font-semibold text-gray-900 dark:text-zinc-100 whitespace-nowrap">{formatPrice(item.price * item.quantity)}</span>
+                        <span className="text-sm font-semibold text-foreground whitespace-nowrap">{formatPrice(item.price * item.quantity)}</span>
                       </div>
                     ))}
                     {items.length > 2 && (
                       <button
                         onClick={() => setShowAllItems((v) => !v)}
-                        className="text-xs font-semibold text-primary dark:text-highlight hover:underline"
+                        className="text-xs font-semibold text-primary hover:underline"
                       >
                         {showAllItems ? 'Show less' : `+ ${items.length - 2} more item${items.length > 3 ? 's' : ''}`}
                       </button>
@@ -3061,16 +3080,16 @@ const Checkout = () => {
 
                   {/* Payment Method */}
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-zinc-400 mb-2.5">Payment Method</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2.5">Payment Method</h3>
                     <div className="space-y-2.5">
                       {/* Razorpay */}
-                      <label className={`flex items-center gap-3 p-3.5 rounded-2xl cursor-pointer transition-all ${selectedPaymentMethod === 'Razorpay' ? 'border-2 border-primary bg-primary/5 dark:bg-highlight/5 dark:border-highlight/70' : 'border border-gray-200 dark:border-zinc-800 hover:border-gray-300 dark:hover:border-zinc-700'}`}>
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${selectedPaymentMethod === 'Razorpay' ? 'bg-primary dark:bg-highlight/70' : 'bg-gray-100 dark:bg-zinc-800'}`}>
-                          <CreditCard className={`w-5 h-5 ${selectedPaymentMethod === 'Razorpay' ? 'text-white dark:text-zinc-900' : 'text-gray-600 dark:text-zinc-400'}`} />
+                      <label className={`flex items-center gap-3 p-3.5 rounded-[var(--radius-card)] cursor-pointer transition-all ${selectedPaymentMethod === 'Razorpay' ? 'border-2 border-primary bg-primary/5' : 'border border-foreground/[0.08] hover:border-foreground/25'}`}>
+                        <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 ${selectedPaymentMethod === 'Razorpay' ? 'bg-primary' : 'bg-foreground/[0.06]'}`}>
+                          <CreditCard className={`w-5 h-5 ${selectedPaymentMethod === 'Razorpay' ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
                         </div>
                         <div className="flex-1">
-                          <span className="block text-sm font-semibold text-gray-900 dark:text-zinc-100">Pay Online</span>
-                          <span className="text-xs text-gray-500 dark:text-zinc-400">Cards, UPI, Wallets & Net Banking</span>
+                          <span className="block text-sm font-semibold text-foreground">Pay Online</span>
+                          <span className="text-xs text-muted-foreground">Cards, UPI, Wallets & Net Banking</span>
                         </div>
                         <input
                           type="radio"
@@ -3078,7 +3097,7 @@ const Checkout = () => {
                           value="Razorpay"
                           checked={selectedPaymentMethod === 'Razorpay'}
                           onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                          className="w-5 h-5 accent-primary dark:accent-highlight"
+                          className="w-5 h-5 accent-primary"
                         />
                       </label>
                     </div>
@@ -3089,39 +3108,43 @@ const Checkout = () => {
                   {/* Price Breakdown */}
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600 dark:text-zinc-400">Item Total</span>
-                      <span className="font-medium text-gray-900 dark:text-zinc-100">{formatPrice(subtotal)}</span>
+                      <span className="text-muted-foreground">Item Total</span>
+                      <span className="font-medium text-foreground">{formatPrice(subtotal)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600 dark:text-zinc-400">Delivery Fee</span>
-                      <span className={`font-medium ${deliveryCharge === 0 ? 'text-green-600' : 'text-gray-900 dark:text-zinc-100'}`}>
+                      <span className="text-muted-foreground">Delivery Fee</span>
+                      <span className={`font-medium ${deliveryCharge === 0 ? 'text-primary' : 'text-foreground'}`}>
                         {deliveryCharge === 0 ? 'FREE' : formatPrice(deliveryCharge)}
                       </span>
                     </div>
                     {discount > 0 && (
                       <div className="flex items-center justify-between">
-                        <span className="text-green-600">Coupon Discount</span>
-                        <span className="font-medium text-green-600">− {formatPrice(discount)}</span>
+                        <span className="text-primary">Coupon Discount</span>
+                        <span className="font-medium text-primary">− {formatPrice(discount)}</span>
                       </div>
                     )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 dark:text-zinc-400">{gstLabel}</span>
-                      <span className="font-medium text-gray-900 dark:text-zinc-100">{formatPrice(taxAmount)}</span>
+                    {showGstLine && (
+
+                      <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">{gstLabel}</span>
+                      <span className="font-medium text-foreground">{formatPrice(taxAmount)}</span>
                     </div>
+
+                    )}
                     <Separator className="my-1" />
                     <div className="flex items-center justify-between">
-                      <span className="text-base font-bold text-gray-900 dark:text-zinc-100">Total</span>
-                      <span className="text-xl font-bold text-gray-900 dark:text-zinc-100">{formatPrice(desktopTotal)}</span>
+                      <span className="text-base font-bold text-foreground">Total</span>
+                      <span className="text-xl font-bold text-foreground">{formatPrice(desktopTotal)}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Footer with CTA */}
-                <div className="sticky bottom-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur border-t border-gray-100 dark:border-zinc-800 px-6 py-4 space-y-2">
+                <div className="sticky bottom-0 bg-card/95 backdrop-blur border-t border-foreground/[0.06] px-6 py-4 space-y-2">
                   <Button
                     onClick={handlePlaceOrder}
                     disabled={isPlacingOrder}
-                    className="w-full h-12 bg-primary hover:bg-primary-dark text-white font-semibold text-sm rounded-xl shadow-lg shadow-primary/25"
+                    className="btn-copper w-full h-12 text-[12px] font-bold rounded-[6px] shadow-lg shadow-primary/25"
                   >
                     {isPlacingOrder ? (
                       <>
@@ -3138,7 +3161,7 @@ const Checkout = () => {
                   <button
                     onClick={() => setShowPaymentDetails(false)}
                     disabled={isPlacingOrder}
-                    className="w-full text-center text-xs font-medium text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 disabled:opacity-50 py-1"
+                    className="w-full text-center text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50 py-1"
                   >
                     Cancel
                   </button>
@@ -3204,8 +3227,8 @@ const Checkout = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.9 }}
-              className="text-white text-3xl font-bold mt-8 text-center px-8"
-              style={{ fontFamily: "var(--font-body)", textShadow: '0 2px 16px hsl(var(--highlight)/0.7)' }}
+              className="text-white text-3xl font-semibold mt-8 text-center px-8"
+              style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)", textShadow: '0 2px 16px hsl(var(--highlight)/0.7)' }}
             >
               Order Placed Successfully!
             </motion.h2>
@@ -3240,16 +3263,16 @@ const Checkout = () => {
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="fixed inset-0 z-[90] flex items-center justify-center p-8"
             >
-              <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ fontFamily: "var(--font-body)" }}>
+              <div className="bg-card rounded-[var(--radius-card)] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ fontFamily: "var(--font-body)" }}>
                 {/* Header */}
-                <div className="sticky top-0 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 px-6 py-4 rounded-t-2xl">
+                <div className="sticky top-0 bg-card border-b border-foreground/[0.08] px-6 py-4 rounded-t-2xl">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-zinc-100">Order Placed</h2>
+                    <h2 className="text-xl font-bold text-foreground">Order Placed</h2>
                     <button
                       onClick={() => setShowOrderSuccess(false)}
-                      className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+                      className="p-2 hover:bg-foreground/[0.06] rounded-full transition-colors"
                     >
-                      <X className="w-5 h-5 text-gray-600 dark:text-zinc-400" />
+                      <X className="w-5 h-5 text-muted-foreground" />
                     </button>
                   </div>
                 </div>
@@ -3261,7 +3284,7 @@ const Checkout = () => {
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 15 }}
-                      className="w-28 h-28 rounded-full bg-green-100 flex items-center justify-center"
+                      className="w-28 h-28 rounded-full bg-primary/10 flex items-center justify-center"
                     >
                       <motion.div
                         initial={{ scale: 0 }}
@@ -3274,7 +3297,7 @@ const Checkout = () => {
                           repeatDelay: 0.5,
                           repeatType: 'loop'
                         }}
-                        className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center"
+                        className="w-20 h-20 rounded-full bg-primary flex items-center justify-center"
                       >
                         <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <motion.path
@@ -3296,7 +3319,8 @@ const Checkout = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.7 }}
-                    className="text-2xl font-bold text-teal-600 text-center mb-3"
+                    className="text-2xl font-semibold text-foreground text-center mb-3"
+                    style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
                   >
                     Order Placed Successfully!
                   </motion.h3>
@@ -3304,19 +3328,19 @@ const Checkout = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.8 }}
-                    className="text-sm text-gray-600 dark:text-zinc-400 text-center mb-8"
+                    className="text-sm text-muted-foreground text-center mb-8"
                   >
                     Payment is successfully processed and your Order is on the way.
                   </motion.p>
 
                   {/* Order Details */}
                   <div className="mb-6">
-                    <h4 className="text-lg font-bold text-gray-900 dark:text-zinc-100 mb-3">Order Placed</h4>
-                    <div className="bg-gray-50 dark:bg-zinc-900 rounded-lg p-4 space-y-2">
-                      <p className="text-sm text-gray-900 dark:text-zinc-100">
+                    <h4 className="text-lg font-bold text-foreground mb-3">Order Placed</h4>
+                    <div className="bg-foreground/[0.03] rounded-lg p-4 space-y-2">
+                      <p className="text-sm text-foreground">
                         Your order # is: <span className="font-bold">{orderId}</span>
                       </p>
-                      <p className="text-xs text-gray-600 dark:text-zinc-400">
+                      <p className="text-xs text-muted-foreground">
                         Payment is successfully processed and your Order is on the way and this been sent your email ID.
                       </p>
                     </div>
@@ -3325,8 +3349,8 @@ const Checkout = () => {
                   {/* Shipping Address */}
                   {selectedAddress && (
                     <div className="mb-6">
-                      <h4 className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2">This order will be shipped to:</h4>
-                      <p className="text-sm text-gray-600 dark:text-zinc-400 leading-relaxed">
+                      <h4 className="text-sm font-semibold text-foreground/80 mb-2">This order will be shipped to:</h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
                         {selectedAddress.address}
                         {selectedAddress.locality && `, ${selectedAddress.locality}`},<br />
                         {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pinCode}
@@ -3336,22 +3360,22 @@ const Checkout = () => {
 
                   {/* Payment Method */}
                   <div className="mb-6">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-zinc-300 mb-2">Payment Method</h4>
-                    <p className="text-sm text-gray-900 dark:text-zinc-100">{selectedPaymentMethod}</p>
+                    <h4 className="text-sm font-semibold text-foreground/80 mb-2">Payment Method</h4>
+                    <p className="text-sm text-foreground">{selectedPaymentMethod}</p>
                   </div>
 
                   {/* Order Summary */}
                   <div className="mb-6">
-                    <h4 className="text-lg font-bold text-gray-900 dark:text-zinc-100 mb-3">Order Summary</h4>
+                    <h4 className="text-lg font-bold text-foreground mb-3">Order Summary</h4>
                     <div className="space-y-3">
                       {/* First Item */}
                       {items.length > 0 && (
-                        <div className="flex gap-4 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-4">
-                          <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-zinc-900">
+                        <div className="flex gap-4 bg-card border border-foreground/[0.08] rounded-lg p-4">
+                          <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-foreground/[0.03]">
                             <SmartImage src={items[0].image} alt={items[0].name} className="w-full h-full object-cover" preset="thumb" />
                           </div>
                           <div className="flex-1">
-                            <h5 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 mb-1">{items[0].name}</h5>
+                            <h5 className="text-sm font-semibold text-foreground mb-1">{items[0].name}</h5>
                             <p className="text-xs text-red-600 font-medium">Delivery by: 10 July, 2024</p>
                           </div>
                         </div>
@@ -3370,12 +3394,12 @@ const Checkout = () => {
                                 className="space-y-3 overflow-hidden"
                               >
                                 {items.slice(1).map((item) => (
-                                  <div key={item.id} className="flex gap-4 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-4">
-                                    <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-zinc-900">
+                                  <div key={item.id} className="flex gap-4 bg-card border border-foreground/[0.08] rounded-lg p-4">
+                                    <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-foreground/[0.03]">
                                       <SmartImage src={item.image} alt={item.name} className="w-full h-full object-cover" preset="thumb" />
                                     </div>
                                     <div className="flex-1">
-                                      <h5 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 mb-1">{item.name}</h5>
+                                      <h5 className="text-sm font-semibold text-foreground mb-1">{item.name}</h5>
                                       <p className="text-xs text-red-600 font-medium">Delivery by: 10 July, 2024</p>
                                     </div>
                                   </div>
@@ -3387,7 +3411,7 @@ const Checkout = () => {
                           {/* Dropdown Toggle Button */}
                           <button
                             onClick={() => setShowAllItems(!showAllItems)}
-                            className="w-full flex items-center justify-center gap-2 py-3 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="w-full flex items-center justify-center gap-2 py-3 text-primary hover:bg-primary/10 rounded-lg transition-colors"
                           >
                             <span className="text-sm font-medium">
                               {showAllItems ? 'Show Less' : `+ ${items.length - 1} more item${items.length > 2 ? 's' : ''}`}
@@ -3401,14 +3425,14 @@ const Checkout = () => {
                 </div>
 
                 {/* Footer with Buttons */}
-                <div className="sticky bottom-0 bg-white dark:bg-zinc-900 border-t border-gray-200 dark:border-zinc-800 px-6 py-4 rounded-b-2xl">
+                <div className="sticky bottom-0 bg-card border-t border-foreground/[0.08] px-6 py-4 rounded-b-2xl">
                   <div className="flex gap-4">
                     <Button
                       onClick={() => {
                         navigate(`/account/orders/${firestoreOrderId ?? orderId}`);
                       }}
                       variant="outline"
-                      className="flex-1 h-12 border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-zinc-100 font-semibold text-sm"
+                      className="flex-1 h-12 border-foreground/15 text-foreground font-semibold text-sm"
                     >
                       TRACK ORDER
                     </Button>
@@ -3420,7 +3444,7 @@ const Checkout = () => {
                           navigate('/');
                         }
                       }}
-                      className="flex-1 h-12 bg-transparent hover:bg-green-50 active:bg-green-100 text-green-600 font-semibold text-sm border-2 border-green-500 transition-all hover:scale-105 active:scale-95"
+                      className="flex-1 h-12 bg-transparent hover:bg-primary/10 active:bg-primary/15 text-primary font-semibold text-sm border-2 border-primary transition-all hover:scale-105 active:scale-95"
                     >
                       DONE
                     </Button>

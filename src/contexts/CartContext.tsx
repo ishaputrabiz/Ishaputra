@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getProduct } from '@/services/productService';
 import { fetchLiveProductInfo } from '@/services/livePricing';
 import { useCatalogRevision } from '@/services/productCache';
+import { BRAND } from '@/config/brand';
 
 // Cart Item Interface
 export interface CartItem {
@@ -48,7 +49,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 // Local storage key for guest users
-const CART_STORAGE_KEY = 'sree_rasthu_cart';
+const CART_STORAGE_KEY = BRAND.storageKeys.cart;
 
 const buildStockMessage = (productName: string, availableStock: number) => {
   if (availableStock <= 0) {

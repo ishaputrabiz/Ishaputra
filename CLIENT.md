@@ -139,6 +139,13 @@
         - Copper "Buy now", which fixes the low-contrast black button in dark mode.
         - "Read more" link, which replaces the blue "more".
         - Squared trust badges and review cards.
+    - **Checkout (mobile and desktop, cart drawer):**
+        - Paper background with sheet cards; copper stepper, totals and savings. Replaces the green stepper and totals, blue links and blue-to-purple button.
+        - Copper "Proceed to checkout" and "Place order" buttons. The old buttons were black, and white in dark mode.
+        - Slide-to-pay is a charcoal-stone track with a copper handle.
+        - The GST line now follows Admin > Commerce settings: it shows only when GST is on and "show GST line" is on. It used to print "GST (3%) ₹0.00" even with GST off, and 3% is the jewellery rate.
+        - Cart and wishlist browser storage keys are now per store (`BRAND.storageKeys`); they were still `sree_rasthu_*`.
+- Preview test account for screenshots: `preview-shopper@ishaputra.test`, created through the site's signup with one dummy Hyderabad address and items in its cart. The password is kept outside the repo. **Delete it in Firebase Authentication (and its `users`/`carts` docs) before launch.**
 
 ## Progress
 - [x] Step 0 safe preview (2026-09-23): home, products and product pages show demo content on Ishaputra Firebase; only the YouTube section is hidden (no videos yet)
@@ -151,6 +158,7 @@ Review the Step 2 Home, Products and Product pages (light and dark, mobile and d
 
 ## Open questions
 - Real business details to replace the dummy ones in `src/config/brand.ts`: legal name, address, phone, WhatsApp, email, hours, GSTIN, domain, social links (blocking for launch, not for review)
+- GST: which rate(s) apply (Ayurvedic medicines and cosmetics differ), are prices GST-inclusive, and should the GST line show at checkout? Set in Admin > Commerce settings; GST is off until then (blocking for launch, not for review)
 - Vector (SVG/AI) logo file? A transparent PNG is in; a vector would give a sharper favicon (not blocking)
 - Category tree correct? (not blocking)
 - Loyalty card: a digital tier card or a physical/QR card? (Step 2B)
