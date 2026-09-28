@@ -192,26 +192,26 @@ const ProfileEditPage = () => {
       {/* Desktop site header */}
       <div className="hidden lg:block"><Header /></div>
 
-      <div className="min-h-screen bg-gray-50 dark:bg-zinc-900/50 pb-24 lg:pb-16 dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "var(--font-body)" }}>
+      <div className="min-h-screen tx-paper pb-24 lg:pb-16">
         {/* Desktop page wrapper for centered card width */}
         <div className="lg:max-w-3xl lg:mx-auto lg:px-6 lg:pt-8">
         <button
           onClick={() => navigate('/account')}
-          className="mb-4 hidden items-center gap-2 rounded-full border border-highlight/15 bg-white/90 dark:bg-zinc-900/90 px-4 py-2 text-sm font-medium text-gray-700 dark:text-zinc-300 shadow-sm transition-colors hover:bg-white dark:border-highlight/20 dark:bg-zinc-900/88 dark:text-zinc-100 dark:hover:bg-zinc-900 lg:inline-flex"
+          className="mb-4 hidden items-center gap-2 rounded-full border border-foreground/10 bg-card/90 px-4 py-2 text-sm font-medium text-foreground/80 shadow-sm transition-colors hover:bg-card dark:border-highlight/20 lg:inline-flex"
         >
           <ArrowLeft className="h-4 w-4" />
           Back
         </button>
         {/* ── Banner + Avatar Section ── */}
-        <div className="relative lg:overflow-hidden lg:rounded-3xl lg:border lg:border-gray-100 dark:border-zinc-800 lg:bg-white dark:bg-zinc-900 lg:shadow-sm dark:lg:border-zinc-800 dark:lg:bg-zinc-900/88">
+        <div className="relative lg:overflow-hidden lg:rounded-[var(--radius-panel)] lg:border lg:border-foreground/[0.08] lg:bg-card lg:shadow-sm">
           {/* Banner Background with geometric pattern */}
-          <div className="relative h-40 bg-gray-100 dark:bg-zinc-800 overflow-hidden">
+          <div className="tx-slate tx-contour relative h-40 overflow-hidden">
             {/* Back Button — mobile only (desktop has site header) */}
             <button
               onClick={() => navigate(-1)}
-              className="lg:hidden absolute top-4 left-4 z-10 rounded-full bg-white/80 dark:bg-zinc-900/80 p-2 shadow-sm transition-colors hover:bg-white dark:bg-zinc-900/85 dark:hover:bg-zinc-900"
+              className="lg:hidden absolute top-4 left-4 z-10 rounded-full bg-white/80 p-2 shadow-sm transition-colors hover:bg-card"
             >
-              <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-zinc-300 dark:text-zinc-100" />
+              <ArrowLeft className="w-5 h-5 text-foreground/80" />
             </button>
 
             {/* Geometric Network Pattern SVG */}
@@ -273,20 +273,20 @@ const ProfileEditPage = () => {
                   key={avatarUrl}
                   src={avatarUrl}
                   alt="Profile"
-                  className="w-28 h-28 rounded-full object-cover border-4 border-white dark:border-zinc-800 shadow-lg bg-white dark:bg-zinc-900"
+                  className="w-28 h-28 rounded-full object-cover border-4 border-card shadow-lg bg-card"
                   referrerPolicy="no-referrer" preset="thumb" />
               ) : (
-                <div className="w-28 h-28 rounded-full bg-gray-200 dark:bg-zinc-800 dark:bg-zinc-700 flex items-center justify-center border-4 border-white dark:border-zinc-800 shadow-lg">
-                  <span className="text-gray-500 dark:text-zinc-500 dark:text-zinc-400 text-3xl font-bold">{initials}</span>
+                <div className="w-28 h-28 rounded-full bg-foreground/10 flex items-center justify-center border-4 border-card shadow-lg">
+                  <span className="text-muted-foreground text-3xl font-bold">{initials}</span>
                 </div>
               )}
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingPhoto}
-                className="absolute bottom-1 right-1 w-8 h-8 bg-gray-900 dark:bg-zinc-100 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-800 dark:bg-zinc-100 transition-colors border-2 border-white dark:border-zinc-800"
+                className="absolute bottom-1 right-1 w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors border-2 border-card"
               >
                 {uploadingPhoto ? (
-                  <div className="w-4 h-4 border-2 border-white dark:border-zinc-800 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-card border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <Camera className="w-4 h-4 text-white" />
                 )}
@@ -308,32 +308,32 @@ const ProfileEditPage = () => {
                     type="text"
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
-                    className="bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-zinc-100 text-lg font-bold text-center px-3 py-1 rounded-lg border border-gray-300 dark:border-zinc-700 focus:outline-none focus:border-gray-500"
+                    className="bg-foreground/[0.06] text-foreground text-lg font-bold text-center px-3 py-1 rounded-lg border border-foreground/15 focus:outline-none focus:border-primary"
                     autoFocus
                     disabled={savingName}
                     onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
                   />
-                  <button onClick={handleSaveName} disabled={savingName} className="p-1 rounded-full bg-gray-200 dark:bg-zinc-800 dark:bg-zinc-700">
-                    <Check className="w-4 h-4 text-gray-700 dark:text-zinc-300" />
+                  <button onClick={handleSaveName} disabled={savingName} className="p-1 rounded-full bg-foreground/10">
+                    <Check className="w-4 h-4 text-foreground/80" />
                   </button>
-                  <button onClick={() => setIsEditingName(false)} className="p-1 rounded-full bg-gray-200 dark:bg-zinc-800 dark:bg-zinc-700">
-                    <X className="w-4 h-4 text-gray-700 dark:text-zinc-300" />
+                  <button onClick={() => setIsEditingName(false)} className="p-1 rounded-full bg-foreground/10">
+                    <X className="w-4 h-4 text-foreground/80" />
                   </button>
                 </div>
               ) : (
                 <>
-                  <h2 className="text-gray-900 dark:text-zinc-100 text-lg font-bold">{displayName}</h2>
+                  <h2 className="text-foreground text-xl font-semibold" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>{displayName}</h2>
                   <button
                     onClick={() => setIsEditingName(true)}
-                    className="p-1 rounded-full bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:bg-zinc-700 transition-colors"
+                    className="p-1 rounded-full bg-foreground/[0.06] hover:bg-foreground/10 transition-colors"
                   >
-                    <Edit3 className="w-3.5 h-3.5 text-gray-500 dark:text-zinc-500 dark:text-zinc-400" />
+                    <Edit3 className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
                 </>
               )}
             </div>
-            <p className="text-gray-500 dark:text-zinc-500 dark:text-zinc-400 text-xs">{user?.email}</p>
-            <p className="text-gray-400 dark:text-zinc-500 text-[10px] mt-0.5">Member since {memberSince}</p>
+            <p className="text-muted-foreground text-xs">{user?.email}</p>
+            <p className="text-muted-foreground/70 text-[10px] mt-0.5">Member since {memberSince}</p>
           </div>
         </div>
 
@@ -344,20 +344,20 @@ const ProfileEditPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <h3 className="text-sm font-bold text-gray-900 dark:text-zinc-100 mb-3 px-1">Personal Information</h3>
-            <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm divide-y divide-gray-100 dark:border-zinc-800 dark:bg-zinc-900/88 dark:divide-zinc-800">
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-3 px-1">Personal information</h3>
+            <div className="overflow-hidden rounded-[var(--radius-card)] border border-foreground/[0.06] bg-card shadow-sm divide-y divide-foreground/[0.07]">
               {/* Full Name */}
               <div className="flex items-center gap-3 px-4 py-3.5">
                 <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 h-5 text-blue-600" />
+                  <User className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-zinc-500 font-semibold">Full Name</p>
-                  <p className="text-sm text-gray-900 dark:text-zinc-100 font-medium truncate">{displayName}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">Full Name</p>
+                  <p className="text-sm text-foreground font-medium truncate">{displayName}</p>
                 </div>
                 <button
                   onClick={() => setIsEditingName(true)}
-                  className="text-blue-500 text-xs font-semibold"
+                  className="text-primary text-xs font-semibold"
                 >
                   Edit
                 </button>
@@ -366,41 +366,41 @@ const ProfileEditPage = () => {
               {/* Email */}
               <div className="flex items-center gap-3 px-4 py-3.5">
                 <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">
-                  <Mail className="w-5 h-5 text-blue-600" />
+                  <Mail className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-zinc-500 font-semibold">Email</p>
-                  <p className="text-sm text-gray-900 dark:text-zinc-100 font-medium truncate">{user?.email || 'Not set'}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">Email</p>
+                  <p className="text-sm text-foreground font-medium truncate">{user?.email || 'Not set'}</p>
                 </div>
                 {user?.emailVerified && (
-                  <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Verified</span>
+                  <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">Verified</span>
                 )}
               </div>
 
               {/* Member Since */}
               <div className="flex items-center gap-3 px-4 py-3.5">
                 <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-5 h-5 text-blue-600" />
+                  <Calendar className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-zinc-500 font-semibold">Member Since</p>
-                  <p className="text-sm text-gray-900 dark:text-zinc-100 font-medium">{memberSince}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">Member Since</p>
+                  <p className="text-sm text-foreground font-medium">{memberSince}</p>
                 </div>
               </div>
 
               {/* WhatsApp helper / guidance */}
               <div className="flex items-start gap-3 px-4 py-3.5">
                 <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">
-                  <Phone className="w-5 h-5 text-emerald-600" />
+                  <Phone className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-zinc-500 font-semibold">WhatsApp</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">WhatsApp</p>
                   {userProfile?.whatsappNumber ? (
-                    <p className="text-sm text-gray-900 dark:text-zinc-100 font-medium truncate">+91 {userProfile.whatsappNumber.replace(/^\+?91/, '')}</p>
+                    <p className="text-sm text-foreground font-medium truncate">+91 {userProfile.whatsappNumber.replace(/^\+?91/, '')}</p>
                   ) : (
-                    <p className="text-sm text-gray-500 dark:text-zinc-500 dark:text-zinc-400">Not linked yet</p>
+                    <p className="text-sm text-muted-foreground">Not linked yet</p>
                   )}
-                  <p className="text-[11px] text-gray-500 dark:text-zinc-500 dark:text-zinc-400 mt-1 leading-snug">
+                  <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
                     Verify a WhatsApp number to receive order updates, OTPs, and turn on two-factor sign-in.
                   </p>
                 </div>
@@ -417,7 +417,7 @@ const ProfileEditPage = () => {
         </div>
 
         {/* App Version */}
-        <p className="text-center text-[10px] text-gray-400 dark:text-zinc-500 pb-2 mt-8">Ishaputra Botanicals v1.0.0</p>
+        <p className="text-center text-[10px] text-muted-foreground/70 pb-2 mt-8">Ishaputra Botanicals v1.0.0</p>
         </div>
       </div>
 
@@ -446,18 +446,18 @@ const ProfileEditPage = () => {
       {/* ── Crop Modal ── */}
       {showCropModal && imageToCrop && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-0 sm:p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-none sm:rounded-2xl shadow-2xl w-full h-full sm:h-auto sm:max-w-md overflow-hidden flex flex-col sm:block">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-zinc-800">
-              <h2 className="text-gray-900 dark:text-zinc-100 text-lg font-semibold">Edit Photo</h2>
+          <div className="bg-card rounded-none sm:rounded-2xl shadow-2xl w-full h-full sm:h-auto sm:max-w-md overflow-hidden flex flex-col sm:block">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-foreground/[0.08]">
+              <h2 className="text-foreground text-lg font-semibold">Edit Photo</h2>
               <button
                 onClick={handleCropCancel}
-                className="p-1 text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+                className="p-1 text-muted-foreground/70 hover:text-foreground hover:bg-foreground/[0.06] rounded-full transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="relative bg-gray-100 dark:bg-zinc-800 flex-1 sm:h-[400px]">
+            <div className="relative bg-foreground/[0.06] flex-1 sm:h-[400px]">
               <Cropper
                 image={imageToCrop}
                 crop={crop}
@@ -471,9 +471,9 @@ const ProfileEditPage = () => {
               />
             </div>
 
-            <div className="px-6 py-5 bg-white dark:bg-zinc-900 border-t border-gray-200 dark:border-zinc-800">
+            <div className="px-6 py-5 bg-card border-t border-foreground/[0.08]">
               <div className="flex items-center gap-3 mb-4">
-                <ZoomOut className="w-5 h-5 text-gray-500 dark:text-zinc-500 dark:text-zinc-400 flex-shrink-0" />
+                <ZoomOut className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                 <input
                   type="range"
                   min={1}
@@ -481,20 +481,20 @@ const ProfileEditPage = () => {
                   step={0.01}
                   value={zoom}
                   onChange={(e) => setZoom(Number(e.target.value))}
-                  className="flex-1 h-1.5 bg-gray-200 dark:bg-zinc-800 dark:bg-zinc-700 rounded-full appearance-none cursor-pointer"
+                  className="flex-1 h-1.5 bg-foreground/10 rounded-full appearance-none cursor-pointer"
                   style={{
                     background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${((zoom - 1) / 2) * 100}%, #E5E7EB ${((zoom - 1) / 2) * 100}%, #E5E7EB 100%)`
                   }}
                 />
-                <ZoomIn className="w-5 h-5 text-gray-500 dark:text-zinc-500 dark:text-zinc-400 flex-shrink-0" />
-                <span className="text-sm font-medium text-gray-600 dark:text-zinc-400 min-w-[3rem] text-right">
+                <ZoomIn className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                <span className="text-sm font-medium text-muted-foreground min-w-[3rem] text-right">
                   {Math.round((zoom - 1) / 2 * 100)}%
                 </span>
               </div>
               <button
                 onClick={handleCropSave}
                 disabled={uploadingPhoto}
-                className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {uploadingPhoto ? 'Saving...' : 'Save'}
               </button>

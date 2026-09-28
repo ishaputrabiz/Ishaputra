@@ -33,7 +33,6 @@ const CancellationRefundPolicy = lazy(() => import("./pages/CancellationRefundPo
 const Wishlist = lazy(() => import("./pages/Wishlist"));
 const MobileCategories = lazy(() => import("./pages/MobileCategories"));
 const Checkout = lazy(() => import("./pages/Checkout"));
-const Profile = lazy(() => import("./pages/Profile"));
 const Account = lazy(() => import("./pages/Account"));
 const SavedAddresses = lazy(() => import("./pages/SavedAddresses"));
 const BuyAgain = lazy(() => import("./pages/BuyAgain"));
@@ -213,11 +212,7 @@ const App = () => {
                   <Checkout />
                 </ProtectedRoute>
               } />
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              } />
+              <Route path="/profile" element={<Navigate to="/account" replace />} />
               <Route path="/account" element={
                 <ProtectedRoute requireEmailVerification={false}>
                   <Account />

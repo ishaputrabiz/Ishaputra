@@ -145,12 +145,18 @@
         - Slide-to-pay is a charcoal-stone track with a copper handle.
         - The GST line now follows Admin > Commerce settings: it shows only when GST is on and "show GST line" is on. It used to print "GST (3%) ₹0.00" even with GST off, and 3% is the jewellery rate.
         - Cart and wishlist browser storage keys are now per store (`BRAND.storageKeys`); they were still `sree_rasthu_*`.
+    - **Account, login and profile:**
+        - The mobile account page opens with a charcoal-stone member card (monogram initial or photo, "Ishaputra member"). It replaces the pink ticket.
+        - The desktop sidebar and panels use the sheet style; the selected menu item has a copper rule.
+        - A new "Wallet & Rewards" menu item links to `/wallet` (loyalty points and cashback). It wasn't reachable from the account menus.
+        - Login, signup and profile-edit use paper, sheet cards and small-caps labels, with copper buttons. Signup's Terms and Privacy links pointed to pages that don't exist; fixed.
+        - `/profile` was a static mock-up that nothing linked to: no working buttons, "Venkat Plus", a hard-coded offer. It now redirects to `/account`, and the mock page is removed.
 - Preview test account for screenshots: `preview-shopper@ishaputra.test`, created through the site's signup with one dummy Hyderabad address and items in its cart. The password is kept outside the repo. **Delete it in Firebase Authentication (and its `users`/`carts` docs) before launch.**
 
 ## Progress
 - [x] Step 0 safe preview (2026-09-23): home, products and product pages show demo content on Ishaputra Firebase; only the YouTube section is hidden (no videos yet)
 - [ ] Step 1 new look: done 2026-09-27, waiting for client review
-- [ ] Step 2: Home, Products, Product detail done 2026-09-28 (textures and UI); next Checkout, Profile, remaining pages
+- [ ] Step 2: Home, Products, Product detail, Checkout, Profile done 2026-09-28 (textures and UI); next the remaining pages
 - [ ] Step 2B features   - [ ] Step 3 accounts   - [ ] Step 4 test and publish   - [ ] Step 5 client changes
 
 ## Next step

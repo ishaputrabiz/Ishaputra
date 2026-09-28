@@ -84,7 +84,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-gray-50 dark:bg-zinc-900 flex flex-col">
+    <div className="min-h-[100dvh] tx-paper flex flex-col">
       <div className="flex-1 flex items-center justify-center py-6 px-4">
         <div className="w-full max-w-md">
           {/* Brand Logo */}
@@ -94,11 +94,12 @@ const Signup = () => {
             </Link>
           </div>
 
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl p-6 md:p-8">
+          <div className="panel tx-sheet tx-contour overflow-hidden p-6 md:p-9">
             {/* Header */}
             <div className="text-center mb-6">
-              <h1 className="text-2xl md:text-3xl font-light text-gray-900 dark:text-zinc-100 mb-2">Create Account</h1>
-              <p className="text-gray-600 dark:text-zinc-400">Join Ishaputra Botanicals today</p>
+              <p className="eyebrow-no eyebrow-center mb-3"><span>Ishaputra Botanicals</span></p>
+              <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Create account</h1>
+              <p className="text-sm text-muted-foreground">Join for rewards on every order</p>
             </div>
 
             {/* Error Message */}
@@ -111,9 +112,9 @@ const Signup = () => {
             {/* Signup Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="username" className="text-gray-700 dark:text-zinc-300">Username</Label>
+                <Label htmlFor="username" className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Username</Label>
                 <div className="relative mt-2">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-zinc-500" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
                     id="username"
                     type="text"
@@ -128,9 +129,9 @@ const Signup = () => {
               </div>
 
               <div>
-                <Label htmlFor="email" className="text-gray-700 dark:text-zinc-300">Email Address</Label>
+                <Label htmlFor="email" className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Email Address</Label>
                 <div className="relative mt-2">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-zinc-500" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
@@ -145,9 +146,9 @@ const Signup = () => {
               </div>
 
               <div>
-                <Label htmlFor="phone" className="text-gray-700 dark:text-zinc-300">Phone Number</Label>
+                <Label htmlFor="phone" className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Phone Number</Label>
                 <div className="relative mt-2">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-zinc-500" />
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
                     id="phone"
                     type="tel"
@@ -165,14 +166,14 @@ const Signup = () => {
                     onCheckedChange={(checked) => setSameForWhatsApp(checked as boolean)}
                     disabled={loading}
                   />
-                  <Label htmlFor="whatsapp" className="text-xs text-gray-500 dark:text-zinc-500 cursor-pointer">
+                  <Label htmlFor="whatsapp" className="text-xs text-muted-foreground cursor-pointer">
                     Same number for WhatsApp
                   </Label>
                 </div>
                 {phone && sameForWhatsApp && (
-                  <div className="mt-3 rounded-xl border border-highlight/30 bg-highlight/6 p-3 space-y-3">
+                  <div className="mt-3 rounded-[8px] border border-primary/20 bg-primary/5 p-3 space-y-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-xs text-gray-600 dark:text-zinc-400">
+                      <p className="text-xs text-muted-foreground">
                         Verify this number on WhatsApp so order updates can reach you there.
                       </p>
                       <Button
@@ -205,7 +206,7 @@ const Signup = () => {
                           </InputOTPGroup>
                         </InputOTP>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <p className={`text-xs ${whatsappOtp.isVerified ? 'text-green-700' : 'text-gray-500'}`}>
+                          <p className={`text-xs ${whatsappOtp.isVerified ? 'text-primary' : 'text-muted-foreground'}`}>
                             {whatsappOtp.isVerified
                               ? 'WhatsApp number verified.'
                               : 'Enter the 6-digit code we sent to your WhatsApp.'}
@@ -232,9 +233,9 @@ const Signup = () => {
               </div>
 
               <div>
-                <Label htmlFor="password" className="text-gray-700 dark:text-zinc-300">Password</Label>
+                <Label htmlFor="password" className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Password</Label>
                 <div className="relative mt-2">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-zinc-500" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
@@ -248,7 +249,7 @@ const Signup = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:text-zinc-400"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -256,9 +257,9 @@ const Signup = () => {
               </div>
 
               <div>
-                <Label htmlFor="confirmPassword" className="text-gray-700 dark:text-zinc-300">Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Confirm Password</Label>
                 <div className="relative mt-2">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-zinc-500" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
                     id="confirmPassword"
                     type={showPassword ? 'text' : 'password'}
@@ -279,13 +280,13 @@ const Signup = () => {
                   onCheckedChange={(checked) => setAgreeTerms(checked as boolean)}
                   disabled={loading}
                 />
-                <Label htmlFor="terms" className="text-sm text-gray-600 dark:text-zinc-400 cursor-pointer leading-tight">
+                <Label htmlFor="terms" className="text-sm text-muted-foreground cursor-pointer leading-tight">
                   I agree to the{' '}
-                  <Link to="/terms" className="text-highlight hover:text-highlight">
+                  <Link to="/terms-conditions" className="text-primary font-medium hover:underline">
                     Terms of Service
                   </Link>{' '}
                   and{' '}
-                  <Link to="/privacy" className="text-highlight hover:text-highlight">
+                  <Link to="/privacy-policy" className="text-primary font-medium hover:underline">
                     Privacy Policy
                   </Link>
                 </Label>
@@ -293,7 +294,7 @@ const Signup = () => {
 
               <Button
                 type="submit"
-                className="w-full bg-highlight hover:bg-highlight text-white py-3"
+                className="btn-copper w-full h-12 text-[12px] font-bold rounded-[6px]"
                 disabled={loading || whatsappOtp.isBusy}
               >
                 {loading ? (
@@ -310,10 +311,10 @@ const Signup = () => {
             {/* Divider */}
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-zinc-800"></div>
+                <div className="w-full border-t border-foreground/10"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white dark:bg-zinc-900 text-gray-500 dark:text-zinc-500">Already have an account?</span>
+                <span className="px-4 bg-card text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Already have an account?</span>
               </div>
             </div>
 
@@ -321,7 +322,7 @@ const Signup = () => {
             <Link to="/login">
               <Button
                 variant="outline"
-                className="w-full border-highlight text-highlight hover:bg-highlight/10"
+                className="w-full h-11 rounded-[6px] border-primary/50 text-primary hover:bg-primary/10 hover:text-primary text-[11px] font-bold uppercase tracking-[0.16em]"
               >
                 Sign In
               </Button>

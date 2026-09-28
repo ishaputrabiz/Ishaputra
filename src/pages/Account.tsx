@@ -5,7 +5,6 @@ import { useAuth, UserProfile } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { auth } from '@/config/firebase';
 import { DELIVERY_PARTNERS_ENABLED } from '@/config/features';
-import shoppingBags from '@/assets/shopping-bags.png';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import Header from '@/components/Header';
@@ -58,6 +57,7 @@ import {
   Video,
   Sun,
   Moon,
+  Wallet,
 } from 'lucide-react';
 import { SmartImage } from "@/components/ui/smart-image";
 
@@ -179,7 +179,7 @@ const Account = () => {
   if (loginFlow === '2fa') {
     return (
       <>
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-950">
+        <div className="min-h-screen flex items-center justify-center tx-paper">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
         <TwoFactorChallengeModal
@@ -197,7 +197,7 @@ const Account = () => {
   if (loginFlow === 'whatsapp') {
     return (
       <>
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-950">
+        <div className="min-h-screen flex items-center justify-center tx-paper">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
         <WhatsAppSetupModal
@@ -447,7 +447,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted">
+    <div className="min-h-screen flex flex-col tx-paper">
       {/* Site Header */}
       <Header />
 
@@ -457,15 +457,15 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="w-full max-w-md bg-card rounded-2xl shadow-lg border border-border p-6 sm:p-8"
+          className="w-full max-w-md panel tx-sheet tx-contour overflow-hidden p-6 sm:p-9"
         >
           {/* Back Button */}
           <button
             onClick={() => navigate(-1)}
-            className="mb-4 flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            className="mb-5 flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span className="text-sm font-medium">Back</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.18em]">Back</span>
           </button>
 
           {/* Tabs — the Delivery partner tab is hidden while the delivery system is off */}
@@ -497,8 +497,9 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
           )}
 
           {/* Header */}
-          <div className="text-center mb-5">
-            <h1 className="text-xl md:text-2xl font-bold text-foreground mb-1" style={{ fontFamily: "var(--font-body)" }}>
+          <div className="text-center mb-7">
+            <p className="eyebrow-no eyebrow-center mb-3"><span>Ishaputra Botanicals</span></p>
+            <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-1.5" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
               {activeTab === 'delivery' 
                 ? 'Delivery Partner Login' 
                 : (isSignUp ? 'Create Account' : 'Welcome Back')}
@@ -515,7 +516,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4"
+              className="bg-red-50 border border-red-200 rounded-[8px] p-3 mb-4 dark:bg-red-950/30 dark:border-red-900/50"
             >
               <p className="text-red-600 text-sm text-center">{error}</p>
             </motion.div>
@@ -526,9 +527,9 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4"
+              className="bg-primary/[0.06] border border-primary/25 rounded-[8px] p-3 mb-4"
             >
-              <p className="text-green-600 text-sm text-center">Password reset email sent! Check your inbox.</p>
+              <p className="text-primary text-sm text-center">Password reset email sent! Check your inbox.</p>
             </motion.div>
           )}
 
@@ -541,7 +542,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
                 animate={{ opacity: 1, height: 'auto' }}
                 transition={{ duration: 0.3 }}
               >
-                <label className="block text-sm font-medium text-foreground/80 mb-1.5">Full Name</label>
+                <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-1.5">Full Name</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
@@ -549,7 +550,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Full Name"
-                    className="w-full pl-11 pr-4 py-3 border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-muted/50"
+                    className="w-full pl-11 pr-4 py-3 border border-foreground/15 rounded-[6px] text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary outline-none transition-all bg-card/80"
                   />
                 </div>
               </motion.div>
@@ -562,7 +563,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
                 animate={{ opacity: 1, height: 'auto' }}
                 transition={{ duration: 0.3 }}
               >
-                <label className="block text-sm font-medium text-foreground/80 mb-1.5">Phone Number</label>
+                <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-1.5">Phone Number</label>
                 <div className="relative">
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
@@ -570,7 +571,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     placeholder="Enter your phone number"
-                    className="w-full pl-11 pr-4 py-3 border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-muted/50"
+                    className="w-full pl-11 pr-4 py-3 border border-foreground/15 rounded-[6px] text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary outline-none transition-all bg-card/80"
                   />
                 </div>
                 <div className="flex items-center gap-2 mt-2">
@@ -578,12 +579,12 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
                     type="checkbox"
                     checked={sameForWhatsApp}
                     onChange={(e) => setSameForWhatsApp(e.target.checked)}
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    className="w-4 h-4 rounded border-border accent-primary focus:ring-primary"
                   />
                   <span className="text-xs text-muted-foreground">Same number for WhatsApp</span>
                 </div>
                 {phone && sameForWhatsApp && (
-                  <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-3">
+                  <div className="mt-3 rounded-[8px] border border-primary/20 bg-primary/5 p-3 space-y-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-xs text-muted-foreground">
                         Verify this number on WhatsApp so order updates and alerts can reach you there.
@@ -618,7 +619,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
                           </InputOTPGroup>
                         </InputOTP>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <p className={`text-xs ${whatsappOtp.isVerified ? 'text-green-700' : 'text-muted-foreground'}`}>
+                          <p className={`text-xs ${whatsappOtp.isVerified ? 'text-primary' : 'text-muted-foreground'}`}>
                             {whatsappOtp.isVerified
                               ? 'WhatsApp number verified.'
                               : 'Enter the 6-digit code we sent to your WhatsApp.'}
@@ -647,7 +648,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-foreground/80 mb-1.5">Email address</label>
+              <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-1.5">Email address</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
@@ -655,7 +656,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
-                  className="w-full pl-11 pr-4 py-3 border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-muted/50"
+                  className="w-full pl-11 pr-4 py-3 border border-foreground/15 rounded-[6px] text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary outline-none transition-all bg-card/80"
                 />
               </div>
             </div>
@@ -663,7 +664,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
             {/* Password */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-foreground/80">Password</label>
+                <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Password</label>
                 {!isSignUp && (
                   <button
                     type="button"
@@ -681,7 +682,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="w-full pl-11 pr-12 py-3 border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-muted/50"
+                  className="w-full pl-11 pr-12 py-3 border border-foreground/15 rounded-[6px] text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary outline-none transition-all bg-card/80"
                 />
                 <button
                   type="button"
@@ -700,10 +701,10 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
                   type="checkbox"
                   checked={agreeTerms}
                   onChange={(e) => setAgreeTerms(e.target.checked)}
-                  className="mt-1 w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  className="mt-1 w-4 h-4 rounded border-border accent-primary focus:ring-primary"
                 />
                 <span className="text-xs text-muted-foreground">
-                  I agree to all <span className="text-primary cursor-pointer">Terms</span>, <span className="text-primary cursor-pointer">Privacy Policy</span> and fees
+                  I agree to the <Link to="/terms-conditions" className="text-primary font-medium hover:underline">Terms</Link> and <Link to="/privacy-policy" className="text-primary font-medium hover:underline">Privacy Policy</Link>
                 </span>
               </div>
             )}
@@ -712,7 +713,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
             <Button
               type="submit"
               disabled={emailLoading || whatsappOtp.isBusy}
-              className="w-full py-3 h-12 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition-all shadow-lg shadow-primary/25"
+              className="btn-copper w-full h-12 text-[12px] font-bold rounded-[6px] shadow-lg shadow-primary/25"
             >
               {emailLoading ? (
                 <>
@@ -728,9 +729,9 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
           {/* Divider - User tab only */}
           {activeTab === 'user' && (
             <div className="flex items-center gap-3 my-5">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground font-medium">Or Login with</span>
-              <div className="flex-1 h-px bg-border" />
+              <div className="flex-1 h-px bg-foreground/10" />
+              <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Or continue with</span>
+              <div className="flex-1 h-px bg-foreground/10" />
             </div>
           )}
 
@@ -740,7 +741,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
               type="button"
               onClick={handleGoogleSignIn}
               disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-3 py-3 border border-border rounded-xl text-sm font-medium text-foreground/80 hover:bg-muted transition-all disabled:opacity-50 bg-card"
+              className="w-full flex items-center justify-center gap-3 py-3 border border-foreground/15 rounded-[6px] text-sm font-semibold text-foreground/85 hover:border-primary/50 transition-all disabled:opacity-50 bg-card/80"
             >
               {googleLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -962,6 +963,7 @@ const AccountPage = () => {
 
   const menuItems = [
     { id: 'orders', label: 'My orders', icon: Package, path: null },
+    { id: 'wallet', label: 'Wallet & rewards', icon: Wallet, path: '/wallet' },
     { id: 'videocalls', label: 'My Video Calls', icon: Video, path: '/my-video-calls' },
     { id: 'editProfile', label: 'Edit Profile', icon: Edit, path: '/account/profile-edit' },
     { id: 'addresses', label: 'Your addresses', icon: MapPin, path: '/account/addresses' },
@@ -974,6 +976,7 @@ const AccountPage = () => {
   // Drawer-style menu for the mobile account page (mirrors the old slide-in menu)
   const accountMenu = [
     { label: 'My Orders', icon: Package, href: '/account/orders' },
+    { label: 'Wallet & Rewards', icon: Wallet, href: '/wallet' },
     { label: 'My Video Calls', icon: Video, href: '/my-video-calls' },
     { label: 'Edit Profile', icon: Edit, href: '/account/profile-edit' },
     { label: 'Your Addresses', icon: MapPin, href: '/account/addresses' },
@@ -983,7 +986,7 @@ const AccountPage = () => {
   ];
 
   const quickAccessCards = [
-    { id: 'orders', label: 'Orders', icon: Package, color: 'text-blue-600', bg: 'bg-blue-50', path: '/orders' },
+    { id: 'orders', label: 'Orders', icon: Package, color: 'text-primary', bg: 'bg-primary/[0.06]', path: '/orders' },
     { id: 'wishlist', label: 'Wishlist', icon: Heart, color: 'text-pink-600', bg: 'bg-pink-50', path: '/wishlist' },
     { id: 'coupons', label: 'Coupons', icon: Ticket, color: 'text-orange-600', bg: 'bg-orange-50', path: '/coupons' },
     { id: 'help', label: 'Help Center', icon: HelpCircle, color: 'text-green-600', bg: 'bg-green-50', path: '/help' },
@@ -991,18 +994,18 @@ const AccountPage = () => {
 
   const accountSettings = [
     { id: 'plus', label: 'Premium Plus', icon: Sparkles, color: 'text-highlight', path: '/premium' },
-    { id: 'profile', label: 'Edit Profile', icon: User, color: 'text-blue-600', path: '/account/profile' },
+    { id: 'profile', label: 'Edit Profile', icon: User, color: 'text-primary', path: '/account/profile' },
     { id: 'cards', label: 'Saved Credit / Debit & Gift Cards', icon: CreditCard, color: 'text-purple-600', path: '/account/cards' },
     { id: 'addresses', label: 'Saved Addresses', icon: MapPin, color: 'text-red-600', path: '/account/addresses' },
     { id: 'videocalls', label: 'My Video Calls', icon: Video, color: 'text-emerald-600', path: '/my-video-calls' },
-    { id: 'language', label: 'Select Language', icon: Globe, color: 'text-blue-600', path: '/account/language' },
+    { id: 'language', label: 'Select Language', icon: Globe, color: 'text-primary', path: '/account/language' },
     { id: 'notifications', label: 'Notification Settings', icon: Bell, color: 'text-green-600', path: '/account/notifications' },
     { id: 'privacy', label: 'Privacy Center', icon: Shield, color: 'text-gray-600', path: '/account/privacy' },
   ];
 
   const myActivity = [
     { id: 'reviews', label: 'Reviews', icon: Star, color: 'text-highlight' },
-    { id: 'questions', label: 'Questions & Answers', icon: MessageCircle, color: 'text-blue-600' },
+    { id: 'questions', label: 'Questions & Answers', icon: MessageCircle, color: 'text-primary' },
   ];
 
   // Filter orders based on selected tab
@@ -1026,7 +1029,7 @@ const AccountPage = () => {
       case 'pending':
         return 'text-highlight';
       case 'processing':
-        return 'text-blue-600';
+        return 'text-primary';
       case 'packed':
       case 'shipped':
       case 'assigned':
@@ -1049,7 +1052,7 @@ const AccountPage = () => {
       case 'pending':
         return 'bg-highlight/10 text-highlight border border-highlight/30';
       case 'processing':
-        return 'bg-blue-50 text-blue-700 border border-blue-200';
+        return 'bg-primary/[0.06] text-primary border border-primary/25';
       case 'packed':
       case 'shipped':
       case 'assigned':
@@ -1237,8 +1240,8 @@ const AccountPage = () => {
   if (isMobile) {
     return (
       <>
-        <div className="min-h-screen pt-2 bg-muted pb-20" style={{ fontFamily: "var(--font-body)" }}>
-          <div className="px-4 py-2" style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
+        <div className="min-h-screen pt-2 tx-paper pb-20">
+          <div className="px-4 py-2">
             {/* Drawer-style top bar */}
             <div className="flex items-center justify-between py-2">
               <button
@@ -1260,55 +1263,51 @@ const AccountPage = () => {
               className="hidden"
             />
 
-            {/* Welcome / profile banner */}
-            <div className="mb-3 mt-1 relative">
-              <div
-                className="bg-pink-50 dark:bg-pink-950/30 rounded-lg p-4 flex items-center justify-between gap-6 overflow-hidden"
-                style={{
-                  backgroundImage: `radial-gradient(circle at 0 50%, hsl(var(--background)) 8px, transparent 8px), radial-gradient(circle at 100% 50%, hsl(var(--background)) 8px, transparent 8px)`,
-                  backgroundSize: '16px 24px',
-                  backgroundPosition: 'left center, right center',
-                  backgroundRepeat: 'repeat-y',
-                  paddingLeft: '20px',
-                  paddingRight: '20px',
-                }}
-              >
+            {/* Member card */}
+            <div className="mb-4 mt-1 relative">
+              <div className="tx-slate tx-contour relative overflow-hidden rounded-[var(--radius-panel)] p-5 flex items-center gap-4 text-charcoal-foreground shadow-[var(--shadow-panel)]">
                 <div className="flex-shrink-0">
                   {avatarUrl ? (
                     <SmartImage
                       key={`avatar-${avatarUrl}-${user?.uid}`}
                       src={avatarUrl}
                       alt="Profile"
-                      className="w-[90px] h-[90px] rounded-full object-cover border-2 border-white shadow-sm"
+                      className="w-[72px] h-[72px] rounded-full object-cover ring-1 ring-highlight-soft/50"
                       referrerPolicy="no-referrer" preset="thumb" />
                   ) : (
-                    <img src={shoppingBags} alt="Shopping bags" className="w-[100px] h-[100px] object-contain" />
+                    <span
+                      className="grid w-[72px] h-[72px] place-items-center rounded-full border border-highlight-soft/45 bg-white/5 text-3xl font-semibold text-highlight-soft"
+                      style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
+                    >
+                      {(userProfile?.name || userProfile?.username || user?.displayName || user?.email || '?').trim().charAt(0).toUpperCase()}
+                    </span>
                   )}
                 </div>
-                <div className="flex-1 text-right min-w-0">
-                  <h3 className="text-foreground font-bold text-base leading-tight truncate">
+                <div className="flex-1 min-w-0">
+                  <p className="eyebrow-no on-dark mb-1.5 !text-[9px]"><span>Ishaputra member</span></p>
+                  <h3 className="text-xl font-semibold leading-tight truncate" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                     Hi, {(userProfile?.name || userProfile?.username || user?.displayName?.split(' ')[0] || 'Welcome')}
                   </h3>
-                  <p className="text-muted-foreground text-xs mt-0.5 mb-3 truncate">{user?.email}</p>
+                  <p className="text-charcoal-foreground/60 text-xs mt-0.5 mb-3 truncate">{user?.email}</p>
                   <button
                     onClick={() => navigate('/account/profile-edit')}
-                    className="text-primary font-bold text-sm tracking-wide hover:underline"
+                    className="link-arrow !text-charcoal-foreground"
                   >
-                    VIEW PROFILE
+                    View profile <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
             </div>
 
             {/* Menu list — drawer style */}
-            <div className="bg-card rounded-lg shadow-sm overflow-hidden">
+            <div className="panel tx-sheet overflow-hidden">
               {accountMenu.map((item) => (
                 <button
                   key={item.label}
                   onClick={() => navigate(item.href)}
-                  className="w-full flex items-center gap-4 px-5 py-4 hover:bg-muted transition-colors border-b border-border/50 text-left"
+                  className="w-full flex items-center gap-4 px-5 py-4 hover:bg-foreground/[0.04] transition-colors border-b border-foreground/[0.07] text-left"
                 >
-                  <item.icon className="w-[22px] h-[22px] text-muted-foreground" strokeWidth={1.4} />
+                  <item.icon className="w-[22px] h-[22px] text-primary" strokeWidth={1.4} />
                   <span className="text-[15px] font-medium text-foreground flex-1 tracking-wide">{item.label}</span>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
                 </button>
@@ -1317,12 +1316,12 @@ const AccountPage = () => {
               {/* Theme toggle */}
               <button
                 onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-                className="w-full flex items-center gap-4 px-5 py-4 hover:bg-muted transition-colors border-b border-border/50 text-left"
+                className="w-full flex items-center gap-4 px-5 py-4 hover:bg-foreground/[0.04] transition-colors border-b border-foreground/[0.07] text-left"
               >
                 {resolvedTheme === 'dark' ? (
-                  <Sun className="w-[22px] h-[22px] text-highlight" strokeWidth={1.6} />
+                  <Sun className="w-[22px] h-[22px] text-primary" strokeWidth={1.4} />
                 ) : (
-                  <Moon className="w-[22px] h-[22px] text-indigo-500" strokeWidth={1.6} />
+                  <Moon className="w-[22px] h-[22px] text-primary" strokeWidth={1.4} />
                 )}
                 <span className="text-[15px] font-medium text-foreground flex-1 tracking-wide">
                   {resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}
@@ -1335,7 +1334,7 @@ const AccountPage = () => {
               {/* Logout */}
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-4 px-5 py-4 hover:bg-muted transition-colors text-left"
+                className="w-full flex items-center gap-4 px-5 py-4 hover:bg-foreground/[0.04] transition-colors text-left"
               >
                 <LogOut className="w-[22px] h-[22px] text-primary" strokeWidth={1.4} />
                 <span className="text-[15px] font-medium text-primary dark:text-primary flex-1 tracking-wide">Log Out</span>
@@ -1460,10 +1459,10 @@ const AccountPage = () => {
 
                 {/* Tracking Information Section - Mobile */}
                 {(selectedOrder.trackingId || selectedOrder.carrier) && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl p-4 border border-blue-100 dark:border-blue-900/50">
+                  <div className="bg-primary/[0.06] rounded-[10px] p-4 border border-primary/20">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center">
-                        <Truck className="w-5 h-5 text-blue-600" />
+                      <div className="w-10 h-10 bg-primary/15 rounded-full flex items-center justify-center">
+                        <Truck className="w-5 h-5 text-primary" />
                       </div>
                       <div>
                         <span className="font-semibold text-foreground text-sm block">Tracking Information</span>
@@ -1480,7 +1479,7 @@ const AccountPage = () => {
                       {selectedOrder.trackingId && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">ID:</span>
-                          <span className="font-mono font-semibold text-blue-600">{selectedOrder.trackingId}</span>
+                          <span className="font-mono font-semibold text-primary">{selectedOrder.trackingId}</span>
                         </div>
                       )}
                       {selectedOrder.trackingUrl && (
@@ -1488,7 +1487,7 @@ const AccountPage = () => {
                           href={selectedOrder.trackingUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 mt-3 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl w-full"
+                          className="flex items-center justify-center gap-2 mt-3 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded-xl w-full"
                         >
                           <Truck className="w-4 h-4" />
                           Track Package
@@ -1569,15 +1568,16 @@ const AccountPage = () => {
     <>
       <Header />
       <CategoryIconNav />
-      <div className="pt-6 bg-muted" style={{ fontFamily: "var(--font-body)" }}>
+      <div className="tx-paper pt-8">
         <div className="container mx-auto px-6 pb-8">
           <div className="grid grid-cols-12 gap-6 -mt-4">
             {/* Sidebar */}
             <div className="col-span-3">
-              <div className="bg-card rounded-lg shadow-sm p-6 sticky top-20">
+              <div className="panel tx-sheet p-6 sticky top-20">
                 {/* User Info */}
                 <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-foreground mb-1">Your Account</h2>
+                  <p className="eyebrow-no mb-3"><span>Ishaputra member</span></p>
+                  <h2 className="text-2xl font-semibold text-foreground mb-1" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Your account</h2>
                   <p className="text-sm text-muted-foreground font-medium" style={{ wordBreak: 'break-all' }}>{userProfile?.username || 'User'}</p>
                   <p className="text-xs text-muted-foreground mt-0.5" style={{ wordBreak: 'break-all' }}>{userProfile?.email || user?.email}</p>
                 </div>
@@ -1588,10 +1588,10 @@ const AccountPage = () => {
                     <button
                       key={item.id}
                       onClick={() => handleMenuClick(item)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-[6px] text-left transition-colors ${
                         selectedMenu === item.id
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-foreground/80 hover:bg-muted'
+                          ? 'bg-primary/10 text-primary font-semibold shadow-[inset_2px_0_0_hsl(var(--primary))]'
+                          : 'text-foreground/80 hover:bg-foreground/[0.04]'
                       }`}
                     >
                       <item.icon className="w-5 h-5" />
@@ -1605,13 +1605,13 @@ const AccountPage = () => {
             {/* Main Content */}
             <div className="col-span-9">
               {selectedMenu === 'orders' && (
-                <div className="bg-card rounded-lg shadow-sm">
+                <div className="panel tx-sheet">
                   {/* Order Tabs */}
-                  <div className="border-b border-border px-6 pt-6">
+                  <div className="border-b border-foreground/[0.08] px-6 pt-5">
                     <div className="flex gap-4">
                       <button
                         onClick={() => setSelectedOrderTab('current')}
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] border-b-2 transition-colors ${
                           selectedOrderTab === 'current'
                             ? 'border-primary text-primary'
                             : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -1621,7 +1621,7 @@ const AccountPage = () => {
                       </button>
                       <button
                         onClick={() => setSelectedOrderTab('all')}
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] border-b-2 transition-colors ${
                           selectedOrderTab === 'all'
                             ? 'border-primary text-primary'
                             : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -1641,20 +1641,20 @@ const AccountPage = () => {
                     ) : filteredOrders.length === 0 ? (
                       <div className="text-center py-12">
                         <Package className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-foreground mb-1">No orders yet!</h3>
+                        <h3 className="text-xl font-semibold text-foreground mb-1" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>No orders yet</h3>
                         <p className="text-sm text-muted-foreground mb-6">Discover classical Ayurveda made for the modern man</p>
                         <button
                           onClick={() => navigate('/products')}
-                          className="px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                          className="btn-copper"
                         >
-                          ✨ Start Shopping
+                          Start shopping
                         </button>
                       </div>
                     ) : (
                       filteredOrders.map((order) => (
                         <div 
                           key={order.id} 
-                          className="border border-border rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow bg-muted"
+                          className="rounded-[var(--radius-card)] border border-foreground/[0.08] bg-card/70 p-4 cursor-pointer transition-all hover:border-primary/35 hover:shadow-[var(--shadow-card-hover)]"
                           style={{ fontFamily: "var(--font-body)" }}
                           onClick={() => {
                             navigate(`/account/orders/${order.id}`);
@@ -1664,7 +1664,7 @@ const AccountPage = () => {
                           <div className="space-y-4">
                             {order.items.map((item, idx) => (
                               <div key={idx} className="flex gap-4">
-                                <div className="w-20 h-20 bg-card rounded-lg flex-shrink-0 overflow-hidden">
+                                <div className="tile-img w-20 h-20 flex-shrink-0 overflow-hidden">
                                   <SmartImage src={item.image} alt={item.name} className="w-full h-full object-cover" preset="thumb" />
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -1687,10 +1687,10 @@ const AccountPage = () => {
                           {/* Tracking Information - Real-time updated */}
                           {(order.trackingId || order.carrier) && (
                             <div className="mt-4 pt-4 border-t border-border">
-                              <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3">
+                              <div className="flex items-center justify-between bg-primary/[0.06] rounded-lg p-3">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center">
-                                    <Truck className="w-4 h-4 text-blue-600" />
+                                  <div className="w-8 h-8 bg-primary/15 rounded-full flex items-center justify-center">
+                                    <Truck className="w-4 h-4 text-primary" />
                                   </div>
                                   <div>
                                     {order.carrier && (
@@ -1707,7 +1707,7 @@ const AccountPage = () => {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={(e) => e.stopPropagation()}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors"
                                   >
                                     Track Package
                                     <ExternalLink className="w-3 h-3" />
@@ -1733,26 +1733,26 @@ const AccountPage = () => {
               )}
 
               {selectedMenu === 'addresses' && (
-                <div className="bg-card rounded-lg shadow-sm p-6">
-                  <h3 className="text-xl font-bold text-foreground mb-4">Your Addresses</h3>
+                <div className="panel tx-sheet p-6">
+                  <h3 className="text-xl font-semibold text-foreground mb-4" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Your Addresses</h3>
                   <p className="text-muted-foreground">Manage your saved addresses here.</p>
-                  <Button onClick={() => navigate('/account/addresses')} className="mt-4">
+                  <Button onClick={() => navigate('/account/addresses')} className="btn-copper mt-4 h-auto py-3 text-[11px] font-bold rounded-[6px]">
                     View Addresses
                   </Button>
                 </div>
               )}
 
               {selectedMenu === 'security' && (
-                <div className="bg-card rounded-lg shadow-sm p-6">
-                  <h3 className="text-xl font-bold text-foreground mb-4">Login & Security</h3>
+                <div className="panel tx-sheet p-6">
+                  <h3 className="text-xl font-semibold text-foreground mb-4" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Login & Security</h3>
                   <p className="text-muted-foreground mb-4">Manage your login credentials and security settings.</p>
-                  <Button onClick={() => navigate('/security')}>Manage Security</Button>
+                  <Button onClick={() => navigate('/security')} className="btn-copper mt-4 h-auto py-3 text-[11px] font-bold rounded-[6px]">Manage security</Button>
                 </div>
               )}
 
               {selectedMenu === 'support' && (
-                <div className="bg-card rounded-lg shadow-sm p-6">
-                  <h3 className="text-xl font-bold text-foreground mb-4">Customer Support</h3>
+                <div className="panel tx-sheet p-6">
+                  <h3 className="text-xl font-semibold text-foreground mb-4" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Customer Support</h3>
                   <p className="text-muted-foreground">Get help with your orders and account.</p>
                 </div>
               )}
@@ -1843,10 +1843,10 @@ const AccountPage = () => {
                 
                 {/* Tracking Information Section - Real-time updated */}
                 {(selectedOrder.trackingId || selectedOrder.carrier) && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl p-4 border border-blue-100 dark:border-blue-900/50">
+                  <div className="bg-primary/[0.06] rounded-[10px] p-4 border border-primary/20">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center">
-                        <Truck className="w-5 h-5 text-blue-600" />
+                      <div className="w-10 h-10 bg-primary/15 rounded-full flex items-center justify-center">
+                        <Truck className="w-5 h-5 text-primary" />
                       </div>
                       <div>
                         <h5 className="font-semibold text-foreground">Tracking Information</h5>
@@ -1863,7 +1863,7 @@ const AccountPage = () => {
                       {selectedOrder.trackingId && (
                         <div className="flex justify-between">
                           <span className="text-sm text-muted-foreground">Tracking ID:</span>
-                          <span className="text-sm font-mono font-semibold text-blue-600">{selectedOrder.trackingId}</span>
+                          <span className="text-sm font-mono font-semibold text-primary">{selectedOrder.trackingId}</span>
                         </div>
                       )}
                       {selectedOrder.trackingUrl && (
@@ -1872,7 +1872,7 @@ const AccountPage = () => {
                             href={selectedOrder.trackingUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors w-full justify-center"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors w-full justify-center"
                           >
                             <Truck className="w-4 h-4" />
                             Track Package
@@ -1929,7 +1929,7 @@ const AccountPage = () => {
                     </button>
                     <button 
                       onClick={() => navigate(`/account/orders/${selectedOrder.id}`)}
-                      className="flex-1 py-3 px-4 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-700 flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+                      className="flex-1 py-3 px-4 bg-primary/[0.06] border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-primary/15 transition-colors"
                     >
                       <MessageCircle className="w-4 h-4" />
                       Open order chat
@@ -1950,7 +1950,7 @@ const AccountPage = () => {
                     </button>
                     <button 
                       onClick={() => navigate(`/account/orders/${selectedOrder.id}`)}
-                      className="flex-1 py-3 px-4 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-700 flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+                      className="flex-1 py-3 px-4 bg-primary/[0.06] border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-primary/15 transition-colors"
                     >
                       <MessageCircle className="w-4 h-4" />
                       Open order chat
@@ -1970,7 +1970,7 @@ const AccountPage = () => {
                     </button>
                     <button 
                       onClick={() => navigate(`/account/orders/${selectedOrder.id}`)}
-                      className="flex-1 py-3 px-4 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-700 flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+                      className="flex-1 py-3 px-4 bg-primary/[0.06] border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-primary/15 transition-colors"
                     >
                       <MessageCircle className="w-4 h-4" />
                       Open order chat
@@ -1985,7 +1985,7 @@ const AccountPage = () => {
                  selectedOrder.status !== 'cancelled' && (
                   <button 
                     onClick={() => navigate(`/account/orders/${selectedOrder.id}`)}
-                    className="w-full py-3 px-4 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-700 flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+                    className="w-full py-3 px-4 bg-primary/[0.06] border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-primary/15 transition-colors"
                   >
                     <MessageCircle className="w-4 h-4" />
                     Open order chat
@@ -2000,7 +2000,7 @@ const AccountPage = () => {
                     href={selectedOrder.trackingUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                    className="flex items-center justify-center gap-2 w-full py-3 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
                   >
                     <Truck className="w-4 h-4" />
                     Track Package
