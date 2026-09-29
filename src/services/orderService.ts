@@ -35,6 +35,7 @@ import {
   normalizePhoneNumber,
 } from '@/services/whatsappService';
 import { notifyOrder } from '@/services/pushNotificationService';
+import { reconcileOrderRewards } from '@/services/rewardsService';
 import { incrementCouponUsage } from '@/services/couponService';
 import { requestCatalogRefresh } from '@/services/catalogPublisher';
 import { fetchLiveProductInfo } from '@/services/livePricing';
@@ -1033,6 +1034,8 @@ export const updateOrderStatus = async (
     }
 
     await updateDoc(docRef, updateData);
+    // Points earned on delivery / refunded on cancel or return follow the status.
+    void reconcileOrderRewards(orderId);
 
     // Restore stock when order is cancelled or returned — only if it was
     // previously decremented (flag prevents double-restore for old orders).
@@ -1495,6 +1498,8 @@ export const verifyDeliveryOTP = async (
         },
       ],
     });
+    // Points earned on delivery / refunded on cancel or return follow the status.
+    void reconcileOrderRewards(orderId);
 
     // Notify the customer that their order was delivered (push + WhatsApp).
     void dispatchStatusNotifications(orderId, 'delivered', {
@@ -1768,6 +1773,8 @@ export const verifyReturnToStoreOTP = async (
         },
       ],
     });
+    // Points earned on delivery / refunded on cancel or return follow the status.
+    void reconcileOrderRewards(orderId);
     return { success: true, message: 'Return to store confirmed!' };
   } catch (error) {
     console.error('Error verifying return-to-store OTP:', error);
@@ -1954,6 +1961,8 @@ export const cancelOrder = async (
         },
       ],
     });
+    // Points earned on delivery / refunded on cancel or return follow the status.
+    void reconcileOrderRewards(orderId);
 
     // Put the units back. Only an admin-side cancellation did this before, so
     // a piece a customer cancelled stayed counted as sold - and now that
@@ -2157,6 +2166,8 @@ export const rejectReturn = async (orderId: string): Promise<void> => {
         },
       ],
     });
+    // Points earned on delivery / refunded on cancel or return follow the status.
+    void reconcileOrderRewards(orderId);
 
     // Notify the customer that their return request was rejected.
     const notifyPhone = orderData.userPhone || orderData.shippingAddress?.mobile;
@@ -2211,6 +2222,8 @@ export const cancelReturn = async (orderId: string): Promise<void> => {
       { status: 'delivered', timestamp: now, note: 'Return cancelled by customer' },
     ],
   });
+  // Points earned on delivery / refunded on cancel or return follow the status.
+  void reconcileOrderRewards(orderId);
 };
 
 /**
