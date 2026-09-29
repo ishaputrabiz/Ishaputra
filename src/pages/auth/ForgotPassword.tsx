@@ -111,28 +111,28 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen tx-paper">
       <Header />
       <div className="flex items-center justify-center py-20 px-4">
         <div className="w-full max-w-md">
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl p-8">
+          <div className="bg-card rounded-[var(--radius-card)] shadow-xl p-8">
             {success ? (
               /* Success State */
               <div className="text-center">
-                <div className="bg-green-100 rounded-full p-4 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                  <CheckCircle className="h-10 w-10 text-green-600" />
+                <div className="bg-primary/10 rounded-full p-4 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                  <CheckCircle className="h-10 w-10 text-primary" />
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100 mb-4">Check Your Email</h1>
-                <p className="text-gray-600 dark:text-zinc-400 mb-6">
-                  If an account exists for <strong className="text-blue-600">{email}</strong>, 
+                <h1 className="text-2xl font-semibold text-foreground mb-4" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Check Your Email</h1>
+                <p className="text-muted-foreground mb-6">
+                  If an account exists for <strong className="text-primary">{email}</strong>, 
                   we've sent a password reset link. Please check your inbox and spam folder.
                 </p>
 
                 {/* Security Info */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+                <div className="bg-primary/5 border border-primary/25 rounded-lg p-4 mb-6 text-left">
                   <div className="flex gap-3">
-                    <Shield className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-gray-700 dark:text-zinc-300">
+                    <Shield className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-foreground/80">
                       <p className="font-semibold mb-1">Security Notice:</p>
                       <ul className="space-y-1 text-xs">
                         <li>• The reset link expires in 1 hour</li>
@@ -167,7 +167,7 @@ const ForgotPassword = () => {
                 </Button>
 
                 <Link to="/account">
-                  <Button className="w-full bg-highlight hover:bg-highlight text-white">
+                  <Button className="btn-copper w-full h-12 text-[12px] font-bold rounded-[6px]">
                     Back to Sign In
                   </Button>
                 </Link>
@@ -180,8 +180,8 @@ const ForgotPassword = () => {
                   <div className="bg-highlight/15 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
                     <Mail className="h-10 w-10 text-highlight" />
                   </div>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-2">Forgot Password?</h1>
-                  <p className="text-gray-600 dark:text-zinc-400">
+                  <h1 className="text-3xl font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Forgot Password?</h1>
+                  <p className="text-muted-foreground">
                     No worries! Enter your email and we'll send you reset instructions.
                   </p>
                 </div>
@@ -207,9 +207,9 @@ const ForgotPassword = () => {
                 {/* Reset Form */}
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <Label htmlFor="email" className="text-gray-700 dark:text-zinc-300 font-medium">Email Address</Label>
+                    <Label htmlFor="email" className="text-foreground/80 font-medium">Email Address</Label>
                     <div className="relative mt-2">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-zinc-500" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/70" />
                       <Input
                         id="email"
                         type="email"
@@ -226,7 +226,7 @@ const ForgotPassword = () => {
 
                   <Button
                     type="submit"
-                    className="w-full bg-highlight hover:bg-highlight text-white py-3 h-12 font-semibold"
+                    className="btn-copper w-full h-12 text-[12px] font-bold rounded-[6px]"
                     disabled={loading || rateLimited}
                   >
                     {loading ? (
@@ -241,8 +241,8 @@ const ForgotPassword = () => {
                 </form>
 
                 {/* Google Sign-in Notice */}
-                <div className="mt-6 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                  <p className="text-xs text-blue-800 flex items-start gap-2">
+                <div className="mt-6 p-3 bg-primary/5 border border-primary/20 rounded-[8px]">
+                  <p className="text-xs text-foreground/75 flex items-start gap-2">
                     <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
                     <span>
                       <strong>Signed up with Google?</strong> Use "Sign in with Google" on the login page instead.
@@ -253,7 +253,7 @@ const ForgotPassword = () => {
                 {/* Back to Login */}
                 <Link 
                   to="/account"
-                  className="flex items-center justify-center gap-2 mt-6 text-gray-600 dark:text-zinc-400 hover:text-highlight transition-colors font-medium"
+                  className="flex items-center justify-center gap-2 mt-6 text-muted-foreground hover:text-highlight transition-colors font-medium"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back to Sign In

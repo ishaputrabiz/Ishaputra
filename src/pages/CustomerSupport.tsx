@@ -30,7 +30,9 @@ const CustomerSupport = () => {
   const contactInfo = {
     email: support.email,
     phone: support.phone,
-    whatsapp: (support.whatsapp || support.phone || '').replace(/\D/g, ''),
+    // Only a number set as WhatsApp: falling back to the phone would open chats
+    // with whoever owns it (the phone is placeholder data until launch).
+    whatsapp: (support.whatsapp || '').replace(/\D/g, ''),
     hours: support.hours,
     responseTime: support.responseTime,
   };
@@ -153,7 +155,7 @@ const CustomerSupport = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,hsl(var(--highlight)/0.06)_0%,rgba(255,255,255,1)_20%),linear-gradient(135deg,hsl(var(--primary)/0.03)_0%,rgba(255,255,255,1)_55%)] dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]">
+    <div className="min-h-screen tx-paper">
       <Header />
       
       <div className="max-w-2xl mx-auto px-3 py-4 pb-24 lg:px-4 lg:py-6 lg:pb-8">
@@ -163,7 +165,7 @@ const CustomerSupport = () => {
             if (selectedOption) { setSelectedOption(null); return; }
             navigate('/account');
           }}
-          className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-highlight/15 bg-white/80 dark:bg-zinc-900/80 px-3 py-2 text-gray-700 dark:text-zinc-300 shadow-sm backdrop-blur transition-colors hover:text-gray-900 dark:border-highlight/20 dark:bg-zinc-900/85 dark:text-zinc-100 dark:hover:text-white lg:mb-6"
+          className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-foreground/10 bg-card/80 px-3 py-2 text-foreground/80 backdrop-blur transition-colors hover:text-primary lg:mb-6"
         >
           <ArrowLeft className="h-4 w-4 lg:h-5 lg:w-5" />
           <span className="text-xs lg:text-sm font-medium">Back</span>
@@ -178,20 +180,16 @@ const CustomerSupport = () => {
               exit={{ opacity: 0 }}
             >
               {/* Header */}
-              <div className="mb-5 rounded-[28px] border border-highlight/15 bg-white/85 dark:bg-zinc-900/85 px-5 py-6 text-center shadow-[0_30px_80px_-60px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/20 dark:bg-zinc-900/88 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.88)] lg:mb-8 lg:px-8">
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <span className="h-px w-8 bg-highlight/50" />
-                  <span className="text-[10px] uppercase tracking-[0.32em] text-primary font-medium">Support Lounge</span>
-                  <span className="h-px w-8 bg-highlight/50" />
-                </div>
-                <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-[linear-gradient(135deg,hsl(var(--highlight)/0.18)_0%,hsl(var(--primary)/0.12)_100%)] text-primary">
+              <div className="mb-5 panel tx-sheet tx-contour overflow-hidden px-5 py-7 text-center lg:mb-8 lg:px-8">
+                <p className="eyebrow-no eyebrow-center mb-4"><span>We're here to help</span></p>
+                <div className="tx-slate mx-auto mb-3 grid h-12 w-12 place-items-center rounded-[10px] text-highlight-soft">
                   <HeadphonesIcon className="h-6 w-6" />
                 </div>
-                <h1 className="mb-1 text-lg font-bold text-gray-900 dark:text-zinc-100 lg:mb-2 lg:text-3xl">Customer Support</h1>
-                <p className="mx-auto max-w-md text-xs text-gray-600 dark:text-zinc-400 dark:text-zinc-300 lg:text-sm">
+                <h1 className="mb-1 text-2xl font-semibold text-foreground lg:mb-2 lg:text-4xl" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Customer support</h1>
+                <p className="mx-auto max-w-md text-xs text-muted-foreground lg:text-sm">
                   Choose the fastest way to reach us for orders, custom requests, and after-sales help.
                 </p>
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[11px] text-gray-600 dark:text-zinc-400 dark:text-zinc-300">
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground">
                   <span className="rounded-full border border-highlight/20 bg-cream px-3 py-1 dark:bg-highlight/5">{contactInfo.hours}</span>
                   <span className="rounded-full border border-highlight/20 bg-cream px-3 py-1 dark:bg-highlight/5">{contactInfo.responseTime}</span>
                 </div>
@@ -203,19 +201,19 @@ const CustomerSupport = () => {
                 <motion.button
                   onClick={() => setSelectedOption('email')}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full rounded-xl border border-highlight/12 bg-white/85 dark:bg-zinc-900/85 p-3 text-left shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)] transition-all active:bg-gray-50 dark:bg-zinc-900/50 hover:-translate-y-0.5 hover:border-highlight/35 dark:border-highlight/20 dark:bg-zinc-900/88 dark:active:bg-zinc-800 lg:rounded-2xl lg:p-5"
+                  className="w-full rounded-[10px] border border-foreground/[0.08] bg-card/80 p-3 text-left shadow-[var(--shadow-panel)] transition-all active:bg-foreground/[0.04] hover:-translate-y-0.5 hover:border-primary/35 lg:rounded-2xl lg:p-5"
                 >
                   <div className="flex items-center gap-3 lg:gap-4">
                     <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center flex-shrink-0">
-                      <Mail className="w-6 h-6 lg:w-8 lg:h-8 text-blue-600" />
+                      <Mail className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="mb-0.5 text-sm font-semibold text-gray-900 dark:text-zinc-100 lg:text-lg">Email Support</h3>
-                      <p className="text-xs text-gray-600 dark:text-zinc-400 dark:text-zinc-300 lg:text-sm">
+                      <h3 className="mb-0.5 text-sm font-semibold text-foreground lg:text-lg">Email Support</h3>
+                      <p className="text-xs text-muted-foreground lg:text-sm">
                         Send us your questions via email
                       </p>
                     </div>
-                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-400 dark:text-zinc-500 lg:h-5 lg:w-5" />
+                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground/70 lg:h-5 lg:w-5" />
                   </div>
                 </motion.button>
 
@@ -223,70 +221,74 @@ const CustomerSupport = () => {
                 <motion.button
                   onClick={() => setSelectedOption('phone')}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full rounded-xl border border-highlight/12 bg-white/85 dark:bg-zinc-900/85 p-3 text-left shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)] transition-all active:bg-gray-50 dark:bg-zinc-900/50 hover:-translate-y-0.5 hover:border-highlight/35 dark:border-highlight/20 dark:bg-zinc-900/88 dark:active:bg-zinc-800 lg:rounded-2xl lg:p-5"
+                  className="w-full rounded-[10px] border border-foreground/[0.08] bg-card/80 p-3 text-left shadow-[var(--shadow-panel)] transition-all active:bg-foreground/[0.04] hover:-translate-y-0.5 hover:border-primary/35 lg:rounded-2xl lg:p-5"
                 >
                   <div className="flex items-center gap-3 lg:gap-4">
                     <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center flex-shrink-0">
-                      <Phone className="w-6 h-6 lg:w-8 lg:h-8 text-blue-600" />
+                      <Phone className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="mb-0.5 text-sm font-semibold text-gray-900 dark:text-zinc-100 lg:text-lg">Phone Support</h3>
-                      <p className="text-xs text-gray-600 dark:text-zinc-400 dark:text-zinc-300 lg:text-sm">
+                      <h3 className="mb-0.5 text-sm font-semibold text-foreground lg:text-lg">Phone Support</h3>
+                      <p className="text-xs text-muted-foreground lg:text-sm">
                         Talk directly with our team
                       </p>
                     </div>
-                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-400 dark:text-zinc-500 lg:h-5 lg:w-5" />
+                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground/70 lg:h-5 lg:w-5" />
                   </div>
                 </motion.button>
 
                 {/* WhatsApp Support */}
+                {contactInfo.whatsapp && (
                 <motion.button
                   onClick={() => setSelectedOption('message')}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full rounded-xl border border-highlight/12 bg-white/85 dark:bg-zinc-900/85 p-3 text-left shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)] transition-all active:bg-gray-50 dark:bg-zinc-900/50 hover:-translate-y-0.5 hover:border-highlight/35 dark:border-highlight/20 dark:bg-zinc-900/88 dark:active:bg-zinc-800 lg:rounded-2xl lg:p-5"
+                  className="w-full rounded-[10px] border border-foreground/[0.08] bg-card/80 p-3 text-left shadow-[var(--shadow-panel)] transition-all active:bg-foreground/[0.04] hover:-translate-y-0.5 hover:border-primary/35 lg:rounded-2xl lg:p-5"
                 >
                   <div className="flex items-center gap-3 lg:gap-4">
                     <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center flex-shrink-0">
-                      <MessageCircle className="w-6 h-6 lg:w-8 lg:h-8 text-blue-600" />
+                      <MessageCircle className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="mb-0.5 text-sm font-semibold text-gray-900 dark:text-zinc-100 lg:text-lg">WhatsApp Chat</h3>
-                      <p className="text-xs text-gray-600 dark:text-zinc-400 dark:text-zinc-300 lg:text-sm">
+                      <h3 className="mb-0.5 text-sm font-semibold text-foreground lg:text-lg">WhatsApp Chat</h3>
+                      <p className="text-xs text-muted-foreground lg:text-sm">
                         Quick messaging support
                       </p>
                     </div>
-                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-400 dark:text-zinc-500 lg:h-5 lg:w-5" />
+                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground/70 lg:h-5 lg:w-5" />
                   </div>
                 </motion.button>
+                )}
               </div>
 
               {/* Additional Info */}
               <div className="space-y-2 lg:space-y-3">
                 {/* Business Hours */}
-                <div className="border border-highlight/12 bg-white/80 dark:bg-zinc-900/80 p-3 lg:p-5 rounded-xl lg:rounded-2xl shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)]">
+                <div className="border border-foreground/[0.08] bg-card/80 p-3 lg:p-5 rounded-[10px] lg:rounded-2xl shadow-[var(--shadow-panel)]">
                   <div className="flex items-start gap-3 lg:gap-4">
                     <div className="w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center flex-shrink-0">
-                      <Clock className="w-5 h-5 lg:w-7 lg:h-7 text-blue-600" />
+                      <Clock className="w-5 h-5 lg:w-7 lg:h-7 text-primary" />
                     </div>
                     <div>
-                      <h3 className="text-sm lg:text-base font-semibold text-gray-900 dark:text-zinc-100 mb-1 lg:mb-2">Business Hours</h3>
-                      <p className="text-xs lg:text-sm text-gray-600 dark:text-zinc-400 mb-0.5 lg:mb-1">{contactInfo.hours}</p>
-                      <p className="text-xs lg:text-sm text-gray-600 dark:text-zinc-400">Response time: {contactInfo.responseTime}</p>
+                      <h3 className="text-sm lg:text-base font-semibold text-foreground mb-1 lg:mb-2">Business Hours</h3>
+                      <p className="text-xs lg:text-sm text-muted-foreground mb-0.5 lg:mb-1">{contactInfo.hours}</p>
+                      <p className="text-xs lg:text-sm text-muted-foreground">Response time: {contactInfo.responseTime}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Contact Summary */}
-                <div className="border border-highlight/12 bg-white/80 dark:bg-zinc-900/80 p-3 lg:p-5 rounded-xl lg:rounded-2xl shadow-[0_18px_40px_-34px_rgba(0,0,0,0.5)]">
+                <div className="border border-foreground/[0.08] bg-card/80 p-3 lg:p-5 rounded-[10px] lg:rounded-2xl shadow-[var(--shadow-panel)]">
                   <div className="flex items-start gap-3 lg:gap-4">
                     <div className="w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center flex-shrink-0">
-                      <MapPin className="w-5 h-5 lg:w-7 lg:h-7 text-blue-600" />
+                      <MapPin className="w-5 h-5 lg:w-7 lg:h-7 text-primary" />
                     </div>
                     <div>
-                      <h3 className="text-sm lg:text-base font-semibold text-gray-900 dark:text-zinc-100 mb-1 lg:mb-2">Reach Us Directly</h3>
-                      <p className="text-xs lg:text-sm text-gray-600 dark:text-zinc-400">Phone: {contactInfo.phone}</p>
-                      <p className="text-xs lg:text-sm text-gray-600 dark:text-zinc-400 break-all">Email: {contactInfo.email}</p>
-                      <p className="text-xs lg:text-sm text-gray-600 dark:text-zinc-400">WhatsApp: +{contactInfo.whatsapp}</p>
+                      <h3 className="text-sm lg:text-base font-semibold text-foreground mb-1 lg:mb-2">Reach Us Directly</h3>
+                      <p className="text-xs lg:text-sm text-muted-foreground">Phone: {contactInfo.phone}</p>
+                      <p className="text-xs lg:text-sm text-muted-foreground break-all">Email: {contactInfo.email}</p>
+                      {contactInfo.whatsapp && (
+                        <p className="text-xs lg:text-sm text-muted-foreground">WhatsApp: +{contactInfo.whatsapp}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -302,17 +304,17 @@ const CustomerSupport = () => {
               <div className="mb-4 lg:mb-6">
                 <div className="flex items-center gap-2.5 lg:gap-3 mb-3 lg:mb-4">
                   <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center">
-                    <Mail className="w-6 h-6 lg:w-8 lg:h-8 text-blue-600" />
+                    <Mail className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-base lg:text-xl font-bold text-gray-900 dark:text-zinc-100">Email Support</h2>
-                    <p className="text-xs lg:text-sm text-gray-600 dark:text-zinc-400">Choose a question or write your own</p>
+                    <h2 className="text-base lg:text-xl font-bold text-foreground">Email Support</h2>
+                    <p className="text-xs lg:text-sm text-muted-foreground">Choose a question or write your own</p>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-1.5 lg:space-y-2 mb-4 lg:mb-6">
-                <h3 className="font-semibold text-gray-900 dark:text-zinc-100 mb-2 lg:mb-3 text-xs lg:text-sm uppercase tracking-wide">Common Questions</h3>
+                <h3 className="font-semibold text-foreground mb-2 lg:mb-3 text-xs lg:text-sm uppercase tracking-wide">Common Questions</h3>
                 {faqQuestions.map((faq, index) => (
                   <motion.button
                     key={faq.id}
@@ -321,20 +323,20 @@ const CustomerSupport = () => {
                     transition={{ delay: index * 0.05 }}
                     onClick={() => handleEmailClick(faq.message)}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full text-left bg-gray-50 dark:bg-zinc-900/50 active:bg-gray-100 dark:bg-zinc-800 p-3 lg:p-4 rounded-lg lg:rounded-xl transition-colors"
+                    className="w-full text-left bg-foreground/[0.03] active:bg-gray-100 p-3 lg:p-4 rounded-lg lg:rounded-xl transition-colors"
                   >
                     <div className="flex items-center justify-between gap-2 lg:gap-3">
-                      <span className="text-xs lg:text-sm font-medium text-gray-900 dark:text-zinc-100 flex-1">
+                      <span className="text-xs lg:text-sm font-medium text-foreground flex-1">
                         {faq.question}
                       </span>
-                      <Send className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-gray-400 dark:text-zinc-500 flex-shrink-0" />
+                      <Send className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-muted-foreground/70 flex-shrink-0" />
                     </div>
                   </motion.button>
                 ))}
               </div>
 
               <div className="bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,hsl(var(--highlight)/0.12)_100%)] border border-highlight/12 p-3 lg:p-4 rounded-lg lg:rounded-xl mb-4 lg:mb-6">
-                <p className="text-xs lg:text-sm text-gray-700 dark:text-zinc-300">
+                <p className="text-xs lg:text-sm text-foreground/80">
                   <span className="font-semibold">Tip:</span> We typically respond {contactInfo.responseTime.toLowerCase()} during business days.
                 </p>
               </div>
@@ -349,11 +351,11 @@ const CustomerSupport = () => {
               <div className="mb-4 lg:mb-6">
                 <div className="flex items-center gap-2.5 lg:gap-3 mb-3 lg:mb-4">
                   <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center">
-                    <Phone className="w-6 h-6 lg:w-8 lg:h-8 text-blue-600" />
+                    <Phone className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-base lg:text-xl font-bold text-gray-900 dark:text-zinc-100">Phone Support</h2>
-                    <p className="text-xs lg:text-sm text-gray-600 dark:text-zinc-400">Speak with our team directly</p>
+                    <h2 className="text-base lg:text-xl font-bold text-foreground">Phone Support</h2>
+                    <p className="text-xs lg:text-sm text-muted-foreground">Speak with our team directly</p>
                   </div>
                 </div>
               </div>
@@ -362,7 +364,7 @@ const CustomerSupport = () => {
               <motion.button
                 onClick={handlePhoneCall}
                 whileTap={{ scale: 0.98 }}
-                className="w-full border border-highlight/20 bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,hsl(var(--highlight)/0.12)_100%)] active:bg-blue-50 text-blue-600 rounded-xl lg:rounded-2xl p-4 lg:p-6 mb-4 lg:mb-6 transition-colors shadow-[0_20px_45px_-35px_rgba(0,0,0,0.45)]"
+                className="w-full border border-highlight/20 bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,hsl(var(--highlight)/0.12)_100%)] active:bg-blue-50 text-primary rounded-[10px] lg:rounded-2xl p-4 lg:p-6 mb-4 lg:mb-6 transition-colors shadow-[0_20px_45px_-35px_rgba(0,0,0,0.45)]"
               >
                 <div className="flex items-center justify-center gap-2 lg:gap-3">
                   <Phone className="w-5 h-5 lg:w-6 lg:h-6" />
@@ -374,7 +376,7 @@ const CustomerSupport = () => {
               </motion.button>
 
               <div className="mb-2 lg:mb-3">
-                <h3 className="font-semibold text-gray-900 dark:text-zinc-100 mb-2 lg:mb-3 text-xs lg:text-sm uppercase tracking-wide">We Can Help With</h3>
+                <h3 className="font-semibold text-foreground mb-2 lg:mb-3 text-xs lg:text-sm uppercase tracking-wide">We Can Help With</h3>
               </div>
 
               <div className="space-y-1.5 lg:space-y-2 mb-4 lg:mb-6">
@@ -384,15 +386,15 @@ const CustomerSupport = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="p-3 lg:p-4 rounded-lg lg:rounded-xl bg-gray-50 dark:bg-zinc-900/50"
+                    className="p-3 lg:p-4 rounded-lg lg:rounded-xl bg-foreground/[0.03]"
                   >
                     <div className="flex items-start gap-2 lg:gap-3">
                       <div className="w-6 h-6 lg:w-8 lg:h-8 flex items-center justify-center flex-shrink-0">
-                        <CheckCircle className="w-5 h-5 lg:w-6 lg:h-6 text-blue-600" />
+                        <CheckCircle className="w-5 h-5 lg:w-6 lg:h-6 text-primary" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-zinc-100 text-xs lg:text-sm mb-0.5 lg:mb-1">{option.title}</h4>
-                        <p className="text-[11px] lg:text-xs text-gray-600 dark:text-zinc-400">{option.description}</p>
+                        <h4 className="font-semibold text-foreground text-xs lg:text-sm mb-0.5 lg:mb-1">{option.title}</h4>
+                        <p className="text-[11px] lg:text-xs text-muted-foreground">{option.description}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -401,11 +403,11 @@ const CustomerSupport = () => {
 
               <div className="p-3 lg:p-4 bg-[linear-gradient(135deg,rgba(34,197,94,0.08)_0%,hsl(var(--highlight)/0.10)_100%)] border border-highlight/12 rounded-lg lg:rounded-xl">
                 <div className="flex items-start gap-2 lg:gap-3">
-                  <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs lg:text-sm font-semibold text-gray-900 dark:text-zinc-100 mb-0.5 lg:mb-1">Available Hours</p>
-                    <p className="text-xs lg:text-sm text-gray-700 dark:text-zinc-300">{contactInfo.hours}</p>
-                    <p className="text-xs lg:text-sm text-gray-700 dark:text-zinc-300">Response time: {contactInfo.responseTime}</p>
+                    <p className="text-xs lg:text-sm font-semibold text-foreground mb-0.5 lg:mb-1">Available Hours</p>
+                    <p className="text-xs lg:text-sm text-foreground/80">{contactInfo.hours}</p>
+                    <p className="text-xs lg:text-sm text-foreground/80">Response time: {contactInfo.responseTime}</p>
                   </div>
                 </div>
               </div>
@@ -420,17 +422,17 @@ const CustomerSupport = () => {
               <div className="mb-4 lg:mb-6">
                 <div className="flex items-center gap-2.5 lg:gap-3 mb-3 lg:mb-4">
                   <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center">
-                    <MessageCircle className="w-6 h-6 lg:w-8 lg:h-8 text-blue-600" />
+                    <MessageCircle className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-base lg:text-xl font-bold text-gray-900 dark:text-zinc-100">WhatsApp Chat</h2>
-                    <p className="text-xs lg:text-sm text-gray-600 dark:text-zinc-400">Quick and convenient messaging</p>
+                    <h2 className="text-base lg:text-xl font-bold text-foreground">WhatsApp Chat</h2>
+                    <p className="text-xs lg:text-sm text-muted-foreground">Quick and convenient messaging</p>
                   </div>
                 </div>
               </div>
 
               <div className="mb-2 lg:mb-3">
-                <h3 className="font-semibold text-gray-900 dark:text-zinc-100 mb-2 lg:mb-3 text-xs lg:text-sm uppercase tracking-wide">Message Templates</h3>
+                <h3 className="font-semibold text-foreground mb-2 lg:mb-3 text-xs lg:text-sm uppercase tracking-wide">Message Templates</h3>
               </div>
 
               <div className="space-y-1.5 lg:space-y-2 mb-4 lg:mb-6">
@@ -442,23 +444,23 @@ const CustomerSupport = () => {
                     transition={{ delay: index * 0.05 }}
                     onClick={() => handleWhatsAppClick(msg.message)}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full text-left p-3 lg:p-4 rounded-lg lg:rounded-xl bg-gray-50 dark:bg-zinc-900/50 active:bg-gray-100 dark:bg-zinc-800 transition-colors"
+                    className="w-full text-left p-3 lg:p-4 rounded-lg lg:rounded-xl bg-foreground/[0.03] active:bg-gray-100 transition-colors"
                   >
                     <div className="flex items-center justify-between gap-2 lg:gap-3">
                       <div className="flex-1">
-                        <div className="text-xs lg:text-sm font-semibold text-gray-900 dark:text-zinc-100 mb-0.5 lg:mb-1">
+                        <div className="text-xs lg:text-sm font-semibold text-foreground mb-0.5 lg:mb-1">
                           {msg.title}
                         </div>
-                        <div className="text-[11px] lg:text-xs text-gray-600 dark:text-zinc-400">{msg.message}</div>
+                        <div className="text-[11px] lg:text-xs text-muted-foreground">{msg.message}</div>
                       </div>
-                      <MessageCircle className="w-4 h-4 lg:w-5 lg:h-5 text-gray-400 dark:text-zinc-500 flex-shrink-0" />
+                      <MessageCircle className="w-4 h-4 lg:w-5 lg:h-5 text-muted-foreground/70 flex-shrink-0" />
                     </div>
                   </motion.button>
                 ))}
               </div>
 
               <div className="p-3 lg:p-4 bg-[linear-gradient(135deg,rgba(168,85,247,0.08)_0%,hsl(var(--highlight)/0.10)_100%)] border border-highlight/12 rounded-lg lg:rounded-xl">
-                <p className="text-xs lg:text-sm text-gray-700 dark:text-zinc-300">
+                <p className="text-xs lg:text-sm text-foreground/80">
                   <span className="font-semibold">Note:</span> Our team is available during business hours to assist you promptly on WhatsApp.
                 </p>
               </div>

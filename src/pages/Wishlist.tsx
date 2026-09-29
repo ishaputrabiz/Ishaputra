@@ -156,16 +156,16 @@ const Wishlist = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col items-center justify-center py-16 px-4"
               >
-                <div className="w-32 h-32 bg-gradient-to-br from-red-50 to-pink-50 rounded-full flex items-center justify-center mb-6">
-                  <Heart className="w-16 h-16 text-red-300" />
+                <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                  <Heart className="w-16 h-16 text-primary" strokeWidth={1.4} />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-zinc-100 mb-3">Login to View Wishlist</h2>
-                <p className="text-gray-500 dark:text-zinc-500 dark:text-zinc-400 text-center mb-8 max-w-md">
+                <h2 className="text-2xl font-semibold text-foreground mb-3" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Log in to see your wishlist</h2>
+                <p className="text-muted-foreground text-center mb-8 max-w-md">
                   Sign in to access your saved items and manage your wishlist.
                 </p>
                 <Button
                   onClick={() => navigate('/login')}
-                  className="bg-gray-900 dark:bg-zinc-100 hover:bg-gray-800 dark:bg-zinc-100 text-white px-8 py-6 text-base rounded-lg"
+                  className="btn-copper h-auto px-8 py-4 text-[12px] font-bold rounded-[6px]"
                 >
                   Login / Sign Up
                 </Button>
@@ -177,22 +177,12 @@ const Wishlist = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col items-center justify-center py-12 sm:py-20"
               >
-                <div className="relative mb-8">
-                  <div className="w-48 h-48 sm:w-64 sm:h-64 flex items-center justify-center">
-                    <div className="relative">
-                      <div className="w-40 h-40 sm:w-52 sm:h-52 border-8 border-foreground/80 rounded-lg relative bg-background">
-                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-24 sm:w-32 h-12 sm:h-16 border-8 border-foreground/80 border-b-0 rounded-t-lg bg-background"></div>
-                        <div className="absolute top-1/2 left-0 right-0 h-4 bg-foreground/20 -translate-y-1/2"></div>
-                        <div className="absolute top-0 bottom-0 left-1/2 w-4 bg-foreground/20 -translate-x-1/2"></div>
-                      </div>
-                      <div className="absolute -right-12 bottom-4 w-10 h-10 border-4 border-foreground/60 rounded bg-background rotate-12"></div>
-                      <div className="absolute -right-8 bottom-0 w-8 h-8 border-4 border-foreground/60 rounded bg-background -rotate-6"></div>
-                    </div>
-                  </div>
-                </div>
+                <div className="tx-slate mb-6 grid h-24 w-24 place-items-center rounded-[14px] shadow-[var(--shadow-panel)]">
+                <Heart className="h-10 w-10 text-highlight-soft" strokeWidth={1.4} />
+              </div>
 
-                <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2" style={{ fontFamily: "var(--font-body)" }}>
-                  My Wishlist is Empty!
+                <h2 className="text-2xl sm:text-3xl font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
+                  Your wishlist is empty
                 </h2>
                 <p className="text-muted-foreground text-center mb-8 max-w-md">
                   {user 
@@ -205,7 +195,7 @@ const Wishlist = () => {
                     <Button
                       onClick={() => navigate("/auth/login")}
                       size="lg"
-                      className="gap-2"
+                      className="btn-copper gap-2 h-auto py-3.5 text-[11px] font-bold rounded-[6px]"
                     >
                       Login to Continue
                     </Button>
@@ -214,7 +204,7 @@ const Wishlist = () => {
                     onClick={() => navigate("/")}
                     variant={user ? "default" : "outline"}
                     size="lg"
-                    className="gap-2"
+                    className="btn-copper gap-2 h-auto py-3.5 text-[11px] font-bold rounded-[6px]"
                   >
                     <ShoppingBag className="w-5 h-5" />
                     Start Shopping
@@ -232,7 +222,7 @@ const Wishlist = () => {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
                       transition={{ delay: index * 0.05 }}
-                      className="group bg-card rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-border"
+                      className="group bg-card rounded-[var(--radius-card)] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-border"
                     >
                       <div
                         className="relative aspect-square overflow-hidden cursor-pointer bg-muted"
@@ -329,7 +319,7 @@ const Wishlist = () => {
       </div>
 
       {/* Mobile View */}
-      <div className="lg:hidden min-h-screen bg-white dark:bg-zinc-900 pb-20 dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]">
+      <div className="lg:hidden min-h-screen tx-paper pb-20 dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]">
         {/* Tanishq-style Header + Search */}
         <MobileHeader />
         <MobileSearchBar />
@@ -344,21 +334,21 @@ const Wishlist = () => {
                 navigate(-1);
               }
             }}
-            className="mb-3 inline-flex items-center gap-2 rounded-full border border-highlight/15 bg-white/85 px-3 py-2 text-xs font-medium text-gray-700 dark:text-zinc-300 shadow-sm backdrop-blur transition-colors hover:bg-white dark:border-highlight/20 dark:bg-zinc-900/85 dark:hover:bg-zinc-900"
+            className="mb-3 inline-flex items-center gap-2 rounded-full border border-highlight/15 bg-white/85 px-3 py-2 text-xs font-medium text-foreground/80 shadow-sm backdrop-blur transition-colors hover:bg-card dark:border-highlight/20"
           >
             <ArrowLeft className="h-4 w-4" />
             Back
           </button>
           <div className="flex flex-wrap items-center gap-1 text-sm">
-            <button onClick={() => navigate("/")} className="font-medium text-gray-900 dark:text-zinc-100 hover:underline">Home</button>
-            <span className="text-gray-400 dark:text-zinc-500">|</span>
-            <span className="text-xs text-gray-400 dark:text-zinc-500">Wishlist</span>
+            <button onClick={() => navigate("/")} className="font-medium text-foreground hover:underline">Home</button>
+            <span className="text-muted-foreground/70">|</span>
+            <span className="text-xs text-muted-foreground/70">Wishlist</span>
           </div>
         </div>
 
         {/* Wishlist Section Title */}
         <div className="px-4 mb-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
+          <h2 className="text-2xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
             Wishlist
           </h2>
         </div>
@@ -368,65 +358,35 @@ const Wishlist = () => {
           {!user ? (
             /* Not Logged In State */
             <div className="flex flex-col items-center justify-center py-10">
-              {/* Heart Icon */}
-              <div className="mb-6">
-                <Heart className="w-16 h-16 text-pink-200" fill="#FBCFE8" strokeWidth={1} />
+              <div className="tx-slate mb-6 grid h-20 w-20 place-items-center rounded-[14px] shadow-[var(--shadow-panel)]">
+                <Heart className="h-8 w-8 text-highlight-soft" strokeWidth={1.4} />
               </div>
               
-              {/* Box illustration */}
-              <div className="relative mb-8">
-                <div className="w-48 h-40 bg-gray-100 dark:bg-zinc-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-zinc-700 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-16 h-3 bg-gray-300 rounded mx-auto mb-2" />
-                    <div className="w-12 h-3 bg-gray-300 rounded mx-auto mb-4" />
-                    <div className="flex justify-center gap-1">
-                      <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-gray-400" />
-                      <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-gray-400" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <p className="text-gray-500 dark:text-zinc-500 dark:text-zinc-400 text-sm text-center mb-6" style={{ fontFamily: "var(--font-body)" }}>
+              <p className="text-muted-foreground text-sm text-center mb-6" style={{ fontFamily: "var(--font-body)" }}>
                 Please login to view your wishlist
               </p>
               <Button
                 onClick={() => navigate("/login")}
                 size="sm"
-                className="gap-2 bg-gray-900 dark:bg-zinc-100 hover:bg-gray-800 dark:bg-zinc-100 text-white rounded-lg"
+                className="btn-copper gap-2 h-auto py-3 text-[11px] font-bold rounded-[6px]"
               >
                 Login / Sign Up
               </Button>
             </div>
           ) : filteredProducts.length === 0 ? (
-            // Empty State - Tanishq Style
+            // Empty State
             <div className="flex flex-col items-center justify-center py-10">
-              {/* Heart Icon */}
-              <div className="mb-6">
-                <Heart className="w-16 h-16 text-pink-200" fill="#FBCFE8" strokeWidth={1} />
+              <div className="tx-slate mb-6 grid h-20 w-20 place-items-center rounded-[14px] shadow-[var(--shadow-panel)]">
+                <Heart className="h-8 w-8 text-highlight-soft" strokeWidth={1.4} />
               </div>
               
-              {/* Box illustration */}
-              <div className="relative mb-8">
-                <div className="w-48 h-40 bg-gray-100 dark:bg-zinc-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-zinc-700 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-16 h-3 bg-gray-300 rounded mx-auto mb-2" />
-                    <div className="w-12 h-3 bg-gray-300 rounded mx-auto mb-4" />
-                    <div className="flex justify-center gap-1">
-                      <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-gray-400" />
-                      <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-gray-400" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <p className="text-gray-500 dark:text-zinc-500 dark:text-zinc-400 text-sm text-center mb-6" style={{ fontFamily: "var(--font-body)" }}>
+              <p className="text-muted-foreground text-sm text-center mb-6" style={{ fontFamily: "var(--font-body)" }}>
                 Your wishlist is empty. Start adding items you love!
               </p>
               <Button
                 onClick={() => navigate("/")}
                 size="sm"
-                className="gap-2 bg-primary hover:bg-primary-dark text-white rounded-md"
+                className="btn-copper gap-2 h-auto py-3 text-[11px] font-bold rounded-[6px]"
               >
                 <ShoppingBag className="w-4 h-4" />
                 Start Shopping
@@ -443,11 +403,11 @@ const Wishlist = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ delay: index * 0.03 }}
-                    className="overflow-hidden rounded-lg border border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/88"
+                    className="overflow-hidden rounded-lg border border-foreground/[0.06] bg-card shadow-sm"
                   >
                     {/* Product Image */}
                     <div
-                      className="relative aspect-square overflow-hidden cursor-pointer bg-gray-50 dark:bg-zinc-900/50"
+                      className="relative aspect-square overflow-hidden cursor-pointer bg-foreground/[0.03]"
                       onClick={() => handleProductClick(product.id)}
                     >
                       {product.image ? (
@@ -457,7 +417,7 @@ const Wishlist = () => {
                           className="w-full h-full object-cover" preset="card" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <ShoppingBag className="w-12 h-12 text-gray-300" />
+                          <ShoppingBag className="w-12 h-12 text-muted-foreground/40" />
                         </div>
                       )}
                       
@@ -467,7 +427,7 @@ const Wishlist = () => {
                           e.stopPropagation();
                           handleRemove(product.id, product.title);
                         }}
-                        className="absolute top-2 right-2 rounded-full bg-white/90 p-1.5 shadow-sm dark:bg-zinc-900/90"
+                        className="absolute top-2 right-2 rounded-full bg-white/90 p-1.5 shadow-sm"
                       >
                         <Heart className="w-4 h-4 text-red-500" fill="currentColor" />
                       </button>
@@ -482,7 +442,7 @@ const Wishlist = () => {
                     {/* Product Info */}
                     <div className="p-3">
                       <h3
-                        className="mb-1 line-clamp-2 text-xs font-normal leading-relaxed text-gray-900 dark:text-zinc-100"
+                        className="mb-1 line-clamp-2 text-xs font-normal leading-relaxed text-foreground"
                         style={{ fontFamily: "var(--font-body)" }}
                         onClick={() => handleProductClick(product.id)}
                       >
@@ -490,11 +450,11 @@ const Wishlist = () => {
                       </h3>
                       
                       <div className="flex items-center gap-1.5 mb-2.5">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
+                        <span className="text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                           ₹{product.price.toLocaleString('en-IN')}
                         </span>
                         {product.oldPrice && product.oldPrice > product.price && (
-                          <span className="text-[10px] text-gray-400 dark:text-zinc-500 line-through">
+                          <span className="text-[10px] text-muted-foreground/70 line-through">
                             ₹{product.oldPrice.toLocaleString('en-IN')}
                           </span>
                         )}

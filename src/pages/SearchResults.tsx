@@ -134,23 +134,23 @@ const SearchResults = () => {
   }, [highlightId, loading, sortedProducts]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-900 pb-20">
+    <div className="min-h-screen tx-paper pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-white dark:bg-zinc-900 shadow-sm">
+      <div className="sticky top-0 z-50 bg-card shadow-sm">
         <div className="flex items-center gap-2 px-3 py-2.5">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-1 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 transition-colors">
-            <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-zinc-300" />
+          <button onClick={() => navigate(-1)} className="p-2 -ml-1 rounded-full hover:bg-foreground/[0.06] transition-colors">
+            <ArrowLeft className="w-5 h-5 text-foreground/80" />
           </button>
           <button
             onClick={() => navigate("/search")}
-            className="flex-1 flex items-center gap-2 bg-gray-50 dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800 px-3 py-2.5"
+            className="flex-1 flex items-center gap-2 bg-foreground/[0.03] rounded-lg border border-foreground/[0.08] px-3 py-2.5"
           >
-            <Search className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
-            <span className="text-sm text-gray-700 dark:text-zinc-300 truncate">{query}</span>
+            <Search className="w-4 h-4 text-muted-foreground/70" />
+            <span className="text-sm text-foreground/80 truncate">{query}</span>
           </button>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`p-2 rounded-full transition-colors ${showFilters ? "bg-primary/10 text-primary" : "hover:bg-gray-100"}`}
+            className={`p-2 rounded-full transition-colors ${showFilters ? "bg-primary/10 text-primary" : "hover:bg-foreground/[0.06]"}`}
           >
             <SlidersHorizontal className="w-5 h-5" />
           </button>
@@ -162,9 +162,9 @@ const SearchResults = () => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="border-t border-gray-100 dark:border-zinc-800 px-4 py-3 bg-gray-50 dark:bg-zinc-900"
+            className="border-t border-foreground/[0.06] px-4 py-3 bg-foreground/[0.03]"
           >
-            <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider font-medium mb-2">Sort By</p>
+            <p className="text-xs text-muted-foreground/70 uppercase tracking-wider font-medium mb-2">Sort By</p>
             <div className="flex flex-wrap gap-2">
               {[
                 { value: "relevance", label: "Relevance" },
@@ -182,7 +182,7 @@ const SearchResults = () => {
                   className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
                     sortBy === opt.value
                       ? "bg-primary text-white border-primary"
-                      : "bg-white text-gray-700 border-gray-200 hover:border-primary/30"
+                      : "bg-card text-foreground/80 border-foreground/[0.08] hover:border-primary/30"
                   }`}
                 >
                   {opt.label}
@@ -194,14 +194,14 @@ const SearchResults = () => {
       </div>
 
       {/* Results Count */}
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-zinc-800">
-        <p className="text-sm text-gray-500 dark:text-zinc-500">
+      <div className="px-4 py-3 border-b border-foreground/[0.06]">
+        <p className="text-sm text-muted-foreground">
           {loading ? (
             "Searching..."
           ) : (
             <>
-              <span className="font-semibold text-gray-900 dark:text-zinc-100">{sortedProducts.length}</span> results for "
-              <span className="font-medium text-gray-900 dark:text-zinc-100">{query}</span>"
+              <span className="font-semibold text-foreground">{sortedProducts.length}</span> results for "
+              <span className="font-medium text-foreground">{query}</span>"
             </>
           )}
         </p>
@@ -212,9 +212,9 @@ const SearchResults = () => {
         <div className="grid grid-cols-2 gap-3 p-4">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="animate-pulse">
-              <div className="aspect-square bg-gray-200 dark:bg-zinc-800 rounded-xl mb-2" />
-              <div className="h-3 bg-gray-200 dark:bg-zinc-800 rounded w-3/4 mb-1" />
-              <div className="h-3 bg-gray-200 dark:bg-zinc-800 rounded w-1/2" />
+              <div className="aspect-square bg-foreground/10 rounded-[10px] mb-2" />
+              <div className="h-3 bg-foreground/10 rounded w-3/4 mb-1" />
+              <div className="h-3 bg-foreground/10 rounded w-1/2" />
             </div>
           ))}
         </div>
@@ -223,7 +223,7 @@ const SearchResults = () => {
       {/* Results Grid */}
       {!loading && sortedProducts.length > 0 && (
         <div className="p-3">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-0 border border-gray-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-0 border border-foreground/[0.08] rounded-[10px] overflow-hidden">
             {pagedProducts.map((product, index) => (
               <motion.div
                 key={product.id}
@@ -231,7 +231,7 @@ const SearchResults = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.5) }}
-                className={`${product.id === highlightId ? "bg-primary/5" : ""} border-b border-r border-gray-200`}
+                className={`${product.id === highlightId ? "bg-primary/5" : ""} border-b border-r border-foreground/[0.08]`}
               >
                 <ProductCard product={product} index={index} />
               </motion.div>
@@ -245,7 +245,7 @@ const SearchResults = () => {
                 onPageChange={goToPage}
                 hrefFor={pageHref}
               />
-              <p className="text-xs text-gray-500 dark:text-zinc-400">
+              <p className="text-xs text-muted-foreground">
                 Showing {pageStart + 1}–{pageStart + pagedProducts.length} of {sortedProducts.length}
               </p>
             </div>
@@ -257,8 +257,8 @@ const SearchResults = () => {
       {!loading && sortedProducts.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 px-6">
           <ShoppingBag className="w-16 h-16 text-gray-200 mb-4" />
-          <p className="text-lg font-medium text-gray-700 dark:text-zinc-300 mb-1">No products found</p>
-          <p className="text-sm text-gray-400 dark:text-zinc-500 text-center mb-6">
+          <p className="text-lg font-medium text-foreground/80 mb-1">No products found</p>
+          <p className="text-sm text-muted-foreground/70 text-center mb-6">
             We couldn't find any products matching "{query}". Try a different search term.
           </p>
           <button

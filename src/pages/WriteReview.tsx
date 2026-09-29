@@ -130,18 +130,18 @@ const WriteReview = () => {
   const activeRating = hoverRating || rating;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-cream to-white" style={{ fontFamily: "var(--font-body)" }}>
+    <div className="min-h-screen tx-paper" style={{ fontFamily: "var(--font-body)" }}>
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-zinc-800 px-4 py-3.5 flex items-center gap-3 shadow-sm">
+      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-foreground/[0.06] px-4 py-3.5 flex items-center gap-3 shadow-sm">
         <button
           onClick={() => navigate(-1)}
-          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 transition-colors text-gray-700 dark:text-zinc-300"
+          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-foreground/[0.06] transition-colors text-foreground/80"
         >
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-base font-semibold text-gray-900 dark:text-zinc-100">Write a Review</h1>
-          <p className="text-xs text-gray-400 dark:text-zinc-500">Your feedback matters</p>
+          <h1 className="text-base font-semibold text-foreground">Write a Review</h1>
+          <p className="text-xs text-muted-foreground/70">Your feedback matters</p>
         </div>
       </div>
 
@@ -150,14 +150,14 @@ const WriteReview = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-4 bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-gray-100 dark:border-zinc-800 shadow-sm"
+          className="flex items-center gap-4 bg-card rounded-[var(--radius-card)] p-4 border border-foreground/[0.06] shadow-sm"
         >
-          <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800">
+          <div className="w-16 h-16 rounded-[10px] overflow-hidden flex-shrink-0 bg-foreground/[0.03] border border-foreground/[0.06]">
             <SmartImage src={productImage} alt={productName} className="w-full h-full object-cover" preset="thumb" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs text-highlight font-medium uppercase tracking-wide mb-0.5">Reviewing</p>
-            <h2 className="font-semibold text-gray-900 dark:text-zinc-100 text-sm leading-tight line-clamp-2">{productName}</h2>
+            <h2 className="font-semibold text-foreground text-sm leading-tight line-clamp-2">{productName}</h2>
             <div className="flex items-center gap-1 mt-1">
               <CheckCircle2 size={12} className="text-emerald-500" />
               <p className="text-xs text-emerald-600 font-medium">Verified Purchase</p>
@@ -170,9 +170,9 @@ const WriteReview = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm"
+          className="bg-card rounded-[var(--radius-card)] p-5 border border-foreground/[0.06] shadow-sm"
         >
-          <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100 mb-4">Rate this product</p>
+          <p className="text-sm font-semibold text-foreground mb-4">Rate this product</p>
           <div className="flex justify-center gap-3 mb-4">
             {[1, 2, 3, 4, 5].map((star) => (
               <motion.button
@@ -217,18 +217,18 @@ const WriteReview = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm"
+          className="bg-card rounded-[var(--radius-card)] p-5 border border-foreground/[0.06] shadow-sm"
         >
-          <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100 mb-3">Your Experience</p>
+          <p className="text-sm font-semibold text-foreground mb-3">Your Experience</p>
           <textarea
             value={reviewText}
             onChange={(e) => setReviewText(e.target.value)}
             placeholder="Share what you loved or didn't love about this product. Would you recommend it to others?"
-            className="w-full h-36 p-4 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-highlight/45 focus:border-transparent text-sm text-gray-800 dark:text-zinc-200 placeholder:text-gray-400 dark:placeholder:text-zinc-500 dark:text-zinc-500 transition-all"
+            className="w-full h-36 p-4 bg-foreground/[0.03] border border-foreground/[0.08] rounded-[10px] resize-none focus:outline-none focus:ring-2 focus:ring-highlight/45 focus:border-transparent text-sm text-foreground placeholder:text-muted-foreground/70 transition-all"
             maxLength={1000}
           />
           <div className="flex justify-end mt-1.5">
-            <span className="text-xs text-gray-400 dark:text-zinc-500">{reviewText.length}/1000</span>
+            <span className="text-xs text-muted-foreground/70">{reviewText.length}/1000</span>
           </div>
         </motion.div>
 
@@ -237,24 +237,24 @@ const WriteReview = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm"
+          className="bg-card rounded-[var(--radius-card)] p-5 border border-foreground/[0.06] shadow-sm"
         >
           <div className="mb-4">
-            <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100">Photos</p>
-            <p className="text-xs text-gray-400 dark:text-zinc-500 mt-0.5">Show others what you experienced</p>
+            <p className="text-sm font-semibold text-foreground">Photos</p>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">Show others what you experienced</p>
           </div>
 
           <div className="grid grid-cols-1 gap-3">
             {/* Add Photos */}
             <label className={`block cursor-pointer ${images.length >= 4 ? 'opacity-50 pointer-events-none' : ''}`}>
               <input type="file" accept={IMAGE_ACCEPT} multiple onChange={handleImageUpload} className="hidden" disabled={images.length >= 4} />
-              <div className="border-2 border-dashed border-highlight/30 bg-highlight/5 rounded-xl p-4 flex flex-col items-center gap-2 hover:border-highlight/70 hover:bg-highlight/10 transition-all">
+              <div className="border-2 border-dashed border-highlight/30 bg-highlight/5 rounded-[10px] p-4 flex flex-col items-center gap-2 hover:border-highlight/70 hover:bg-highlight/10 transition-all">
                 <div className="w-11 h-11 bg-highlight/15 rounded-full flex items-center justify-center">
                   <Camera size={20} className="text-highlight" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-gray-800 dark:text-zinc-200">Add Photos</p>
-                  <p className="text-xs text-gray-400 dark:text-zinc-500">{images.length}/4 uploaded</p>
+                  <p className="text-sm font-medium text-foreground">Add Photos</p>
+                  <p className="text-xs text-muted-foreground/70">{images.length}/4 uploaded</p>
                 </div>
               </div>
             </label>
@@ -266,7 +266,7 @@ const WriteReview = () => {
             <div className="grid grid-cols-4 gap-2 mt-3">
               {imagePreviews.map((preview, index) => (
                 <div key={index} className="relative aspect-square">
-                  <SmartImage src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover rounded-xl" preset="card" />
+                  <SmartImage src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover rounded-[10px]" preset="card" />
                   <button
                     onClick={() => removeImage(index)}
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-900 text-white rounded-full flex items-center justify-center shadow"
@@ -282,15 +282,15 @@ const WriteReview = () => {
       </div>
 
       {/* Fixed Bottom Submit Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800 px-4 py-4 safe-area-inset-bottom shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-foreground/[0.06] px-4 py-4 safe-area-inset-bottom shadow-lg">
         <motion.button
           onClick={handleSubmit}
           disabled={uploading || rating === 0 || !reviewText.trim()}
           whileTap={{ scale: 0.97 }}
-          className={`w-full max-w-lg mx-auto flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm transition-all ${
+          className={`w-full max-w-lg mx-auto flex items-center justify-center gap-2 py-3.5 rounded-[var(--radius-card)] font-semibold text-sm transition-all ${
             rating > 0 && reviewText.trim()
               ? 'bg-gray-900 text-white hover:bg-gray-800 shadow-lg'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-foreground/[0.06] text-muted-foreground/70 cursor-not-allowed'
           }`}
         >
           {uploading ? (
@@ -302,10 +302,10 @@ const WriteReview = () => {
             'Submit Review ?'
           )}
         </motion.button>
-        <p className="text-[10px] text-center text-gray-400 dark:text-zinc-500 mt-2 leading-relaxed">
+        <p className="text-[10px] text-center text-muted-foreground/70 mt-2 leading-relaxed">
           By submitting, you agree to our{' '}
-          <span className="text-gray-600 dark:text-zinc-400 underline">Terms of Use</span> and{' '}
-          <span className="text-gray-600 dark:text-zinc-400 underline">Privacy Policy</span>
+          <span className="text-muted-foreground underline">Terms of Use</span> and{' '}
+          <span className="text-muted-foreground underline">Privacy Policy</span>
         </p>
       </div>
     </div>

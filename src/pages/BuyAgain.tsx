@@ -133,19 +133,19 @@ const BuyAgain = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900">
+    <div className="min-h-screen tx-paper">
       <div className="hidden lg:block">
         <Header />
       </div>
 
       {/* Mobile Header */}
-      <div className="lg:hidden bg-white dark:bg-zinc-900 sticky top-0 z-40 shadow-sm">
+      <div className="lg:hidden bg-card sticky top-0 z-40 shadow-sm">
         {showSearch ? (
           /* Search Bar Mode */
           <div className="flex items-center gap-2 px-4 py-3">
             <button
               onClick={() => { setShowSearch(false); setSearchQuery(''); }}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+              className="p-1 hover:bg-foreground/[0.06] rounded-full transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -156,14 +156,14 @@ const BuyAgain = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search products..."
-                className="w-full pl-3 pr-8 py-2 text-sm border border-gray-300 dark:border-zinc-700 rounded-full outline-none focus:border-blue-500 bg-gray-50 dark:bg-zinc-900"
+                className="w-full pl-3 pr-8 py-2 text-sm border border-foreground/15 rounded-full outline-none focus:border-primary bg-foreground/[0.03]"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1"
                 >
-                  <X className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
+                  <X className="w-4 h-4 text-muted-foreground/70" />
                 </button>
               )}
             </div>
@@ -174,24 +174,24 @@ const BuyAgain = () => {
             <div className="flex items-center gap-3 flex-1">
               <button
                 onClick={() => navigate(-1)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+                className="p-1 hover:bg-foreground/[0.06] rounded-full transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Buy Again</h1>
+              <h1 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Buy again</h1>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowSearch(true)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+                className="p-2 hover:bg-foreground/[0.06] rounded-full transition-colors"
               >
-                <Search className="w-5 h-5 text-gray-600 dark:text-zinc-400" />
+                <Search className="w-5 h-5 text-muted-foreground" />
               </button>
               <button
                 onClick={() => navigate('/cart')}
-                className="relative p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+                className="relative p-2 hover:bg-foreground/[0.06] rounded-full transition-colors"
               >
-                <ShoppingBag className="w-5 h-5 text-gray-600 dark:text-zinc-400" />
+                <ShoppingBag className="w-5 h-5 text-muted-foreground" />
                 {totalItems > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
                     {totalItems}
@@ -203,14 +203,14 @@ const BuyAgain = () => {
         )}
 
         {/* Sort Bar */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 relative">
-          <span className="text-sm text-gray-600 dark:text-zinc-400">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-foreground/[0.08] bg-card relative">
+          <span className="text-sm text-muted-foreground">
             {displayedProducts.length} Items
           </span>
           <div className="relative">
             <button 
               onClick={() => setShowSortDropdown(!showSortDropdown)}
-              className="flex items-center gap-1 text-sm text-gray-700 dark:text-zinc-300"
+              className="flex items-center gap-1 text-sm text-foreground/80"
             >
               Sort By
               <ChevronDown className={`w-4 h-4 transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
@@ -218,22 +218,22 @@ const BuyAgain = () => {
 
             {/* Sort Dropdown */}
             {showSortDropdown && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg shadow-lg z-50 overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-foreground/[0.08] rounded-lg shadow-lg z-50 overflow-hidden">
                 <button
                   onClick={() => { setSortBy('recent'); setShowSortDropdown(false); }}
-                  className={`w-full text-left px-4 py-3 text-sm transition-colors ${sortBy === 'recent' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+                  className={`w-full text-left px-4 py-3 text-sm transition-colors ${sortBy === 'recent' ? 'bg-primary/5 text-primary font-medium' : 'text-foreground/80 hover:bg-foreground/[0.04]'}`}
                 >
                   Recently Ordered
                 </button>
                 <button
                   onClick={() => { setSortBy('price-low'); setShowSortDropdown(false); }}
-                  className={`w-full text-left px-4 py-3 text-sm border-t border-gray-100 transition-colors ${sortBy === 'price-low' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+                  className={`w-full text-left px-4 py-3 text-sm border-t border-foreground/[0.06] transition-colors ${sortBy === 'price-low' ? 'bg-primary/5 text-primary font-medium' : 'text-foreground/80 hover:bg-foreground/[0.04]'}`}
                 >
                   Price - Low to High
                 </button>
                 <button
                   onClick={() => { setSortBy('price-high'); setShowSortDropdown(false); }}
-                  className={`w-full text-left px-4 py-3 text-sm border-t border-gray-100 transition-colors ${sortBy === 'price-high' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+                  className={`w-full text-left px-4 py-3 text-sm border-t border-foreground/[0.06] transition-colors ${sortBy === 'price-high' ? 'bg-primary/5 text-primary font-medium' : 'text-foreground/80 hover:bg-foreground/[0.04]'}`}
                 >
                   Price - High to Low
                 </button>
@@ -248,11 +248,11 @@ const BuyAgain = () => {
         <div className="hidden lg:flex items-center gap-4 mb-6">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+            className="p-2 hover:bg-foreground/[0.06] rounded-full transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-zinc-100">Buy Again</h1>
+          <h1 className="text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Buy again</h1>
         </div>
 
         {/* All Products Grid */}
@@ -264,11 +264,11 @@ const BuyAgain = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.02 }}
-                className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-zinc-800 hover:shadow-md transition-shadow"
+                className="bg-card rounded-lg shadow-sm overflow-hidden border border-foreground/[0.08] hover:shadow-md transition-shadow"
               >
                 {/* Product Image */}
                 <div 
-                  className="aspect-[3/4] relative overflow-hidden bg-gray-100 dark:bg-zinc-800 cursor-pointer"
+                  className="aspect-[3/4] relative overflow-hidden bg-foreground/[0.06] cursor-pointer"
                   onClick={() => navigate(`/product/${product.id}`)}
                 >
                   <SmartImage
@@ -284,11 +284,11 @@ const BuyAgain = () => {
                 
                 {/* Product Info */}
                 <div className="p-3">
-                  <p className="text-xs font-bold text-gray-900 dark:text-zinc-100 mb-1">
+                  <p className="text-xs font-bold text-foreground mb-1">
                     ₹{product.price?.toFixed(0)}
                   </p>
                   <h3 
-                    className="text-[11px] text-gray-600 dark:text-zinc-400 line-clamp-1 mb-3 leading-tight cursor-pointer"
+                    className="text-[11px] text-muted-foreground line-clamp-1 mb-3 leading-tight cursor-pointer"
                     onClick={() => navigate(`/product/${product.id}`)}
                   >
                     {product.name}
@@ -306,7 +306,7 @@ const BuyAgain = () => {
                         category: product.category,
                       });
                     }}
-                    className="w-full py-2 text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                    className="w-full py-2 text-[11px] font-bold text-white bg-primary hover:bg-primary/90 rounded transition-colors"
                   >
                     ORDER AGAIN
                   </button>
@@ -315,17 +315,19 @@ const BuyAgain = () => {
             ))}
           </div>
         ) : (
-          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm p-8 lg:p-12 text-center">
-            <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-zinc-100 mb-2">
-              No Previous Orders
+          <div className="panel tx-sheet p-8 lg:p-12 text-center">
+            <div className="tx-slate mx-auto mb-5 grid h-20 w-20 place-items-center rounded-[14px] shadow-[var(--shadow-panel)]">
+              <Package className="h-9 w-9 text-highlight-soft" strokeWidth={1.4} />
+            </div>
+            <h3 className="text-xl font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
+              No previous orders
             </h3>
-            <p className="text-gray-600 dark:text-zinc-400 mb-6">
+            <p className="text-muted-foreground mb-6">
               You haven't placed any orders yet. Start shopping to see your order history here!
             </p>
             <button
               onClick={() => navigate('/')}
-              className="px-6 py-3 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
+              className="btn-copper"
             >
               Start Shopping
             </button>
@@ -335,8 +337,8 @@ const BuyAgain = () => {
         {/* You May Also Like Section - Horizontal Scroll */}
         {suggestedProducts.length > 0 && (
           <section className="mt-8">
-            <h2 className="text-base lg:text-xl font-semibold text-gray-900 dark:text-zinc-100 mb-3">
-              You May Also Like
+            <h2 className="text-lg lg:text-2xl font-semibold text-foreground mb-4" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
+              You may also like
             </h2>
 
             <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
@@ -346,10 +348,10 @@ const BuyAgain = () => {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="flex-shrink-0 w-32 lg:w-40 bg-white dark:bg-zinc-900 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-zinc-800 hover:shadow-md transition-shadow cursor-pointer group"
+                  className="flex-shrink-0 w-32 lg:w-40 bg-card rounded-lg shadow-sm overflow-hidden border border-foreground/[0.08] hover:shadow-md transition-shadow cursor-pointer group"
                   onClick={() => navigate(`/product/${product.id}`)}
                 >
-                  <div className="aspect-square relative overflow-hidden bg-gray-100 dark:bg-zinc-800">
+                  <div className="aspect-square relative overflow-hidden bg-foreground/[0.06]">
                     <SmartImage
                       src={product.image}
                       alt={product.name}
@@ -360,17 +362,17 @@ const BuyAgain = () => {
                         e.stopPropagation();
                         toggleWishlist(product.id, product.name);
                       }}
-                      className="absolute top-2 right-2 p-1 bg-white/90 dark:bg-zinc-900/90 hover:bg-white rounded-full shadow transition-colors"
+                      className="absolute top-2 right-2 p-1 bg-white/90 hover:bg-card rounded-full shadow transition-colors"
                     >
-                      <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
+                      <Heart className={`w-4 h-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
                     </button>
                   </div>
                   <div className="p-2">
-                    <h3 className="text-xs lg:text-sm font-medium text-gray-900 dark:text-zinc-100 line-clamp-1 mb-2 leading-tight">
+                    <h3 className="text-xs lg:text-sm font-medium text-foreground line-clamp-1 mb-2 leading-tight">
                       {product.name}
                     </h3>
                     <div className="flex items-center justify-between gap-1">
-                      <p className="text-sm lg:text-base font-bold text-gray-900 dark:text-zinc-100">
+                      <p className="text-sm lg:text-base font-bold text-foreground">
                         ₹{product.price?.toFixed(0)}
                       </p>
                       <button
@@ -384,7 +386,7 @@ const BuyAgain = () => {
                             category: product.category,
                           });
                         }}
-                        className="p-1 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors"
+                        className="p-1 bg-primary hover:bg-primary/90 text-white rounded-full transition-colors"
                       >
                         <ShoppingCart className="w-3 h-3" />
                       </button>

@@ -233,16 +233,16 @@ const MobileSearch = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-900 dark:bg-zinc-950 lg:hidden">
+    <div className="min-h-screen tx-paper lg:hidden">
       {/* Search Bar Header */}
-      <div className="sticky top-0 z-50 bg-white dark:bg-zinc-900 dark:bg-zinc-950 shadow-sm dark:shadow-black/40 border-b border-transparent dark:border-zinc-800 px-3 py-2.5 flex items-center gap-2">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-1 rounded-full hover:bg-gray-100 dark:bg-zinc-800 dark:hover:bg-zinc-800 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-zinc-300 dark:text-zinc-200" />
+      <div className="sticky top-0 z-50 bg-card shadow-sm dark:shadow-black/40 border-b border-transparent px-3 py-2.5 flex items-center gap-2">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-1 rounded-full hover:bg-foreground/[0.06] transition-colors">
+          <ArrowLeft className="w-5 h-5 text-foreground/80" />
         </button>
         <div
-          className={`flex-1 flex items-center bg-gray-50 dark:bg-zinc-900 rounded-lg border ${isListening ? "border-red-500 ring-2 ring-red-200 dark:ring-red-900/50" : "border-gray-200 dark:border-zinc-800"} overflow-hidden`}
+          className={`flex-1 flex items-center bg-foreground/[0.03] rounded-lg border ${isListening ? "border-red-500 ring-2 ring-red-200 dark:ring-red-900/50" : "border-foreground/[0.08]"} overflow-hidden`}
         >
-          <Search className="ml-3 w-4 h-4 text-gray-400 dark:text-zinc-500 flex-shrink-0" />
+          <Search className="ml-3 w-4 h-4 text-muted-foreground/70 flex-shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -252,23 +252,23 @@ const MobileSearch = () => {
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSearch(searchQuery);
             }}
-            className="flex-1 px-3 py-2.5 text-sm bg-transparent text-gray-900 dark:text-zinc-100 focus:outline-none placeholder-gray-400 dark:placeholder-zinc-500"
+            className="flex-1 px-3 py-2.5 text-sm bg-transparent text-foreground focus:outline-none placeholder-gray-400 dark:placeholder-zinc-500"
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery("")} className="p-2">
-              <X className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
+              <X className="w-4 h-4 text-muted-foreground/70" />
             </button>
           )}
           <button
             onClick={toggleVoiceSearch}
-            className={`p-2 mr-1 rounded-md transition-colors ${isListening ? "bg-red-500" : "hover:bg-gray-200 dark:hover:bg-zinc-800"}`}
+            className={`p-2 mr-1 rounded-md transition-colors ${isListening ? "bg-red-500" : "hover:bg-foreground/10"}`}
           >
             {isListening ? (
               <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }}>
                 <Mic className="w-4 h-4 text-white" />
               </motion.div>
             ) : (
-              <Mic className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
+              <Mic className="w-4 h-4 text-muted-foreground/70" />
             )}
           </button>
         </div>
@@ -302,26 +302,26 @@ const MobileSearch = () => {
         {/* Product Suggestions (when typing) */}
         {searchQuery.trim() && suggestions.length > 0 && (
           <div className="mb-4">
-            <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider font-medium mb-3">Suggestions</p>
+            <p className="text-xs text-muted-foreground/70 uppercase tracking-wider font-medium mb-3">Suggestions</p>
             <div className="space-y-1">
               {suggestions.map((product) => (
                 <button
                   key={product.id}
                   onClick={() => handleProductClick(product)}
-                  className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-900 active:bg-gray-100 dark:bg-zinc-800 dark:active:bg-zinc-800 transition-colors"
+                  className="flex items-center gap-3 w-full p-2.5 rounded-[10px] hover:bg-foreground/[0.04] active:bg-gray-100 dark:active:bg-zinc-800 transition-colors"
                 >
-                  <div className="w-11 h-11 flex-shrink-0 bg-gray-100 dark:bg-zinc-800 rounded-lg overflow-hidden">
+                  <div className="w-11 h-11 flex-shrink-0 bg-foreground/[0.06] rounded-lg overflow-hidden">
                     {product.image ? (
                       <SmartImage src={product.image} alt={product.title} className="w-full h-full object-cover" preset="card" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <ShoppingBag className="w-5 h-5 text-gray-400 dark:text-zinc-500" />
+                        <ShoppingBag className="w-5 h-5 text-muted-foreground/70" />
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-medium text-gray-900 dark:text-zinc-100 truncate">{product.title}</p>
-                    <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400">{product.category}</p>
+                    <p className="text-sm font-medium text-foreground truncate">{product.title}</p>
+                    <p className="text-xs text-muted-foreground">{product.category}</p>
                   </div>
                   <p className="text-sm font-semibold text-primary flex-shrink-0">₹{product.price.toLocaleString()}</p>
                 </button>
@@ -342,8 +342,8 @@ const MobileSearch = () => {
         {searchQuery.trim() && suggestions.length === 0 && allProducts.length > 0 && (
           <div className="text-center py-10">
             <ShoppingBag className="w-12 h-12 text-gray-300 dark:text-zinc-700 mx-auto mb-3" />
-            <p className="text-gray-500 dark:text-zinc-500 dark:text-zinc-400 text-sm">No products found for "{searchQuery}"</p>
-            <p className="text-xs text-gray-400 dark:text-zinc-500 mt-1">Try searching with different keywords</p>
+            <p className="text-muted-foreground text-sm">No products found for "{searchQuery}"</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Try searching with different keywords</p>
           </div>
         )}
 
@@ -354,7 +354,7 @@ const MobileSearch = () => {
             {searchHistory.length > 0 && (
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider font-medium">Recent Searches</p>
+                  <p className="text-xs text-muted-foreground/70 uppercase tracking-wider font-medium">Recent Searches</p>
                   <button onClick={clearHistory} className="text-xs text-red-500 dark:text-red-400 font-medium">
                     Clear All
                   </button>
@@ -364,16 +364,16 @@ const MobileSearch = () => {
                     <div key={term} className="flex items-center gap-3 group">
                       <button
                         onClick={() => handleSearch(term)}
-                        className="flex-1 flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-900 text-left transition-colors"
+                        className="flex-1 flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-foreground/[0.04] text-left transition-colors"
                       >
-                        <Clock className="w-4 h-4 text-gray-400 dark:text-zinc-500 flex-shrink-0" />
-                        <span className="text-sm text-gray-700 dark:text-zinc-300 dark:text-zinc-200 truncate">{term}</span>
+                        <Clock className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" />
+                        <span className="text-sm text-foreground/80 truncate">{term}</span>
                       </button>
                       <button
                         onClick={() => removeHistoryItem(term)}
-                        className="p-1.5 rounded-full hover:bg-gray-100 dark:bg-zinc-800 dark:hover:bg-zinc-800 transition-colors"
+                        className="p-1.5 rounded-full hover:bg-foreground/[0.06] transition-colors"
                       >
-                        <X className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
+                        <X className="w-4 h-4 text-muted-foreground/70" />
                       </button>
                     </div>
                   ))}
@@ -383,7 +383,7 @@ const MobileSearch = () => {
 
             {/* Trending Searches */}
             <div className="mb-6">
-              <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider font-medium mb-3 flex items-center gap-1.5">
+              <p className="text-xs text-muted-foreground/70 uppercase tracking-wider font-medium mb-3 flex items-center gap-1.5">
                 <TrendingUp className="w-3.5 h-3.5" /> Popular Searches
               </p>
               <div className="flex flex-wrap gap-2">
@@ -391,7 +391,7 @@ const MobileSearch = () => {
                   <button
                     key={term}
                     onClick={() => handleSearch(term)}
-                    className="px-4 py-2 bg-gray-50 dark:bg-zinc-900 text-gray-700 dark:text-zinc-300 dark:text-zinc-200 text-sm rounded-full border border-gray-200 dark:border-zinc-800 hover:bg-primary/5 hover:border-primary/30 hover:text-primary dark:hover:bg-primary/10 transition-colors"
+                    className="px-4 py-2 bg-foreground/[0.03] text-foreground/80 text-sm rounded-full border border-foreground/[0.08] hover:bg-primary/5 hover:border-primary/30 hover:text-primary dark:hover:bg-primary/10 transition-colors"
                   >
                     {term}
                   </button>
@@ -402,7 +402,7 @@ const MobileSearch = () => {
             {/* Popular Products */}
             {allProducts.length > 0 && (
               <div>
-                <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider font-medium mb-3">Popular Products</p>
+                <p className="text-xs text-muted-foreground/70 uppercase tracking-wider font-medium mb-3">Popular Products</p>
                 <div className="grid grid-cols-3 gap-2">
                   {allProducts.slice(0, 6).map((product) => (
                     <button
@@ -412,9 +412,9 @@ const MobileSearch = () => {
                         setSearchHistory(getSearchHistory());
                         navigate(`/product/${product.id}`);
                       }}
-                      className="bg-gray-50 dark:bg-zinc-900 rounded-xl overflow-hidden border border-gray-100 dark:border-zinc-800 hover:border-primary/30 transition-colors"
+                      className="bg-foreground/[0.03] rounded-[10px] overflow-hidden border border-foreground/[0.06] hover:border-primary/30 transition-colors"
                     >
-                      <div className="aspect-square bg-gray-100 dark:bg-zinc-800">
+                      <div className="aspect-square bg-foreground/[0.06]">
                         {product.image ? (
                           <SmartImage src={product.image} alt={product.title} className="w-full h-full object-cover" preset="card" />
                         ) : (
@@ -424,7 +424,7 @@ const MobileSearch = () => {
                         )}
                       </div>
                       <div className="p-2">
-                        <p className="text-[11px] text-gray-700 dark:text-zinc-300 dark:text-zinc-200 font-medium truncate">{product.title}</p>
+                        <p className="text-[11px] text-foreground/80 font-medium truncate">{product.title}</p>
                         <p className="text-[11px] text-primary font-semibold">₹{product.price.toLocaleString()}</p>
                       </div>
                     </button>

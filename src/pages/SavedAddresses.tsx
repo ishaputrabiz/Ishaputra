@@ -246,7 +246,7 @@ const SavedAddresses = () => {
         <MobileHeader />
         <MobileSearchBar />
       </div>
-      <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "var(--font-body)" }}>
+      <div className="min-h-screen tx-paper" style={{ fontFamily: "var(--font-body)" }}>
         <div className="container mx-auto max-w-4xl px-4 py-4 pb-24">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -259,18 +259,18 @@ const SavedAddresses = () => {
                   }
                   navigate('/account');
                 }}
-                className="rounded-full p-2 transition-colors hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-800"
+                className="rounded-full p-2 transition-colors hover:bg-foreground/10"
               >
-                <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-zinc-300 dark:text-zinc-100" />
+                <ArrowLeft className="w-6 h-6 text-foreground/80" />
               </button>
               <div>
-                <h1 className="text-lg font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Addresses</h1>
+                <h1 className="text-lg font-bold text-foreground" style={{ fontFamily: "var(--font-body)" }}>Addresses</h1>
               </div>
             </div>
             {!showForm && (
               <button
                 onClick={() => setShowForm(true)}
-                className="flex items-center gap-2 border-2 border-blue-600 bg-transparent hover:bg-blue-50 text-blue-600 text-sm px-4 py-2 rounded-full transition-colors font-medium"
+                className="flex items-center gap-1.5 border border-primary/60 bg-transparent hover:bg-primary/10 text-primary text-[11px] font-bold uppercase tracking-[0.16em] px-4 py-2 rounded-[6px] transition-colors"
                 style={{ fontFamily: "var(--font-body)" }}
               >
                 <Plus className="w-4 h-4" />
@@ -289,23 +289,23 @@ const SavedAddresses = () => {
                 transition={{ duration: 0.3 }}
                 className="mb-8"
               >
-                <div className="rounded-2xl bg-white dark:bg-zinc-900 p-6 shadow-lg dark:bg-zinc-900/88 md:p-8">
+                <div className="rounded-[var(--radius-card)] bg-card p-6 shadow-lg md:p-8">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
+                    <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                       {editingAddress ? 'Edit Address' : 'Add New Address'}
                     </h2>
                     <button
                       onClick={resetForm}
-                      className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:bg-zinc-800 dark:hover:bg-zinc-800"
+                      className="rounded-full p-2 transition-colors hover:bg-foreground/[0.06]"
                     >
-                      <X className="w-5 h-5 text-gray-600 dark:text-zinc-400 dark:text-zinc-300" />
+                      <X className="w-5 h-5 text-muted-foreground" />
                     </button>
                   </div>
 
                   <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Full Name */}
                     <div>
-                      <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
+                      <Label htmlFor="fullName" className="text-sm font-medium text-foreground/80 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                         Full Name *
                       </Label>
                       <Input
@@ -314,14 +314,14 @@ const SavedAddresses = () => {
                         value={formData.fullName}
                         onChange={handleInputChange}
                         placeholder="Enter your full name"
-                        className="h-12 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                        className="h-12 border-foreground/15 focus:border-primary focus:ring-primary"
                         required
                       />
                     </div>
 
                     {/* Phone Number */}
                     <div>
-                      <Label htmlFor="phoneNumber" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
+                      <Label htmlFor="phoneNumber" className="text-sm font-medium text-foreground/80 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                         Phone Number *
                       </Label>
                       <Input
@@ -331,7 +331,7 @@ const SavedAddresses = () => {
                         value={formData.phoneNumber}
                         onChange={handleInputChange}
                         placeholder="10-digit mobile number"
-                        className="h-12 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                        className="h-12 border-foreground/15 focus:border-primary focus:ring-primary"
                         required
                       />
                     </div>
@@ -339,7 +339,7 @@ const SavedAddresses = () => {
                     {/* Pin Code & Locality */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <Label htmlFor="pinCode" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
+                        <Label htmlFor="pinCode" className="text-sm font-medium text-foreground/80 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                           Pin Code *
                         </Label>
                         <Input
@@ -349,12 +349,12 @@ const SavedAddresses = () => {
                           onChange={handleInputChange}
                           placeholder="6-digit PIN code"
                           maxLength={6}
-                          className="h-12 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                          className="h-12 border-foreground/15 focus:border-primary focus:ring-primary"
                           required
                         />
                       </div>
                       <div>
-                        <Label htmlFor="locality" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
+                        <Label htmlFor="locality" className="text-sm font-medium text-foreground/80 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                           Locality
                         </Label>
                         <Input
@@ -363,14 +363,14 @@ const SavedAddresses = () => {
                           value={formData.locality}
                           onChange={handleInputChange}
                           placeholder="Locality/Town"
-                          className="h-12 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                          className="h-12 border-foreground/15 focus:border-primary focus:ring-primary"
                         />
                       </div>
                     </div>
 
                     {/* Address */}
                     <div>
-                      <Label htmlFor="address" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
+                      <Label htmlFor="address" className="text-sm font-medium text-foreground/80 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                         Address (Area and Street) *
                       </Label>
                       <Input
@@ -379,13 +379,13 @@ const SavedAddresses = () => {
                         value={formData.address}
                         onChange={handleInputChange}
                         placeholder="Flat/House No., Building, Street"
-                        className="h-12 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                        className="h-12 border-foreground/15 focus:border-primary focus:ring-primary"
                         required
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="googleMapsUrl" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
+                      <Label htmlFor="googleMapsUrl" className="text-sm font-medium text-foreground/80 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                         Google Maps URL
                       </Label>
                       <Input
@@ -394,14 +394,14 @@ const SavedAddresses = () => {
                         value={formData.googleMapsUrl || ''}
                         onChange={handleInputChange}
                         placeholder="https://maps.app.goo.gl/... or Google Maps share link"
-                        className="h-12 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                        className="h-12 border-foreground/15 focus:border-primary focus:ring-primary"
                       />
                     </div>
 
                     {/* City & State */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <Label htmlFor="city" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
+                        <Label htmlFor="city" className="text-sm font-medium text-foreground/80 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                           City *
                         </Label>
                         <Input
@@ -410,12 +410,12 @@ const SavedAddresses = () => {
                           value={formData.city}
                           onChange={handleInputChange}
                           placeholder="City"
-                          className="h-12 border-gray-300 dark:border-zinc-700 focus:border-blue-500 focus:ring-blue-500"
+                          className="h-12 border-foreground/15 focus:border-primary focus:ring-primary"
                           required
                         />
                       </div>
                       <div>
-                        <Label htmlFor="state" className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
+                        <Label htmlFor="state" className="text-sm font-medium text-foreground/80 mb-2 block" style={{ fontFamily: "var(--font-body)" }}>
                           State *
                         </Label>
                         <select
@@ -423,7 +423,7 @@ const SavedAddresses = () => {
                           name="state"
                           value={formData.state}
                           onChange={(e) => setFormData((p) => ({ ...p, state: e.target.value }))}
-                          className="h-12 w-full border border-gray-300 dark:border-zinc-700 rounded-md px-3 bg-white dark:bg-zinc-900 focus:border-blue-500 focus:ring-blue-500 text-sm"
+                          className="h-12 w-full border border-foreground/15 rounded-md px-3 bg-card focus:border-primary focus:ring-primary text-sm"
                           required
                         >
                           <option value="">Select state</option>
@@ -443,9 +443,9 @@ const SavedAddresses = () => {
                         onChange={(e) =>
                           setFormData((prev) => ({ ...prev, isDefault: e.target.checked }))
                         }
-                        className="w-5 h-5 text-blue-600 border-gray-300 dark:border-zinc-700 rounded focus:ring-blue-500"
+                        className="w-5 h-5 text-primary border-foreground/15 rounded focus:ring-primary"
                       />
-                      <Label htmlFor="isDefault" className="text-sm font-medium text-gray-700 dark:text-zinc-300 cursor-pointer" style={{ fontFamily: "var(--font-body)" }}>
+                      <Label htmlFor="isDefault" className="text-sm font-medium text-foreground/80 cursor-pointer" style={{ fontFamily: "var(--font-body)" }}>
                         Set as default shipping address
                       </Label>
                     </div>
@@ -455,7 +455,7 @@ const SavedAddresses = () => {
                       <Button
                         type="submit"
                         disabled={formLoading}
-                        className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white h-12 rounded-xl font-semibold shadow-lg"
+                        className="flex-1 btn-copper h-12 text-[12px] font-bold rounded-[6px] shadow-lg"
                         style={{ fontFamily: "var(--font-body)" }}
                       >
                         {formLoading ? (
@@ -474,7 +474,7 @@ const SavedAddresses = () => {
                         type="button"
                         onClick={resetForm}
                         variant="outline"
-                        className="px-8 h-12 rounded-xl border-gray-300 dark:border-zinc-700"
+                        className="px-8 h-12 rounded-[10px] border-foreground/15"
                         style={{ fontFamily: "var(--font-body)" }}
                       >
                         Cancel
@@ -493,13 +493,13 @@ const SavedAddresses = () => {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl bg-white dark:bg-zinc-900 p-12 text-center shadow-sm dark:bg-zinc-900/88"
+                  className="rounded-[10px] bg-card p-12 text-center shadow-sm"
                 >
-                  <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gray-100 dark:bg-zinc-800">
-                    <MapPin className="w-10 h-10 text-gray-400 dark:text-zinc-500" />
+                  <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-foreground/[0.06]">
+                    <MapPin className="w-10 h-10 text-muted-foreground/70" />
                   </div>
-                  <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>No addresses saved</h3>
-                  <p className="text-xs text-gray-600 dark:text-zinc-400 dark:text-zinc-300" style={{ fontFamily: "var(--font-body)" }}>Add your first delivery address</p>
+                  <h3 className="mb-2 text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>No addresses saved</h3>
+                  <p className="text-xs text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>Add your first delivery address</p>
                 </motion.div>
               ) : (
                 addresses.map((address, index) => (
@@ -508,21 +508,21 @@ const SavedAddresses = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="relative rounded-xl bg-white dark:bg-zinc-900 p-4 shadow-sm dark:bg-zinc-900/88"
+                    className="relative rounded-[10px] bg-card p-4 shadow-sm"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 pr-8">
-                        <h3 className="mb-1 text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
+                        <h3 className="mb-1 text-base font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                           {address.fullName}
                         </h3>
-                        <div className="space-y-0.5 text-sm text-gray-600 dark:text-zinc-400 dark:text-zinc-300" style={{ fontFamily: "var(--font-body)" }}>
+                        <div className="space-y-0.5 text-sm text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>
                           <p>{address.address}</p>
                           {address.locality && <p>{address.locality}</p>}
                           <p>{address.city}, {address.state} - {address.pinCode}</p>
                           <p className="pt-1">{address.phoneNumber}</p>
                         </div>
                         {address.isDefault && (
-                          <span className="inline-block mt-2 px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-medium" style={{ fontFamily: "var(--font-body)" }}>
+                          <span className="inline-block mt-2 px-2 py-1 bg-primary/10 text-primary text-xs rounded font-medium" style={{ fontFamily: "var(--font-body)" }}>
                             ✓ Default
                           </span>
                         )}
@@ -530,7 +530,7 @@ const SavedAddresses = () => {
                           href={address.googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${address.address}, ${address.locality || ''}, ${address.city}, ${address.state} ${address.pinCode}, India`)}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 mt-2 ml-2 text-xs text-blue-600 hover:text-blue-700 underline"
+                          className="inline-flex items-center gap-1 mt-2 ml-2 text-xs text-primary hover:text-primary/80 underline"
                           style={{ fontFamily: "var(--font-body)" }}
                         >
                           <MapPin className="w-3 h-3" /> View on Google Maps
@@ -541,9 +541,9 @@ const SavedAddresses = () => {
                       <div className="relative menu-container">
                         <button
                           onClick={() => setOpenMenuId(openMenuId === address.id ? null : address.id)}
-                          className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:bg-zinc-800 dark:hover:bg-zinc-800"
+                          className="rounded-full p-2 transition-colors hover:bg-foreground/[0.06]"
                         >
-                          <MoreVertical className="w-5 h-5 text-gray-600 dark:text-zinc-400 dark:text-zinc-300" />
+                          <MoreVertical className="w-5 h-5 text-muted-foreground" />
                         </button>
 
                         {/* Dropdown Menu */}
@@ -552,14 +552,14 @@ const SavedAddresses = () => {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="absolute right-0 top-10 z-10 w-40 rounded-lg border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950"
+                            className="absolute right-0 top-10 z-10 w-40 rounded-lg border border-foreground/[0.08] bg-card py-1 shadow-lg"
                           >
                             <button
                               onClick={() => {
                                 handleEdit(address);
                                 setOpenMenuId(null);
                               }}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800 dark:bg-zinc-900/50 flex items-center gap-2"
+                              className="w-full text-left px-4 py-2 text-sm text-foreground/80 hover:bg-foreground/[0.04] flex items-center gap-2"
                               style={{ fontFamily: "var(--font-body)" }}
                             >
                               <Edit2 className="w-4 h-4" />
@@ -582,7 +582,7 @@ const SavedAddresses = () => {
                                   handleSetDefault(address.id);
                                   setOpenMenuId(null);
                                 }}
-                                className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2 border-t border-gray-100 dark:border-zinc-800"
+                                className="w-full text-left px-4 py-2 text-sm text-primary hover:bg-green-50 flex items-center gap-2 border-t border-foreground/[0.06]"
                                 style={{ fontFamily: "var(--font-body)" }}
                               >
                                 <Check className="w-4 h-4" />

@@ -42,7 +42,7 @@ const PrivacyPolicy = () => {
 
             {/* How We Use Information */}
             <section className={policySectionClassName}>
-              <h2 className={policyHeadingClassName}>3. How We Use Your Information</h2>
+              <h2 className={policyHeadingClassName}>2. How We Use Your Information</h2>
               <p className={`${policyBodyClassName} mb-3`}>
                 We use your information to:
               </p>
@@ -57,7 +57,7 @@ const PrivacyPolicy = () => {
 
             {/* Payment Information */}
             <section className={policySectionClassName}>
-              <h2 className={policyHeadingClassName}>2. Payment Information</h2>
+              <h2 className={policyHeadingClassName}>3. Payment Information</h2>
               <div className={policyNoteClassName}>
                 <p className={policyBodyClassName}>
                   <strong className="text-foreground">All online payments are processed securely through Razorpay.</strong> We do not store your credit/debit card details, UPI credentials, or banking information on our servers.

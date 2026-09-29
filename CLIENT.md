@@ -151,16 +151,28 @@
         - A new "Wallet & Rewards" menu item links to `/wallet` (loyalty points and cashback). It wasn't reachable from the account menus.
         - Login, signup and profile-edit use paper, sheet cards and small-caps labels, with copper buttons. Signup's Terms and Privacy links pointed to pages that don't exist; fixed.
         - `/profile` was a static mock-up that nothing linked to: no working buttons, "Venkat Plus", a hard-coded offer. It now redirects to `/account`, and the mock page is removed.
+    - **Remaining pages** (wishlist, orders, order details, cancel, addresses, wallet, security, support, video calls, buy again, search, categories, reviews, password and email pages, policies, 404):
+        - Paper background with sheet cards.
+        - Neutrals, blues and greens mapped to brand tokens. Order-status colours (green delivered, red cancelled, purple returns) are kept.
+        - Empty states use a charcoal icon tile with copper buttons. This replaces the pink heart and gray "Tanishq style" drawing on the wishlist.
+    - **Wallet (`/wallet`):**
+        - The loyalty tier is now a charcoal-stone card: metal-toned tier badges, copper top tier, and each tier's threshold shown under it.
+        - Tiers now live in `BRAND.loyaltyTiers`, with DUMMY wellness-sized thresholds (₹0 / ₹5,000 / ₹15,000 / ₹30,000). The jewellery store's started at ₹50,000.
+        - "Total investment" is renamed "Total spent".
+        - Its "View all" link went to `/orders`, which doesn't exist; fixed.
+    - **Customer support:** WhatsApp no longer falls back to the phone number. The option shows only once a WhatsApp number is set in Admin > Customer support.
+    - **Policy pages:** charcoal header band and sheet card. The privacy policy's sections 2 and 3 were numbered the wrong way round.
+- Not screenshot-checked yet (need a real order): order details and cancel order. Their colours were mapped with the rest.
 - Preview test account for screenshots: `preview-shopper@ishaputra.test`, created through the site's signup with one dummy Hyderabad address and items in its cart. The password is kept outside the repo. **Delete it in Firebase Authentication (and its `users`/`carts` docs) before launch.**
 
 ## Progress
 - [x] Step 0 safe preview (2026-09-23): home, products and product pages show demo content on Ishaputra Firebase; only the YouTube section is hidden (no videos yet)
 - [ ] Step 1 new look: done 2026-09-27, waiting for client review
-- [ ] Step 2: Home, Products, Product detail, Checkout, Profile done 2026-09-28 (textures and UI); next the remaining pages
+- [x] Step 2 design (2026-09-29): Home, Products, Product detail, Checkout, Profile and the remaining pages; waiting for client review
 - [ ] Step 2B features   - [ ] Step 3 accounts   - [ ] Step 4 test and publish   - [ ] Step 5 client changes
 
 ## Next step
-Review the Step 2 Home, Products and Product pages (light and dark, mobile and desktop). After that: Checkout, then Profile, then the remaining pages.
+Client reviews the Step 2 design across the site (light and dark, mobile and desktop). Then Step 2B: Scratch & Win, Dealer Membership and the loyalty card, which needs the open loyalty and cashback answers below.
 
 ## Open questions
 - Real business details to replace the dummy ones in `src/config/brand.ts`: legal name, address, phone, WhatsApp, email, hours, GSTIN, domain, social links (blocking for launch, not for review)
@@ -170,4 +182,5 @@ Review the Step 2 Home, Products and Product pages (light and dark, mobile and d
 - Loyalty card: a digital tier card or a physical/QR card? (Step 2B)
 - Scratch & Win: when a card is earned, prizes (points, coupon, cashback), odds, daily limit (Step 2B)
 - Dealer membership: dealer pricing (separate price or % off), how dealers apply and get approved, minimum order, dealer-only products (Step 2B)
+- Loyalty tiers: names and spend thresholds (dummy now: Silver ₹0, Gold ₹5,000, Platinum ₹15,000, Premium ₹30,000 in `BRAND.loyaltyTiers`), and what each tier gets (Step 2B)
 - Cashback and loyalty points rules: earn rate, value per point, expiry, caps (Step 2B, before touching the wallet)

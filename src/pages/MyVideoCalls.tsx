@@ -39,8 +39,8 @@ const STATUS_CONFIG: Record<VideoCallStatus, {
   },
   confirmed: {
     label: 'Confirmed',
-    badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200',
-    dot: 'bg-blue-500',
+    badge: 'bg-blue-100 text-blue-800 dark:text-blue-200',
+    dot: 'bg-primary',
     border: 'border-blue-200/60 dark:border-blue-800/40',
     icon: CheckCircle,
   },
@@ -54,7 +54,7 @@ const STATUS_CONFIG: Record<VideoCallStatus, {
   },
   completed: {
     label: 'Completed',
-    badge: 'bg-gray-100 text-gray-600 dark:bg-gray-800/60 dark:text-gray-400',
+    badge: 'bg-foreground/[0.06] text-muted-foreground dark:bg-gray-800/60 dark:text-gray-400',
     dot: 'bg-gray-400',
     border: 'border-gray-200/40 dark:border-gray-700/30',
     icon: CheckCircle,
@@ -117,7 +117,7 @@ const MyVideoCalls = () => {
   const pastRequests = requests.filter(r => ['completed', 'cancelled', 'no_show'].includes(r.status));
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen tx-paper">
       <Header />
 
       <main className="max-w-2xl mx-auto px-4 py-6 pb-28 md:pb-10">
@@ -132,10 +132,10 @@ const MyVideoCalls = () => {
           </button>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-highlight/70 to-highlight flex items-center justify-center shadow-sm">
+              <div className="w-8 h-8 rounded-[10px] bg-gradient-to-br from-highlight/70 to-highlight flex items-center justify-center shadow-sm">
                 <Video className="w-4 h-4 text-white" />
               </div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground">My Video Calls</h1>
+              <h1 className="text-xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>My video calls</h1>
             </div>
             <p className="text-xs text-muted-foreground ml-10">Track & manage your demo call appointments</p>
           </div>
@@ -234,7 +234,7 @@ function RequestCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.22 }}
-      className={`relative bg-card border rounded-2xl overflow-hidden shadow-sm ${cfg.border}`}
+      className={`relative bg-card border rounded-[var(--radius-card)] overflow-hidden shadow-sm ${cfg.border}`}
     >
       {/* Live pulse top bar */}
       {isLive && (
@@ -289,7 +289,7 @@ function RequestCard({
 
         {/* Meeting info */}
         {req.meetingType === 'meet' && req.meetingUrl && req.status === 'confirmed' && (
-          <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded-lg px-3 py-2 mb-3">
+          <div className="flex items-center gap-2 text-xs text-primary bg-primary/5 rounded-lg px-3 py-2 mb-3">
             <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
             <span>Google Meet link ready — tap below to join</span>
           </div>
@@ -307,7 +307,7 @@ function RequestCard({
           {req.status === 'confirmed' && req.meetingType === 'meet' && req.meetingUrl && (
             <Button
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 rounded-xl shadow-sm"
+              className="bg-primary hover:bg-primary/90 text-white gap-1.5 rounded-[10px] shadow-sm"
               onClick={() => onJoinMeet(req.meetingUrl!)}
             >
               <ExternalLink className="w-3.5 h-3.5" />
@@ -320,7 +320,7 @@ function RequestCard({
             req.meetingType === 'inapp' && req.callId && (
               <Button
                 size="sm"
-                className={`gap-1.5 rounded-xl shadow-sm text-white ${isLive ? 'bg-emerald-500 hover:bg-emerald-600 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                className={`gap-1.5 rounded-[10px] shadow-sm text-white ${isLive ? 'bg-emerald-500 hover:bg-emerald-600 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-700'}`}
                 onClick={() => onJoin(req.callId!)}
               >
                 <Video className="w-3.5 h-3.5" />
@@ -333,7 +333,7 @@ function RequestCard({
             <Button
               size="sm"
               variant="outline"
-              className="text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 gap-1 rounded-xl"
+              className="text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 gap-1 rounded-[10px]"
               disabled={cancelling === req.id}
               onClick={() => onCancel(req.id)}
             >
@@ -358,17 +358,17 @@ function EmptyState({ onBrowse }: { onBrowse: () => void }) {
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center py-24 text-center gap-4"
     >
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-highlight/15 to-highlight/10 dark:from-highlight/8 dark:to-highlight/5 flex items-center justify-center shadow-inner">
-        <Video className="w-9 h-9 text-highlight" />
+      <div className="tx-slate w-20 h-20 rounded-[14px] flex items-center justify-center shadow-[var(--shadow-panel)]">
+        <Video className="w-9 h-9 text-highlight-soft" strokeWidth={1.4} />
       </div>
       <div>
-        <p className="font-semibold text-foreground mb-1">No video call requests yet</p>
+        <p className="text-lg font-semibold text-foreground mb-1" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>No video calls yet</p>
         <p className="text-sm text-muted-foreground max-w-xs">
           Book a video consultation with our wellness experts from any product page.
         </p>
       </div>
       <Button
-        className="mt-2 bg-highlight hover:bg-highlight text-white rounded-full px-6 gap-2"
+        className="btn-copper mt-2 h-auto py-3 text-[11px] font-bold rounded-[6px] gap-2"
         onClick={onBrowse}
       >
         <Sparkles className="w-4 h-4" />

@@ -86,17 +86,17 @@ const MobileCategories = () => {
   }, [selectedCategory]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 pb-20" style={{ fontFamily: "var(--font-body)" }}>
+    <div className="min-h-screen tx-paper pb-20" style={{ fontFamily: "var(--font-body)" }}>
       {/* Header */}
-      <div className="sticky top-0 bg-white dark:bg-zinc-900 z-40 px-4 py-3 flex items-center justify-between border-b border-gray-100 dark:border-zinc-800">
+      <div className="sticky top-0 bg-card z-40 px-4 py-3 flex items-center justify-between border-b border-foreground/[0.06]">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/')}
             className="p-1"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-zinc-300" />
+            <ArrowLeft className="w-5 h-5 text-foreground/80" />
           </button>
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Top Categories</h1>
+          <h1 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>Top Categories</h1>
         </div>
         <img src="/black_logo.png" alt="Ishaputra Botanicals" className="h-6 w-auto dark:hidden" />
         <img src="/white_logo.png" alt="Ishaputra Botanicals" className="h-6 w-auto hidden dark:block" />
@@ -105,7 +105,7 @@ const MobileCategories = () => {
       {/* Main Content */}
       <div className="flex">
         {/* Left Sidebar - Categories */}
-        <div className="w-20 bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800 min-h-[calc(100vh-120px)]">
+        <div className="w-20 bg-card border-r border-foreground/[0.06] min-h-[calc(100vh-120px)]">
           {mainCategories.map((category) => (
             <button
               key={category.id}
@@ -113,13 +113,13 @@ const MobileCategories = () => {
               className={`w-full py-3 px-2 flex flex-col items-center gap-1 transition-all ${
                 selectedCategory?.id === category.id
                   ? 'bg-primary/10'
-                  : 'hover:bg-gray-50 dark:hover:bg-zinc-800'
+                  : 'hover:bg-foreground/[0.04]'
               }`}
             >
               <div className={`w-12 h-12 rounded-full overflow-hidden border-2 ${
                 selectedCategory?.id === category.id
                   ? 'border-primary'
-                  : 'border-gray-200 dark:border-zinc-700'
+                  : 'border-foreground/[0.08]'
               }`}>
                 <SmartImage
                   src={category.image}
@@ -129,7 +129,7 @@ const MobileCategories = () => {
               <span className={`text-[10px] text-center leading-tight font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-full ${
                 selectedCategory?.id === category.id
                   ? 'text-primary'
-                  : 'text-gray-600 dark:text-zinc-400'
+                  : 'text-muted-foreground'
               }`} style={{ fontFamily: "var(--font-body)" }}>
                 {category.name.length > 10 ? category.name.slice(0, 10) + '...' : category.name}
               </span>
@@ -141,7 +141,7 @@ const MobileCategories = () => {
         {selectedCategory && (
           <div className="flex-1 p-4">
             {/* Category Title */}
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100 mb-4" style={{ fontFamily: "var(--font-body)" }}>{selectedCategory.name}</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4" style={{ fontFamily: "var(--font-body)" }}>{selectedCategory.name}</h2>
 
             {/* Subcategory Grid */}
             <div className="grid grid-cols-3 gap-3">
@@ -154,13 +154,13 @@ const MobileCategories = () => {
                   onClick={() => navigate(subcategory.path)}
                   className="flex flex-col items-center"
                 >
-                  <div className="w-full aspect-[4/5] rounded-xl overflow-hidden bg-gray-100 dark:bg-zinc-800 mb-2 shadow-sm">
+                  <div className="w-full aspect-[4/5] rounded-[10px] overflow-hidden bg-foreground/[0.06] mb-2 shadow-sm">
                     <SmartImage
                       src={subcategory.image}
                       alt={subcategory.name}
                       className="w-full h-full object-cover" preset="card" />
                   </div>
-                  <span className="text-xs text-gray-700 dark:text-zinc-300 text-center font-medium truncate w-full" style={{ fontFamily: "var(--font-body)" }}>
+                  <span className="text-xs text-foreground/80 text-center font-medium truncate w-full" style={{ fontFamily: "var(--font-body)" }}>
                     {subcategory.name.length > 12 ? subcategory.name.slice(0, 12) + '...' : subcategory.name}
                   </span>
                 </motion.button>

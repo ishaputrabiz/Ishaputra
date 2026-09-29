@@ -89,15 +89,15 @@ const OrderStatusStepper = ({ status, isReturnPickedState = false }: { status: s
   const isCancelled = status === 'cancelled';
 
   // For return flow, use emerald color scheme
-  const activeColor = isReturnFlow ? 'bg-emerald-500' : 'bg-blue-500';
-  const activeBorder = isReturnFlow ? 'border-emerald-500' : 'border-blue-500';
-  const activeText = isReturnFlow ? 'text-emerald-600' : 'text-blue-600';
-  const activeDot = isReturnFlow ? 'bg-emerald-500' : 'bg-blue-500';
+  const activeColor = isReturnFlow ? 'bg-emerald-500' : 'bg-primary';
+  const activeBorder = isReturnFlow ? 'border-emerald-500' : 'border-primary';
+  const activeText = isReturnFlow ? 'text-emerald-600' : 'text-primary';
+  const activeDot = isReturnFlow ? 'bg-emerald-500' : 'bg-primary';
 
   return (
     <div className="flex items-start justify-between relative" style={{ fontFamily: "var(--font-body)" }}>
       {/* Progress Line Background */}
-      <div className="absolute top-4 left-6 right-6 h-0.5 bg-gray-200 dark:bg-zinc-800 dark:bg-zinc-700 z-0" />
+      <div className="absolute top-4 left-6 right-6 h-0.5 bg-foreground/10 z-0" />
       
       {/* Progress Line Active */}
       <div 
@@ -116,10 +116,10 @@ const OrderStatusStepper = ({ status, isReturnPickedState = false }: { status: s
             {/* Step Circle */}
             <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
               isCancelled 
-                ? 'bg-gray-100 dark:bg-zinc-800 border-gray-300 dark:border-zinc-700'
+                ? 'bg-foreground/[0.06] border-foreground/15'
                 : isCompleted 
                   ? `${activeColor} ${activeBorder}` 
-                  : 'bg-white dark:bg-zinc-900 border-gray-300 dark:border-zinc-700'
+                  : 'bg-card border-foreground/15'
             }`}>
               {isCompleted ? (
                 <CheckCircle2 className="w-5 h-5 text-white" />
@@ -130,7 +130,7 @@ const OrderStatusStepper = ({ status, isReturnPickedState = false }: { status: s
             
             {/* Step Label */}
             <p className={`text-[10px] text-center mt-2 leading-tight whitespace-pre-line ${
-              isCompleted ? `${activeText} font-medium` : 'text-gray-400 dark:text-zinc-500'
+              isCompleted ? `${activeText} font-medium` : 'text-muted-foreground/70'
             }`}>
               {step.label}
             </p>
@@ -590,8 +590,8 @@ const OrderDetailsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-zinc-900/50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="min-h-screen tx-paper flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -615,23 +615,23 @@ const OrderDetailsPage = () => {
       
       {/* Page Header */}
       <div className="mx-auto max-w-4xl px-4 pt-4">
-        <div className="flex items-center gap-3 rounded-[28px] border border-highlight/15 bg-white/88 px-4 py-4 shadow-[0_30px_80px_-60px_rgba(0,0,0,0.5)] backdrop-blur dark:border-highlight/20 dark:bg-zinc-900/88 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.9)]">
+        <div className="flex items-center gap-3 rounded-[28px] border border-highlight/15 bg-white/88 px-4 py-4 shadow-[0_30px_80px_-60px_rgba(0,0,0,0.5)] backdrop-blur dark:border-highlight/20 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.9)]">
           <button
             onClick={() => {
               if (window.innerWidth >= 1024) { navigate('/account'); return; }
               navigate('/account/orders');
             }}
-            className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-gray-100 dark:bg-zinc-800 dark:hover:bg-zinc-800"
+            className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-foreground/[0.06]"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-zinc-300 dark:text-zinc-100" />
+            <ArrowLeft className="w-5 h-5 text-foreground/80" />
           </button>
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="h-px w-6 bg-highlight/50" />
               <span className="text-[10px] uppercase tracking-[0.3em] text-primary font-medium">Order</span>
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Order Details</h2>
-            <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400">ORD-{order.orderId}</p>
+            <h2 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>Order Details</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">ORD-{order.orderId}</p>
           </div>
         </div>
       </div>
@@ -640,7 +640,7 @@ const OrderDetailsPage = () => {
       <div className="mx-auto max-w-4xl space-y-3 px-4 pb-24 pt-4">
         {/* Tracking ID Banner */}
         <div className="rounded-[24px] border border-highlight/12 bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,hsl(var(--highlight)/0.10)_100%)] px-4 py-3 shadow-[0_20px_45px_-38px_rgba(0,0,0,0.45)] dark:border-highlight/18 dark:bg-[linear-gradient(135deg,rgba(37,99,235,0.14)_0%,rgba(146,64,14,0.12)_100%)]">
-          <p className="text-sm text-blue-700 dark:text-blue-200">
+          <p className="text-sm text-primary dark:text-blue-200">
             Order can be tracked by <span className="font-semibold">ORD-{order.orderId}</span>
             {order.trackingId && (
               <span className="mt-1 block text-xs">Tracking ID: {order.trackingId}</span>
@@ -649,29 +649,29 @@ const OrderDetailsPage = () => {
         </div>
 
         {/* Product Card */}
-        <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
           <div className="flex gap-4">
-            <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-highlight/10 bg-gray-50 dark:bg-zinc-900 dark:bg-zinc-800/70">
+            <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-[10px] border border-highlight/10 bg-foreground/[0.03] dark:bg-zinc-800/70">
               <SmartImage 
                 src={order.items[0]?.image} 
                 alt={order.items[0]?.name} 
                 className="w-full h-full object-cover" preset="thumb" />
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
+              <h3 className="text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                 {order.items.length > 1 
                   ? `${order.items[0]?.name} +${order.items.length - 1} more`
                   : order.items[0]?.name
                 }
               </h3>
-              <p className="mt-1 text-base font-bold text-gray-900 dark:text-zinc-100">₹{order.total.toLocaleString()}</p>
+              <p className="mt-1 text-base font-bold text-foreground">₹{order.total.toLocaleString()}</p>
             </div>
           </div>
         </div>
 
         {/* Order Status Timeline (hidden for returned / refunded orders) */}
         {order.status !== 'returned' && order.status !== 'refunded' && (
-          <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-5 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+          <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-5 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
             <OrderStatusStepper status={order.status} isReturnPickedState={order.status === 'picked' && !!(order as any).returnScheduledAt} />
           </div>
         )}
@@ -701,7 +701,7 @@ const OrderDetailsPage = () => {
         )}
 
         {/* Current Status Card */}
-        <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
           <div className="flex gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
               order.status === 'delivered' ? 'bg-emerald-100' :
@@ -709,8 +709,8 @@ const OrderDetailsPage = () => {
               order.status === 'returnRequested' ? 'bg-highlight/15' :
               order.status === 'returnScheduled' ? 'bg-emerald-100' :
               (order.status === 'picked' && !!(order as any).returnScheduledAt) ? 'bg-highlight/15' :
-              order.status === 'returned' ? 'bg-gray-100 dark:bg-zinc-800' :
-              order.status === 'refunded' ? 'bg-green-100 dark:bg-green-900/30' :
+              order.status === 'returned' ? 'bg-foreground/[0.06]' :
+              order.status === 'refunded' ? 'bg-green-100' :
               'bg-blue-100'
             }`}>
               {order.status === 'delivered' ? (
@@ -724,24 +724,24 @@ const OrderDetailsPage = () => {
               ) : (order.status === 'picked' && !!(order as any).returnScheduledAt) ? (
                 <Truck className="w-5 h-5 text-highlight" />
               ) : order.status === 'returned' ? (
-                <CheckCircle2 className="w-5 h-5 text-gray-600 dark:text-zinc-400" />
+                <CheckCircle2 className="w-5 h-5 text-muted-foreground" />
               ) : order.status === 'refunded' ? (
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
               ) : (
-                <Package className="w-5 h-5 text-blue-600" />
+                <Package className="w-5 h-5 text-primary" />
               )}
             </div>
             <div className="flex-1">
-              <h4 className="text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
+              <h4 className="text-base font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                 {order.status === 'picked' && !!(order as any).returnScheduledAt ? 'Return Pickup' : getStatusLabel(order.status)}
               </h4>
               {order.carrier && (
-                <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400">
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                   <MapPin className="w-3 h-3" />
                   {order.carrier}
                 </p>
               )}
-              <p className="mt-1 text-xs text-gray-600 dark:text-zinc-400 dark:text-zinc-300" style={{ fontFamily: "var(--font-body)" }}>
+              <p className="mt-1 text-xs text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>
                 {order.status === 'pending' && 'Your order has been placed successfully'}
                 {order.status === 'processing' && 'Package is being prepared for shipment'}
                 {(order.status === 'packed' || order.status === 'shipped' || order.status === 'assigned') && 'Your order is packed and ready for dispatch'}
@@ -755,7 +755,7 @@ const OrderDetailsPage = () => {
                 {order.status === 'returned' && 'Item has been picked up and returned successfully.'}
                 {order.status === 'refunded' && 'Your refund has been processed successfully.'}
               </p>
-              <p className="mt-1 flex items-center gap-1 text-xs text-gray-400 dark:text-zinc-500">
+              <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground/70">
                 <Clock className="w-3 h-3" />
                 {formatDate(order.updatedAt || order.createdAt)}
               </p>
@@ -770,10 +770,10 @@ const OrderDetailsPage = () => {
             <p className="mt-1 text-xs text-highlight dark:text-charcoal-foreground">Share this OTP with your delivery partner at the door</p>
             <p className="mt-2 font-mono text-3xl font-extrabold tracking-[0.5em] text-highlight dark:text-highlight">{order.delivery_otp}</p>
             {(order.delivery_partner_name || order.delivery_boy_name) && (
-              <div className="mt-3 flex items-center justify-between rounded-xl bg-white/70 px-3 py-2 dark:bg-zinc-900/60">
+              <div className="mt-3 flex items-center justify-between rounded-[10px] bg-white/70 px-3 py-2">
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest text-gray-400">Delivery Partner</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70">Delivery Partner</p>
+                  <p className="text-sm font-semibold text-foreground">
                     {order.delivery_partner_name || order.delivery_boy_name}
                   </p>
                 </div>
@@ -797,10 +797,10 @@ const OrderDetailsPage = () => {
             <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-200">Show this OTP to the pickup partner when they arrive to collect your item</p>
             <p className="mt-2 font-mono text-3xl font-extrabold tracking-[0.5em] text-emerald-700 dark:text-emerald-300">{(order as any).return_otp}</p>
             {(order.delivery_partner_name || order.delivery_boy_name) && (
-              <div className="mt-3 flex items-center justify-between rounded-xl bg-white/70 px-3 py-2 dark:bg-zinc-900/60">
+              <div className="mt-3 flex items-center justify-between rounded-[10px] bg-white/70 px-3 py-2">
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest text-gray-400">Pickup Partner</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70">Pickup Partner</p>
+                  <p className="text-sm font-semibold text-foreground">
                     {order.delivery_partner_name || order.delivery_boy_name}
                   </p>
                 </div>
@@ -860,7 +860,7 @@ const OrderDetailsPage = () => {
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="flex gap-3 rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
           {/* Cancel Button - Only for pending/processing orders */}
           {(order.status === 'pending' || order.status === 'processing') && (
             <button
@@ -898,20 +898,20 @@ const OrderDetailsPage = () => {
           {/* Chat Button - Always show */}
           <button 
             onClick={focusOrderChat}
-            className="flex-1 py-2.5 px-4 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-700 flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+            className="flex-1 py-2.5 px-4 bg-primary/5 border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
           >
             <MessageCircle className="w-4 h-4" />
             Open order chat
           </button>
         </div>
 
-        <div ref={conversationSectionRef} className="rounded-[24px] border border-highlight/12 bg-white/92 p-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div ref={conversationSectionRef} className="rounded-[24px] border border-highlight/12 bg-white/92 p-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
           <button
             onClick={() => setConversationOpen(!conversationOpen)}
             className="flex w-full items-start justify-between gap-3 text-left"
           >
             <div>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
+              <h3 className="text-base font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                 Order conversation
                 {conversationMessages.length > 0 && (
                   <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">
@@ -920,17 +920,17 @@ const OrderDetailsPage = () => {
                 )}
               </h3>
               {!conversationOpen && (
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {conversationMessages.length === 0 ? 'Tap to start a conversation' : `${conversationMessages.length} message${conversationMessages.length > 1 ? 's' : ''}`}
                 </p>
               )}
             </div>
-            <ChevronDown className={`mt-0.5 h-5 w-5 shrink-0 text-gray-400 transition-transform duration-200 dark:text-zinc-500 ${conversationOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`mt-0.5 h-5 w-5 shrink-0 text-muted-foreground/70 transition-transform duration-200 ${conversationOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {conversationOpen && (
             <>
-              <p className="mt-2 text-xs text-gray-500 dark:text-zinc-400">Ask about delivery timing, product issues, or any order-specific request. Replies from the admin team stay attached to this order.</p>
+              <p className="mt-2 text-xs text-muted-foreground">Ask about delivery timing, product issues, or any order-specific request. Replies from the admin team stay attached to this order.</p>
 
               <div className="mt-4 flex items-center justify-end">
                 <button
@@ -943,7 +943,7 @@ const OrderDetailsPage = () => {
 
               <div className="mt-3 space-y-3">
                 {conversationMessages.length === 0 ? (
-                  <div className="rounded-[20px] border border-dashed border-highlight/18 bg-cream px-4 py-6 text-center text-sm text-gray-500 dark:bg-zinc-950/80 dark:text-zinc-400">
+                  <div className="rounded-[20px] border border-dashed border-highlight/18 bg-cream px-4 py-6 text-center text-sm text-muted-foreground">
                     No order messages yet. Start the conversation below and the admin team will reply here.
                   </div>
                 ) : (
@@ -956,19 +956,19 @@ const OrderDetailsPage = () => {
                           className={`max-w-[88%] rounded-[22px] px-4 py-3 shadow-sm ${
                             isCustomerMessage
                               ? 'bg-primary text-white'
-                              : 'border border-highlight/12 bg-cream text-gray-800 dark:bg-highlight/5 dark:text-zinc-100'
+                              : 'border border-highlight/12 bg-cream text-foreground dark:bg-highlight/5'
                           }`}
                         >
-                          <div className={`flex flex-wrap items-center gap-2 text-[11px] ${isCustomerMessage ? 'text-white/75' : 'text-gray-500 dark:text-zinc-400'}`}>
+                          <div className={`flex flex-wrap items-center gap-2 text-[11px] ${isCustomerMessage ? 'text-white/75' : 'text-muted-foreground'}`}>
                             <span className="font-semibold">{message.authorName || (isCustomerMessage ? 'You' : 'Support team')}</span>
                             <span>{formatDate(message.createdAt as any)}</span>
                             {message.channel !== 'chat' && (
-                              <span className={`rounded-full px-2 py-0.5 ${isCustomerMessage ? 'bg-white/10 text-white/80' : 'bg-white dark:bg-zinc-900 text-primary'}`}>
+                              <span className={`rounded-full px-2 py-0.5 ${isCustomerMessage ? 'bg-white/10 text-white/80' : 'bg-card text-primary'}`}>
                                 {message.channel}
                               </span>
                             )}
                           </div>
-                          <p className={`mt-2 whitespace-pre-wrap text-sm leading-6 ${isCustomerMessage ? 'text-white' : 'text-gray-700 dark:text-zinc-200'}`}>
+                          <p className={`mt-2 whitespace-pre-wrap text-sm leading-6 ${isCustomerMessage ? 'text-white' : 'text-foreground/80'}`}>
                             {message.message}
                           </p>
                         </div>
@@ -978,16 +978,16 @@ const OrderDetailsPage = () => {
                 )}
               </div>
 
-              <div className="mt-4 rounded-[22px] border border-highlight/12 bg-cream p-3 dark:bg-zinc-950/80">
+              <div className="mt-4 rounded-[22px] border border-highlight/12 bg-cream p-3">
                 <Textarea
                   ref={conversationInputRef}
                   value={chatDraft}
                   onChange={(event) => setChatDraft(event.target.value)}
-                  className="min-h-[118px] resize-none border-0 bg-white/80 dark:bg-zinc-900/80 focus-visible:ring-1 focus-visible:ring-highlight dark:bg-zinc-900/70 dark:text-zinc-100"
+                  className="min-h-[118px] resize-none border-0 bg-white/80 focus-visible:ring-1 focus-visible:ring-highlight"
                   placeholder="Write your order-related message here. Mention delivery timing, product questions, or any issue with this order."
                 />
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">This chat stays attached to order ORD-{order.orderId} so the admin team sees the full context.</p>
+                  <p className="text-xs text-muted-foreground">This chat stays attached to order ORD-{order.orderId} so the admin team sees the full context.</p>
                   <button
                     onClick={sendOrderChatMessage}
                     disabled={sendingChatMessage || !chatDraft.trim()}
@@ -1004,12 +1004,12 @@ const OrderDetailsPage = () => {
 
         {/* Track Package Button */}
         {order.trackingUrl && (
-          <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-3 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+          <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-3 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
             <a
               href={order.trackingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 text-white text-sm font-semibold rounded-xl"
+              className="flex items-center justify-center gap-2 w-full py-3 bg-primary text-white text-sm font-semibold rounded-[10px]"
             >
               <Truck className="w-4 h-4" />
               Track Package
@@ -1019,42 +1019,42 @@ const OrderDetailsPage = () => {
         )}
 
         {/* Delivery Details Section */}
-        <div className="overflow-hidden rounded-[24px] border border-highlight/12 bg-white/92 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:bg-zinc-900/92 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
-          <h3 className="border-b border-highlight/10 px-4 py-3 text-base font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Delivery details</h3>
+        <div className="overflow-hidden rounded-[24px] border border-highlight/12 bg-white/92 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+          <h3 className="border-b border-highlight/10 px-4 py-3 text-base font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>Delivery details</h3>
           
           {/* Delivery Address */}
           <div className="px-4 py-3 flex items-center gap-3 border-b border-highlight/10">
-            <div className="w-10 h-10 bg-gray-100 dark:bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0">
-              <Home className="w-5 h-5 text-gray-600 dark:text-zinc-400" />
+            <div className="w-10 h-10 bg-foreground/[0.06] rounded-full flex items-center justify-center flex-shrink-0">
+              <Home className="w-5 h-5 text-muted-foreground" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-blue-600">Delivery Address</p>
-              <p className="text-xs text-gray-600 dark:text-zinc-400 truncate">
+              <p className="text-sm font-medium text-primary">Delivery Address</p>
+              <p className="text-xs text-muted-foreground truncate">
                 {order.shippingAddress.address}, {order.shippingAddress.city}
               </p>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-400 dark:text-zinc-500 flex-shrink-0" />
+            <ChevronRight className="w-5 h-5 text-muted-foreground/70 flex-shrink-0" />
           </div>
 
           {/* Customer Info */}
           <div className="px-4 py-3 flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-white text-sm font-semibold">
                 {order.shippingAddress.fullName.charAt(0).toUpperCase()}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-zinc-100">{order.shippingAddress.fullName}</p>
-              <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400">ORD-{order.orderId}</p>
+              <p className="text-sm font-medium text-foreground">{order.shippingAddress.fullName}</p>
+              <p className="text-xs text-muted-foreground">ORD-{order.orderId}</p>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-400 dark:text-zinc-500 flex-shrink-0" />
+            <ChevronRight className="w-5 h-5 text-muted-foreground/70 flex-shrink-0" />
           </div>
         </div>
 
         {/* Rate Delivery Boy - Only for delivered orders with a delivery boy assigned */}
         {order.status === 'delivered' && order.deliveryBoyId && (
           <div className="bg-white/92 rounded-[24px] border border-highlight/12 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur overflow-hidden">
-            <h3 className="px-4 py-3 text-base font-semibold text-gray-900 dark:text-zinc-100 border-b border-highlight/10" style={{ fontFamily: "var(--font-body)" }}>Rate your delivery</h3>
+            <h3 className="px-4 py-3 text-base font-semibold text-foreground border-b border-highlight/10" style={{ fontFamily: "var(--font-body)" }}>Rate your delivery</h3>
             <div className="px-4 py-4">
               {hasRated ? (
                 <div className="flex flex-col items-center py-4 gap-2">
@@ -1063,12 +1063,12 @@ const OrderDetailsPage = () => {
                       <Star key={n} className={`h-6 w-6 ${n <= deliveryRating ? 'text-highlight-soft fill-current' : 'text-gray-200 fill-current'}`} />
                     ))}
                   </div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-zinc-300">Rating submitted!</p>
-                  <p className="text-xs text-gray-400 dark:text-zinc-500">Thank you for your feedback</p>
+                  <p className="text-sm font-medium text-foreground/80">Rating submitted!</p>
+                  <p className="text-xs text-muted-foreground/70">Thank you for your feedback</p>
                 </div>
               ) : (
                 <>
-                  <p className="text-sm text-gray-600 dark:text-zinc-400 mb-3">How was your delivery experience?</p>
+                  <p className="text-sm text-muted-foreground mb-3">How was your delivery experience?</p>
                   <div className="flex items-center gap-2 mb-3">
                     {[1,2,3,4,5].map(n => (
                       <button key={n} onClick={() => setDeliveryRating(n)}>
@@ -1081,12 +1081,12 @@ const OrderDetailsPage = () => {
                     onChange={e => setRatingComment(e.target.value)}
                     placeholder="Leave a comment (optional)"
                     rows={2}
-                    className="w-full text-sm border border-gray-200 dark:border-zinc-800 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 mb-3"
+                    className="w-full text-sm border border-foreground/[0.08] rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 mb-3"
                   />
                   <button
                     onClick={submitDeliveryRating}
                     disabled={submittingRating || deliveryRating === 0}
-                    className="w-full py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full py-2.5 bg-primary text-white text-sm font-semibold rounded-[10px] hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {submittingRating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                     Submit Rating
@@ -1100,7 +1100,7 @@ const OrderDetailsPage = () => {
         {/* Write a Review - for all delivered orders */}
         {order.status === 'delivered' && (
           <div className="bg-white/92 rounded-[24px] border border-highlight/12 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur overflow-hidden">
-            <h3 className="px-4 py-3 text-base font-semibold text-gray-900 dark:text-zinc-100 border-b border-highlight/10" style={{ fontFamily: "var(--font-body)" }}>Rate the product</h3>
+            <h3 className="px-4 py-3 text-base font-semibold text-foreground border-b border-highlight/10" style={{ fontFamily: "var(--font-body)" }}>Rate the product</h3>
             <div className="px-4 py-4">
               {checkingReview ? (
                 <div className="flex items-center justify-center py-4">
@@ -1109,8 +1109,8 @@ const OrderDetailsPage = () => {
               ) : hasReviewedProduct ? (
                 <div className="flex flex-col items-center py-4 gap-2">
                   <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-                  <p className="text-sm font-medium text-gray-700 dark:text-zinc-300">Review submitted!</p>
-                  <p className="text-xs text-gray-400 dark:text-zinc-500">Thank you for sharing your experience</p>
+                  <p className="text-sm font-medium text-foreground/80">Review submitted!</p>
+                  <p className="text-xs text-muted-foreground/70">Thank you for sharing your experience</p>
                 </div>
               ) : (
                 <>
@@ -1118,7 +1118,7 @@ const OrderDetailsPage = () => {
                     {order.items[0]?.image && (
                       <SmartImage src={order.items[0].image} alt={order.items[0].name} className="h-10 w-10 rounded-lg object-cover" preset="thumb" />
                     )}
-                    <p className="text-sm text-gray-600 dark:text-zinc-400">Share your experience with {order.items[0]?.name || 'this product'}</p>
+                    <p className="text-sm text-muted-foreground">Share your experience with {order.items[0]?.name || 'this product'}</p>
                   </div>
                   <button
                     onClick={() => navigate('/write-review', {
@@ -1128,7 +1128,7 @@ const OrderDetailsPage = () => {
                         productImage: order.items[0]?.image,
                       }
                     })}
-                    className="w-full py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-2.5 bg-primary text-white text-sm font-semibold rounded-[10px] hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
                   >
                     <Star className="h-4 w-4" />
                     Write a Review
@@ -1139,13 +1139,13 @@ const OrderDetailsPage = () => {
           </div>
         )}
 
-        {/* Price Details Section */}        <div className="bg-white dark:bg-zinc-900 mt-2 border-t border-b border-gray-100 dark:border-zinc-800">
-          <h3 className="px-4 py-3 text-base font-semibold text-gray-900 dark:text-zinc-100 border-b border-gray-100 dark:border-zinc-800" style={{ fontFamily: "var(--font-body)" }}>Price details</h3>
+        {/* Price Details Section */}        <div className="bg-card mt-2 border-t border-b border-foreground/[0.06]">
+          <h3 className="px-4 py-3 text-base font-semibold text-foreground border-b border-foreground/[0.06]" style={{ fontFamily: "var(--font-body)" }}>Price details</h3>
           
           <div className="px-4 py-3 space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-zinc-400">Selling price</span>
-              <span className="text-gray-900 dark:text-zinc-100">₹{order.subtotal.toLocaleString()}</span>
+              <span className="text-muted-foreground">Selling price</span>
+              <span className="text-foreground">₹{order.subtotal.toLocaleString()}</span>
             </div>
             {order.discount > 0 && (
               <div className="flex justify-between text-sm">
@@ -1154,48 +1154,48 @@ const OrderDetailsPage = () => {
               </div>
             )}
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-zinc-400">Total fees</span>
-              <span className="text-gray-900 dark:text-zinc-100">₹{(order.deliveryCharge + order.taxAmount).toLocaleString()}</span>
+              <span className="text-muted-foreground">Total fees</span>
+              <span className="text-foreground">₹{(order.deliveryCharge + order.taxAmount).toLocaleString()}</span>
             </div>
-            <div className="pt-3 border-t border-gray-200 dark:border-zinc-800 flex justify-between">
-              <span className="text-base font-semibold text-blue-600">Total amount</span>
-              <span className="text-base font-bold text-gray-900 dark:text-zinc-100">₹{order.total.toLocaleString()}</span>
+            <div className="pt-3 border-t border-foreground/[0.08] flex justify-between">
+              <span className="text-base font-semibold text-primary">Total amount</span>
+              <span className="text-base font-bold text-foreground">₹{order.total.toLocaleString()}</span>
             </div>
           </div>
         </div>
 
         {/* Share Order Details */}
-        <div className="bg-white dark:bg-zinc-900 mt-2 px-4 py-3 border-t border-gray-100 dark:border-zinc-800">
+        <div className="bg-card mt-2 px-4 py-3 border-t border-foreground/[0.06]">
           <button 
             onClick={() => setShowShareMenu(true)}
-            className="w-full flex items-center justify-between text-sm text-gray-700 dark:text-zinc-300 font-medium py-2"
+            className="w-full flex items-center justify-between text-sm text-foreground/80 font-medium py-2"
           >
             <div className="flex items-center gap-3">
-              <Share2 className="w-5 h-5 text-gray-500 dark:text-zinc-500 dark:text-zinc-400" />
+              <Share2 className="w-5 h-5 text-muted-foreground" />
               <span>Share Order Details</span>
             </div>
-            <ChevronRight className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground/70" />
           </button>
         </div>
 
         {/* Download Invoice */}
-        <div className="bg-white dark:bg-zinc-900 px-4 py-3 border-b border-gray-100 dark:border-zinc-800">
+        <div className="bg-card px-4 py-3 border-b border-foreground/[0.06]">
           <button 
             onClick={() => downloadInvoice()}
             disabled={isDownloadingInvoice}
-            className="w-full flex items-center justify-between text-sm text-gray-700 dark:text-zinc-300 font-medium py-2 disabled:opacity-50"
+            className="w-full flex items-center justify-between text-sm text-foreground/80 font-medium py-2 disabled:opacity-50"
           >
             <div className="flex items-center gap-3">
-              <Download className="w-5 h-5 text-gray-500 dark:text-zinc-500 dark:text-zinc-400" />
+              <Download className="w-5 h-5 text-muted-foreground" />
               <div className="text-left">
                 <span className="block">Download Invoice</span>
-                <span className="text-xs text-gray-400 dark:text-zinc-500">Order ID: {order.orderId}</span>
+                <span className="text-xs text-muted-foreground/70">Order ID: {order.orderId}</span>
               </div>
             </div>
             {isDownloadingInvoice ? (
-              <Loader2 className="w-4 h-4 text-gray-400 dark:text-zinc-500 animate-spin" />
+              <Loader2 className="w-4 h-4 text-muted-foreground/70 animate-spin" />
             ) : (
-              <ChevronRight className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
+              <ChevronRight className="w-4 h-4 text-muted-foreground/70" />
             )}
           </button>
         </div>
@@ -1338,18 +1338,18 @@ const OrderDetailsPage = () => {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="bg-white dark:bg-zinc-900 w-full rounded-t-3xl p-6 pb-8"
+              className="bg-card w-full rounded-t-[var(--radius-panel)] p-6 pb-8"
               style={{ fontFamily: "var(--font-body)" }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Share Order Details</h3>
+                <h3 className="text-lg font-semibold text-foreground">Share Order Details</h3>
                 <button
                   onClick={() => setShowShareMenu(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800"
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-foreground/[0.06]"
                 >
-                  <X className="w-5 h-5 text-gray-600 dark:text-zinc-400" />
+                  <X className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
 
@@ -1357,7 +1357,7 @@ const OrderDetailsPage = () => {
               {isGeneratingImage && (
                 <div className="flex items-center justify-center py-4 mb-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500 mr-3"></div>
-                  <span className="text-sm text-gray-600 dark:text-zinc-400">Generating receipt image...</span>
+                  <span className="text-sm text-muted-foreground">Generating receipt image...</span>
                 </div>
               )}
 
@@ -1369,10 +1369,10 @@ const OrderDetailsPage = () => {
                   disabled={isGeneratingImage}
                   className="flex flex-col items-center gap-2 disabled:opacity-50"
                 >
-                  <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center">
+                  <div className="w-14 h-14 bg-green-100 rounded-[var(--radius-card)] flex items-center justify-center">
                     <MessageCircle className="w-7 h-7 text-green-600" />
                   </div>
-                  <span className="text-xs text-gray-700 dark:text-zinc-300">WhatsApp</span>
+                  <span className="text-xs text-foreground/80">WhatsApp</span>
                 </button>
 
                 {/* Gmail */}
@@ -1381,10 +1381,10 @@ const OrderDetailsPage = () => {
                   disabled={isGeneratingImage}
                   className="flex flex-col items-center gap-2 disabled:opacity-50"
                 >
-                  <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center">
+                  <div className="w-14 h-14 bg-red-100 rounded-[var(--radius-card)] flex items-center justify-center">
                     <Mail className="w-7 h-7 text-red-600" />
                   </div>
-                  <span className="text-xs text-gray-700 dark:text-zinc-300">Gmail</span>
+                  <span className="text-xs text-foreground/80">Gmail</span>
                 </button>
 
                 {/* Instagram */}
@@ -1393,10 +1393,10 @@ const OrderDetailsPage = () => {
                   disabled={isGeneratingImage}
                   className="flex flex-col items-center gap-2 disabled:opacity-50"
                 >
-                  <div className="w-14 h-14 bg-pink-100 rounded-2xl flex items-center justify-center">
+                  <div className="w-14 h-14 bg-pink-100 rounded-[var(--radius-card)] flex items-center justify-center">
                     <Share2 className="w-7 h-7 text-pink-600" />
                   </div>
-                  <span className="text-xs text-gray-700 dark:text-zinc-300">Instagram</span>
+                  <span className="text-xs text-foreground/80">Instagram</span>
                 </button>
 
                 {/* Download Image */}
@@ -1405,10 +1405,10 @@ const OrderDetailsPage = () => {
                   disabled={isGeneratingImage}
                   className="flex flex-col items-center gap-2 disabled:opacity-50"
                 >
-                  <div className="w-14 h-14 bg-gray-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center">
-                    <Download className="w-7 h-7 text-gray-600 dark:text-zinc-400" />
+                  <div className="w-14 h-14 bg-foreground/[0.06] rounded-[var(--radius-card)] flex items-center justify-center">
+                    <Download className="w-7 h-7 text-muted-foreground" />
                   </div>
-                  <span className="text-xs text-gray-700 dark:text-zinc-300">Save</span>
+                  <span className="text-xs text-foreground/80">Save</span>
                 </button>
 
                 {/* Facebook Messenger */}
@@ -1417,10 +1417,10 @@ const OrderDetailsPage = () => {
                   disabled={isGeneratingImage}
                   className="flex flex-col items-center gap-2 disabled:opacity-50"
                 >
-                  <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center">
-                    <MessageCircle className="w-7 h-7 text-blue-600" />
+                  <div className="w-14 h-14 bg-blue-100 rounded-[var(--radius-card)] flex items-center justify-center">
+                    <MessageCircle className="w-7 h-7 text-primary" />
                   </div>
-                  <span className="text-xs text-gray-700 dark:text-zinc-300">Messenger</span>
+                  <span className="text-xs text-foreground/80">Messenger</span>
                 </button>
 
                 {/* SMS */}
@@ -1429,10 +1429,10 @@ const OrderDetailsPage = () => {
                   disabled={isGeneratingImage}
                   className="flex flex-col items-center gap-2 disabled:opacity-50"
                 >
-                  <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center">
+                  <div className="w-14 h-14 bg-green-100 rounded-[var(--radius-card)] flex items-center justify-center">
                     <MessageCircle className="w-7 h-7 text-green-700" />
                   </div>
-                  <span className="text-xs text-gray-700 dark:text-zinc-300">SMS</span>
+                  <span className="text-xs text-foreground/80">SMS</span>
                 </button>
 
                 {/* Telegram */}
@@ -1441,10 +1441,10 @@ const OrderDetailsPage = () => {
                   disabled={isGeneratingImage}
                   className="flex flex-col items-center gap-2 disabled:opacity-50"
                 >
-                  <div className="w-14 h-14 bg-sky-100 rounded-2xl flex items-center justify-center">
+                  <div className="w-14 h-14 bg-sky-100 rounded-[var(--radius-card)] flex items-center justify-center">
                     <Share2 className="w-7 h-7 text-sky-600" />
                   </div>
-                  <span className="text-xs text-gray-700 dark:text-zinc-300">Telegram</span>
+                  <span className="text-xs text-foreground/80">Telegram</span>
                 </button>
 
                 {/* More (Native Share) */}
@@ -1453,10 +1453,10 @@ const OrderDetailsPage = () => {
                   disabled={isGeneratingImage}
                   className="flex flex-col items-center gap-2 disabled:opacity-50"
                 >
-                  <div className="w-14 h-14 bg-gray-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center">
-                    <Share2 className="w-7 h-7 text-gray-600 dark:text-zinc-400" />
+                  <div className="w-14 h-14 bg-foreground/[0.06] rounded-[var(--radius-card)] flex items-center justify-center">
+                    <Share2 className="w-7 h-7 text-muted-foreground" />
                   </div>
-                  <span className="text-xs text-gray-700 dark:text-zinc-300">More</span>
+                  <span className="text-xs text-foreground/80">More</span>
                 </button>
               </div>
             </motion.div>
@@ -1472,10 +1472,10 @@ const OrderDetailsPage = () => {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 bg-white dark:bg-zinc-900 z-[99999] flex flex-col"
+            className="fixed inset-0 bg-card z-[99999] flex flex-col"
           >
             {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100 dark:border-zinc-800">
+            <div className="flex items-center gap-3 px-4 py-4 border-b border-foreground/[0.06]">
               <button
                 onClick={() => {
                   if (returnStep === 'details') {
@@ -1489,9 +1489,9 @@ const OrderDetailsPage = () => {
                 }}
                 className="w-8 h-8 flex items-center justify-center"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-zinc-300" />
+                <ArrowLeft className="w-5 h-5 text-foreground/80" />
               </button>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>Request Return</h3>
+              <h3 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>Request Return</h3>
             </div>
 
             {/* Return Reasons Grid - Step 1 */}
@@ -1502,32 +1502,32 @@ const OrderDetailsPage = () => {
               {/* Product Info */}
               <div className="mb-4">
                 <div className="flex gap-3">
-                  <div className="w-16 h-16 bg-gray-100 dark:bg-zinc-800 rounded-lg overflow-hidden flex-shrink-0">
+                  <div className="w-16 h-16 bg-foreground/[0.06] rounded-lg overflow-hidden flex-shrink-0">
                     <SmartImage 
                       src={order.items[0]?.image} 
                       alt={order.items[0]?.name}
                       className="w-full h-full object-cover" preset="thumb" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2" style={{ fontFamily: "var(--font-body)" }}>
+                    <h4 className="text-sm font-semibold text-foreground line-clamp-2" style={{ fontFamily: "var(--font-body)" }}>
                       {order.items[0]?.name}
                     </h4>
-                    <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400 mt-0.5" style={{ fontFamily: "var(--font-body)" }}>
+                    <p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: "var(--font-body)" }}>
                       Quantity: {order.items[0]?.quantity}
                     </p>
-                    <p className="text-base font-bold text-gray-900 dark:text-zinc-100 mt-1" style={{ fontFamily: "var(--font-body)" }}>
+                    <p className="text-base font-bold text-foreground mt-1" style={{ fontFamily: "var(--font-body)" }}>
                       ₹{order.items[0]?.price?.toLocaleString()}
                     </p>
                   </div>
                 </div>
                 {order.items.length > 1 && (
-                  <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400 mt-2 text-center" style={{ fontFamily: "var(--font-body)" }}>
+                  <p className="text-xs text-muted-foreground mt-2 text-center" style={{ fontFamily: "var(--font-body)" }}>
                     +{order.items.length - 1} more items will be included in this return
                   </p>
                 )}
               </div>
 
-              <h4 className="text-base font-semibold text-gray-900 dark:text-zinc-100 mb-4" style={{ fontFamily: "var(--font-body)" }}>Reason for return</h4>
+              <h4 className="text-base font-semibold text-foreground mb-4" style={{ fontFamily: "var(--font-body)" }}>Reason for return</h4>
               
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -1568,15 +1568,15 @@ const OrderDetailsPage = () => {
                       setReturnReason(item.reason);
                       setCustomReturnReason('');
                     }}
-                    className={`flex flex-col items-center p-4 rounded-xl border-2 transition-all ${
+                    className={`flex flex-col items-center p-4 rounded-[10px] border-2 transition-all ${
                       returnReason === item.reason
-                        ? 'border-gray-900 bg-gray-50 dark:bg-zinc-900/50'
-                        : 'border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-gray-300 dark:border-zinc-700'
+                        ? 'border-gray-900 bg-foreground/[0.03]'
+                        : 'border-foreground/[0.08] bg-card hover:border-foreground/25'
                     }`}
                   >
                     <SmartImage src={item.image} alt={item.description} className="w-16 h-16 mb-2 object-contain dark:brightness-75 dark:opacity-80" preset="thumb" />
                     <span className={`text-xs text-center leading-tight ${
-                      returnReason === item.reason ? 'text-gray-900 dark:text-zinc-100 font-medium' : 'text-gray-600 dark:text-zinc-400'
+                      returnReason === item.reason ? 'text-foreground font-medium' : 'text-muted-foreground'
                     }`} style={{ fontFamily: "var(--font-body)" }}>
                       {item.description}
                     </span>
@@ -1587,15 +1587,15 @@ const OrderDetailsPage = () => {
               {/* Other Reason Option */}
               <button
                 onClick={() => setReturnReason('Other reason')}
-                className={`w-full mt-3 p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${
+                className={`w-full mt-3 p-4 rounded-[10px] border-2 transition-all flex items-center gap-3 ${
                   returnReason === 'Other reason'
-                    ? 'border-gray-900 bg-gray-50 dark:bg-zinc-900/50'
-                    : 'border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-gray-300 dark:border-zinc-700'
+                    ? 'border-gray-900 bg-foreground/[0.03]'
+                    : 'border-foreground/[0.08] bg-card hover:border-foreground/25'
                 }`}
               >
                 <span className="text-2xl">✏️</span>
                 <span className={`text-sm ${
-                  returnReason === 'Other reason' ? 'text-gray-900 dark:text-zinc-100 font-medium' : 'text-gray-600 dark:text-zinc-400'
+                  returnReason === 'Other reason' ? 'text-foreground font-medium' : 'text-muted-foreground'
                 }`} style={{ fontFamily: "var(--font-body)" }}>
                   Other reason
                 </span>
@@ -1610,11 +1610,11 @@ const OrderDetailsPage = () => {
                     placeholder="Please describe your reason for return..."
                     rows={4}
                     maxLength={200}
-                    className="w-full px-4 py-3 border-2 border-gray-300 dark:border-zinc-700 rounded-xl focus:outline-none focus:border-gray-900 bg-gray-50 dark:bg-zinc-900/50 text-gray-900 dark:text-zinc-100 placeholder-gray-500 resize-none"
+                    className="w-full px-4 py-3 border-2 border-foreground/15 rounded-[10px] focus:outline-none focus:border-gray-900 bg-foreground/[0.03] text-foreground placeholder-gray-500 resize-none"
                     style={{ fontFamily: "var(--font-body)" }}
                     autoFocus
                   />
-                  <p className="text-xs text-gray-700 dark:text-zinc-300 mt-1 ml-1" style={{ fontFamily: "var(--font-body)" }}>
+                  <p className="text-xs text-foreground/80 mt-1 ml-1" style={{ fontFamily: "var(--font-body)" }}>
                     {customReturnReason.length}/200 characters
                   </p>
                 </div>
@@ -1622,13 +1622,13 @@ const OrderDetailsPage = () => {
             </div>
 
             {/* Bottom Button - Step 1 */}
-            <div className="px-4 py-4 border-t border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+            <div className="px-4 py-4 border-t border-foreground/[0.06] bg-card">
               <button
                 onClick={() => setReturnStep('details')}
                 disabled={!returnReason || (returnReason === 'Other reason' && !customReturnReason.trim())}
                 className={`w-full py-4 rounded-full font-semibold text-base transition-all ${
                   !returnReason || (returnReason === 'Other reason' && !customReturnReason.trim())
-                    ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 cursor-not-allowed'
+                    ? 'bg-foreground/[0.06] text-muted-foreground/70 cursor-not-allowed'
                     : 'bg-gray-900 dark:bg-zinc-100 text-white hover:bg-gray-800 dark:bg-zinc-100'
                 }`}
                 style={{ fontFamily: "var(--font-body)" }}
@@ -1648,67 +1648,67 @@ const OrderDetailsPage = () => {
                     {/* Product Info */}
                     <div>
                       <div className="flex gap-3">
-                        <div className="w-16 h-16 bg-gray-100 dark:bg-zinc-800 rounded-lg overflow-hidden flex-shrink-0">
+                        <div className="w-16 h-16 bg-foreground/[0.06] rounded-lg overflow-hidden flex-shrink-0">
                           <SmartImage 
                             src={order.items[0]?.image} 
                             alt={order.items[0]?.name}
                             className="w-full h-full object-cover" preset="thumb" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 line-clamp-2" style={{ fontFamily: "var(--font-body)" }}>
+                          <h4 className="text-sm font-semibold text-foreground line-clamp-2" style={{ fontFamily: "var(--font-body)" }}>
                             {order.items[0]?.name}
                           </h4>
-                          <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400 mt-0.5" style={{ fontFamily: "var(--font-body)" }}>
+                          <p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: "var(--font-body)" }}>
                             Quantity: {order.items[0]?.quantity}
                           </p>
-                          <p className="text-base font-bold text-gray-900 dark:text-zinc-100 mt-1" style={{ fontFamily: "var(--font-body)" }}>
+                          <p className="text-base font-bold text-foreground mt-1" style={{ fontFamily: "var(--font-body)" }}>
                             ₹{order.items[0]?.price?.toLocaleString()}
                           </p>
                         </div>
                       </div>
                       {order.items.length > 1 && (
-                        <p className="text-xs text-gray-500 dark:text-zinc-500 dark:text-zinc-400 mt-2 text-center" style={{ fontFamily: "var(--font-body)" }}>
+                        <p className="text-xs text-muted-foreground mt-2 text-center" style={{ fontFamily: "var(--font-body)" }}>
                           +{order.items.length - 1} more items will be included in this return
                         </p>
                       )}
                     </div>
 
-                    <div className="h-px bg-gray-200 dark:bg-zinc-800 dark:bg-zinc-700" />
+                    <div className="h-px bg-foreground/10" />
 
                     {/* Replacement Info */}
                     <div>
-                      <h4 className="text-base font-medium text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>
+                      <h4 className="text-base font-medium text-foreground mb-3" style={{ fontFamily: "var(--font-body)" }}>
                         Return Type
                       </h4>
-                      <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
+                      <div className="p-4 bg-primary/5 rounded-lg border-2 border-primary/25">
+                        <p className="text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                           Product Replacement
                         </p>
-                        <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1" style={{ fontFamily: "var(--font-body)" }}>
+                        <p className="text-xs text-muted-foreground mt-1" style={{ fontFamily: "var(--font-body)" }}>
                           Your product will be replaced with the same item after quality check
                         </p>
                       </div>
                     </div>
 
-                    <div className="h-px bg-gray-200 dark:bg-zinc-800 dark:bg-zinc-700" />
+                    <div className="h-px bg-foreground/10" />
 
                     {/* Pick up and delivery */}
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-zinc-100 mb-3" style={{ fontFamily: "var(--font-body)" }}>
+                      <h4 className="text-sm font-medium text-foreground mb-3" style={{ fontFamily: "var(--font-body)" }}>
                         Pick up and delivery
                       </h4>
-                      <div className="p-4 bg-gray-50 dark:bg-zinc-900/50 rounded-lg">
-                        <p className="text-sm font-medium text-gray-900 dark:text-zinc-100" style={{ fontFamily: "var(--font-body)" }}>
+                      <div className="p-4 bg-foreground/[0.03] rounded-lg">
+                        <p className="text-sm font-medium text-foreground" style={{ fontFamily: "var(--font-body)" }}>
                           {order.shippingAddress?.fullName || 'N/A'}
                         </p>
-                        <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1" style={{ fontFamily: "var(--font-body)" }}>
+                        <p className="text-xs text-muted-foreground mt-1" style={{ fontFamily: "var(--font-body)" }}>
                           📱 {order.shippingAddress?.mobile || 'N/A'}
                         </p>
-                        <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1" style={{ fontFamily: "var(--font-body)" }}>
+                        <p className="text-xs text-muted-foreground mt-1" style={{ fontFamily: "var(--font-body)" }}>
                           {order.shippingAddress?.address}, { order.shippingAddress?.locality && `${order.shippingAddress.locality}, `}{order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.pincode}
                         </p>
                         {order.shippingAddress?.landmark && (
-                          <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1" style={{ fontFamily: "var(--font-body)" }}>
+                          <p className="text-xs text-muted-foreground mt-1" style={{ fontFamily: "var(--font-body)" }}>
                             Landmark: {order.shippingAddress.landmark}
                           </p>
                         )}
@@ -1718,13 +1718,13 @@ const OrderDetailsPage = () => {
                 </div>
 
                 {/* Bottom Button - Step 2 */}
-                <div className="px-4 py-4 border-t border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                <div className="px-4 py-4 border-t border-foreground/[0.06] bg-card">
                   <button
                     onClick={handleRequestReturn}
                     disabled={isSubmitting}
                     className={`w-full py-4 rounded-full font-semibold text-base transition-all ${
                       isSubmitting
-                        ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 cursor-not-allowed'
+                        ? 'bg-foreground/[0.06] text-muted-foreground/70 cursor-not-allowed'
                         : 'bg-gray-900 dark:bg-zinc-100 text-white hover:bg-gray-800 dark:bg-zinc-100'
                     }`}
                     style={{ fontFamily: "var(--font-body)" }}

@@ -131,8 +131,8 @@ const CancelOrderPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400 dark:text-zinc-500" />
+      <div className="min-h-screen tx-paper flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground/70" />
       </div>
     );
   }
@@ -142,26 +142,26 @@ const CancelOrderPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 pb-20" style={{ fontFamily: "var(--font-body)" }}>
+    <div className="min-h-screen tx-paper pb-20" style={{ fontFamily: "var(--font-body)" }}>
       {/* Top Site Navigation */}
       <Header />
       
       {/* Page Header */}
-      <div className="bg-white dark:bg-zinc-900 sticky top-16 z-40 border-b border-gray-100 dark:border-zinc-800">
+      <div className="bg-card sticky top-16 z-40 border-b border-foreground/[0.06]">
         <div className="flex items-center gap-3 px-4 py-4">
           <button
             onClick={() => navigate(`/account/orders/${orderId}`)}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+            className="p-1 hover:bg-foreground/[0.06] rounded-full transition-colors"
           >
-            <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-zinc-300" />
+            <ArrowLeft className="w-6 h-6 text-foreground/80" />
           </button>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center">
               <Ban className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900 dark:text-zinc-100">Cancel Order</h1>
-              <p className="text-xs text-gray-500 dark:text-zinc-500">Order #{order.orderId}</p>
+              <h1 className="text-lg font-bold text-foreground">Cancel Order</h1>
+              <p className="text-xs text-muted-foreground">Order #{order.orderId}</p>
             </div>
           </div>
         </div>
@@ -171,10 +171,10 @@ const CancelOrderPage = () => {
       <div className="px-4 py-6">
         {/* Cancellation Reason Section */}
         <div className="mb-6">
-          <h2 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-2">
+          <h2 className="text-base font-bold text-foreground mb-2">
             Reason for Cancellation
           </h2>
-          <p className="text-sm text-gray-600 dark:text-zinc-400 mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             Please select a reason for cancelling this order:
           </p>
 
@@ -192,12 +192,12 @@ const CancelOrderPage = () => {
                 className="w-full flex items-center justify-between py-3 transition-all"
               >
                 <span className={`text-sm font-medium transition-colors ${
-                  cancelReason === reason ? 'text-red-600' : 'text-gray-700'
+                  cancelReason === reason ? 'text-red-600' : 'text-foreground/80'
                 }`}>
                   {reason}
                 </span>
                 <ChevronRight className={`w-5 h-5 transition-colors ${
-                  cancelReason === reason ? 'text-red-600' : 'text-gray-400'
+                  cancelReason === reason ? 'text-red-600' : 'text-muted-foreground/70'
                 }`} />
               </button>
             ))}
@@ -210,7 +210,7 @@ const CancelOrderPage = () => {
                 value={customReason}
                 onChange={(e) => setCustomReason(e.target.value)}
                 placeholder="Please specify your reason..."
-                className="w-full px-4 py-3 border border-gray-300 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-sm"
+                className="w-full px-4 py-3 border border-foreground/15 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-sm"
                 rows={4}
               />
             </div>
@@ -218,7 +218,7 @@ const CancelOrderPage = () => {
 
           {/* Selected Address Display */}
           {cancelReason === 'Need to change delivery address' && selectedNewAddress && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl">
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-[10px]">
               <div className="flex items-start gap-2">
                 <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                 <div>
@@ -236,7 +236,7 @@ const CancelOrderPage = () => {
       </div>
 
       {/* Fixed Bottom Button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800 p-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-foreground/[0.06] p-4">
         <button
           onClick={handleCancelOrder}
           disabled={
@@ -250,7 +250,7 @@ const CancelOrderPage = () => {
             isSubmitting || 
             (cancelReason === 'Other reason' && !customReason.trim()) ||
             (cancelReason === 'Need to change delivery address' && !selectedNewAddress)
-              ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+              ? 'bg-foreground/[0.06] text-muted-foreground/70 border-foreground/[0.08] cursor-not-allowed'
               : 'bg-transparent text-red-600 border-red-600 hover:bg-red-50 active:scale-95'
           }`}
         >
@@ -284,19 +284,19 @@ const CancelOrderPage = () => {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-[70] bg-white dark:bg-zinc-900 rounded-t-3xl max-h-[85vh] overflow-hidden"
+              className="fixed bottom-0 left-0 right-0 z-[70] bg-card rounded-t-[var(--radius-panel)] max-h-[85vh] overflow-hidden"
               style={{ fontFamily: "var(--font-body)" }}
             >
-              <div className="p-4 border-b border-gray-200 dark:border-zinc-800">
+              <div className="p-4 border-b border-foreground/[0.08]">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-zinc-100">
+                  <h3 className="text-lg font-bold text-foreground">
                     Select New Delivery Address
                   </h3>
                   <button
                     onClick={() => setShowAddressModal(false)}
-                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+                    className="p-1.5 hover:bg-foreground/[0.06] rounded-full transition-colors"
                   >
-                    <X className="w-5 h-5 text-gray-600 dark:text-zinc-400" />
+                    <X className="w-5 h-5 text-muted-foreground" />
                   </button>
                 </div>
               </div>
@@ -305,8 +305,8 @@ const CancelOrderPage = () => {
                 {addresses.length === 0 ? (
                   <div className="py-8 text-center">
                     <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500 dark:text-zinc-500">No saved addresses found</p>
-                    <p className="text-xs text-gray-400 dark:text-zinc-500 mt-1">
+                    <p className="text-sm text-muted-foreground">No saved addresses found</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">
                       Please add an address from your profile
                     </p>
                   </div>
@@ -315,10 +315,10 @@ const CancelOrderPage = () => {
                     {addresses.map((address) => (
                       <label
                         key={address.id}
-                        className={`block p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        className={`block p-4 rounded-[10px] border-2 cursor-pointer transition-all ${
                           selectedNewAddress?.id === address.id
                             ? 'border-red-500 bg-red-50'
-                            : 'border-gray-200 bg-white hover:border-gray-300'
+                            : 'border-foreground/[0.08] bg-card hover:border-foreground/25'
                         }`}
                       >
                         <div className="flex items-start gap-3">
@@ -328,13 +328,13 @@ const CancelOrderPage = () => {
                             name="selectedAddress"
                             checked={selectedNewAddress?.id === address.id}
                             onChange={() => setSelectedNewAddress(address)}
-                            className="mt-1 w-4 h-4 text-red-600 border-gray-300 dark:border-zinc-700 focus:ring-red-500"
+                            className="mt-1 w-4 h-4 text-red-600 border-foreground/15 focus:ring-red-500"
                           />
                           
                           {/* Address Details */}
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="font-bold text-gray-900 dark:text-zinc-100 uppercase text-sm">
+                              <span className="font-bold text-foreground uppercase text-sm">
                                 {address.fullName}
                               </span>
                               {address.isDefault && (
@@ -343,8 +343,8 @@ const CancelOrderPage = () => {
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-gray-600 dark:text-zinc-400 mb-1">{address.phoneNumber}</p>
-                            <p className="text-xs text-gray-700 dark:text-zinc-300 leading-relaxed">
+                            <p className="text-xs text-muted-foreground mb-1">{address.phoneNumber}</p>
+                            <p className="text-xs text-foreground/80 leading-relaxed">
                               {address.address}
                               {address.locality && `, ${address.locality}`}, {address.city}, {address.state} - {address.pinCode}
                             </p>
@@ -357,14 +357,14 @@ const CancelOrderPage = () => {
               </div>
               
               {/* Footer Buttons */}
-              <div className="p-4 border-t border-gray-200 dark:border-zinc-800 flex gap-3">
+              <div className="p-4 border-t border-foreground/[0.08] flex gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     setShowAddressModal(false);
                     setSelectedNewAddress(null);
                   }}
-                  className="flex-1 h-11 text-sm font-semibold border-2 border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-gray-700 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+                  className="flex-1 h-11 text-sm font-semibold border-2 border-foreground/15 rounded-lg bg-card text-foreground/80 hover:bg-foreground/[0.04] transition-colors"
                 >
                   Cancel
                 </button>

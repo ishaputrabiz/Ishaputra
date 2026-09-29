@@ -1,6 +1,5 @@
 // ============================================
-// PURCHASE SUMMARY — Premium Jewellery Journey
-// Track your investment and order history
+// WALLET — loyalty tier, spend, gift cards and recent orders
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -19,14 +18,25 @@ import {
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { SmartImage } from "@/components/ui/smart-image";
+import { BRAND } from '@/config/brand';
 
-// Loyalty Tier Configuration
-const LOYALTY_TIERS = [
-  { name: 'Silver Member', min: 0, max: 50000, icon: Award, color: 'text-gray-600', bgColor: 'bg-gradient-to-br from-gray-50 to-gray-100', borderColor: 'border-gray-300', badgeBg: 'bg-gray-500' },
-  { name: 'Gold Member', min: 50000, max: 100000, icon: Crown, color: 'text-highlight', bgColor: 'bg-gradient-to-br from-yellow-50 to-highlight/15', borderColor: 'border-yellow-400', badgeBg: 'bg-gradient-to-r from-yellow-500 to-highlight' },
-  { name: 'Platinum Member', min: 100000, max: 175000, icon: Diamond, color: 'text-blue-600', bgColor: 'bg-gradient-to-br from-blue-50 to-indigo-100', borderColor: 'border-blue-400', badgeBg: 'bg-gradient-to-r from-blue-500 to-indigo-600' },
-  { name: 'Premium Member', min: 175000, max: 300000, icon: Crown, color: 'text-purple-600', bgColor: 'bg-gradient-to-br from-purple-50 to-pink-100', borderColor: 'border-purple-400', badgeBg: 'bg-gradient-to-r from-purple-600 to-pink-600', isPremium: true },
+const HEADING = { fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" };
+
+// Loyalty tiers: names and thresholds from the brand config, look from here
+// (metal tones on the charcoal card, copper for the top tier).
+const TIER_STYLE = [
+  { icon: Award, accent: 'hsl(30 6% 68%)' },
+  { icon: Crown, accent: 'hsl(var(--highlight-soft))' },
+  { icon: Diamond, accent: 'hsl(36 24% 86%)' },
+  { icon: Crown, accent: 'hsl(var(--primary))' },
 ];
+const LOYALTY_TIERS = BRAND.loyaltyTiers.map((tier, i, all) => ({
+  ...tier,
+  ...TIER_STYLE[Math.min(i, TIER_STYLE.length - 1)],
+  isPremium: i === all.length - 1,
+}));
+/** Spend at which the progress bar is full: the top tier's threshold. */
+const PROGRAMME_TOP = LOYALTY_TIERS[LOYALTY_TIERS.length - 1].min;
 
 interface OrderStats {
   totalSpent: number;
@@ -200,60 +210,64 @@ const PurchaseSummary: React.FC = () => {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center tx-paper">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-900">
+      <div className="min-h-screen flex items-center justify-center tx-paper">
         <div className="text-center">
-          <p className="text-gray-600 dark:text-zinc-400 mb-4">Please log in to view your purchase summary</p>
-          <Button onClick={() => navigate('/account')}>Go to Account</Button>
+          <p className="text-muted-foreground mb-4">Please log in to view your purchase summary</p>
+          <Button onClick={() => navigate('/account')} className="btn-copper h-auto py-3 text-[11px] font-bold rounded-[6px]">Go to account</Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900" style={{ fontFamily: "var(--font-body)" }}>
+    <div className="min-h-screen tx-paper">
       <div className="hidden lg:block"><Header /></div>
 
       {/* Desktop Back Button */}
-      <div className="hidden lg:block bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800">
+      <div className="hidden lg:block border-b border-foreground/[0.08]">
         <div className="max-w-4xl mx-auto px-4">
           <button
             onClick={() => navigate('/account')}
-            className="flex items-center gap-2 py-3 text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:text-zinc-100 transition-colors"
+            className="flex items-center gap-1.5 py-3 text-muted-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Back to Account</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.18em]">Back to account</span>
           </button>
         </div>
       </div>
 
       {/* Mobile Header */}
-      <div className="lg:hidden sticky top-0 z-30 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full">
-          <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-zinc-300" />
+      <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-foreground/[0.08] px-4 py-3 flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="p-1 hover:bg-foreground/[0.06] rounded-full">
+          <ArrowLeft className="w-5 h-5 text-foreground/80" />
         </button>
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">My Wellness Journey</h1>
+        <h1 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Wallet & rewards</h1>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 lg:py-10 pb-24 lg:pb-10">
+        <div className="hidden lg:block mb-8">
+          <p className="eyebrow-no mb-3"><span>Your wallet</span></p>
+          <h1 className="text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Wallet & rewards</h1>
+        </div>
         
         {/* ─── LOYALTY TIER CARD ──────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`${currentTier.bgColor} ${currentTier.borderColor} border-2 rounded-2xl p-6 mb-6 relative overflow-hidden shadow-sm`}
+          className="tx-slate tx-contour rounded-[var(--radius-panel)] p-6 mb-6 relative overflow-hidden shadow-[var(--shadow-panel)] text-charcoal-foreground"
         >
-          <div className="absolute top-0 right-0 opacity-10">
+          <div className="absolute top-0 right-0 opacity-[0.07]">
             <TierIcon className="w-32 h-32 -translate-y-8 translate-x-8" />
           </div>
-          
+
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-4">
               <div className="relative">
@@ -262,51 +276,57 @@ const PurchaseSummary: React.FC = () => {
                     <Crown className="w-5 h-5 text-highlight fill-highlight-soft drop-shadow-lg" />
                   </div>
                 )}
-                <div className={`w-12 h-12 ${currentTier.badgeBg} rounded-full flex items-center justify-center text-white border-2 ${currentTier.borderColor} shadow-md`}>
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-charcoal border border-white/20 shadow-md"
+                  style={{ background: currentTier.accent }}
+                >
                   <TierIcon className="w-6 h-6" />
                 </div>
               </div>
               <div>
-                <p className="text-xs text-gray-600 dark:text-zinc-400">Your Status</p>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-zinc-100">{currentTier.name}</h2>
+                <p className="eyebrow-no on-dark !text-[9px]"><span>Your status</span></p>
+                <h2 className="text-xl font-semibold mt-1" style={{ ...HEADING, color: currentTier.accent }}>{currentTier.name}</h2>
               </div>
             </div>
 
             {/* Tier Stages Display */}
             <div className="space-y-3 mt-4">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-600 dark:text-zinc-400 font-medium">Membership Progress</span>
-                <span className="text-gray-900 dark:text-zinc-100 font-semibold">₹{stats.totalSpent.toLocaleString('en-IN')} / ₹3,00,000</span>
+                <span className="text-charcoal-foreground/60 font-medium">Membership progress</span>
+                <span className="font-semibold tabular-nums">₹{stats.totalSpent.toLocaleString('en-IN')} / ₹{PROGRAMME_TOP.toLocaleString('en-IN')}</span>
               </div>
 
               {/* All Stages with Progress Bar */}
               <div className="relative py-2">
                 {/* Progress Bar connecting badges */}
-                <div className="absolute top-[22px] left-[5%] right-[5%] h-2 bg-white/50 backdrop-blur rounded-full shadow-inner border border-gray-200 dark:border-zinc-800">
-                  <motion.div 
+                <div className="absolute top-[26px] left-[12.5%] right-[12.5%] h-1 bg-white/10 rounded-full">
+                  <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${Math.min((stats.totalSpent / 300000) * 100, 100)}%` }}
+                    animate={{ width: `${Math.min((stats.totalSpent / PROGRAMME_TOP) * 100, 100)}%` }}
                     transition={{ duration: 1.5, ease: "easeOut" }}
-                    className="h-full bg-gradient-to-r from-gray-500 via-yellow-500 via-blue-500 to-purple-600 shadow-sm rounded-full"
+                    className="h-full bg-gradient-to-r from-highlight-soft to-primary rounded-full"
                   />
                 </div>
 
                 {/* Stage Indicators */}
                 <div className="relative flex justify-between items-start">
-                  {LOYALTY_TIERS.map((tier, index) => {
+                  {LOYALTY_TIERS.map((tier) => {
                     const TierBadgeIcon = tier.icon;
                     const isCurrentTier = currentTier.name === tier.name;
                     const isCompleted = stats.totalSpent >= tier.min;
-                    
+
                     return (
                       <div key={tier.name} className="flex flex-col items-center flex-1 z-10">
-                        <div className={`relative w-11 h-11 rounded-full flex items-center justify-center transition-all ${
-                          isCurrentTier 
-                            ? `${tier.badgeBg} text-white border-[3px] border-white shadow-xl scale-110` 
-                            : isCompleted
-                            ? `${tier.badgeBg} text-white border-[3px] border-white shadow-md`
-                            : 'bg-white border-[3px] border-gray-300 text-gray-400'
-                        }`}>
+                        <div
+                          className={`relative w-11 h-11 rounded-full flex items-center justify-center transition-all ${
+                            isCurrentTier
+                              ? 'text-charcoal ring-2 ring-offset-2 ring-offset-charcoal ring-white/40 scale-110 shadow-xl'
+                              : isCompleted
+                              ? 'text-charcoal shadow-md'
+                              : 'bg-charcoal border border-white/15 text-white/35'
+                          }`}
+                          style={isCompleted ? { background: tier.accent } : undefined}
+                        >
                           {tier.isPremium && isCurrentTier && (
                             <div className="absolute -top-2 left-1/2 -translate-x-1/2">
                               <Crown className="w-4 h-4 text-highlight fill-highlight-soft drop-shadow" />
@@ -314,11 +334,12 @@ const PurchaseSummary: React.FC = () => {
                           )}
                           <TierBadgeIcon className="w-5 h-5" />
                         </div>
-                        <p className={`text-[10px] mt-2 text-center font-medium leading-tight ${
-                          isCurrentTier ? 'text-gray-900' : 'text-gray-500'
+                        <p className={`text-[10px] mt-2.5 text-center font-bold uppercase tracking-[0.12em] leading-tight ${
+                          isCurrentTier ? 'text-charcoal-foreground' : 'text-charcoal-foreground/45'
                         }`}>
                           {tier.name.replace(' Member', '')}
                         </p>
+                        <p className="text-[10px] text-charcoal-foreground/40 tabular-nums">₹{tier.min.toLocaleString('en-IN')}</p>
                       </div>
                     );
                   })}
@@ -327,13 +348,13 @@ const PurchaseSummary: React.FC = () => {
 
               {/* Next Tier Info */}
               {nextTier ? (
-                <p className="text-xs text-gray-600 dark:text-zinc-400 font-medium text-center">
+                <p className="text-xs text-charcoal-foreground/70 font-medium text-center">
                   Spend ₹{remaining.toLocaleString('en-IN')} more to unlock {nextTier.name}
                 </p>
               ) : (
-                <div className="flex items-center justify-center gap-2 bg-white/60 backdrop-blur rounded-lg p-2 border border-purple-200">
-                  <Sparkles className="w-4 h-4 text-highlight" />
-                  <p className="text-xs text-gray-700 dark:text-zinc-300 font-medium">
+                <div className="flex items-center justify-center gap-2 bg-white/5 rounded-[8px] p-2 border border-highlight-soft/30">
+                  <Sparkles className="w-4 h-4 text-highlight-soft" />
+                  <p className="text-xs font-medium">
                     You've reached the highest tier!
                   </p>
                 </div>
@@ -342,61 +363,61 @@ const PurchaseSummary: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* ─── TOTAL INVESTMENT CARD ──────────────────── */}
+        {/* ─── TOTAL SPENT CARD ──────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-zinc-800 mb-6"
+          className="panel tx-sheet p-6 mb-6"
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md">
+              <div className="tx-slate w-10 h-10 rounded-[8px] flex items-center justify-center text-highlight-soft">
                 <TrendingUp className="w-5 h-5" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">Total Investment</h3>
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Total spent</h3>
             </div>
             <button 
               onClick={() => setShowAmount(!showAmount)} 
-              className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 dark:bg-zinc-800 rounded-full transition-colors"
+              className="p-2 hover:bg-foreground/[0.06] rounded-full transition-colors"
             >
-              {showAmount ? <Eye className="w-4 h-4 text-gray-500 dark:text-zinc-500" /> : <EyeOff className="w-4 h-4 text-gray-500 dark:text-zinc-500" />}
+              {showAmount ? <Eye className="w-4 h-4 text-muted-foreground" /> : <EyeOff className="w-4 h-4 text-muted-foreground" />}
             </button>
           </div>
 
           <div className="mb-6">
             <div className="flex items-baseline gap-1 mb-1">
-              <IndianRupee className="w-6 h-6 text-gray-700 dark:text-zinc-300 mt-1" />
-              <span className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              <IndianRupee className="w-6 h-6 text-primary mt-1" />
+              <span className="text-4xl font-semibold text-foreground tabular-nums" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
                 {showAmount ? stats.totalSpent.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '••••••'}
               </span>
             </div>
-            <p className="text-xs text-gray-600 dark:text-zinc-400 font-medium">From delivered orders only</p>
+            <p className="text-xs text-muted-foreground font-medium">From delivered orders only</p>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg flex items-center justify-center text-white mx-auto mb-2 shadow-md">
+              <div className="tx-slate w-12 h-12 rounded-[8px] flex items-center justify-center mx-auto mb-2 text-emerald-400">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-zinc-100">{stats.deliveredCount}</p>
-              <p className="text-xs text-gray-600 dark:text-zinc-400 font-medium">Delivered</p>
+              <p className="text-2xl font-semibold text-foreground tabular-nums" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>{stats.deliveredCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Delivered</p>
             </div>
             
             <div className="text-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-highlight/70 to-primary rounded-lg flex items-center justify-center text-white mx-auto mb-2 shadow-md">
+              <div className="tx-slate w-12 h-12 rounded-[8px] flex items-center justify-center mx-auto mb-2 text-highlight-soft">
                 <Clock className="w-6 h-6" />
               </div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-zinc-100">{stats.pendingCount}</p>
-              <p className="text-xs text-gray-600 dark:text-zinc-400 font-medium">Pending</p>
+              <p className="text-2xl font-semibold text-foreground tabular-nums" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>{stats.pendingCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Pending</p>
             </div>
             
             <div className="text-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-primary rounded-lg flex items-center justify-center text-white mx-auto mb-2 shadow-md">
+              <div className="tx-slate w-12 h-12 rounded-[8px] flex items-center justify-center mx-auto mb-2 text-red-400">
                 <XCircle className="w-6 h-6" />
               </div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-zinc-100">{stats.cancelledCount}</p>
-              <p className="text-xs text-gray-600 dark:text-zinc-400 font-medium">Cancelled</p>
+              <p className="text-2xl font-semibold text-foreground tabular-nums" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>{stats.cancelledCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Cancelled</p>
             </div>
           </div>
         </motion.div>
@@ -405,7 +426,7 @@ const PurchaseSummary: React.FC = () => {
         <div className="mb-6">
           <Button 
             variant="outline"
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 hover:from-blue-100 hover:to-indigo-100 transition-all shadow-sm"
+            className="w-full h-12 flex items-center justify-center gap-2 rounded-[6px] border-primary/50 bg-transparent text-primary hover:bg-primary/10 hover:text-primary text-[11px] font-bold uppercase tracking-[0.16em] transition-all"
             onClick={() => navigate('/products')}
           >
             <ShoppingBag className="w-4 h-4" />
@@ -418,17 +439,17 @@ const PurchaseSummary: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="bg-gradient-to-br from-white to-pink-50 rounded-2xl p-6 shadow-sm border border-pink-200 mb-6"
+          className="panel tx-sheet p-6 mb-6"
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-primary rounded-lg flex items-center justify-center text-white shadow-md">
+              <div className="tx-slate w-10 h-10 rounded-[8px] flex items-center justify-center text-highlight-soft">
                 <Gift className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">Gift Cards</h3>
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Gift cards</h3>
                 {totalGiftBalance > 0 && (
-                  <p className="text-xs text-green-600 font-medium">₹{totalGiftBalance.toLocaleString('en-IN')} available</p>
+                  <p className="text-xs text-primary font-medium">₹{totalGiftBalance.toLocaleString('en-IN')} available</p>
                 )}
               </div>
             </div>
@@ -436,15 +457,15 @@ const PurchaseSummary: React.FC = () => {
 
           {giftCardsLoading ? (
             <div className="flex justify-center py-6">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-pink-500"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
           ) : giftCards.length === 0 ? (
             <div className="text-center py-6">
-              <div className="w-14 h-14 bg-gray-50 dark:bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Gift className="w-7 h-7 text-gray-300" />
+              <div className="w-14 h-14 bg-foreground/[0.03] rounded-full flex items-center justify-center mx-auto mb-3">
+                <Gift className="w-7 h-7 text-muted-foreground/60" />
               </div>
-              <p className="text-sm font-medium text-gray-600 dark:text-zinc-400">No gift cards yet</p>
-              <p className="text-xs text-gray-400 dark:text-zinc-500 mt-1">Gift cards from the store will appear here</p>
+              <p className="text-sm font-medium text-muted-foreground">No gift cards yet</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Gift cards from the store will appear here</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -456,62 +477,62 @@ const PurchaseSummary: React.FC = () => {
                 return (
                   <div 
                     key={card.id} 
-                    className={`relative overflow-hidden rounded-xl border-2 p-4 transition-all ${
+                    className={`relative overflow-hidden rounded-[10px] border-2 p-4 transition-all ${
                       expired || fullyUsed 
-                        ? 'border-gray-200 bg-gray-50 opacity-60' 
-                        : 'border-pink-200 bg-gradient-to-r from-pink-50 to-purple-50'
+                        ? 'border-foreground/[0.08] bg-foreground/[0.03] opacity-60' 
+                        : 'border-primary/30 bg-primary/[0.05]'
                     }`}
                   >
                     {/* Decorative circles */}
-                    <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white dark:bg-zinc-900 rounded-full" />
-                    <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white dark:bg-zinc-900 rounded-full" />
+                    <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-card rounded-full" />
+                    <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-card rounded-full" />
 
                     <div className="relative">
                       {/* Header row */}
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <div className="flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-pink-600" />
-                            <span className="text-xs font-bold text-gray-700 dark:text-zinc-300 tracking-wider font-mono">{card.code}</span>
+                            <CreditCard className="w-4 h-4 text-primary" />
+                            <span className="text-xs font-bold text-foreground/80 tracking-wider font-mono">{card.code}</span>
                           </div>
                           {card.description && (
-                            <p className="text-xs text-gray-500 dark:text-zinc-500 mt-1">{card.description}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{card.description}</p>
                           )}
                         </div>
                         <div className="text-right">
                           {expired ? (
                             <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Expired</span>
                           ) : fullyUsed ? (
-                            <span className="text-[10px] bg-gray-200 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400 px-2 py-0.5 rounded-full font-medium">Fully Used</span>
+                            <span className="text-[10px] bg-foreground/10 text-muted-foreground px-2 py-0.5 rounded-full font-medium">Fully Used</span>
                           ) : (
-                            <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Active</span>
+                            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Active</span>
                           )}
                         </div>
                       </div>
 
                       {/* Amount */}
                       <div className="flex items-baseline gap-1 mb-2">
-                        <span className="text-xl font-bold text-gray-900 dark:text-zinc-100">₹{card.remainingAmount.toLocaleString('en-IN')}</span>
+                        <span className="text-xl font-bold text-foreground">₹{card.remainingAmount.toLocaleString('en-IN')}</span>
                         {card.usedAmount > 0 && (
-                          <span className="text-xs text-gray-400 dark:text-zinc-500">/ ₹{card.amount.toLocaleString('en-IN')}</span>
+                          <span className="text-xs text-muted-foreground/70">/ ₹{card.amount.toLocaleString('en-IN')}</span>
                         )}
                       </div>
 
                       {/* Usage bar */}
                       {card.usedAmount > 0 && (
                         <div className="mb-2">
-                          <div className="h-1.5 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                          <div className="h-1.5 bg-foreground/10 rounded-full overflow-hidden">
                             <div 
-                              className="h-full bg-pink-500 rounded-full transition-all"
+                              className="h-full bg-primary rounded-full transition-all"
                               style={{ width: `${usagePercent}%` }}
                             />
                           </div>
-                          <p className="text-[10px] text-gray-400 dark:text-zinc-500 mt-1">₹{card.usedAmount.toLocaleString('en-IN')} used</p>
+                          <p className="text-[10px] text-muted-foreground/70 mt-1">₹{card.usedAmount.toLocaleString('en-IN')} used</p>
                         </div>
                       )}
 
                       {/* Expiry */}
-                      <div className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-zinc-500">
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70">
                         <Clock className="w-3 h-3" />
                         <span>Expires {new Date(card.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                       </div>
@@ -528,19 +549,19 @@ const PurchaseSummary: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-gradient-to-br from-white to-purple-50 rounded-2xl p-6 shadow-sm border border-purple-200 mb-6"
+          className="panel tx-sheet p-6 mb-6"
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md">
+              <div className="tx-slate w-10 h-10 rounded-[8px] flex items-center justify-center text-highlight-soft">
                 <Calendar className="w-5 h-5" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">Recent Orders</h3>
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Recent orders</h3>
             </div>
             {stats.deliveredCount > 0 && (
               <button 
-                onClick={() => navigate('/orders')}
-                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                onClick={() => navigate('/account/orders')}
+                className="link-arrow"
               >
                 View All
               </button>
@@ -561,16 +582,16 @@ const PurchaseSummary: React.FC = () => {
             
             return recentDeliveredOrders.length === 0 ? (
               <div className="text-center py-8">
-                <div className="w-14 h-14 bg-gray-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <Package className="w-7 h-7 text-gray-400 dark:text-zinc-500" />
+                <div className="w-14 h-14 bg-foreground/[0.06] rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <Package className="w-7 h-7 text-muted-foreground/70" />
                 </div>
-                <p className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">No delivered orders this month</p>
-                <p className="text-xs text-gray-400 dark:text-zinc-500 mb-4">Recent delivered orders will appear here</p>
+                <p className="text-sm font-medium text-foreground/80 mb-1">No delivered orders this month</p>
+                <p className="text-xs text-muted-foreground/70 mb-4">Recent delivered orders will appear here</p>
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => navigate('/products')}
-                  className="text-sm"
+                  className="h-10 rounded-[6px] border-primary/50 text-primary hover:bg-primary/10 hover:text-primary text-[11px] font-bold uppercase tracking-[0.16em]"
                 >
                   <ShoppingBag className="w-4 h-4 mr-2" />
                   Browse Collection
@@ -588,11 +609,11 @@ const PurchaseSummary: React.FC = () => {
                   return (
                     <div 
                       key={order.id} 
-                      className="flex gap-3 p-3 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 hover:border-purple-300 hover:shadow-md transition-all cursor-pointer"
+                      className="flex gap-3 p-3 bg-card rounded-[10px] border border-foreground/[0.08] hover:border-primary/35 hover:shadow-[var(--shadow-card-hover)] transition-all cursor-pointer"
                       onClick={() => navigate(`/account/orders/${order.id}`)}
                     >
                       {/* Product Image */}
-                      <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-zinc-800">
+                      <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-foreground/[0.06]">
                         {firstItem?.image ? (
                           <SmartImage 
                             src={firstItem.image} 
@@ -600,22 +621,22 @@ const PurchaseSummary: React.FC = () => {
                             className="w-full h-full object-cover" preset="thumb" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Package className="w-6 h-6 text-gray-400 dark:text-zinc-500" />
+                            <Package className="w-6 h-6 text-muted-foreground/70" />
                           </div>
                         )}
                       </div>
 
                       {/* Order Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100 truncate mb-1">
+                        <p className="text-sm font-semibold text-foreground truncate mb-1">
                           {displayTitle}
                         </p>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                             {order.status}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-400 dark:text-zinc-500">
+                        <p className="text-xs text-muted-foreground/70">
                           {order.createdAt?.toDate?.()?.toLocaleDateString('en-IN', { 
                             day: 'numeric', 
                             month: 'short',
@@ -636,13 +657,13 @@ const PurchaseSummary: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mt-6 shadow-sm"
+          className="tx-slate rounded-[var(--radius-card)] p-5 mt-6 text-charcoal-foreground"
         >
           <div className="flex gap-3">
-            <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <Sparkles className="w-5 h-5 text-highlight-soft flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-blue-900 mb-1">Exclusive Member Benefits</p>
-              <p className="text-xs text-blue-700">
+              <p className="text-sm font-semibold mb-1" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Member benefits</p>
+              <p className="text-xs text-charcoal-foreground/65 leading-relaxed">
                 Unlock special offers, early access to new collections, and personalized recommendations as you progress through loyalty tiers.
               </p>
             </div>

@@ -168,8 +168,8 @@ const VerifyEmail = () => {
   // Show loading while checking auth
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
-        <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+      <div className="min-h-screen flex items-center justify-center tx-paper">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
@@ -179,17 +179,17 @@ const VerifyEmail = () => {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 flex flex-col items-center justify-center p-4 font-poppins">
+    <div className="min-h-[100dvh] tx-paper flex flex-col items-center justify-center p-4">
       {/* Brand Logo */}
       <div className="mb-6">
         <img src={logo} alt="Ishaputra Botanicals" className="h-12 md:h-14 w-auto" />
       </div>
 
-      <div className="relative w-full max-w-md bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-2xl p-8 sm:p-10">
+      <div className="relative w-full max-w-md bg-white/80 backdrop-blur-sm rounded-[var(--radius-card)] p-8 sm:p-10">
         {/* Close Button - just dismisses the card, no navigation */}
         <button
           onClick={() => setDismissed(true)}
-          className="absolute top-5 right-5 text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:text-zinc-400 transition-colors"
+          className="absolute top-5 right-5 text-muted-foreground/70 hover:text-foreground transition-colors"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -199,7 +199,7 @@ const VerifyEmail = () => {
 
         {/* Email Icon with Purple Circle */}
         <div className="flex justify-center mb-6">
-          <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">
+          <div className="relative w-28 h-28 rounded-full bg-primary flex items-center justify-center shadow-lg">
             {/* Pink dot indicator */}
             <div className="absolute top-2 right-2 w-4 h-4 bg-pink-500 rounded-full animate-pulse" />
             {/* Mail icon */}
@@ -209,18 +209,18 @@ const VerifyEmail = () => {
 
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100 mb-3">
+          <h1 className="text-2xl font-semibold text-foreground mb-3" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
             Verify Your Email
           </h1>
-          <p className="text-gray-600 dark:text-zinc-400 text-sm leading-relaxed">
+          <p className="text-muted-foreground text-sm leading-relaxed">
             Your email address is not verified yet. Please check your inbox and click the verification link.
           </p>
         </div>
 
         {/* Email Display */}
         <div className="mb-6 text-center">
-          <p className="text-sm text-gray-500 dark:text-zinc-500 mb-2">Verification email sent to:</p>
-          <p className="text-blue-600 font-semibold text-base break-all">
+          <p className="text-sm text-muted-foreground mb-2">Verification email sent to:</p>
+          <p className="text-primary font-semibold text-base break-all">
             {userEmail}
           </p>
         </div>
@@ -232,7 +232,7 @@ const VerifyEmail = () => {
             variant="outline"
             onClick={handleResendVerification}
             disabled={resendCountdown > 0 || resendLoading}
-            className="w-full h-12 bg-white dark:bg-zinc-900 border border-blue-300 text-blue-600 hover:bg-blue-50 rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full h-12 bg-card border border-primary/50 text-primary hover:bg-primary/10 rounded-[10px] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {resendLoading ? (
               <>
@@ -256,7 +256,7 @@ const VerifyEmail = () => {
           <Button
             onClick={handleVerifyCheck}
             disabled={verifyLoading}
-            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-all disabled:opacity-50"
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-white rounded-[10px] font-semibold transition-all disabled:opacity-50"
           >
             {verifyLoading ? (
               <>
@@ -286,7 +286,7 @@ const VerifyEmail = () => {
         <div className="text-center">
           <button
             onClick={handleLogout}
-            className="text-sm text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:text-zinc-300 transition-colors underline"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors underline"
           >
             Logout and try different account
           </button>
