@@ -17,6 +17,7 @@ import {
   Clock,
   Percent,
   IndianRupee,
+  Coins,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,6 +55,8 @@ import {
 } from '@/services/siteSettingsService';
 
 import { describeError } from '@/lib/errorMessage';
+import { getRewardSettings, saveRewardSettings } from '@/services/rewardsService';
+import { DEFAULT_REWARD_SETTINGS, type RewardSettings } from '@/lib/rewards';
 
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -799,6 +802,88 @@ const SupportTab = () => {
 };
 
 // ─── MAIN PAGE ───────────────────────────────────────────────────────────────
+// ─── REWARDS TAB ─────────────────────────────────────────────────────────────
+// Loyalty points + wallet cashback rules (src/lib/rewards.ts). Read by the
+// storefront and by api/create-order.ts + api/notify-order.ts.
+const RewardsTab = () => {
+  const [s, setS] = useState<RewardSettings | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getRewardSettings()
+      .then(setS)
+      .catch(() => setS(DEFAULT_REWARD_SETTINGS));
+  }, []);
+
+  if (!s) {
+    return (
+      <div className="py-12 grid place-items-center">
+        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
+      </div>
+    );
+  }
+
+  const field = (
+    key: 'pointsPer100' | 'pointValue' | 'unlockDays' | 'maxPointsPercent',
+    label: string,
+    hint: string,
+    step = 1,
+  ) => (
+    <div>
+      <Label className="text-sm">{label}</Label>
+      <Input
+        type="number"
+        step={step}
+        min={0}
+        value={s[key]}
+        onChange={(e) => setS({ ...s, [key]: Number(e.target.value) })}
+        className="mt-1"
+      />
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{hint}</p>
+    </div>
+  );
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await saveRewardSettings(s);
+      toast.success('Reward settings saved');
+    } catch (err) {
+      toast.error(describeError(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Section
+      title="Loyalty points & cashback"
+      subtitle="Placeholder values until the client confirms its loyalty rules."
+      icon={Coins}
+    >
+      <div className="flex items-center justify-between gap-4 mb-5">
+        <div>
+          <p className="text-sm font-medium text-gray-900 dark:text-white">Rewards on</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Off hides the checkout toggles and stops new points. Balances are kept.
+          </p>
+        </div>
+        <Switch checked={s.enabled} onCheckedChange={(v) => setS({ ...s, enabled: v })} />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+        {field('pointsPer100', 'Points per ₹100 spent', 'On products paid for, once the order is delivered.')}
+        {field('pointValue', 'Value of 1 point (₹)', 'What a point is worth at checkout.', 0.5)}
+        {field('unlockDays', 'Days until points unlock', 'Match the return window.')}
+        {field('maxPointsPercent', 'Max % of products payable with points', 'Wallet cashback has no cap.')}
+      </div>
+      <Button onClick={save} disabled={saving} className="gap-2">
+        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+        Save
+      </Button>
+    </Section>
+  );
+};
+
 const AdminCommerceSettings = () => {
   return (
     <div className="admin-panel max-w-5xl mx-auto p-4 md:p-8">
@@ -807,7 +892,7 @@ const AdminCommerceSettings = () => {
           Commerce Settings
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Manage coupons, delivery, GST, and customer support — applied site-wide at checkout.
+          Manage delivery, GST, customer support and rewards — applied site-wide at checkout.
         </p>
       </div>
 
@@ -819,6 +904,9 @@ const AdminCommerceSettings = () => {
           <TabsTrigger value="support" className="gap-1.5">
             <HeadphonesIcon className="w-4 h-4" /> Support
           </TabsTrigger>
+          <TabsTrigger value="rewards" className="gap-1.5">
+            <Coins className="w-4 h-4" /> Rewards
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="delivery">
@@ -826,6 +914,9 @@ const AdminCommerceSettings = () => {
         </TabsContent>
         <TabsContent value="support">
           <SupportTab />
+        </TabsContent>
+        <TabsContent value="rewards">
+          <RewardsTab />
         </TabsContent>
       </Tabs>
     </div>

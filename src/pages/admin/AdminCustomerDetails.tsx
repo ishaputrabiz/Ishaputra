@@ -20,6 +20,7 @@ import { getProduct } from '@/services/productService';
 import { getUserWishlist } from '@/services/wishlistService';
 import { UIProduct, adaptFirebaseToUI } from '@/lib/productAdapter';
 import { SmartImage } from "@/components/ui/smart-image";
+import { RewardsAdminPanel } from '@/components/admin/RewardsAdminPanel';
 
 interface CustomerOrder {
   id: string;
@@ -228,6 +229,8 @@ const AdminCustomerDetails = () => {
           </div>
         </div>
       </div>
+
+      {customerId && <RewardsAdminPanel customerId={customerId} />}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.25fr)_360px]">
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">

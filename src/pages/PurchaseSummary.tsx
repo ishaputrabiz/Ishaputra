@@ -19,6 +19,7 @@ import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore
 import { db } from '@/config/firebase';
 import { SmartImage } from "@/components/ui/smart-image";
 import { BRAND } from '@/config/brand';
+import { RewardsWalletCard } from '@/components/rewards/RewardsWalletCard';
 
 const HEADING = { fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" };
 
@@ -362,6 +363,9 @@ const PurchaseSummary: React.FC = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* ─── POINTS & CASHBACK ──────────────────── */}
+        <RewardsWalletCard uid={user.uid} />
 
         {/* ─── TOTAL SPENT CARD ──────────────────── */}
         <motion.div

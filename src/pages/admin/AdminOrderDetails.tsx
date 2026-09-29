@@ -15,6 +15,7 @@ import {
   Clock,
   Receipt,
   ExternalLink,
+  Coins,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { reconcileOrderRewards } from '@/services/rewardsService';
 import { subscribeToDeliveryBoys, DeliveryBoy } from '@/services/deliveryBoyService';
 import { DELIVERY_PARTNERS_ENABLED } from '@/config/features';
 import {
@@ -625,6 +627,18 @@ const AdminOrderDetails = () => {
               <span>-{formatPrice(order.discount || order.couponDiscount || 0)}</span>
             </div>
           )}
+          {(order.pointsUsed || 0) > 0 && (
+            <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+              <span>Points ({order.pointsUsed})</span>
+              <span>-{formatPrice(order.pointsUsed || 0)}</span>
+            </div>
+          )}
+          {(order.cashbackUsed || 0) > 0 && (
+            <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+              <span>Wallet cashback</span>
+              <span>-{formatPrice(order.cashbackUsed || 0)}</span>
+            </div>
+          )}
           <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 text-base font-bold text-gray-900 dark:border-zinc-800 dark:text-zinc-100">
             <span>Total</span>
             <span className="text-highlight">{formatPrice(order.total || 0)}</span>
@@ -635,6 +649,25 @@ const AdminOrderDetails = () => {
               {order.couponDescription ? ` — ${order.couponDescription}` : ''}
             </p>
           )}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-zinc-800">
+            <span className="inline-flex items-center gap-1.5">
+              <Coins className="h-3.5 w-3.5" />
+              {(order.pointsEarned || 0) > 0
+                ? `${order.pointsEarned} points earned on delivery`
+                : 'Points are earned when the order is delivered'}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const r = await reconcileOrderRewards(order.id);
+                if (r.ok) toast.success('Rewards are in line with this order');
+                else toast.error(`Could not recalculate rewards: ${r.detail || 'unknown error'}`);
+              }}
+            >
+              Recalculate rewards
+            </Button>
+          </div>
         </div>
       </div>
 
