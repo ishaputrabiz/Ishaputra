@@ -74,34 +74,37 @@ service cloud.firestore {
         allow write: if isAdmin();
       }
 
-      // --- WALLET (subcollection) ---
-      // Balance is READ-ONLY for clients. Only server/admin can modify.
-      // In production, replace client writes with Cloud Functions.
+      // --- LEGACY WALLET (unused) ---
+      // Admin-only writes: the old rules let a customer create and update their
+      // own balance, transactions and rewards.
       match /wallets/{walletId} {
         allow read: if isOwner(userId) || isAdmin();
-        // Allow create for wallet initialization
-        allow create: if isOwner(userId) || isAdmin();
-        // Users can update their own wallet (for client-side atomic transactions)
-        // In production: restrict to Cloud Functions only
-        allow update: if isOwner(userId) || isAdmin();
-        allow delete: if false; // NEVER delete wallets
+        allow create, update: if isAdmin();
+        allow delete: if false;
       }
-      
-      // --- TRANSACTIONS (append-only ledger) ---
       match /transactions/{txId} {
         allow read: if isOwner(userId) || isAdmin();
-        // Transactions can be created but NEVER edited or deleted
-        allow create: if isOwner(userId) || isAdmin();
-        allow update: if isAdmin(); // Only admin can update status (e.g., expire)
-        allow delete: if false; // Immutable transaction log
+        allow create, update: if isAdmin();
+        allow delete: if false;
       }
-      
-      // --- REWARDS ---
       match /rewards/{rewardId} {
         allow read: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId) || isAdmin();
-        allow update: if isOwner(userId) || isAdmin(); // For redemption
-        allow delete: if false; // Never delete reward entries
+        allow create, update: if isAdmin();
+        allow delete: if false;
+      }
+
+      // --- REWARD LEDGER (loyalty points + wallet cashback) ---
+      // Balance = sum of active entries (src/lib/rewards.ts). Customers only
+      // read. Admins add entries and may void one; the payment functions write
+      // through the Admin SDK. Entries are never otherwise edited or deleted.
+      match /rewardLedger/{entryId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isAdmin();
+        allow update: if isAdmin()
+          && resource.data.status == 'active'
+          && request.resource.data.status == 'void'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'voidedAt', 'voidedBy']);
+        allow delete: if false;
       }
       
       // --- PAYMENT METHODS (Razorpay ready) ---
