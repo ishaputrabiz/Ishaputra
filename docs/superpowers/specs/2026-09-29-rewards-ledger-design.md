@@ -75,7 +75,7 @@ The order gets `pointsUsed`, `cashbackUsed` and `pointsEarned`. The ledger is th
     - Updated only by an admin, and only `status` from `active` to `void`.
     - Never deleted.
 - **The server** writes through the Admin SDK, which bypasses the rules.
-- **Lock down the old wallet code:** the unused `wallets`, `transactions` and `rewards` subcollections become admin-only for writes. `src/services/walletService.ts` is removed; nothing imports it. The types still used by gift cards stay.
+- **Lock down the old wallet code:** the unused `wallets`, `transactions` and `rewards` subcollections become admin-only for writes. `src/services/walletService.ts` and `src/types/wallet.ts` are removed; nothing else imports them.
 
 ## Flows
 
@@ -91,10 +91,11 @@ The order gets `pointsUsed`, `cashbackUsed` and `pointsEarned`. The ledger is th
         - lower the amount charged;
         - write `{rw_uid, rw_points, rw_cashback}` into the Razorpay order `notes`.
     - The response includes `pointsApplied` and `cashbackApplied`.
-    - If the Admin SDK fails, it charges without redemption and returns `rewardsError`. The checkout then says "Rewards unavailable right now" and the order still goes through.
+    - Client-sent `notes` keys starting with `rw_` are dropped, so a browser can't fake them.
+    - If the Admin SDK fails, it returns 409 `rewards_unavailable` and charges nothing. The checkout turns the toggles off and says "Rewards unavailable right now"; the customer sees the full total before paying.
 3. **`POST /api/verify-payment`:**
     - After the signature checks out, it fetches the Razorpay order and reads its notes.
-    - It writes the spend entries (negative amounts) in a transaction, keyed by the Razorpay order ID.
+    - It writes the spend entries (negative amounts) with create-once IDs keyed by the Razorpay order ID.
     - If that write fails, it still returns `verified: true` with `rewardsPending: true`, and reconcile repairs it.
 4. **Order write (browser, unchanged path):** the order doc stores `pointsUsed` and `cashbackUsed` from the create-order response, along with the existing `razorpayOrderId`.
 5. **Reconcile:** `POST /api/notify-order` with `{ action: 'reconcile-rewards', orderId }`.
@@ -113,12 +114,13 @@ The order gets `pointsUsed`, `cashbackUsed` and `pointsEarned`. The ledger is th
 ## Shared logic
 
 `src/lib/rewards.ts` is pure and dependency-free, and is used by both the browser and the `api/` functions:
-- `summarise(entries, now)` gives available and pending per currency.
-- `redemption({ subtotalAfterCoupon, deliveryCharge, taxAmount, balances, settings, usePoints, useCashback })` gives `{ points, cashback, payable }`.
+- `normaliseRewardSettings(raw)` fills in defaults and clamps values.
+- `summariseRewards(entries, nowMs)` gives available and pending per currency.
+- `computeRedemption({ subtotal, couponDiscount, deliveryCharge, gstOnTop, balances, settings, usePoints, useCashback })` gives `{ points, pointsValue, cashback, payable }`.
 - `pointsForOrder(order, settings)` gives the points to earn.
 
 The `api/` files must stay standalone (CLAUDE.md: each imports nothing from `src/`):
-- `create-order.ts` gets a copy of `summarise` and `redemption`, and `notify-order.ts` gets a copy of `pointsForOrder`.
+- `create-order.ts` and `notify-order.ts` each get a copy of the whole core block.
 - Each copy sits between `// >>> rewards-core` and `// <<< rewards-core` markers.
 - A test checks that every marked block matches the same block in `src/lib/rewards.ts`.
 
@@ -127,13 +129,13 @@ The `api/` files must stay standalone (CLAUDE.md: each imports nothing from `src
 ## Error handling
 
 - A reward failure never blocks a payment or an order. The server charges without redemption, or repairs the ledger later through reconcile.
-- The spend is written in a transaction that recalculates the balance first. If the balance has dropped in the meantime (for example, a second tab), the spend is still written, because the payment is real. The balance may then go negative, and the admin panel highlights negative balances.
+- A spend is always recorded, because the payment is real. If the balance dropped in the meantime (for example, a second tab), it may go negative, and the admin panel highlights negative balances.
 - Every ledger write uses a deterministic ID with create-if-absent semantics.
 
 ## Testing
 
 - **Unit tests** use Node's built-in test runner (`node --test`, running TypeScript directly; no new dependency) and live in `tests/`. They cover:
-    - `summarise`, `redemption` (caps, discount order, the ₹1 minimum, rewards off) and `pointsForOrder`;
+    - `summariseRewards`, `computeRedemption` (caps, discount order, the ₹1 minimum, rewards off), `pointsForOrder` and `normaliseRewardSettings`;
     - the `api/` parity test above.
 - **Now, on the preview:**
     - Admin credits and debits points and cashback, and the wallet page and checkout toggles reflect them.
