@@ -15,8 +15,16 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  * coupons, silver rate) is server-controlled data.
  *
  * Body:    { items: [{ productId, quantity }], paymentMethod?, couponCode?,
+ *            usePoints?, useCashback?,
  *            currency?, receipt?, notes?, amount? (client's claim, checked) }
- * Returns: { order_id, amount, currency, key_id }
+ * Returns: { order_id, amount, currency, key_id, pointsApplied, cashbackApplied }
+ *
+ * Loyalty points / wallet cashback: when either flag is set the customer's
+ * private ledger is read with the Admin SDK (needs the Bearer ID token), the
+ * redemption is priced with the shared rules below, and the amounts are
+ * written into the Razorpay order notes (rw_uid / rw_points / rw_cashback),
+ * which api/verify-payment.ts turns into ledger entries after payment. If
+ * rewards cannot be priced safely the answer is 409 and nothing is charged.
  */
 
 const RAZORPAY_API_BASE = 'https://api.razorpay.com/v1';
@@ -74,6 +82,173 @@ function setCors(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
+
+// ── Loyalty points / wallet cashback ─────────────────────────────────────────
+// Verbatim copy of src/lib/rewards.ts (api/ files import nothing from src/).
+// tests/rewards-parity.test.ts fails if it drifts.
+
+// >>> rewards-core
+type RewardCurrency = 'points' | 'cashback';
+
+interface RewardSettings {
+  enabled: boolean;
+  /** Points earned per ₹100 paid for products. */
+  pointsPer100: number;
+  /** Rupee value of one point. */
+  pointValue: number;
+  /** Days after delivery before earned points can be spent (the return window). */
+  unlockDays: number;
+  /** Share of the product amount (after coupon) that points may cover, in percent. */
+  maxPointsPercent: number;
+}
+
+// TODO(client): placeholders until Ishaputra confirms its rules.
+const DEFAULT_REWARD_SETTINGS: RewardSettings = {
+  enabled: true,
+  pointsPer100: 1,
+  pointValue: 1,
+  unlockDays: 7,
+  maxPointsPercent: 20,
+};
+
+interface LedgerLike {
+  currency: RewardCurrency;
+  amount: number;
+  status: 'active' | 'void';
+  unlockAtMs: number;
+}
+
+interface RewardBalances {
+  points: { available: number; pending: number };
+  cashback: { available: number; pending: number };
+}
+
+function normaliseRewardSettings(raw: Partial<RewardSettings> | null | undefined): RewardSettings {
+  const num = (v: unknown, fallback: number, min: number, max: number) => {
+    const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+  };
+  const d = DEFAULT_REWARD_SETTINGS;
+  return {
+    enabled: raw?.enabled === undefined ? d.enabled : raw.enabled === true,
+    pointsPer100: num(raw?.pointsPer100, d.pointsPer100, 0, 100),
+    pointValue: num(raw?.pointValue, d.pointValue, 0, 100),
+    unlockDays: num(raw?.unlockDays, d.unlockDays, 0, 365),
+    maxPointsPercent: num(raw?.maxPointsPercent, d.maxPointsPercent, 0, 100),
+  };
+}
+
+function summariseRewards(entries: LedgerLike[], nowMs: number): RewardBalances {
+  const out: RewardBalances = {
+    points: { available: 0, pending: 0 },
+    cashback: { available: 0, pending: 0 },
+  };
+  for (const e of entries) {
+    if (e.status !== 'active') continue;
+    const bucket = out[e.currency];
+    if (!bucket) continue;
+    const amount = Number(e.amount) || 0;
+    if (e.unlockAtMs <= nowMs) bucket.available += amount;
+    else bucket.pending += amount;
+  }
+  return out;
+}
+
+interface RedemptionInput {
+  subtotal: number;
+  couponDiscount: number;
+  deliveryCharge: number;
+  gstOnTop: number;
+  balances: RewardBalances;
+  settings: RewardSettings;
+  usePoints: boolean;
+  useCashback: boolean;
+}
+
+interface Redemption {
+  points: number;
+  pointsValue: number;
+  cashback: number;
+  /** Left to pay; redemptions never take it below ₹1 (Razorpay's minimum). */
+  payable: number;
+}
+
+function computeRedemption(i: RedemptionInput): Redemption {
+  const s = i.settings;
+  const productsAfterCoupon = Math.max(0, i.subtotal - i.couponDiscount);
+  let payable = Math.max(0, productsAfterCoupon + i.deliveryCharge + i.gstOnTop);
+  let points = 0;
+  let pointsValue = 0;
+  let cashback = 0;
+  if (s.enabled && i.usePoints && s.pointValue > 0) {
+    const capRupees = Math.floor((productsAfterCoupon * s.maxPointsPercent) / 100);
+    const rupees = Math.max(0, Math.min(capRupees, Math.floor(payable - 1)));
+    const affordable = Math.floor(rupees / s.pointValue);
+    points = Math.max(0, Math.min(Math.floor(i.balances.points.available), affordable));
+    pointsValue = points * s.pointValue;
+    payable -= pointsValue;
+  }
+  if (s.enabled && i.useCashback) {
+    cashback = Math.max(0, Math.min(Math.floor(i.balances.cashback.available), Math.floor(payable - 1)));
+    payable -= cashback;
+  }
+  return { points, pointsValue, cashback, payable };
+}
+
+function pointsForOrder(
+  order: { total?: number; deliveryCharge?: number; taxAmount?: number; gstInclusive?: boolean },
+  s: RewardSettings,
+): number {
+  if (!s.enabled) return 0;
+  const tax = order.gstInclusive ? 0 : Number(order.taxAmount) || 0;
+  const base = (Number(order.total) || 0) - (Number(order.deliveryCharge) || 0) - tax;
+  return Math.max(0, Math.floor((base / 100) * s.pointsPer100));
+}
+// <<< rewards-core
+
+/**
+ * Price the customer's opted-in points/cashback. Needs the Admin SDK (the
+ * ledger is private), loaded only on this path so an ordinary checkout never
+ * depends on it. Throws when it cannot price safely; the caller answers 409.
+ */
+async function priceRewards(
+  req: VercelRequest,
+  input: Omit<RedemptionInput, 'balances' | 'settings'>,
+): Promise<Redemption & { uid: string }> {
+  const header = String(req.headers.authorization || '');
+  const idToken = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  if (!idToken) throw new Error('Sign in again to use your rewards');
+  const { default: admin } = await import('firebase-admin');
+  const app = admin.apps.length
+    ? admin.app()
+    : admin.initializeApp({
+        credential: admin.credential.cert(
+          JSON.parse(Buffer.from(process.env.FIREBASE_ADMIN_SDK_BASE64 || '', 'base64').toString('utf8')),
+        ),
+      });
+  const { uid } = await admin.auth(app).verifyIdToken(idToken);
+  const db = admin.firestore(app);
+  const [settingsSnap, ledgerSnap] = await Promise.all([
+    db.collection('siteSettings').doc('rewards').get(),
+    db.collection('users').doc(uid).collection('rewardLedger').get(),
+  ]);
+  const settings = normaliseRewardSettings(
+    settingsSnap.exists ? (settingsSnap.data() as Partial<RewardSettings>) : null,
+  );
+  const balances = summariseRewards(
+    ledgerSnap.docs.map((d) => {
+      const x = d.data();
+      return {
+        currency: x.currency === 'cashback' ? 'cashback' : 'points',
+        amount: Number(x.amount) || 0,
+        status: x.status === 'void' ? 'void' : 'active',
+        unlockAtMs: typeof x.unlockAt?.toMillis === 'function' ? x.unlockAt.toMillis() : 0,
+      } as LedgerLike;
+    }),
+    Date.now(),
+  );
+  return { uid, ...computeRedemption({ ...input, balances, settings }) };
 }
 
 // ── Pricing helpers: must mirror src/hooks/useCheckoutPricing.ts ─────────────
@@ -216,6 +391,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     paymentMethod?: string;
     shippingState?: string;
     couponCode?: string;
+    /** Spend available loyalty points (capped by the shop's rules). */
+    usePoints?: boolean;
+    /** Spend available wallet cashback. */
+    useCashback?: boolean;
     amount?: unknown;
     currency?: unknown;
     receipt?: unknown;
@@ -250,6 +429,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   let serverTotal: number;
+  // Kept for the rewards step, which prices after the coupon and delivery.
+  let parts = { subtotal: 0, discount: 0, deliveryCharge: 0, gstAmount: 0 };
   try {
     // ── Settings (admin-managed documents, never client-supplied) ──
     const [deliveryDoc, gstDoc, silverDoc] = await Promise.all([
@@ -342,12 +523,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const deliveryCharge = computeDeliveryCharge(subtotal, delivery, products, destState);
     const gstAmount = computeGstOnTop(subtotal, gst);
 
+    parts = { subtotal, discount, deliveryCharge, gstAmount };
     serverTotal = Math.max(0, subtotal + deliveryCharge + gstAmount - discount);
   } catch (error: unknown) {
     return res.status(500).json({
       error: 'Could not price this order',
       detail: error instanceof Error ? error.message : 'Unknown pricing error',
     });
+  }
+
+  // ── Loyalty points / wallet cashback (only when the customer opted in) ──
+  let pointsApplied = 0;
+  let cashbackApplied = 0;
+  let rewardNotes: Record<string, string> = {};
+  if (body.usePoints === true || body.useCashback === true) {
+    try {
+      const r = await priceRewards(req, {
+        subtotal: parts.subtotal,
+        couponDiscount: parts.discount,
+        deliveryCharge: parts.deliveryCharge,
+        gstOnTop: parts.gstAmount,
+        usePoints: body.usePoints === true,
+        useCashback: body.useCashback === true,
+      });
+      pointsApplied = r.points;
+      cashbackApplied = r.cashback;
+      serverTotal = r.payable;
+      if (r.points > 0 || r.cashback > 0) {
+        rewardNotes = { rw_uid: r.uid, rw_points: String(r.points), rw_cashback: String(r.cashback) };
+      }
+    } catch (error: unknown) {
+      return res.status(409).json({
+        code: 'rewards_unavailable',
+        error: 'Rewards are unavailable right now. Your balance is safe - pay without them or try again shortly.',
+        detail: error instanceof Error ? error.message : 'Unknown rewards error',
+      });
+    }
   }
 
   const amountInPaise = Math.round(serverTotal * 100);
@@ -369,6 +580,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const receipt =
     typeof body.receipt === 'string' && body.receipt ? body.receipt : `rcpt_${Date.now()}`;
 
+  // Reward amounts in the notes come only from the server: drop any rw_* key the
+  // browser sent, then add ours. verify-payment trusts these notes.
+  const clientNotes = Object.fromEntries(
+    Object.entries(body.notes || {}).filter(([k]) => !k.startsWith('rw_')),
+  );
+  const notes: Record<string, string> = { ...clientNotes, ...rewardNotes };
+
   try {
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
     const resp = await fetch(`${RAZORPAY_API_BASE}/orders`, {
@@ -378,7 +596,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         amount: amountInPaise,
         currency,
         receipt,
-        ...(body.notes ? { notes: body.notes } : {}),
+        ...(Object.keys(notes).length ? { notes } : {}),
       }),
     });
 
@@ -402,6 +620,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       amount: data.amount,
       currency: data.currency,
       key_id: keyId,
+      pointsApplied,
+      cashbackApplied,
     });
   } catch (error: unknown) {
     return res.status(500).json({
