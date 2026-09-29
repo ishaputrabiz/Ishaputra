@@ -11,6 +11,8 @@
  * and it is returned by /api/create-order (falling back to VITE_RAZORPAY_KEY_ID).
  */
 
+import { auth } from '@/config/firebase';
+
 const CHECKOUT_SCRIPT_SRC = 'https://checkout.razorpay.com/v1/checkout.js';
 
 interface RazorpaySuccessResponse {
@@ -34,6 +36,12 @@ export interface VerifiedPayment {
   razorpayPaymentId: string;
   razorpayOrderId: string;
   razorpaySignature: string;
+  /** Loyalty points the server applied to this payment. */
+  pointsApplied: number;
+  /** Wallet cashback (₹) the server applied to this payment. */
+  cashbackApplied: number;
+  /** True when the spend could not be recorded yet (reconcile repairs it). */
+  rewardsPending?: boolean;
 }
 
 export interface RazorpayCheckoutOptions {
@@ -55,6 +63,9 @@ export interface RazorpayCheckoutOptions {
   shippingState?: string;
   /** Re-validated server-side; an invalid code is simply ignored. */
   couponCode?: string;
+  /** Spend loyalty points / wallet cashback. Priced server-side from the ledger. */
+  usePoints?: boolean;
+  useCashback?: boolean;
   /** Defaults to INR. */
   currency?: string;
   /** Receipt id stored against the Razorpay order (e.g. the internal order number). */
@@ -76,6 +87,18 @@ export class PaymentCancelledError extends Error {
   constructor(message = 'Payment was cancelled') {
     super(message);
     this.name = 'PaymentCancelledError';
+  }
+}
+
+/**
+ * The server could not price points/cashback (409 rewards_unavailable). The
+ * customer has not been charged; checkout turns the toggles off so they can
+ * review the full total.
+ */
+export class RewardsUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RewardsUnavailableError';
   }
 }
 
@@ -118,22 +141,34 @@ interface CreateOrderResponse {
   amount: number;
   currency: string;
   key_id: string;
+  pointsApplied?: number;
+  cashbackApplied?: number;
 }
 
 async function createOrder(options: RazorpayCheckoutOptions): Promise<CreateOrderResponse> {
   const amountInPaise = Math.round(options.amount * 100);
 
+  const wantsRewards = options.usePoints === true || options.useCashback === true;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (wantsRewards) {
+    // The reward ledger is private: the server reads it as this customer.
+    const idToken = await auth.currentUser?.getIdToken().catch(() => '');
+    if (idToken) headers.Authorization = `Bearer ${idToken}`;
+  }
+
   let res: Response;
   try {
     res = await fetch('/api/create-order', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         // The server prices `items` and treats `amount` only as a cross-check.
         items: options.lineItems,
         paymentMethod: options.paymentMethod,
         shippingState: options.shippingState,
         couponCode: options.couponCode,
+        usePoints: options.usePoints === true,
+        useCashback: options.useCashback === true,
         amount: amountInPaise,
         currency: options.currency || 'INR',
         receipt: options.receipt,
@@ -146,13 +181,16 @@ async function createOrder(options: RazorpayCheckoutOptions): Promise<CreateOrde
 
   // Parse defensively: a misconfigured/missing endpoint returns HTML, not JSON.
   const raw = await res.text();
-  let data: Partial<CreateOrderResponse> & { error?: string; detail?: string } = {};
+  let data: Partial<CreateOrderResponse> & { error?: string; detail?: string; code?: string } = {};
   try {
     data = raw ? JSON.parse(raw) : {};
   } catch {
     data = {};
   }
 
+  if (res.status === 409 && data.code === 'rewards_unavailable') {
+    throw new RewardsUnavailableError(data.error || 'Rewards are unavailable right now.');
+  }
   if (!res.ok || !data.order_id) {
     const detail =
       data.error ||
@@ -163,7 +201,10 @@ async function createOrder(options: RazorpayCheckoutOptions): Promise<CreateOrde
   return data as CreateOrderResponse;
 }
 
-async function verifyPayment(response: RazorpaySuccessResponse): Promise<VerifiedPayment> {
+async function verifyPayment(
+  response: RazorpaySuccessResponse,
+  order: CreateOrderResponse,
+): Promise<VerifiedPayment> {
   const res = await fetch('/api/verify-payment', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -183,6 +224,9 @@ async function verifyPayment(response: RazorpaySuccessResponse): Promise<Verifie
     razorpayPaymentId: response.razorpay_payment_id,
     razorpayOrderId: response.razorpay_order_id,
     razorpaySignature: response.razorpay_signature,
+    pointsApplied: Number(order.pointsApplied) || 0,
+    cashbackApplied: Number(order.cashbackApplied) || 0,
+    ...(data?.rewardsPending === true ? { rewardsPending: true } : {}),
   };
 }
 
@@ -225,7 +269,7 @@ export async function payWithRazorpay(
         ondismiss: () => finish(() => reject(new PaymentCancelledError())),
       },
       handler: (response: RazorpaySuccessResponse) => {
-        verifyPayment(response)
+        verifyPayment(response, order)
           .then((verified) => finish(() => resolve(verified)))
           .catch((err) => finish(() => reject(err)));
       },

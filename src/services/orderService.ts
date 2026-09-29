@@ -236,6 +236,13 @@ export interface Order {
   razorpayPaymentId?: string;
   razorpayOrderId?: string;
   razorpaySignature?: string;
+  // Rewards (display only - the reward ledger is the record; see src/lib/rewards.ts).
+  /** Loyalty points spent on this order (server-applied). */
+  pointsUsed?: number;
+  /** Wallet cashback in rupees spent on this order (server-applied). */
+  cashbackUsed?: number;
+  /** Points earned when delivered (set by the reconcile action). */
+  pointsEarned?: number;
   shippingAddress: ShippingAddress;
   paymentMethod: string;
   // Canonical statuses. Legacy values 'shipped' | 'assigned' | 'picked' are kept in the

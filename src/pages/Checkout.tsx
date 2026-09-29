@@ -16,7 +16,10 @@ import { getActiveProductsCached } from '@/services/productCache';
 import { adaptFirebaseToUI, UIProduct } from '@/lib/productAdapter';
 import { getUserAddresses, getDefaultAddress, Address, addAddress, AddressFormData } from '@/services/addressService';
 import { createPaidOrder, preflightCart, generateOrderNumber, OrderFormData, OrderItem } from '@/services/orderService';
-import { payWithRazorpay, PaymentCancelledError, type VerifiedPayment } from '@/services/razorpayService';
+import { payWithRazorpay, PaymentCancelledError, RewardsUnavailableError, type VerifiedPayment } from '@/services/razorpayService';
+import { useRewards } from '@/hooks/useRewards';
+import { reconcileOrderRewards } from '@/services/rewardsService';
+import { RewardsRedeemCard, RewardsBillLines } from '@/components/checkout/RewardsRedeemCard';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useWishlist } from '@/hooks/useWishlist';
@@ -379,6 +382,10 @@ const MobileCheckout = () => {
   // Admin-driven pricing (coupons / delivery / GST all live in /admin/commerce-settings).
   // Product ids let per-product delivery overrides apply; the address state
   // selects the within-state / outside-state / per-state rate.
+  // Loyalty points / wallet cashback the customer opts to spend (src/lib/rewards.ts).
+  const rewardsState = useRewards(user?.uid);
+  const [usePoints, setUsePoints] = useState(false);
+  const [useCashback, setUseCashback] = useState(false);
   const pricing = useCheckoutPricing(subtotal, items.length === 0, selectedPaymentMethod, {
     productIds: items.map((i) => i.id),
     destinationState: selectedAddress?.state,
@@ -388,6 +395,7 @@ const MobileCheckout = () => {
     userId: user?.uid,
     // Apply the code the customer tapped in the offer ribbon.
     applyRememberedCode: true,
+    rewards: { balances: rewardsState.balances, settings: rewardsState.settings, usePoints, useCashback },
   });
   const deliveryCharge = pricing.deliveryCharge;
   const taxAmount = pricing.gstAmount;
@@ -491,6 +499,8 @@ const MobileCheckout = () => {
           paymentMethod: selectedPaymentMethod,
           shippingState: selectedAddress.state,
           couponCode: pricing.appliedCoupon?.code,
+          usePoints: pricing.pointsApplied > 0,
+          useCashback: pricing.cashbackApplied > 0,
           receipt: orderId,
           name: 'Ishaputra Botanicals',
           description: `Order ${orderId}`,
@@ -550,6 +560,8 @@ const MobileCheckout = () => {
           razorpayOrderId: verifiedPayment.razorpayOrderId,
           razorpaySignature: verifiedPayment.razorpaySignature,
         } : {}),
+        ...(verifiedPayment?.pointsApplied ? { pointsUsed: verifiedPayment.pointsApplied } : {}),
+        ...(verifiedPayment?.cashbackApplied ? { cashbackUsed: verifiedPayment.cashbackApplied } : {}),
         status: 'pending',
       };
 
@@ -559,6 +571,7 @@ const MobileCheckout = () => {
       // charged and left without a record of it.
       const created = await createPaidOrder(orderData);
       const docId = created.id;
+      if (verifiedPayment?.pointsApplied || verifiedPayment?.cashbackApplied) void reconcileOrderRewards(docId);
       setFirestoreOrderId(docId);
       if (created.needsReview) {
         toast({
@@ -586,6 +599,12 @@ const MobileCheckout = () => {
     } catch (error) {
       console.error('Error placing order:', error);
       setSlideResetKey(k => k + 1);
+      if (error instanceof RewardsUnavailableError) {
+        setUsePoints(false);
+        setUseCashback(false);
+        toast({ title: 'Rewards unavailable right now', description: error.message });
+        return;
+      }
       if (error instanceof PaymentCancelledError) {
         toast({
           title: 'Payment cancelled',
@@ -1224,6 +1243,21 @@ const MobileCheckout = () => {
               </div>
             </div>
 
+            {/* Loyalty points / wallet cashback */}
+            <div className="mx-4 mb-4">
+              <RewardsRedeemCard
+                balances={rewardsState.balances}
+                settings={rewardsState.settings}
+                usePoints={usePoints}
+                useCashback={useCashback}
+                onUsePoints={setUsePoints}
+                onUseCashback={setUseCashback}
+                pointsApplied={pricing.pointsApplied}
+                pointsValue={pricing.pointsValue}
+                cashbackApplied={pricing.cashbackApplied}
+              />
+            </div>
+
             {/* Bill Summary */}
             <div className="mx-4 mb-4">
               <div className="tx-sheet rounded-[var(--radius-card)] border border-foreground/[0.08] shadow-[var(--shadow-panel)] p-4">
@@ -1245,6 +1279,7 @@ const MobileCheckout = () => {
                       <span className="text-primary font-medium" style={{ fontFamily: "var(--font-body)" }}>− {formatPrice(discount)}</span>
                     </div>
                   )}
+                  <RewardsBillLines pointsApplied={pricing.pointsApplied} pointsValue={pricing.pointsValue} cashbackApplied={pricing.cashbackApplied} />
                   {showGstLine && (
 
                     <div className="flex justify-between text-sm">
@@ -1352,6 +1387,7 @@ const MobileCheckout = () => {
                   {deliveryCharge === 0 ? 'FREE' : formatPrice(deliveryCharge)}
                 </span>
               </div>
+              <RewardsBillLines pointsApplied={pricing.pointsApplied} pointsValue={pricing.pointsValue} cashbackApplied={pricing.cashbackApplied} />
               
               {showGstLine && (
 
@@ -1572,6 +1608,7 @@ const MobileCheckout = () => {
                     <span className="text-xs text-muted-foreground">Subtotal</span>
                     <span className="text-sm font-semibold text-foreground">{formatPrice(subtotal)}</span>
                   </div>
+                  <RewardsBillLines pointsApplied={pricing.pointsApplied} pointsValue={pricing.pointsValue} cashbackApplied={pricing.cashbackApplied} className="flex items-center justify-between text-sm" />
                   <Separator className="my-2" />
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-foreground">Total (incl. taxes)</span>
@@ -2079,6 +2116,10 @@ const Checkout = () => {
   };
 
   // Admin-driven pricing (must be called before any conditional returns — Rules of Hooks)
+  // Loyalty points / wallet cashback the customer opts to spend (src/lib/rewards.ts).
+  const rewardsState = useRewards(user?.uid);
+  const [usePoints, setUsePoints] = useState(false);
+  const [useCashback, setUseCashback] = useState(false);
   const pricing = useCheckoutPricing(subtotal, items.length === 0, selectedPaymentMethod, {
     productIds: items.map((i) => i.id),
     destinationState: selectedAddress?.state,
@@ -2088,6 +2129,7 @@ const Checkout = () => {
     userId: user?.uid,
     // Apply the code the customer tapped in the offer ribbon.
     applyRememberedCode: true,
+    rewards: { balances: rewardsState.balances, settings: rewardsState.settings, usePoints, useCashback },
   });
   const deliveryCharge = pricing.deliveryCharge;
   const taxAmount = pricing.gstAmount;
@@ -2189,6 +2231,8 @@ const Checkout = () => {
           paymentMethod: selectedPaymentMethod,
           shippingState: selectedAddress.state,
           couponCode: pricing.appliedCoupon?.code,
+          usePoints: pricing.pointsApplied > 0,
+          useCashback: pricing.cashbackApplied > 0,
           receipt: orderId,
           name: 'Ishaputra Botanicals',
           description: `Order ${orderId}`,
@@ -2248,6 +2292,8 @@ const Checkout = () => {
           razorpayOrderId: verifiedPayment.razorpayOrderId,
           razorpaySignature: verifiedPayment.razorpaySignature,
         } : {}),
+        ...(verifiedPayment?.pointsApplied ? { pointsUsed: verifiedPayment.pointsApplied } : {}),
+        ...(verifiedPayment?.cashbackApplied ? { cashbackUsed: verifiedPayment.cashbackApplied } : {}),
         status: 'pending',
       };
 
@@ -2257,6 +2303,7 @@ const Checkout = () => {
       // charged and left without a record of it.
       const created = await createPaidOrder(orderData);
       const docId = created.id;
+      if (verifiedPayment?.pointsApplied || verifiedPayment?.cashbackApplied) void reconcileOrderRewards(docId);
       setFirestoreOrderId(docId);
       if (created.needsReview) {
         toast({
@@ -2278,6 +2325,12 @@ const Checkout = () => {
       setTimeout(() => setShowOrderAnimation(false), 2800);
     } catch (error) {
       console.error('Error placing order:', error);
+      if (error instanceof RewardsUnavailableError) {
+        setUsePoints(false);
+        setUseCashback(false);
+        toast({ title: 'Rewards unavailable right now', description: error.message });
+        return;
+      }
       if (error instanceof PaymentCancelledError) {
         toast({
           title: 'Payment cancelled',
@@ -2915,6 +2968,21 @@ const Checkout = () => {
               )}
             </div>
 
+            {/* Loyalty points / wallet cashback */}
+            <div className="">
+              <RewardsRedeemCard
+                balances={rewardsState.balances}
+                settings={rewardsState.settings}
+                usePoints={usePoints}
+                useCashback={useCashback}
+                onUsePoints={setUsePoints}
+                onUseCashback={setUseCashback}
+                pointsApplied={pricing.pointsApplied}
+                pointsValue={pricing.pointsValue}
+                cashbackApplied={pricing.cashbackApplied}
+              />
+            </div>
+
             {/* Price Details */}
             <div className="tx-sheet border border-foreground/[0.08] rounded-[var(--radius-panel)] shadow-[var(--shadow-panel)] p-6 sticky top-4">
               <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-5">Price details ({items.length} Item{items.length > 1 ? 's' : ''})</h3>
@@ -2962,6 +3030,7 @@ const Checkout = () => {
                     <span className="text-primary">- {formatPrice(discount)}</span>
                   </div>
                 )}
+                <RewardsBillLines pointsApplied={pricing.pointsApplied} pointsValue={pricing.pointsValue} cashbackApplied={pricing.cashbackApplied} />
 
                 {pricing.freeDelivery && pricing.deliveryBeforeFree > 0 && (
                   <div className="bg-primary/[0.06] border border-primary/25 rounded-lg p-3 text-sm text-primary">
@@ -3123,6 +3192,7 @@ const Checkout = () => {
                         <span className="font-medium text-primary">− {formatPrice(discount)}</span>
                       </div>
                     )}
+                    <RewardsBillLines pointsApplied={pricing.pointsApplied} pointsValue={pricing.pointsValue} cashbackApplied={pricing.cashbackApplied} className="flex items-center justify-between" />
                     {showGstLine && (
 
                       <div className="flex items-center justify-between">
