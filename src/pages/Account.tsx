@@ -1,86 +1,70 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuth, UserProfile } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { auth } from '@/config/firebase';
 import { DELIVERY_PARTNERS_ENABLED } from '@/config/features';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { IconButton } from '@/components/ui/icon-button';
+import { Notice } from '@/components/ui/notice';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+import { OrderStatusBadge } from '@/components/ui/status-badge';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { AuthField } from '@/components/auth/AuthField';
+import { AuthCardSkeleton, PanelSkeleton } from '@/components/skeletons';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { EmptyState } from '@/components/EmptyState';
 import Header from '@/components/Header';
 import CategoryIconNav from '@/components/CategoryIconNav';
 import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/MobileBottomNav';
-import { subscribeToUserOrders, Order, updateOrderStatus, cancelOrder, requestReturn, cancelReturn } from '@/services/orderService';
-import { uploadImage, deleteMedia, describeUploadError, IMAGE_TYPES } from '@/services/mediaStorage';
+import { subscribeToUserOrders, Order } from '@/services/orderService';
 import { useWhatsAppOtpVerification } from '@/hooks/useWhatsAppOtpVerification';
 import { getSecuritySettings, generateDeviceFingerprint, updateSecuritySettings } from '@/services/securityService';
+import { validatePassword } from '@/lib/passwordValidation';
+import { formatINR, formatDateTime } from '@/lib/format';
+import { fadeUp } from '@/lib/motion';
 import TwoFactorChallengeModal from '@/components/auth/TwoFactorChallengeModal';
 import WhatsAppSetupModal from '@/components/auth/WhatsAppSetupModal';
 import { toast } from 'sonner';
-import logo from '@/assets/dark.png';
 import {
-  Loader2,
   User,
-  CreditCard,
   MapPin,
-  Bell,
   Shield,
-  HelpCircle,
   Heart,
   Package,
   LogOut,
   ChevronRight,
-  Sparkles,
-  Ticket,
-  Globe,
-  Star,
   MessageCircle,
-  Mail,
-  Lock,
-  Eye,
-  Settings,
-  RotateCcw,
-  EyeOff,
   Truck,
   ExternalLink,
-  Clock,
-  CheckCircle2,
-  XCircle,
   ArrowLeft,
-  Ban,
-  RotateCcw as ReturnIcon,
-  AlertCircle,
-  X,
   Edit,
-  Phone,
   Video,
-  Sun,
-  Moon,
   Wallet,
+  SunMoon,
 } from 'lucide-react';
 import { SmartImage } from "@/components/ui/smart-image";
-import { isWithinReturnWindow } from '@/lib/returnWindow';
 
-/**
- * Loyalty points and wallet cashback that paid part of an order, as summary
- * rows in rupees. order.total is what was charged after them, so listing them
- * makes the summary add up. Orders saved before pointsValue existed used
- * 1 point = ₹1.
- */
-const rewardsPaidRows = (order: Order): Array<[string, number]> => {
-  const points = Math.max(0, Number(order.pointsUsed) || 0);
-  const pointsValue = typeof order.pointsValue === 'number' ? order.pointsValue : points;
-  const cashback = Number(order.cashbackUsed) || 0;
-  const rows: Array<[string, number]> = [];
-  if (pointsValue > 0) rows.push([`Points (${points.toLocaleString('en-IN')})`, pointsValue]);
-  if (cashback > 0) rows.push(['Wallet cashback', cashback]);
-  return rows;
-};
+const HEADING_FONT = { fontFamily: 'var(--font-heading)', fontStretch: 'var(--font-heading-stretch)' } as const;
+
+/** The full-page placeholder while auth resolves or a sign-in finishes: the sign-in card's shape, not a spinner. */
+const SignInPlaceholder = () => (
+  <div className="tx-paper flex min-h-dvh flex-col">
+    <div className="h-[var(--sticky-top)] border-b border-foreground/[0.08] bg-background" />
+    <div className="flex flex-1 items-center justify-center px-4 py-8 sm:py-12">
+      <AuthCardSkeleton label="Signing you in" />
+    </div>
+  </div>
+);
 
 const Account = () => {
   const { user, loading, logout, updateUserProfile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Login flow: 'idle' = normal | 'loading' = between login and checks (prevents flash) | '2fa' | 'whatsapp'
   const [loginFlow, setLoginFlow] = useState<'idle' | 'loading' | '2fa' | 'whatsapp'>('idle');
@@ -108,7 +92,7 @@ const Account = () => {
           if (!settings.trustedDevices.includes(fingerprint)) {
             const phone = profile.whatsappNumber || profile.phone || '';
             if (!phone) {
-              toast.error('Two-factor authentication is enabled but no WhatsApp number is on file.');
+              toast.error('2-step verification is on, but there is no WhatsApp number on your account. Contact support to sign in.');
               await logout();
               setLoginFlow('idle');
               return;
@@ -123,7 +107,7 @@ const Account = () => {
           }
         }
       } catch {
-        // 2FA check failed — proceed without it
+        // 2FA check failed: proceed without it
       }
 
       // Check WhatsApp collection (Google sign-in users only)
@@ -174,31 +158,35 @@ const Account = () => {
     navigate(pendingDestination, { replace: true });
   };
 
-  // Auth loading state
+  // Auth loading state: the shape of the page that is about to appear
   if (loading) {
+    const onSignInRoute = location.pathname === '/login' || location.pathname === '/auth/login';
+    if (onSignInRoute) return <SignInPlaceholder />;
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div aria-busy="true" className="tx-paper min-h-dvh">
+        <span className="sr-only" role="status">Loading your account</span>
+        <div className="h-[var(--sticky-top)] border-b border-foreground/[0.08] bg-background" />
+        <div className="container-custom flex flex-col gap-5 py-8 md:py-12">
+          <Skeleton className="h-8 w-48" />
+          <PanelSkeleton lines={3} label="" />
+          <PanelSkeleton lines={4} label="" />
+        </div>
       </div>
     );
   }
 
-  // Transition loading — prevents AccountPage flash while login flow is in progress
-  if (loginFlow === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+  // Transition placeholder: prevents an AccountPage flash once Firebase has a user but the
+  // 2-step / WhatsApp checks are still running. While there is no user yet the sign-in form
+  // stays mounted, so its error message and typed email survive a failed attempt.
+  if (loginFlow === 'loading' && user) {
+    return <SignInPlaceholder />;
   }
 
-  // 2FA modal — shown even when Firebase has signed the user in, gates navigation
+  // 2FA modal: shown even when Firebase has signed the user in, gates navigation
   if (loginFlow === '2fa') {
     return (
       <>
-        <div className="min-h-screen flex items-center justify-center tx-paper">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+        <SignInPlaceholder />
         <TwoFactorChallengeModal
           open={showTwoFactor}
           phoneNumber={twoFactorPhone}
@@ -214,9 +202,7 @@ const Account = () => {
   if (loginFlow === 'whatsapp') {
     return (
       <>
-        <div className="min-h-screen flex items-center justify-center tx-paper">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+        <SignInPlaceholder />
         <WhatsAppSetupModal
           open={showWhatsApp}
           onSuccess={handleWhatsAppSuccess}
@@ -277,6 +263,18 @@ const resolveDestination = (from: unknown, role: string | undefined): string => 
   return `${pathname}${loc?.search || ''}${loc?.hash || ''}`;
 };
 
+/** Why a guest was sent here (state.reason from checkout, the cart drawer and ProtectedRoute). */
+const REASON_COPY: Record<string, string> = {
+  checkout: 'Sign in to check out. Your bag is saved.',
+  cart: 'Sign in to check out. Your bag is saved.',
+  wishlist: 'Sign in to see your saved items.',
+};
+
+/** Sign-up uses the same password policy as reset (owner decision AUTH-24). */
+const PASSWORD_POLICY_HINT = 'At least 8 characters, with an uppercase and a lowercase letter, a number and a symbol.';
+
+type ErrorField = 'email' | 'password' | 'name' | 'phone' | 'terms' | 'otp';
+
 const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -290,16 +288,50 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [sameForWhatsApp, setSameForWhatsApp] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [error, setError] = useState('');
-  const [resetSent, setResetSent] = useState(false);
+  /** Which fields the current error is about (marked aria-invalid and tied to the message). */
+  const [errorFields, setErrorFields] = useState<ErrorField[]>([]);
   const whatsappOtp = useWhatsAppOtpVerification(phone, activeTab === 'user' && isSignUp && sameForWhatsApp);
 
-  const { loginWithGoogle, login, signup, resetPassword } = useAuth();
+  const { loginWithGoogle, login, signup } = useAuth();
   const navigate = useNavigate();
+
+  const navState = (location.state ?? {}) as { reason?: string; passwordUpdated?: boolean };
+  const reasonCopy = navState.reason ? REASON_COPY[navState.reason] : undefined;
+  const passwordUpdated = navState.passwordUpdated === true || navState.reason === 'password-updated';
+
+  /** Text fields that can show their own error underneath (AuthField). */
+  const INLINE_FIELDS: Partial<Record<ErrorField, string>> = {
+    email: 'login-email', password: 'login-password', name: 'signup-name', phone: 'signup-phone',
+  };
+
+  /**
+   * Show an error. One text field at fault: the message goes under that field and the
+   * field gets focus. Anything else (wrong credentials, network, terms, WhatsApp code):
+   * the banner above the form, announced, with every field it is about marked invalid.
+   */
+  const showError = (message: string, fields: ErrorField[] = []) => {
+    setError(message);
+    setErrorFields(fields);
+    const inlineId = fields.length === 1 ? INLINE_FIELDS[fields[0]] : undefined;
+    if (message && inlineId) {
+      requestAnimationFrame(() => document.getElementById(inlineId)?.focus());
+    }
+  };
+  const clearError = () => showError('');
+
+  const inlineError = !!error && errorFields.length === 1 && !!INLINE_FIELDS[errorFields[0]];
+  const bannerError = !!error && !inlineError;
+
+  /** Error wiring for a field: its own message underneath, or invalid + described by the banner. */
+  const fieldErrorProps = (field: ErrorField) => {
+    if (!error || !errorFields.includes(field)) return {};
+    if (inlineError) return { error };
+    return { 'aria-invalid': true as const, 'aria-describedby': 'login-error' };
+  };
 
   // Handle tab change
   const handleTabChange = (tab: LoginTab) => {
@@ -309,8 +341,7 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
     setPassword('');
     setFullName('');
     setPhone('');
-    setError('');
-    setResetSent(false);
+    clearError();
     // Update URL to reflect tab change
     if (tab === 'delivery') {
       setSearchParams({ tab: 'delivery' });
@@ -321,11 +352,11 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
 
   const handleGoogleSignIn = async () => {
     if (activeTab === 'delivery') {
-      setError('Google Sign-In is not available for delivery partners.');
+      showError('Google sign-in is not available for delivery partners.');
       return;
     }
-    
-    setError('');
+
+    clearError();
     setGoogleLoading(true);
     onLoginStart(); // Prevent AccountPage flash
 
@@ -333,61 +364,71 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
       const profile = await loginWithGoogle();
       const destination = resolveDestination(location.state?.from, profile.role);
       await onLoginComplete(profile, destination, true);
-      // Do NOT reset loading — navigating away or showing a modal
+      // Do NOT reset loading: navigating away or showing a modal
     } catch (err: any) {
       console.error('Google login error:', err);
       setGoogleLoading(false);
       onLoginError();
-      
+
       if (err.code === 'auth/popup-closed-by-user') {
-        setError('Sign-in popup was closed. Please try again.');
+        showError('The Google window closed before sign-in finished. Try again.');
       } else if (err.code === 'auth/popup-blocked') {
-        setError('Popup was blocked by browser. Please allow popups and try again.');
+        showError('Your browser blocked the Google window. Allow pop-ups for this site, then try again.');
       } else if (err.code === 'auth/unauthorized-domain') {
-        setError('This domain is not authorized. Please contact support.');
+        showError('Google sign-in is not set up for this address. Contact support.');
       } else if (err.code === 'auth/operation-not-allowed') {
-        setError('Google sign-in is not enabled. Please contact support.');
+        showError('Google sign-in is turned off. Sign in with your email instead.');
       } else if (err.code === 'auth/cancelled-popup-request') {
-        setError('Multiple popups detected. Please try again.');
+        showError('Another Google window is already open. Close it and try again.');
       } else if (err.code === 'auth/network-request-failed') {
-        setError('Network error. Please check your connection and try again.');
+        showError('Unable to reach Google. Check your connection and try again.');
       } else {
-        setError(`Failed to sign in with Google: ${err.message || 'Please try again.'}`);
+        showError('Unable to sign in with Google. Try again.');
       }
     }
   };
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    clearError();
 
-    if (!email || !password) {
-      setError('Please fill in all fields.');
+    if (isSignUp && !fullName.trim()) {
+      showError('Enter your full name.', ['name']);
       return;
     }
 
-    if (isSignUp && !fullName) {
-      setError('Please enter your full name.');
+    if (!email) {
+      showError('Enter your email address.', ['email']);
+      return;
+    }
+
+    if (!password) {
+      showError('Enter your password.', ['password']);
+      return;
+    }
+
+    if (isSignUp && !validatePassword(password).valid) {
+      showError(`Choose a stronger password: ${PASSWORD_POLICY_HINT.charAt(0).toLowerCase()}${PASSWORD_POLICY_HINT.slice(1)}`, ['password']);
       return;
     }
 
     if (isSignUp && phone && !/^[6-9]\d{9}$/.test(phone)) {
-      setError('Please enter a valid 10-digit Indian mobile number.');
+      showError('Enter a 10-digit mobile number starting with 6, 7, 8 or 9.', ['phone']);
       return;
     }
 
     if (isSignUp && sameForWhatsApp && phone && !whatsappOtp.isVerified) {
-      setError('Please verify your WhatsApp number before signing up.');
+      showError('Verify your WhatsApp number with the code we send, then create your account.', ['otp']);
       return;
     }
 
     if (isSignUp && !agreeTerms) {
-      setError('Please agree to the terms and conditions.');
+      showError('Agree to the Terms and Privacy Policy to create your account.', ['terms']);
       return;
     }
 
     setEmailLoading(true);
-    onLoginStart(); // Prevent AccountPage flash — must run before any await that could trigger auth state change
+    onLoginStart(); // Prevent AccountPage flash: must run before any await that could trigger auth state change
 
     try {
       if (isSignUp) {
@@ -399,11 +440,11 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
         return;
       } else {
         const profile = await login(email, password);
-        
+
         // Handle delivery login
         if (activeTab === 'delivery') {
           if (profile.role !== 'delivery') {
-            setError('This login is for delivery partners only. Please use the User tab.');
+            showError('This sign-in is for delivery partners only. Use the User tab.');
             setEmailLoading(false);
             onLoginError();
             return;
@@ -412,10 +453,10 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
           // Don't reset loading - navigating away
           return;
         }
-        
+
         // Handle user login - check they're not delivery
         if (profile.role === 'delivery') {
-          setError('Delivery partners should use the Delivery tab to login.');
+          showError('Delivery partners sign in from the Delivery tab.');
           setEmailLoading(false);
           onLoginError();
           return;
@@ -423,45 +464,47 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
 
         const destination = resolveDestination(location.state?.from, profile.role);
         await onLoginComplete(profile, destination, false);
-        // Do NOT reset loading — navigating away or showing a modal
+        // Do NOT reset loading: navigating away or showing a modal
         return;
       }
     } catch (err: any) {
       console.error('Email auth error:', err);
       setEmailLoading(false);
       onLoginError();
-      
+
       if (err.code === 'auth/user-not-found') {
-        setError('No account found with this email.');
+        showError('No account uses this email. Check it, or create an account.', ['email']);
       } else if (err.code === 'auth/wrong-password') {
-        setError('Incorrect password. Please try again.');
+        showError('That password is incorrect. Try again, or reset it.', ['password']);
       } else if (err.code === 'auth/invalid-credential') {
-        setError('Invalid email or password.');
+        showError('Email or password is incorrect. Check both and try again.', ['email', 'password']);
       } else if (err.code === 'auth/email-already-in-use') {
-        setError('An account with this email already exists.');
+        showError('An account already uses this email. Sign in instead.', ['email']);
       } else if (err.code === 'auth/weak-password') {
-        setError('Password should be at least 6 characters.');
+        showError(`Choose a stronger password: ${PASSWORD_POLICY_HINT.charAt(0).toLowerCase()}${PASSWORD_POLICY_HINT.slice(1)}`, ['password']);
       } else if (err.code === 'auth/invalid-email') {
-        setError('Please enter a valid email address.');
+        showError('Enter a valid email address, like name@example.com.', ['email']);
+      } else if (err.code === 'auth/too-many-requests') {
+        showError('Too many attempts. Wait a few minutes, then try again.');
+      } else if (err.code === 'auth/network-request-failed') {
+        showError('Unable to connect. Check your connection and try again.');
       } else {
-        setError(err.message || 'Authentication failed. Please try again.');
+        showError(isSignUp ? 'Unable to create your account. Try again.' : 'Unable to sign in. Try again.');
       }
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      setError('Please enter your email address first.');
-      return;
-    }
-    try {
-      await resetPassword(email);
-      setResetSent(true);
-      setError('');
-    } catch (err: any) {
-      setError('Failed to send reset email. Please check your email address.');
-    }
+  const toggleSignUp = () => {
+    setIsSignUp(!isSignUp);
+    clearError();
   };
+
+  const title = activeTab === 'delivery'
+    ? 'Delivery partner sign in'
+    : (isSignUp ? 'Create account' : 'Welcome back');
+  const description = activeTab === 'delivery'
+    ? 'Open your delivery dashboard.'
+    : (isSignUp ? 'Sign up to save your bag, orders and addresses.' : 'Sign in to your account.');
 
   return (
     <div className="min-h-screen flex flex-col tx-paper">
@@ -469,286 +512,272 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
       <Header />
 
       {/* Content area */}
-      <div className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12">
+      <main id="main" tabIndex={-1} className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12 outline-none">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="w-full max-w-md panel tx-sheet tx-contour overflow-hidden p-6 sm:p-9"
+          initial={fadeUp.initial}
+          animate={fadeUp.animate}
+          transition={fadeUp.transition}
+          className="panel tx-sheet tx-contour mx-auto w-full max-w-md p-6 sm:p-9"
         >
           {/* Back Button */}
           <button
+            type="button"
             onClick={() => navigate(-1)}
-            className="mb-5 flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors"
+            className="-ml-2 mb-4 inline-flex h-10 items-center gap-1.5 rounded-control px-2 text-muted-foreground transition-[color,transform] duration-press ease-out hover:text-foreground active:scale-[0.97]"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft aria-hidden="true" className="size-4" />
             <span className="text-[11px] font-bold uppercase tracking-[0.18em]">Back</span>
           </button>
 
-          {/* Tabs — the Delivery partner tab is hidden while the delivery system is off */}
+          {/* Tabs: the Delivery partner tab is hidden while the delivery system is off */}
           {DELIVERY_PARTNERS_ENABLED && (
-            <div className="flex mb-6 bg-muted rounded-full p-1">
-              <button
-                onClick={() => handleTabChange('user')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-sm font-medium transition-all ${
-                  activeTab === 'user'
-                    ? 'bg-card text-primary shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground/80'
-                }`}
-              >
-                <User className="h-4 w-4" />
-                User
-              </button>
-              <button
-                onClick={() => handleTabChange('delivery')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-full text-sm font-medium transition-all ${
-                  activeTab === 'delivery'
-                    ? 'bg-card text-primary shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground/80'
-                }`}
-              >
-                <Truck className="h-4 w-4" />
-                Delivery
-              </button>
+            <div className="mb-6 flex gap-1 rounded-control bg-muted p-1">
+              {([['user', 'User', User], ['delivery', 'Delivery', Truck]] as const).map(([tab, label, Icon]) => (
+                <button
+                  key={tab}
+                  type="button"
+                  aria-pressed={activeTab === tab}
+                  onClick={() => handleTabChange(tab)}
+                  className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-control px-4 text-sm font-medium transition-[background-color,color,box-shadow,transform] duration-press ease-out active:scale-[0.97] ${
+                    activeTab === tab
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Icon aria-hidden="true" className="size-4" />
+                  {label}
+                </button>
+              ))}
             </div>
           )}
 
           {/* Header */}
-          <div className="text-center mb-7">
-            <p className="eyebrow-no eyebrow-center mb-3"><span>Ishaputra Botanicals</span></p>
-            <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-1.5" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
-              {activeTab === 'delivery' 
-                ? 'Delivery Partner Login' 
-                : (isSignUp ? 'Create Account' : 'Welcome Back')}
+          <div className="mb-6 flex flex-col gap-2">
+            <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground [text-wrap:balance]" style={HEADING_FONT}>
+              {title}
             </h1>
-            <p className="text-muted-foreground text-sm">
-              {activeTab === 'delivery'
-                ? 'Access your delivery dashboard'
-                : (isSignUp ? 'Sign up to get started' : 'Please login to your account')}
-            </p>
+            <p className="text-sm leading-relaxed text-muted-foreground [text-wrap:pretty]">{description}</p>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-red-50 border border-red-200 rounded-[8px] p-3 mb-4 dark:bg-red-950/30 dark:border-red-900/50"
+          {/* Why the visitor is here (checkout, cart, wishlist) or a finished password reset */}
+          {(passwordUpdated || reasonCopy) && !bannerError && (
+            <Notice
+              tone={passwordUpdated ? 'success' : 'info'}
+              compact
+              className="mb-5"
             >
-              <p className="text-red-600 text-sm text-center">{error}</p>
-            </motion.div>
+              {passwordUpdated ? 'Password updated. Sign in with your new password.' : reasonCopy}
+            </Notice>
           )}
 
-          {/* Reset Password Success */}
-          {resetSent && (
-            <motion.div
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-primary/[0.06] border border-primary/25 rounded-[8px] p-3 mb-4"
-            >
-              <p className="text-primary text-sm text-center">Password reset email sent! Check your inbox.</p>
+          {/* Error Message */}
+          {bannerError && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }} className="mb-5">
+              <Notice id="login-error" tone="danger" compact>
+                {error}
+              </Notice>
             </motion.div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleEmailSignIn} className="space-y-4">
-            {/* Full Name - only for Sign Up (User tab only) */}
+          <form onSubmit={handleEmailSignIn} noValidate className="flex flex-col gap-5">
+            {/* Full Name and Phone: only for Sign Up (User tab only) */}
             {activeTab === 'user' && isSignUp && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+                className="flex flex-col gap-5"
               >
-                <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-1.5">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Full Name"
-                    className="w-full pl-11 pr-4 py-3 border border-foreground/15 rounded-[6px] text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary outline-none transition-all bg-card/80"
-                  />
-                </div>
-              </motion.div>
-            )}
+                <AuthField
+                  id="signup-name"
+                  name="name"
+                  label="Full name"
+                  autoComplete="name"
+                  autoCapitalize="words"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  {...fieldErrorProps('name')}
+                />
 
-            {/* Phone Number - only for Sign Up (User tab only) */}
-            {activeTab === 'user' && isSignUp && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                transition={{ duration: 0.3 }}
-              >
-                <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-1.5">Phone Number</label>
-                <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
+                <div className="flex flex-col gap-3">
+                  <AuthField
+                    id="signup-phone"
+                    name="tel-national"
+                    label="Mobile number (optional)"
                     type="tel"
+                    autoComplete="tel-national"
+                    inputMode="numeric"
+                    maxLength={10}
+                    placeholder="10-digit number"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    placeholder="Enter your phone number"
-                    className="w-full pl-11 pr-4 py-3 border border-foreground/15 rounded-[6px] text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary outline-none transition-all bg-card/80"
+                    {...fieldErrorProps('phone')}
                   />
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <input
-                    type="checkbox"
-                    checked={sameForWhatsApp}
-                    onChange={(e) => setSameForWhatsApp(e.target.checked)}
-                    className="w-4 h-4 rounded border-border accent-primary focus:ring-primary"
-                  />
-                  <span className="text-xs text-muted-foreground">Same number for WhatsApp</span>
-                </div>
-                {phone && sameForWhatsApp && (
-                  <div className="mt-3 rounded-[8px] border border-primary/20 bg-primary/5 p-3 space-y-3">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-xs text-muted-foreground">
-                        Verify this number on WhatsApp so order updates and alerts can reach you there.
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void whatsappOtp.sendOtp()}
-                        disabled={emailLoading || whatsappOtp.isBusy}
-                      >
-                        {whatsappOtp.phase === 'sent' || whatsappOtp.isVerified ? 'Resend Code' : 'Send Code'}
-                      </Button>
-                    </div>
-
-                    {(whatsappOtp.phase === 'sent' || whatsappOtp.isVerified) && (
-                      <div className="space-y-3">
-                        <InputOTP
-                          maxLength={6}
-                          value={whatsappOtp.otpCode}
-                          onChange={whatsappOtp.setOtpCode}
-                          disabled={emailLoading || whatsappOtp.isBusy || whatsappOtp.isVerified}
-                          containerClassName="justify-center"
-                        >
-                          <InputOTPGroup className="justify-center">
-                            <InputOTPSlot index={0} />
-                            <InputOTPSlot index={1} />
-                            <InputOTPSlot index={2} />
-                            <InputOTPSlot index={3} />
-                            <InputOTPSlot index={4} />
-                            <InputOTPSlot index={5} />
-                          </InputOTPGroup>
-                        </InputOTP>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <p className={`text-xs ${whatsappOtp.isVerified ? 'text-primary' : 'text-muted-foreground'}`}>
-                            {whatsappOtp.isVerified
-                              ? 'WhatsApp number verified.'
-                              : 'Enter the 6-digit code we sent to your WhatsApp.'}
-                          </p>
-                          {!whatsappOtp.isVerified && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              onClick={() => void whatsappOtp.confirmOtp()}
-                              disabled={emailLoading || whatsappOtp.isBusy || whatsappOtp.otpCode.length !== 6}
-                            >
-                              Verify Code
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {whatsappOtp.otpError && (
-                      <p className="text-xs text-red-600">{whatsappOtp.otpError}</p>
-                    )}
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="signup-same-whatsapp"
+                      checked={sameForWhatsApp}
+                      onCheckedChange={(v) => setSameForWhatsApp(v === true)}
+                    />
+                    <label htmlFor="signup-same-whatsapp" className="text-sm text-muted-foreground">
+                      Use this number for WhatsApp
+                    </label>
                   </div>
-                )}
+                  {phone && sameForWhatsApp && (
+                    <div className="flex flex-col gap-3 rounded-card border border-foreground/10 bg-muted/50 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-xs leading-relaxed text-muted-foreground">
+                          Verify this number on WhatsApp so order updates can reach you there.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() => void whatsappOtp.sendOtp()}
+                          disabled={emailLoading || whatsappOtp.isBusy}
+                          {...fieldErrorProps('otp')}
+                        >
+                          {whatsappOtp.phase === 'sent' || whatsappOtp.isVerified ? 'Resend code' : 'Send code'}
+                        </Button>
+                      </div>
+
+                      {(whatsappOtp.phase === 'sent' || whatsappOtp.isVerified) && (
+                        <div className="flex flex-col gap-3">
+                          <InputOTP
+                            maxLength={6}
+                            value={whatsappOtp.otpCode}
+                            onChange={whatsappOtp.setOtpCode}
+                            disabled={emailLoading || whatsappOtp.isBusy || whatsappOtp.isVerified}
+                            containerClassName="justify-center"
+                            aria-label="6-digit WhatsApp code"
+                            autoComplete="one-time-code"
+                            inputMode="numeric"
+                          >
+                            <InputOTPGroup className="justify-center">
+                              <InputOTPSlot index={0} />
+                              <InputOTPSlot index={1} />
+                              <InputOTPSlot index={2} />
+                              <InputOTPSlot index={3} />
+                              <InputOTPSlot index={4} />
+                              <InputOTPSlot index={5} />
+                            </InputOTPGroup>
+                          </InputOTP>
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <p
+                              role="status"
+                              className={`text-xs ${whatsappOtp.isVerified ? 'font-semibold text-status-success-fg' : 'text-muted-foreground'}`}
+                            >
+                              {whatsappOtp.isVerified
+                                ? 'WhatsApp number verified.'
+                                : 'Enter the 6-digit code we sent to your WhatsApp.'}
+                            </p>
+                            {!whatsappOtp.isVerified && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="shrink-0"
+                                onClick={() => void whatsappOtp.confirmOtp()}
+                                disabled={emailLoading || whatsappOtp.isBusy || whatsappOtp.otpCode.length !== 6}
+                              >
+                                Verify code
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {whatsappOtp.otpError && (
+                        <p role="alert" className="text-xs text-destructive">{whatsappOtp.otpError}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </motion.div>
             )}
 
             {/* Email */}
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-1.5">Email address</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  className="w-full pl-11 pr-4 py-3 border border-foreground/15 rounded-[6px] text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary outline-none transition-all bg-card/80"
-                />
-              </div>
-            </div>
+            <AuthField
+              id="login-email"
+              name="email"
+              label="Email"
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              {...fieldErrorProps('email')}
+            />
 
-            {/* Password */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Password</label>
-                {!isSignUp && (
-                  <button
-                    type="button"
-                    onClick={handleForgotPassword}
-                    className="text-xs text-primary font-medium hover:underline"
-                  >
-                    Forgot password?
-                  </button>
-                )}
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="w-full pl-11 pr-12 py-3 border border-foreground/15 rounded-[6px] text-sm focus:ring-2 focus:ring-primary/25 focus:border-primary outline-none transition-all bg-card/80"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground/80"
+            {/* Password. "Forgot password?" comes after the input in the DOM (so Tab goes
+                email, password, then the link) and sits on the label row visually. */}
+            <div className="relative">
+              <AuthField
+                id="login-password"
+                name="password"
+                label="Password"
+                type="password"
+                autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                hint={isSignUp ? PASSWORD_POLICY_HINT : undefined}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                {...fieldErrorProps('password')}
+              />
+              {!isSignUp && activeTab === 'user' && (
+                <Link
+                  to="/forgot-password"
+                  state={{ email }}
+                  className="absolute -top-1 right-0 -mr-1 inline-flex min-h-6 items-center rounded-control px-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
+                  Forgot your password?
+                </Link>
+              )}
             </div>
 
             {/* Terms Agreement - User tab sign up only */}
             {activeTab === 'user' && isSignUp && (
-              <div className="flex items-start gap-2">
-                <input
-                  type="checkbox"
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="signup-terms"
                   checked={agreeTerms}
-                  onChange={(e) => setAgreeTerms(e.target.checked)}
-                  className="mt-1 w-4 h-4 rounded border-border accent-primary focus:ring-primary"
+                  onCheckedChange={(v) => setAgreeTerms(v === true)}
+                  className="mt-0.5"
+                  {...fieldErrorProps('terms')}
                 />
-                <span className="text-xs text-muted-foreground">
-                  I agree to the <Link to="/terms-conditions" className="text-primary font-medium hover:underline">Terms</Link> and <Link to="/privacy-policy" className="text-primary font-medium hover:underline">Privacy Policy</Link>
-                </span>
+                <label htmlFor="signup-terms" className="text-sm leading-relaxed text-muted-foreground">
+                  I agree to the{' '}
+                  <Link to="/terms-conditions" className="font-medium text-primary underline-offset-4 hover:underline">Terms</Link>
+                  {' '}and{' '}
+                  <Link to="/privacy-policy" className="font-medium text-primary underline-offset-4 hover:underline">Privacy Policy</Link>
+                </label>
               </div>
             )}
 
             {/* Sign In / Sign Up Button */}
             <Button
               type="submit"
+              size="lg"
               disabled={emailLoading || whatsappOtp.isBusy}
-              className="btn-copper w-full h-12 text-[12px] font-bold rounded-[6px] shadow-lg shadow-primary/25"
+              aria-busy={emailLoading || undefined}
+              className="mt-1 w-full"
             >
-              {emailLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  {isSignUp ? 'Creating Account...' : 'Logging in...'}
-                </>
-              ) : (
-                isSignUp ? 'Sign Up' : 'Login'
-              )}
+              {emailLoading && <Spinner />}
+              {emailLoading
+                ? (isSignUp ? 'Creating account…' : 'Signing in…')
+                : (isSignUp ? 'Create account' : 'Sign in')}
             </Button>
           </form>
 
           {/* Divider - User tab only */}
           {activeTab === 'user' && (
-            <div className="flex items-center gap-3 my-5">
-              <div className="flex-1 h-px bg-foreground/10" />
-              <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Or continue with</span>
-              <div className="flex-1 h-px bg-foreground/10" />
+            <div className="my-6 flex items-center gap-3" aria-hidden="true">
+              <div className="h-px flex-1 bg-foreground/[0.08]" />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Or</span>
+              <div className="h-px flex-1 bg-foreground/[0.08]" />
             </div>
           )}
 
@@ -758,49 +787,45 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
               type="button"
               onClick={handleGoogleSignIn}
               disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-3 py-3 border border-foreground/15 rounded-[6px] text-sm font-semibold text-foreground/85 hover:border-primary/50 transition-all disabled:opacity-50 bg-card/80"
+              aria-busy={googleLoading || undefined}
+              className="flex h-12 w-full items-center justify-center gap-3 rounded-control border border-input bg-background text-sm font-semibold text-foreground transition-[transform,background-color,border-color] duration-press ease-out hover:bg-muted active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {googleLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Spinner />
               ) : (
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="size-5" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                 </svg>
               )}
-              {googleLoading ? 'Signing In...' : 'Google'}
+              {googleLoading ? 'Signing in…' : 'Continue with Google'}
             </button>
           )}
 
           {/* Toggle Sign In / Sign Up - User tab only */}
           {activeTab === 'user' && (
-            <div className="text-center mt-6">
-              <span className="text-sm text-muted-foreground">
-                {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-              </span>
+            <p className="mt-6 border-t border-foreground/[0.08] pt-5 text-center text-sm text-muted-foreground">
+              {isSignUp ? 'Already have an account? ' : 'New here? '}
               <button
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setError('');
-                  setResetSent(false);
-                }}
-                className="text-sm text-primary font-semibold hover:underline"
+                type="button"
+                onClick={toggleSignUp}
+                className="-mx-1 inline-flex min-h-6 items-center rounded-control px-1 font-semibold text-primary underline-offset-4 hover:underline"
               >
-                {isSignUp ? 'Sign In' : 'Sign up'}
+                {isSignUp ? 'Sign in' : 'Create an account'}
               </button>
-            </div>
+            </p>
           )}
 
           {/* Delivery Help Text */}
           {activeTab === 'delivery' && (
-            <p className="text-center text-sm text-muted-foreground mt-6">
-              Contact admin if you need your delivery account credentials.
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Ask the store admin for your delivery account details.
             </p>
           )}
         </motion.div>
-      </div>
+      </main>
 
       <Footer />
       {/* Mobile Bottom Nav */}
@@ -809,141 +834,61 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
   );
 };
 
+/** Order statuses that count as "current" (in progress). */
+const CURRENT_STATUSES = ['pending', 'processing', 'packed', 'shipped', 'assigned', 'outForDelivery', 'picked'];
+
+const THEME_OPTIONS = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
+] as const;
+
 // Account Page Component
 const AccountPage = () => {
   const navigate = useNavigate();
-  const { logout, userProfile, user, updateUserProfile } = useAuth();
-  const { setTheme, resolvedTheme } = useTheme();
-  const [selectedMenu, setSelectedMenu] = useState('orders');
-  const [selectedOrderTab, setSelectedOrderTab] = useState('current');
+  const { logout, userProfile, user } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const [selectedOrderTab, setSelectedOrderTab] = useState<'current' | 'all'>('current');
   const [isMobile, setIsMobile] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [showOrderModal, setShowOrderModal] = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showReturnModal, setShowReturnModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
-  const [returnReason, setReturnReason] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const signOutTriggerRef = useRef<HTMLElement | null>(null);
 
   // Update avatar URL when user or userProfile changes
   useEffect(() => {
-    const newAvatarUrl = userProfile?.avatar || user?.photoURL || null;
-    console.log('🖼️ Avatar URL updated:', newAvatarUrl);
-    setAvatarUrl(newAvatarUrl);
+    setAvatarUrl(userProfile?.avatar || user?.photoURL || null);
   }, [userProfile?.avatar, user?.photoURL]);
-
-  // Handle photo upload
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
-    // Validate file type
-    if (!IMAGE_TYPES.includes(file.type)) {
-      toast.error('Please select a JPG, PNG or WebP image');
-      return;
-    }
-
-    // The photo is shrunk to 500 KB before upload; this only guards the phone.
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error('Image size should be less than 20MB');
-      return;
-    }
-
-    setUploadingPhoto(true);
-    try {
-      const previousAvatar = userProfile?.avatar;
-      const result = await uploadImage(file, { category: 'avatars', autoCompress: true });
-
-      await updateUserProfile({ avatar: result.url });
-      setAvatarUrl(result.url);
-      if (previousAvatar && previousAvatar !== result.url) void deleteMedia([previousAvatar]);
-      toast.success('Profile photo updated successfully');
-    } catch (error) {
-      console.error('Error uploading photo:', error);
-      toast.error(describeUploadError(error));
-    } finally {
-      setUploadingPhoto(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  // Handle account deletion
-  const handleDeleteAccount = async () => {
-    if (!user) return;
-    
-    const confirmed = window.confirm(
-      'Are you sure you want to delete your account? This action cannot be undone.'
-    );
-    
-    if (confirmed) {
-      try {
-        // TODO: Implement account deletion logic
-        toast.success('Account deletion requested. Please contact support.');
-      } catch (error) {
-        console.error('Error deleting account:', error);
-        toast.error('Failed to delete account. Please try again.');
-      }
-    }
-  };
 
   // Subscribe to user orders
   useEffect(() => {
     if (!user) return;
 
-    console.log('Setting up order subscription for user:', user.uid);
     setOrdersLoading(true);
-    
+
     const unsubscribe = subscribeToUserOrders(
       user.uid,
       (fetchedOrders) => {
-        console.log('📦 [Account] Real-time update received!');
-        console.log('📦 [Account] Number of orders:', fetchedOrders.length);
-        console.log('📦 [Account] Order details:', fetchedOrders.map(o => ({
-          id: o.id,
-          status: o.status,
-          trackingId: o.trackingId,
-          lastUpdated: o.lastUpdated
-        })));
         setOrders(fetchedOrders);
         setOrdersLoading(false);
       },
       (error) => {
         console.error('Error fetching orders:', error);
-        console.error('Error details:', error.message, (error as any).code);
-        
+
         // Check if it's an index error
         if (error.message?.includes('index') || error.message?.includes('requires an index')) {
           console.error('FIRESTORE INDEX REQUIRED: Please create the composite index for orders collection');
-          console.error('Follow the link in the error message above or check the browser console');
         }
-        
+
         setOrdersLoading(false);
       }
     );
 
     return () => {
-      console.log('Cleaning up order subscription');
       unsubscribe();
     };
   }, [user]);
-
-  // Sync selected order with updated orders data (for real-time updates in detail view)
-  useEffect(() => {
-    if (selectedOrder && orders.length > 0) {
-      const updatedOrder = orders.find(order => order.id === selectedOrder.id);
-      if (updatedOrder) {
-        console.log('🔄 [Account] Syncing selected order with real-time data');
-        setSelectedOrder(updatedOrder);
-      }
-    }
-  }, [orders]);
 
   // Detect mobile
   React.useEffect(() => {
@@ -953,16 +898,21 @@ const AccountPage = () => {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const handleLogout = async () => {
-    if (!window.confirm('Log out of your account?')) return;
+  /** Ask first (styled dialog), then sign out after a 5-second undo window. */
+  const handleLogout = () => {
+    signOutTriggerRef.current = document.activeElement as HTMLElement | null;
+    setConfirmSignOut(true);
+  };
+
+  const performLogout = () => {
     let cancelled = false;
-    const t = toast('Logging you out…', {
+    toast('Signing you out', {
       duration: 5000,
       action: {
         label: 'Undo',
         onClick: () => {
           cancelled = true;
-          toast.success('Logout cancelled');
+          toast('You are still signed in');
         },
       },
     });
@@ -970,326 +920,89 @@ const AccountPage = () => {
       if (cancelled) return;
       try {
         await logout();
-        toast.success('Logged out');
+        toast.success('Signed out');
       } catch (error) {
         console.error('Logout error:', error);
-        toast.error('Failed to log out');
+        toast.error('Unable to sign out. Try again.');
       }
     }, 5000);
   };
 
+  const signOutDialog = (
+    <ConfirmDialog
+      open={confirmSignOut}
+      onOpenChange={setConfirmSignOut}
+      title="Sign out?"
+      description="You can sign back in any time. Your bag and saved items stay on your account."
+      confirmLabel="Sign out"
+      cancelLabel="Stay signed in"
+      onConfirm={performLogout}
+      returnFocusRef={signOutTriggerRef}
+    />
+  );
+
   const menuItems = [
-    { id: 'orders', label: 'My orders', icon: Package, path: null },
+    { id: 'orders', label: 'My orders', icon: Package, path: '/account' },
     { id: 'wallet', label: 'Wallet & rewards', icon: Wallet, path: '/wallet' },
-    { id: 'videocalls', label: 'My Video Calls', icon: Video, path: '/my-video-calls' },
-    { id: 'editProfile', label: 'Edit Profile', icon: Edit, path: '/account/profile-edit' },
+    { id: 'videocalls', label: 'My video calls', icon: Video, path: '/my-video-calls' },
+    { id: 'editProfile', label: 'Edit profile', icon: Edit, path: '/account/profile-edit' },
     { id: 'addresses', label: 'Your addresses', icon: MapPin, path: '/account/addresses' },
     { id: 'security', label: 'Login & security', icon: Shield, path: '/security' },
     { id: 'saved', label: 'Saved items', icon: Heart, path: '/wishlist' },
     { id: 'support', label: 'Customer support', icon: MessageCircle, path: '/customer-support' },
-    { id: 'logout', label: 'Log out', icon: LogOut, path: null, action: 'logout' },
   ];
 
-  // Drawer-style menu for the mobile account page (mirrors the old slide-in menu)
+  // Drawer-style menu for the mobile account page
   const accountMenu = [
-    { label: 'My Orders', icon: Package, href: '/account/orders' },
-    { label: 'Wallet & Rewards', icon: Wallet, href: '/wallet' },
-    { label: 'My Video Calls', icon: Video, href: '/my-video-calls' },
-    { label: 'Edit Profile', icon: Edit, href: '/account/profile-edit' },
-    { label: 'Your Addresses', icon: MapPin, href: '/account/addresses' },
-    { label: 'Login & Security', icon: Shield, href: '/security' },
-    { label: 'Saved Items', icon: Heart, href: '/wishlist' },
-    { label: 'Customer Support', icon: MessageCircle, href: '/customer-support' },
-  ];
-
-  const quickAccessCards = [
-    { id: 'orders', label: 'Orders', icon: Package, color: 'text-primary', bg: 'bg-primary/[0.06]', path: '/orders' },
-    { id: 'wishlist', label: 'Wishlist', icon: Heart, color: 'text-pink-600', bg: 'bg-pink-50', path: '/wishlist' },
-    { id: 'coupons', label: 'Coupons', icon: Ticket, color: 'text-orange-600', bg: 'bg-orange-50', path: '/coupons' },
-    { id: 'help', label: 'Help Center', icon: HelpCircle, color: 'text-green-600', bg: 'bg-green-50', path: '/help' },
-  ];
-
-  const accountSettings = [
-    { id: 'plus', label: 'Premium Plus', icon: Sparkles, color: 'text-highlight', path: '/premium' },
-    { id: 'profile', label: 'Edit Profile', icon: User, color: 'text-primary', path: '/account/profile' },
-    { id: 'cards', label: 'Saved Credit / Debit & Gift Cards', icon: CreditCard, color: 'text-purple-600', path: '/account/cards' },
-    { id: 'addresses', label: 'Saved Addresses', icon: MapPin, color: 'text-red-600', path: '/account/addresses' },
-    { id: 'videocalls', label: 'My Video Calls', icon: Video, color: 'text-emerald-600', path: '/my-video-calls' },
-    { id: 'language', label: 'Select Language', icon: Globe, color: 'text-primary', path: '/account/language' },
-    { id: 'notifications', label: 'Notification Settings', icon: Bell, color: 'text-green-600', path: '/account/notifications' },
-    { id: 'privacy', label: 'Privacy Center', icon: Shield, color: 'text-gray-600', path: '/account/privacy' },
-  ];
-
-  const myActivity = [
-    { id: 'reviews', label: 'Reviews', icon: Star, color: 'text-highlight' },
-    { id: 'questions', label: 'Questions & Answers', icon: MessageCircle, color: 'text-primary' },
+    { label: 'My orders', icon: Package, href: '/account/orders' },
+    { label: 'Wallet & rewards', icon: Wallet, href: '/wallet' },
+    { label: 'My video calls', icon: Video, href: '/my-video-calls' },
+    { label: 'Edit profile', icon: Edit, href: '/account/profile-edit' },
+    { label: 'Your addresses', icon: MapPin, href: '/account/addresses' },
+    { label: 'Login & security', icon: Shield, href: '/security' },
+    { label: 'Saved items', icon: Heart, href: '/wishlist' },
+    { label: 'Customer support', icon: MessageCircle, href: '/customer-support' },
   ];
 
   // Filter orders based on selected tab
-  const filteredOrders = orders.filter(order => {
-    if (selectedOrderTab === 'current') {
-      return ['pending', 'processing', 'packed', 'shipped', 'assigned', 'outForDelivery', 'picked'].includes(order.status);
-    } else if (selectedOrderTab === 'all') {
-      return true;
-    }
-    return false;
-  });
+  const filteredOrders = orders.filter(order =>
+    selectedOrderTab === 'current' ? CURRENT_STATUSES.includes(order.status) : true
+  );
 
-  // Format price in INR
-  const formatPrice = (price: number) => {
-    return `₹${price.toFixed(2)}`;
-  };
+  const displayName = userProfile?.name || userProfile?.username || user?.displayName?.split(' ')[0] || 'Welcome';
 
-  // Get status color - sophisticated palette
-  const getStatusColor = (status: Order['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'text-highlight';
-      case 'processing':
-        return 'text-primary';
-      case 'packed':
-      case 'shipped':
-      case 'assigned':
-        return 'text-orange-600';
-      case 'outForDelivery':
-      case 'picked':
-        return 'text-purple-600';
-      case 'delivered':
-        return 'text-emerald-600';
-      case 'cancelled':
-        return 'text-red-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
-
-  // Get status badge classes
-  const getStatusBadgeClass = (status: Order['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-highlight/10 text-highlight border border-highlight/30';
-      case 'processing':
-        return 'bg-primary/[0.06] text-primary border border-primary/25';
-      case 'packed':
-      case 'shipped':
-      case 'assigned':
-        return 'bg-orange-50 text-orange-700 border border-orange-200';
-      case 'outForDelivery':
-      case 'picked':
-        return 'bg-purple-50 text-purple-700 border border-purple-200';
-      case 'delivered':
-        return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-      case 'cancelled':
-        return 'bg-red-50 text-red-700 border border-red-200';
-      case 'returnRequested':
-        return 'bg-highlight/10 text-highlight border border-highlight/30';
-      case 'returnScheduled':
-        return 'bg-purple-50 text-purple-700 border border-purple-200';
-      case 'returned':
-        return 'bg-gray-50 text-gray-700 border border-gray-200';
-      case 'deliveryFailed':
-        return 'bg-red-50 text-red-700 border border-red-200';
-      default:
-        return 'bg-gray-50 text-gray-700 border border-gray-200';
-    }
-  };
-
-  // Get status icon
-  const getStatusIcon = (status: Order['status']) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="w-4 h-4" />;
-      case 'processing':
-        return <Package className="w-4 h-4" />;
-      case 'packed':
-      case 'shipped':
-      case 'assigned':
-        return <Truck className="w-4 h-4" />;
-      case 'outForDelivery':
-      case 'picked':
-        return <MapPin className="w-4 h-4" />;
-      case 'delivered':
-        return <CheckCircle2 className="w-4 h-4" />;
-      case 'cancelled':
-        return <XCircle className="w-4 h-4" />;
-      case 'returnRequested':
-        return <ReturnIcon className="w-4 h-4" />;
-      case 'returnScheduled':
-        return <ReturnIcon className="w-4 h-4" />;
-      case 'returned':
-        return <ReturnIcon className="w-4 h-4" />;
-      case 'deliveryFailed':
-        return <XCircle className="w-4 h-4" />;
-      default:
-        return <Package className="w-4 h-4" />;
-    }
-  };
-
-  // Get status label
-  const getStatusLabel = (status: Order['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'processing':
-        return 'Processing';
-      case 'packed':
-      case 'shipped':
-      case 'assigned':
-        return 'Packed';
-      case 'outForDelivery':
-      case 'picked':
-        return 'Out for Delivery';
-      case 'delivered':
-        return 'Delivered';
-      case 'cancelled':
-        return 'Cancelled';
-      case 'returnRequested':
-        return 'Return Requested';
-      case 'returnScheduled':
-        return 'Return Scheduled';
-      case 'returned':
-        return 'Returned';
-      case 'deliveryFailed':
-        return 'Delivery Attempted';
-      default:
-        return status;
-    }
-  };
-
-  // Format date
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return 'N/A';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }) + ', ' + date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
-
-  // Format payment method
-  const formatPaymentMethod = (method: string) => {
-    if (method === 'cod') return 'Cash On Delivery';
-    if (method === 'online') return 'Online Payment';
-    if (method === 'card') return 'Card Payment';
-    // Capitalize first letter of each word
-    return method.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  };
-
-  // Check if order can be returned (within 7 days of delivery)
-  const canReturnOrder = (order: Order): boolean => {
-    if (order.status !== 'delivered') return false;
-    if ((order as any).returnCancelled) return false;
-    return isWithinReturnWindow(order.deliveredAt);
-  };
-
-  // Handle cancel order
-  const handleCancelOrder = async () => {
-    if (!selectedOrder || !user || !cancelReason) return;
-    
-    setIsSubmitting(true);
-    try {
-      await cancelOrder(selectedOrder.id, user.uid, cancelReason);
-      setShowCancelModal(false);
-      setCancelReason('');
-      // Order will update via real-time subscription
-      alert('Order cancelled successfully');
-    } catch (error: any) {
-      alert(error.message || 'Failed to cancel order');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Handle request return
-  const handleRequestReturn = async () => {
-    if (!selectedOrder || !user || !returnReason) return;
-    
-    setIsSubmitting(true);
-    try {
-      await requestReturn(selectedOrder.id, user.uid, returnReason);
-      setShowReturnModal(false);
-      setReturnReason('');
-      // Order will update via real-time subscription
-      alert('Return request submitted successfully. Our team will review your request.');
-    } catch (error: any) {
-      alert(error.message || 'Failed to submit return request');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Handle cancel return
-  const [cancellingReturn, setCancellingReturn] = useState(false);
-  const handleCancelReturn = async () => {
-    if (!selectedOrder) return;
-    setCancellingReturn(true);
-    try {
-      await cancelReturn(selectedOrder.id);
-      alert('Return request cancelled.');
-    } catch (err: any) {
-      alert(err?.message || 'Failed to cancel return');
-    } finally {
-      setCancellingReturn(false);
-    }
-  };
-
-  const handleMenuClick = (menu: any) => {
-    if (menu.action === 'logout') {
-      handleLogout();
-    } else if (menu.path) {
-      navigate(menu.path);
-    } else {
-      setSelectedMenu(menu.id);
-    }
-  };
-
-  // Mobile view - new design matching desktop
+  // Mobile view
   if (isMobile) {
+    const rowClass =
+      'focus-inset flex min-h-14 w-full items-center gap-4 border-b border-foreground/[0.08] px-5 py-4 text-left transition-colors duration-hover hover:bg-muted/60';
     return (
       <>
-        <div className="min-h-screen pt-2 tx-paper pb-20">
+        <main id="main" tabIndex={-1} className="min-h-screen pt-2 tx-paper pb-20 outline-none">
           <div className="px-4 py-2">
             {/* Drawer-style top bar */}
             <div className="flex items-center justify-between py-2">
-              <button
-                onClick={() => navigate('/')}
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
-                aria-label="Back to home"
-              >
-                <ArrowLeft className="w-5 h-5 text-foreground/80" strokeWidth={1.5} />
-              </button>
-              <User className="w-6 h-6 text-foreground/80" strokeWidth={1.5} />
+              <IconButton label="Back to home" className="-ml-2" onClick={() => navigate('/')}>
+                <ArrowLeft aria-hidden="true" />
+              </IconButton>
+              <User aria-hidden="true" className="size-6 text-muted-foreground" />
             </div>
-
-            {/* Hidden file input (avatar upload via Edit Profile) */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoChange}
-              className="hidden"
-            />
 
             {/* Member card */}
             <div className="mb-4 mt-1 relative">
-              <div className="tx-slate tx-contour relative overflow-hidden rounded-[var(--radius-panel)] p-5 flex items-center gap-4 text-charcoal-foreground shadow-[var(--shadow-panel)]">
+              <div className="tx-slate tx-contour relative overflow-hidden rounded-panel p-5 flex items-center gap-4 text-charcoal-foreground shadow-[var(--shadow-panel)] dark:ring-1 dark:ring-highlight-soft/20">
                 <div className="flex-shrink-0">
                   {avatarUrl ? (
                     <SmartImage
                       key={`avatar-${avatarUrl}-${user?.uid}`}
                       src={avatarUrl}
-                      alt="Profile"
+                      alt=""
                       className="w-[72px] h-[72px] rounded-full object-cover ring-1 ring-highlight-soft/50"
                       referrerPolicy="no-referrer" preset="thumb" />
                   ) : (
                     <span
-                      className="grid w-[72px] h-[72px] place-items-center rounded-full border border-highlight-soft/45 bg-white/5 text-3xl font-semibold text-highlight-soft"
-                      style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
+                      aria-hidden="true"
+                      className="grid w-[72px] h-[72px] place-items-center rounded-full border border-highlight-soft/45 bg-charcoal-foreground/5 text-3xl font-semibold text-highlight-soft"
+                      style={HEADING_FONT}
                     >
                       {(userProfile?.name || userProfile?.username || user?.displayName || user?.email || '?').trim().charAt(0).toUpperCase()}
                     </span>
@@ -1297,895 +1010,275 @@ const AccountPage = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="eyebrow-no on-dark mb-1.5 !text-[9px]"><span>Ishaputra member</span></p>
-                  <h3 className="text-xl font-semibold leading-tight truncate" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
-                    Hi, {(userProfile?.name || userProfile?.username || user?.displayName?.split(' ')[0] || 'Welcome')}
-                  </h3>
-                  <p className="text-charcoal-foreground/60 text-xs mt-0.5 mb-3 truncate">{user?.email}</p>
-                  <button
-                    onClick={() => navigate('/account/profile-edit')}
-                    className="link-arrow !text-charcoal-foreground"
+                  <h1 className="text-xl font-semibold leading-tight break-words [overflow-wrap:anywhere]" style={HEADING_FONT}>
+                    Hi, {displayName}
+                  </h1>
+                  <p className="text-charcoal-foreground/70 text-xs mt-0.5 mb-3 break-words [overflow-wrap:anywhere]">{user?.email}</p>
+                  <Link
+                    to="/account/profile-edit"
+                    className="link-arrow relative !text-charcoal-foreground after:absolute after:-inset-y-3 after:inset-x-0 after:content-['']"
                   >
-                    View profile <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                    View profile <ChevronRight aria-hidden="true" className="size-3.5" />
+                  </Link>
                 </div>
               </div>
             </div>
 
-            {/* Menu list — drawer style */}
-            <div className="panel tx-sheet overflow-hidden">
+            {/* Menu list: drawer style */}
+            <nav aria-label="Account" className="panel tx-sheet overflow-hidden">
               {accountMenu.map((item) => (
-                <button
-                  key={item.label}
-                  onClick={() => navigate(item.href)}
-                  className="w-full flex items-center gap-4 px-5 py-4 hover:bg-foreground/[0.04] transition-colors border-b border-foreground/[0.07] text-left"
-                >
-                  <item.icon className="w-[22px] h-[22px] text-primary" strokeWidth={1.4} />
+                <Link key={item.label} to={item.href} className={rowClass}>
+                  <item.icon aria-hidden="true" className="size-[22px] shrink-0 text-primary" />
                   <span className="text-[15px] font-medium text-foreground flex-1 tracking-wide">{item.label}</span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-                </button>
+                  <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
+                </Link>
               ))}
 
-              {/* Theme toggle */}
-              <button
-                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-                className="w-full flex items-center gap-4 px-5 py-4 hover:bg-foreground/[0.04] transition-colors border-b border-foreground/[0.07] text-left"
-              >
-                {resolvedTheme === 'dark' ? (
-                  <Sun className="w-[22px] h-[22px] text-primary" strokeWidth={1.4} />
-                ) : (
-                  <Moon className="w-[22px] h-[22px] text-primary" strokeWidth={1.4} />
-                )}
-                <span className="text-[15px] font-medium text-foreground flex-1 tracking-wide">
-                  {resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                </span>
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em] px-2 py-0.5 rounded-full bg-muted">
-                  {resolvedTheme === 'dark' ? 'Dark' : 'Light'}
-                </span>
-              </button>
+              {/* Theme: Light / Dark / System (owner decision ACCT-31) */}
+              <div className="flex min-h-14 items-center gap-4 border-b border-foreground/[0.08] px-5 py-2.5">
+                <SunMoon aria-hidden="true" className="size-[22px] shrink-0 text-primary" />
+                <span id="theme-label" className="text-[15px] font-medium text-foreground flex-1 tracking-wide">Theme</span>
+                <ToggleGroup
+                  type="single"
+                  size="sm"
+                  value={theme}
+                  onValueChange={(v) => { if (v) setTheme(v as 'light' | 'dark' | 'system'); }}
+                  aria-labelledby="theme-label"
+                  className="shrink-0"
+                >
+                  {THEME_OPTIONS.map((opt) => (
+                    <ToggleGroupItem key={opt.value} value={opt.value} className="h-9 px-2.5 text-xs">
+                      {opt.label}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </div>
 
               {/* Logout */}
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-4 px-5 py-4 hover:bg-foreground/[0.04] transition-colors text-left"
-              >
-                <LogOut className="w-[22px] h-[22px] text-primary" strokeWidth={1.4} />
-                <span className="text-[15px] font-medium text-primary dark:text-primary flex-1 tracking-wide">Log Out</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+              <button type="button" onClick={handleLogout} className={`${rowClass} border-b-0`}>
+                <LogOut aria-hidden="true" className="size-[22px] shrink-0 text-primary" />
+                <span className="text-[15px] font-medium text-primary flex-1 tracking-wide">Sign out</span>
+                <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
               </button>
-            </div>
+            </nav>
           </div>
-        </div>
+        </main>
         <MobileBottomNav />
-
-        {/* Order Details Full Page - Mobile */}
-        <AnimatePresence>
-          {showOrderModal && selectedOrder && (
-            <motion.div 
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed inset-0 bg-card z-50 overflow-y-auto"
-              style={{ fontFamily: "var(--font-body)" }}
-            >
-              {/* Header */}
-              <div className="sticky top-0 bg-card border-b border-border px-4 py-3 flex items-center gap-3 z-10">
-                <button 
-                  onClick={() => setShowOrderModal(false)}
-                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5 text-foreground/80" />
-                </button>
-                <h3 className="text-lg font-semibold text-foreground">My Orders</h3>
-              </div>
-              
-              <div className="p-4 pb-24 space-y-5">
-                {/* Order ID & Status */}
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Order ID</p>
-                  <h4 className="text-lg font-bold text-foreground">#{selectedOrder.orderId}</h4>
-                  <span className={`inline-flex items-center gap-1.5 mt-2 text-sm font-medium px-3 py-1 rounded-full ${getStatusBadgeClass(selectedOrder.status)}`}>
-                    {getStatusIcon(selectedOrder.status)}
-                    {getStatusLabel(selectedOrder.status)}
-                  </span>
-                  {/* Status message for return flow */}
-                  {selectedOrder.status === 'returnRequested' && (
-                    <p className="text-sm text-highlight mt-2">Return request submitted. Waiting for approval.</p>
-                  )}
-                  {selectedOrder.status === 'returnScheduled' && (
-                    <p className="text-sm text-emerald-700 mt-2">Return approved! Your pickup partner is on the way.</p>
-                  )}
-                  {selectedOrder.status === 'returned' && (
-                    <p className="text-sm text-muted-foreground mt-2">Item has been picked up and returned successfully.</p>
-                  )}
-                  {selectedOrder.status === 'deliveryFailed' && (
-                    <p className="text-sm text-red-700 mt-2">We couldn't reach you for delivery. Your item is being returned to our store. We'll contact you to reschedule.</p>
-                  )}
-                </div>
-
-                {/* Return Pickup OTP — shown when return is scheduled */}
-                {selectedOrder.status === 'returnScheduled' && (selectedOrder as any).return_otp && (
-                  <div className="rounded-2xl border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 to-green-50 px-5 py-4 dark:border-emerald-500/40 dark:from-emerald-500/10 dark:to-green-500/10">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-300">Return Pickup OTP</p>
-                    <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-200">Show this OTP to the pickup partner when they arrive to collect your item</p>
-                    <p className="mt-2 font-mono text-3xl font-extrabold tracking-[0.5em] text-emerald-700 dark:text-emerald-300">{(selectedOrder as any).return_otp}</p>
-                    {(selectedOrder.delivery_partner_name || (selectedOrder as any).delivery_boy_name) && (
-                      <div className="mt-3 flex items-center justify-between rounded-xl bg-white/70 px-3 py-2 dark:bg-zinc-900/60">
-                        <div>
-                          <p className="text-[10px] uppercase tracking-widest text-gray-400">Pickup Partner</p>
-                          <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100">
-                            {selectedOrder.delivery_partner_name || (selectedOrder as any).delivery_boy_name}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Delivery Window — shown when order is out for delivery and window is set */}
-                {(selectedOrder.status === 'outForDelivery' || selectedOrder.status === 'shipped' || selectedOrder.status === 'assigned') &&
-                  (selectedOrder as any).delivery_window_date && (
-                  <div className="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50 px-4 py-3 dark:border-purple-500/30 dark:from-purple-500/10 dark:to-indigo-500/10">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-purple-700 dark:text-purple-300">Expected Delivery Window</p>
-                    <p className="mt-1 text-sm font-semibold text-purple-900 dark:text-purple-100">
-                      {(() => {
-                        const d = new Date((selectedOrder as any).delivery_window_date + 'T00:00:00');
-                        const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-                        const fmt = (t: string) => { const [h, m] = t.split(':').map(Number); const p = h >= 12 ? 'PM' : 'AM'; return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${p}`; };
-                        return `${dateStr}, between ${fmt((selectedOrder as any).delivery_window_from)} – ${fmt((selectedOrder as any).delivery_window_to)}`;
-                      })()}
-                    </p>
-                    {(selectedOrder as any).delivery_window_note && (
-                      <p className="mt-1 text-xs text-purple-700 dark:text-purple-300">{(selectedOrder as any).delivery_window_note}</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Delivery Failed card */}
-                {selectedOrder.status === 'deliveryFailed' && (
-                  <div className="rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-primary/10 px-4 py-3 dark:border-red-500/30 dark:from-red-500/10 dark:to-primary/10">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-red-700 dark:text-red-300">Delivery Attempted</p>
-                    <p className="mt-1 text-sm font-medium text-red-900 dark:text-red-100">We couldn't reach you for delivery.</p>
-                    <p className="mt-1 text-xs text-red-700 dark:text-red-300">Your item is being returned to our store. Our team will contact you to reschedule the delivery.</p>
-                  </div>
-                )}
-
-                {/* Items Section */}
-                <div>
-                  <h5 className="text-base font-semibold text-foreground mb-3">Items</h5>
-                  <div className="space-y-3">
-                    {selectedOrder.items.map((item, idx) => (
-                      <div key={idx} className="flex gap-3 bg-muted rounded-xl p-3">
-                        <div className="w-16 h-16 bg-card rounded-lg flex-shrink-0 overflow-hidden border border-border">
-                          <SmartImage src={item.image} alt={item.name} className="w-full h-full object-cover" preset="thumb" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h6 className="text-sm font-semibold text-foreground mb-1">{item.name}</h6>
-                          <p className="text-xs text-muted-foreground">Qty: {item.quantity} × ₹{item.price.toLocaleString()}</p>
-                          <p className="text-sm font-bold text-foreground mt-1">₹{(item.price * item.quantity).toLocaleString()}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Tracking Information Section - Mobile */}
-                {(selectedOrder.trackingId || selectedOrder.carrier) && (
-                  <div className="bg-primary/[0.06] rounded-[10px] p-4 border border-primary/20">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-primary/15 rounded-full flex items-center justify-center">
-                        <Truck className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <span className="font-semibold text-foreground text-sm block">Tracking Information</span>
-                        <span className="text-xs text-muted-foreground">Track your package</span>
-                      </div>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      {selectedOrder.carrier && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Carrier:</span>
-                          <span className="font-semibold text-foreground">{selectedOrder.carrier}</span>
-                        </div>
-                      )}
-                      {selectedOrder.trackingId && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">ID:</span>
-                          <span className="font-mono font-semibold text-primary">{selectedOrder.trackingId}</span>
-                        </div>
-                      )}
-                      {selectedOrder.trackingUrl && (
-                        <a
-                          href={selectedOrder.trackingUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 mt-3 px-4 py-2.5 bg-primary text-white text-sm font-medium rounded-xl w-full"
-                        >
-                          <Truck className="w-4 h-4" />
-                          Track Package
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Shipping Address */}
-                <div>
-                  <h5 className="text-base font-semibold text-foreground mb-3">Shipping Address</h5>
-                  <div className="bg-muted rounded-xl p-4">
-                    <p className="font-semibold text-foreground mb-1">{selectedOrder.shippingAddress.fullName}</p>
-                    <p className="text-sm text-muted-foreground">{selectedOrder.shippingAddress.address}</p>
-                    {selectedOrder.shippingAddress.locality && (
-                      <p className="text-sm text-muted-foreground">{selectedOrder.shippingAddress.locality}</p>
-                    )}
-                    <p className="text-sm text-muted-foreground">
-                      {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.pincode}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      <span className="font-medium">Phone:</span> {selectedOrder.shippingAddress.mobile}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Payment Summary */}
-                <div>
-                  <h5 className="text-base font-semibold text-foreground mb-3">Payment Summary</h5>
-                  <div className="bg-muted rounded-xl p-4 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span className="text-foreground">₹{selectedOrder.subtotal.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Delivery</span>
-                      <span className="text-foreground">₹{selectedOrder.deliveryCharge.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      {/* GST-inclusive prices already carry this tax, so it is not added again. */}
-                      <span className="text-muted-foreground">Tax{selectedOrder.gstInclusive && selectedOrder.taxAmount > 0 ? ' (included)' : ''}</span>
-                      <span className="text-foreground">₹{selectedOrder.taxAmount.toLocaleString()}</span>
-                    </div>
-                    {selectedOrder.discount > 0 && (
-                      <div className="flex justify-between text-sm text-green-800 dark:text-green-500">
-                        <span>Discount</span>
-                        <span>-₹{selectedOrder.discount.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {rewardsPaidRows(selectedOrder).map(([label, amount]) => (
-                      <div key={label} className="flex justify-between text-sm text-green-800 dark:text-green-500">
-                        <span>{label}</span>
-                        <span>-₹{amount.toLocaleString()}</span>
-                      </div>
-                    ))}
-                    <div className="border-t border-border pt-2 mt-2">
-                      <div className="flex justify-between">
-                        <span className="font-semibold text-foreground">Total</span>
-                        <span className="font-bold text-lg text-foreground">₹{selectedOrder.total.toLocaleString()}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between text-sm pt-2">
-                      <span className="text-muted-foreground">Payment Method</span>
-                      <span className="font-medium text-foreground">{formatPaymentMethod(selectedOrder.paymentMethod)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Order Date */}
-                <div className="text-center text-xs text-muted-foreground pt-2">
-                  Ordered on {formatDate(selectedOrder.createdAt)}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {signOutDialog}
       </>
     );
   }
 
-  // Desktop view - new sidebar layout
+  // Desktop view: sidebar layout
+  const tabClass = (active: boolean) =>
+    `-mb-px border-b-2 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.18em] transition-colors duration-hover ${
+      active ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+    }`;
+
   return (
     <>
       <Header />
       <CategoryIconNav />
-      <div className="tx-paper pt-8">
+      <main id="main" tabIndex={-1} className="tx-paper pt-8 outline-none">
         <div className="container mx-auto px-6 pb-8">
           <div className="grid grid-cols-12 gap-6 -mt-4">
             {/* Sidebar */}
             <div className="col-span-3">
-              <div className="panel tx-sheet p-6 sticky top-20">
+              <div className="panel tx-sheet p-6 sticky top-[var(--sticky-top)]">
                 {/* User Info */}
                 <div className="mb-6">
                   <p className="eyebrow-no mb-3"><span>Ishaputra member</span></p>
-                  <h2 className="text-2xl font-semibold text-foreground mb-1" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Your account</h2>
-                  <p className="text-sm text-muted-foreground font-medium" style={{ wordBreak: 'break-all' }}>{userProfile?.username || 'User'}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5" style={{ wordBreak: 'break-all' }}>{userProfile?.email || user?.email}</p>
+                  <h1 className="text-2xl font-semibold text-foreground mb-1" style={HEADING_FONT}>Your account</h1>
+                  <p className="text-sm text-muted-foreground font-medium break-words [overflow-wrap:anywhere]">{userProfile?.username || 'User'}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 break-words [overflow-wrap:anywhere]">{userProfile?.email || user?.email}</p>
                 </div>
 
                 {/* Menu Items */}
-                <nav className="space-y-1">
-                  {menuItems.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleMenuClick(item)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-[6px] text-left transition-colors ${
-                        selectedMenu === item.id
-                          ? 'bg-primary/10 text-primary font-semibold shadow-[inset_2px_0_0_hsl(var(--primary))]'
-                          : 'text-foreground/80 hover:bg-foreground/[0.04]'
-                      }`}
-                    >
-                      <item.icon className="w-5 h-5" />
-                      <span className="text-sm font-medium">{item.label}</span>
-                    </button>
-                  ))}
+                <nav aria-label="Account" className="flex flex-col gap-1">
+                  {menuItems.map((item) => {
+                    const current = item.id === 'orders';
+                    return (
+                      <Link
+                        key={item.id}
+                        to={item.path}
+                        aria-current={current ? 'page' : undefined}
+                        className={`flex w-full items-center gap-3 rounded-control px-4 py-3 text-left text-sm font-medium transition-colors duration-hover ${
+                          current
+                            ? 'bg-primary/10 text-primary font-semibold shadow-[inset_2px_0_0_hsl(var(--primary))]'
+                            : 'text-foreground/80 hover:bg-muted/60 hover:text-foreground'
+                        }`}
+                      >
+                        <item.icon aria-hidden="true" className="size-5 shrink-0" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-3 rounded-control px-4 py-3 text-left text-sm font-medium text-foreground/80 transition-colors duration-hover hover:bg-muted/60 hover:text-foreground"
+                  >
+                    <LogOut aria-hidden="true" className="size-5 shrink-0" />
+                    Sign out
+                  </button>
                 </nav>
               </div>
             </div>
 
             {/* Main Content */}
             <div className="col-span-9">
-              {selectedMenu === 'orders' && (
-                <div className="panel tx-sheet">
-                  {/* Order Tabs */}
-                  <div className="border-b border-foreground/[0.08] px-6 pt-5">
-                    <div className="flex gap-4">
-                      <button
-                        onClick={() => setSelectedOrderTab('current')}
-                        className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] border-b-2 transition-colors ${
-                          selectedOrderTab === 'current'
-                            ? 'border-primary text-primary'
-                            : 'border-transparent text-muted-foreground hover:text-foreground'
-                        }`}
-                      >
-                        Current
-                      </button>
-                      <button
-                        onClick={() => setSelectedOrderTab('all')}
-                        className={`px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] border-b-2 transition-colors ${
-                          selectedOrderTab === 'all'
-                            ? 'border-primary text-primary'
-                            : 'border-transparent text-muted-foreground hover:text-foreground'
-                        }`}
-                      >
-                        All orders
-                      </button>
-                    </div>
+              <section aria-labelledby="orders-heading" className="panel tx-sheet">
+                <h2 id="orders-heading" className="sr-only">Your orders</h2>
+                {/* Order Tabs */}
+                <div className="border-b border-foreground/[0.08] px-6 pt-4">
+                  <div className="flex gap-4" role="group" aria-label="Show orders">
+                    <button
+                      type="button"
+                      aria-pressed={selectedOrderTab === 'current'}
+                      onClick={() => setSelectedOrderTab('current')}
+                      className={tabClass(selectedOrderTab === 'current')}
+                    >
+                      Current
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={selectedOrderTab === 'all'}
+                      onClick={() => setSelectedOrderTab('all')}
+                      className={tabClass(selectedOrderTab === 'all')}
+                    >
+                      All orders
+                    </button>
                   </div>
+                </div>
 
-                  {/* Orders List */}
-                  <div className="p-6 space-y-6">
-                    {ordersLoading ? (
-                      <div className="flex justify-center items-center py-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                      </div>
-                    ) : filteredOrders.length === 0 ? (
-                      <div className="text-center py-12">
-                        <Package className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-foreground mb-1" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>No orders yet</h3>
-                        <p className="text-sm text-muted-foreground mb-6">Discover classical Ayurveda made for the modern man</p>
-                        <button
-                          onClick={() => navigate('/products')}
-                          className="btn-copper"
-                        >
-                          Start shopping
-                        </button>
-                      </div>
+                {/* Orders List */}
+                <div className="p-6 flex flex-col gap-5">
+                  {ordersLoading ? (
+                    <div aria-busy="true" className="flex flex-col gap-5">
+                      <span className="sr-only" role="status">Loading your orders</span>
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="flex gap-4 rounded-card border border-foreground/[0.08] p-4">
+                          <Skeleton className="size-20 shrink-0 rounded-[8px]" />
+                          <div className="flex flex-1 flex-col gap-2.5 pt-1">
+                            <Skeleton className="h-4 w-1/2" />
+                            <Skeleton className="h-3.5 w-1/4" />
+                            <Skeleton className="h-3.5 w-1/5" />
+                            <Skeleton className="h-6 w-48 rounded-chip" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : filteredOrders.length === 0 ? (
+                    selectedOrderTab === 'current' && orders.length > 0 ? (
+                      <EmptyState
+                        icon={Package}
+                        as="h3"
+                        title="Nothing in progress"
+                        description="Your delivered and past orders are under All orders."
+                        action={{ label: 'All orders', onClick: () => setSelectedOrderTab('all') }}
+                      />
                     ) : (
-                      filteredOrders.map((order) => (
-                        <div 
-                          key={order.id} 
-                          className="rounded-[var(--radius-card)] border border-foreground/[0.08] bg-card/70 p-4 cursor-pointer transition-all hover:border-primary/35 hover:shadow-[var(--shadow-card-hover)]"
-                          style={{ fontFamily: "var(--font-body)" }}
-                          onClick={() => {
-                            navigate(`/account/orders/${order.id}`);
-                          }}
-                        >
-                          {/* Order Items Display */}
-                          <div className="space-y-4">
-                            {order.items.map((item, idx) => (
-                              <div key={idx} className="flex gap-4">
-                                <div className="tile-img w-20 h-20 flex-shrink-0 overflow-hidden">
-                                  <SmartImage src={item.image} alt={item.name} className="w-full h-full object-cover" preset="thumb" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="text-base font-semibold text-foreground mb-1">{item.name}</h4>
-                                  <p className="text-sm text-muted-foreground">Price: {formatPrice(item.price)}</p>
-                                  <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className={`inline-flex items-center gap-1.5 text-sm font-medium px-2.5 py-0.5 rounded-full ${getStatusBadgeClass(order.status)}`}>
-                                      {getStatusIcon(order.status)}
-                                      {getStatusLabel(order.status)}
-                                    </span>
-                                    <span className="text-sm text-muted-foreground">•</span>
-                                    <span className="text-sm text-muted-foreground">{formatDate(order.createdAt)}</span>
-                                  </div>
+                      <EmptyState
+                        icon={Package}
+                        as="h3"
+                        title="No orders yet"
+                        description="Discover classical Ayurveda made for the modern man."
+                        action={{ label: 'Start shopping', to: '/products' }}
+                      />
+                    )
+                  ) : (
+                    filteredOrders.map((order) => (
+                      <article
+                        key={order.id}
+                        className="relative rounded-card border border-foreground/[0.08] bg-card/70 p-4 transition-[border-color,box-shadow] duration-hover hover:border-primary/35 hover:shadow-[var(--shadow-card-hover)] has-[a[data-card-link]:focus-visible]:outline has-[a[data-card-link]:focus-visible]:outline-2 has-[a[data-card-link]:focus-visible]:outline-offset-2 has-[a[data-card-link]:focus-visible]:outline-ring"
+                        style={{ fontFamily: "var(--font-body)" }}
+                      >
+                        {/* Order Items Display */}
+                        <div className="flex flex-col gap-4">
+                          {order.items.map((item, idx) => (
+                            <div key={idx} className="flex gap-4">
+                              <div className="tile-img w-20 h-20 flex-shrink-0 overflow-hidden">
+                                <SmartImage src={item.image} alt="" className="w-full h-full object-cover" preset="thumb" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-base font-semibold text-foreground mb-1">
+                                  {idx === 0 ? (
+                                    // Stretched link: the whole card opens the order
+                                    <Link
+                                      to={`/account/orders/${order.id}`}
+                                      data-card-link
+                                      className="outline-none after:absolute after:inset-0 after:rounded-card after:content-['']"
+                                    >
+                                      {item.name}
+                                    </Link>
+                                  ) : (
+                                    item.name
+                                  )}
+                                </h3>
+                                <p className="text-sm text-muted-foreground tabular-nums">Price: {formatINR(item.price)}</p>
+                                <p className="text-sm text-muted-foreground tabular-nums">Quantity: {item.quantity}</p>
+                                <div className="flex flex-wrap items-center gap-2 mt-2">
+                                  <OrderStatusBadge status={order.status} order={order} />
+                                  <span aria-hidden="true" className="text-sm text-muted-foreground">·</span>
+                                  <span className="text-sm text-muted-foreground tabular-nums">{formatDateTime(order.createdAt)}</span>
                                 </div>
                               </div>
-                            ))}
-                          </div>
-                          
-                          {/* Tracking Information - Real-time updated */}
-                          {(order.trackingId || order.carrier) && (
-                            <div className="mt-4 pt-4 border-t border-border">
-                              <div className="flex items-center justify-between bg-primary/[0.06] rounded-lg p-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 bg-primary/15 rounded-full flex items-center justify-center">
-                                    <Truck className="w-4 h-4 text-primary" />
-                                  </div>
-                                  <div>
-                                    {order.carrier && (
-                                      <p className="text-sm font-medium text-foreground">{order.carrier}</p>
-                                    )}
-                                    {order.trackingId && (
-                                      <p className="text-xs text-muted-foreground">Tracking ID: {order.trackingId}</p>
-                                    )}
-                                  </div>
-                                </div>
-                                {order.trackingUrl && (
-                                  <a
-                                    href={order.trackingUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors"
-                                  >
-                                    Track Package
-                                    <ExternalLink className="w-3 h-3" />
-                                  </a>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Tracking Information - Real-time updated */}
+                        {(order.trackingId || order.carrier) && (
+                          <div className="mt-4 flex items-center justify-between gap-3 border-t border-foreground/[0.08] pt-4">
+                            <div className="flex items-center gap-3">
+                              <div className="grid size-9 place-items-center rounded-full bg-primary/10">
+                                <Truck aria-hidden="true" className="size-4 text-primary" />
+                              </div>
+                              <div>
+                                {order.carrier && (
+                                  <p className="text-sm font-medium text-foreground">{order.carrier}</p>
+                                )}
+                                {order.trackingId && (
+                                  <p className="text-xs text-muted-foreground tabular-nums">Tracking ID {order.trackingId}</p>
                                 )}
                               </div>
                             </div>
-                          )}
-
-                          {/* OTP Display for Out for Delivery Orders */}
-                          {order.status === 'outForDelivery' && order.delivery_otp && (
-                            <div className="mt-4 pt-4 border-t border-border">
-                              <p className="text-sm font-semibold text-foreground">Delivery OTP</p>
-                              <p className="text-xs text-muted-foreground mt-1">Share this OTP with your delivery partner</p>
-                              <p className="text-base font-bold text-foreground mt-2">{order.delivery_otp}</p>
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {selectedMenu === 'addresses' && (
-                <div className="panel tx-sheet p-6">
-                  <h3 className="text-xl font-semibold text-foreground mb-4" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Your Addresses</h3>
-                  <p className="text-muted-foreground">Manage your saved addresses here.</p>
-                  <Button onClick={() => navigate('/account/addresses')} className="btn-copper mt-4 h-auto py-3 text-[11px] font-bold rounded-[6px]">
-                    View Addresses
-                  </Button>
-                </div>
-              )}
-
-              {selectedMenu === 'security' && (
-                <div className="panel tx-sheet p-6">
-                  <h3 className="text-xl font-semibold text-foreground mb-4" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Login & Security</h3>
-                  <p className="text-muted-foreground mb-4">Manage your login credentials and security settings.</p>
-                  <Button onClick={() => navigate('/security')} className="btn-copper mt-4 h-auto py-3 text-[11px] font-bold rounded-[6px]">Manage security</Button>
-                </div>
-              )}
-
-              {selectedMenu === 'support' && (
-                <div className="panel tx-sheet p-6">
-                  <h3 className="text-xl font-semibold text-foreground mb-4" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Customer Support</h3>
-                  <p className="text-muted-foreground">Get help with your orders and account.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-      <Footer />
-
-      {/* Order Details Modal - Desktop */}
-      {showOrderModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" style={{ fontFamily: "var(--font-body)" }}>
-            <div className="sticky top-0 bg-card border-b border-border p-6 flex justify-between items-center">
-              <h3 className="text-2xl font-bold text-foreground">Order Details</h3>
-              <button 
-                onClick={() => setShowOrderModal(false)}
-                className="text-muted-foreground hover:text-foreground/80 text-2xl"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-6">
-              {/* Order Number */}
-              <div>
-                <h4 className="text-xl font-bold text-foreground">Order #: {selectedOrder.orderId}</h4>
-                <p className="text-base text-muted-foreground mt-2">
-                  {selectedOrder.items.length} Products | By Ishaputra Botanicals | {formatDate(selectedOrder.createdAt)}
-                </p>
-              </div>
-
-              {/* Order Details Grid */}
-              <div className="space-y-4 text-base">
-                <div className="flex justify-between py-3 border-b border-border">
-                  <span className="text-muted-foreground font-medium">Status:</span>
-                  <span className={`inline-flex items-center gap-1.5 font-semibold text-lg px-3 py-1 rounded-full ${getStatusBadgeClass(selectedOrder.status)}`}>
-                    {getStatusIcon(selectedOrder.status)}
-                    {getStatusLabel(selectedOrder.status)}
-                  </span>
-                </div>
-
-                {/* Return Status Message */}
-                {(selectedOrder.status === 'returnRequested' || selectedOrder.status === 'returnScheduled' || selectedOrder.status === 'returned') && (
-                  <div className={`p-4 rounded-xl border ${
-                    selectedOrder.status === 'returnRequested' ? 'bg-highlight/10 border-highlight/30' :
-                    selectedOrder.status === 'returnScheduled' ? 'bg-emerald-50 border-emerald-200' :
-                    'bg-gray-50 border-gray-200'
-                  }`}>
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        selectedOrder.status === 'returnRequested' ? 'bg-highlight/15' :
-                        selectedOrder.status === 'returnScheduled' ? 'bg-emerald-100' :
-                        'bg-gray-100'
-                      }`}>
-                        <ReturnIcon className={`w-5 h-5 ${
-                          selectedOrder.status === 'returnRequested' ? 'text-highlight' :
-                          selectedOrder.status === 'returnScheduled' ? 'text-emerald-600' :
-                          'text-gray-600'
-                        }`} />
-                      </div>
-                      <div>
-                        <h5 className={`font-semibold ${
-                          selectedOrder.status === 'returnRequested' ? 'text-highlight' :
-                          selectedOrder.status === 'returnScheduled' ? 'text-emerald-800' :
-                          'text-gray-800'
-                        }`}>
-                          {selectedOrder.status === 'returnRequested' && 'Return Request Pending'}
-                          {selectedOrder.status === 'returnScheduled' && 'Return Approved'}
-                          {selectedOrder.status === 'returned' && 'Return Complete'}
-                        </h5>
-                        <p className={`text-sm mt-1 ${
-                          selectedOrder.status === 'returnRequested' ? 'text-highlight' :
-                          selectedOrder.status === 'returnScheduled' ? 'text-emerald-700' :
-                          'text-gray-600'
-                        }`}>
-                          {selectedOrder.status === 'returnRequested' && 'Your return request is being reviewed by our team.'}
-                          {selectedOrder.status === 'returnScheduled' && 'Your return has been approved! Pickup will be scheduled soon.'}
-                          {selectedOrder.status === 'returned' && 'Your item has been picked up and returned successfully.'}
-                        </p>
-                        {selectedOrder.returnReason && (
-                          <p className="text-xs text-muted-foreground mt-2">Reason: {selectedOrder.returnReason}</p>
+                            {order.trackingUrl && (
+                              <a
+                                href={order.trackingUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="relative z-raised inline-flex h-9 items-center gap-1.5 rounded-control border border-input px-3 text-xs font-semibold text-foreground transition-[background-color,transform] duration-press ease-out hover:bg-muted active:scale-[0.97]"
+                              >
+                                Track package
+                                <ExternalLink aria-hidden="true" className="size-3.5" />
+                                <span className="sr-only"> (opens in a new tab)</span>
+                              </a>
+                            )}
+                          </div>
                         )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Tracking Information Section - Real-time updated */}
-                {(selectedOrder.trackingId || selectedOrder.carrier) && (
-                  <div className="bg-primary/[0.06] rounded-[10px] p-4 border border-primary/20">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-primary/15 rounded-full flex items-center justify-center">
-                        <Truck className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <h5 className="font-semibold text-foreground">Tracking Information</h5>
-                        <p className="text-xs text-muted-foreground">Updated in real-time</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 pl-13">
-                      {selectedOrder.carrier && (
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Carrier:</span>
-                          <span className="text-sm font-semibold text-foreground">{selectedOrder.carrier}</span>
-                        </div>
-                      )}
-                      {selectedOrder.trackingId && (
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Tracking ID:</span>
-                          <span className="text-sm font-mono font-semibold text-primary">{selectedOrder.trackingId}</span>
-                        </div>
-                      )}
-                      {selectedOrder.trackingUrl && (
-                        <div className="mt-3">
-                          <a
-                            href={selectedOrder.trackingUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors w-full justify-center"
-                          >
-                            <Truck className="w-4 h-4" />
-                            Track Package
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
-                {/* OTP Delivery Verification - Shown when out for delivery */}
-                {selectedOrder.status === 'outForDelivery' && selectedOrder.delivery_otp && (
-                  <div className="py-3 border-b border-border">
-                    <p className="text-sm font-semibold text-foreground">Delivery OTP</p>
-                    <p className="text-xs text-muted-foreground mt-1">Share this OTP with your delivery partner</p>
-                    <p className="text-base font-bold text-foreground mt-2">{selectedOrder.delivery_otp}</p>
-                  </div>
-                )}
-                
-                <div className="flex justify-between py-3 border-b border-border">
-                  <span className="text-muted-foreground font-medium">Payment:</span>
-                  <span className="font-semibold text-foreground">
-                    {formatPaymentMethod(selectedOrder.paymentMethod)}
-                  </span>
+                        {/* OTP Display for Out for Delivery Orders */}
+                        {order.status === 'outForDelivery' && order.delivery_otp && (
+                          <div className="mt-4 flex items-center justify-between gap-3 border-t border-foreground/[0.08] pt-4">
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">Delivery OTP</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">Share it with your delivery partner</p>
+                            </div>
+                            <p className="font-mono text-lg font-semibold tracking-[0.3em] text-foreground tabular-nums">{order.delivery_otp}</p>
+                          </div>
+                        )}
+                      </article>
+                    ))
+                  )}
                 </div>
-                
-                <div className="py-3 border-b border-border">
-                  <span className="text-muted-foreground font-medium block mb-2">Delivered to:</span>
-                  <span className="font-semibold text-foreground">
-                    {selectedOrder.shippingAddress.address}, {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state}
-                  </span>
-                </div>
-                
-                <div className="flex justify-between py-3">
-                  <span className="text-muted-foreground font-medium text-lg">Total:</span>
-                  <span className="font-bold text-foreground text-2xl">
-                    {formatPrice(selectedOrder.total)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-4 border-t border-border">
-                {/* Cancel Order Button - Only for pending/processing orders */}
-                {(selectedOrder.status === 'pending' || selectedOrder.status === 'processing') && (
-                  <div className="flex gap-3">
-                    <button 
-                      onClick={() => setShowCancelModal(true)}
-                      className="flex-1 py-3 px-4 border-2 border-red-200 bg-red-50 rounded-lg text-sm font-semibold text-red-700 flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
-                    >
-                      <Ban className="w-4 h-4" />
-                      Cancel Order
-                    </button>
-                    <button 
-                      onClick={() => navigate(`/account/orders/${selectedOrder.id}`)}
-                      className="flex-1 py-3 px-4 bg-primary/[0.06] border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-primary/15 transition-colors"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Open order chat
-                    </button>
-                  </div>
-                )}
-
-                {/* Cancel Return — only when return is requested and not yet cancelled */}
-                {selectedOrder.status === 'returnRequested' && !(selectedOrder as any).returnCancelled && (
-                  <div className="flex gap-3 mt-3">
-                    <button
-                      onClick={handleCancelReturn}
-                      disabled={cancellingReturn}
-                      className="flex-1 py-3 px-4 border-2 border-highlight/30 bg-highlight/10 rounded-lg text-sm font-semibold text-highlight flex items-center justify-center gap-2 hover:bg-highlight/15 transition-colors disabled:opacity-50"
-                    >
-                      <Ban className="w-4 h-4" />
-                      Cancel Return
-                    </button>
-                    <button 
-                      onClick={() => navigate(`/account/orders/${selectedOrder.id}`)}
-                      className="flex-1 py-3 px-4 bg-primary/[0.06] border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-primary/15 transition-colors"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Open order chat
-                    </button>
-                  </div>
-                )}
-
-                {/* Return Items Button - Only for delivered orders within 7 days */}
-                {canReturnOrder(selectedOrder) && (
-                  <div className="flex gap-3">
-                    <button 
-                      onClick={() => setShowReturnModal(true)}
-                      className="flex-1 py-3 px-4 border-2 border-emerald-200 bg-emerald-50 rounded-lg text-sm font-semibold text-emerald-700 flex items-center justify-center gap-2 hover:bg-emerald-100 transition-colors"
-                    >
-                      <ReturnIcon className="w-4 h-4" />
-                      Return Items
-                    </button>
-                    <button 
-                      onClick={() => navigate(`/account/orders/${selectedOrder.id}`)}
-                      className="flex-1 py-3 px-4 bg-primary/[0.06] border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-primary/15 transition-colors"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Open order chat
-                    </button>
-                  </div>
-                )}
-
-                {/* Chat Button - For other statuses where cancel/return not applicable */}
-                {selectedOrder.status !== 'pending' && 
-                 selectedOrder.status !== 'processing' && 
-                 !canReturnOrder(selectedOrder) &&
-                 selectedOrder.status !== 'cancelled' && (
-                  <button 
-                    onClick={() => navigate(`/account/orders/${selectedOrder.id}`)}
-                    className="w-full py-3 px-4 bg-primary/[0.06] border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-primary/15 transition-colors"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Open order chat
-                  </button>
-                )}
-              </div>
-
-              {/* Track Package Button */}
-              {selectedOrder.trackingUrl && (
-                <div className="pt-2">
-                  <a
-                    href={selectedOrder.trackingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full py-3 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
-                  >
-                    <Truck className="w-4 h-4" />
-                    Track Package
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                </div>
-              )}
+              </section>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Cancel Order Modal */}
-      {showCancelModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-card rounded-2xl shadow-2xl max-w-md w-full p-6"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-foreground">Cancel Order</h3>
-              <button
-                onClick={() => setShowCancelModal(false)}
-                className="p-2 hover:bg-muted rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-muted-foreground" />
-              </button>
-            </div>
-
-            <div className="mb-4">
-              <p className="text-sm text-muted-foreground mb-2">Order ID: <span className="font-semibold">ORD-{selectedOrder.orderId}</span></p>
-              <p className="text-sm text-muted-foreground mb-4">Please select a reason for cancellation:</p>
-              
-              <div className="space-y-2">
-                {[
-                  'Changed my mind',
-                  'Ordered by mistake',
-                  'Found a better price',
-                  'Need to change delivery address',
-                  'Other reason'
-                ].map((reason) => (
-                  <button
-                    key={reason}
-                    onClick={() => setCancelReason(reason)}
-                    className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-colors ${
-                      cancelReason === reason
-                        ? 'border-red-500 bg-red-50 text-red-700'
-                        : 'border-border hover:border-red-200 hover:bg-red-50/50'
-                    }`}
-                  >
-                    {reason}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowCancelModal(false);
-                  setCancelReason('');
-                }}
-                className="flex-1 py-3 px-4 border border-border rounded-lg text-sm font-medium text-foreground/80 hover:bg-muted transition-colors"
-              >
-                Go Back
-              </button>
-              <button
-                onClick={handleCancelOrder}
-                disabled={!cancelReason || isSubmitting}
-                className="flex-1 py-3 px-4 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                ) : (
-                  'Confirm Cancellation'
-                )}
-              </button>
-            </div>
-
-            <p className="text-xs text-muted-foreground mt-4 text-center">
-              <AlertCircle className="w-4 h-4 inline mr-1" />
-              This action cannot be undone
-            </p>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Return Request Modal */}
-      {showReturnModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-card rounded-2xl shadow-2xl max-w-md w-full p-6"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-foreground">Request Return</h3>
-              <button
-                onClick={() => setShowReturnModal(false)}
-                className="p-2 hover:bg-muted rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-muted-foreground" />
-              </button>
-            </div>
-
-            <div className="mb-4">
-              <p className="text-sm text-muted-foreground mb-2">Order ID: <span className="font-semibold">ORD-{selectedOrder.orderId}</span></p>
-              <p className="text-sm text-muted-foreground mb-4">Please select a reason for return:</p>
-              
-              <div className="space-y-2">
-                {[
-                  'Defective item',
-                  'Wrong size or fit',
-                  'Quality not as expected',
-                  'Received wrong product',
-                  'Product damaged during delivery',
-                  'Other reason'
-                ].map((reason) => (
-                  <button
-                    key={reason}
-                    onClick={() => setReturnReason(reason)}
-                    className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-colors ${
-                      returnReason === reason
-                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                        : 'border-border hover:border-emerald-200 hover:bg-emerald-50/50'
-                    }`}
-                  >
-                    {reason}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-4 p-3 bg-highlight/10 border border-highlight/30 rounded-lg">
-                <p className="text-xs text-highlight">
-                  <Clock className="w-4 h-4 inline mr-1" />
-                  Returns are accepted within 7 days of delivery. Our team will review your request within 24-48 hours.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowReturnModal(false);
-                  setReturnReason('');
-                }}
-                className="flex-1 py-3 px-4 border border-border rounded-lg text-sm font-medium text-foreground/80 hover:bg-muted transition-colors"
-              >
-                Go Back
-              </button>
-              <button
-                onClick={handleRequestReturn}
-                disabled={!returnReason || isSubmitting}
-                className="flex-1 py-3 px-4 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                ) : (
-                  'Submit Request'
-                )}
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+      </main>
+      <Footer />
+      {signOutDialog}
     </>
   );
 };
