@@ -210,6 +210,21 @@ Shown or used on the site but not confirmed. Each must be replaced or confirmed 
 - **Wallet tier benefits** and tier thresholds (`BRAND.loyaltyTiers`).
 - **GST rate** and whether prices include GST (Admin > Commerce settings).
 - **"Ships from" state** on invoices and the product page (Telangana today).
+- **Products flagged "New arrival":** 7 of the 12 demo products carry the flag, so the "New" tag shows on most cards. Set it only on real new arrivals.
+- **Category photos:** on /categories, Powders and Shilajit borrow the same product photo; each needs its own image.
+
+## UI pass decisions (owner, 2026-10-04)
+The full-site UI audit (295 findings) raised 14 questions. The owner approved:
+- Dead links and search: the gift icon is gone from the search bars; old Sreerasthu URLs (/jewelry, /shop/..., /gifts, /furniture, /home-decor, /articles) open /products; /search works on desktop and search results have the normal header and footer.
+- Checkout and cart: one bill block with the same rows everywhere, "Done" after an order goes to the last product, "100% secure" on the Back row, the cart drawer's dead scan and mic buttons hidden, guests told why they were sent to sign in, one remove button on the wishlist. (Wishlist "Add to cart" behaviour unchanged.)
+- Login and content: "Forgot your password?" opens its own page with the email; the site header on all auth pages; after a reset the shopper lands on sign-in with "Password updated"; broken call links hide the call controls; About's buttons and range cards link to the products; no eyebrow above the logo on auth cards.
+- Account settings: Light / Dark / System on the account hub, "Add address" in the empty state, and new visitors follow their device's theme.
+- Small additions: "Show all reviews", a category link in the product breadcrumb, "Browse all products" on "Category not found", brand loading screen minimum 0.7 s, admin header search goes to products.
+- Admin: switched-off silver-rate and delivery-partner pieces hidden behind their flags; a styled confirmation before admin status changes, Approve / Reject return and the customer's "Cancel return".
+- Contact form opens a prefilled email (it used to only log to the browser console).
+- Logic: Buy again uses today's price; one password policy (8+ characters with upper, lower, number and symbol) for sign-up and reset; analytics and the second sign-in instance load later for a faster first visit.
+Not approved (left as they were): stopping the home product rows' drift and a hero pause control (the rows stay still on screen, as they always have: a CSS setting swallows the drift); one product card everywhere and hiding the empty stars; deleting the hidden mobile bottom nav.
+Owner to do: set Ships From = Telangana in Admin > Commerce (the delivery-charge home state still defaults to Andhra Pradesh).
 
 ## Progress
 - [x] Step 0 safe preview (2026-09-23): home, products and product pages show demo content on Ishaputra Firebase; only the YouTube section is hidden (no videos yet)
@@ -219,7 +234,7 @@ Shown or used on the site but not confirmed. Each must be replaced or confirmed 
 - [ ] Step 3 accounts   - [ ] Step 4 test and publish   - [ ] Step 5 client changes
 
 ## Next step
-The world-class UI/UX pass across the whole site (the owner's top priority, 2026-10-03): audit, then fix area by area with screenshots, keeping every layout. Then the rest of Step 2B, which needs the open loyalty and cashback answers below.
+The world-class UI pass is built on branch `ui-world-class` (audit, foundation, 9 area packages, fresh-eyes review). Owner reviews it, then merge into `main`. Then the rest of Step 2B, which needs the open loyalty and cashback answers below.
 
 ## Open questions
 - Real business details to replace the dummy ones in `src/config/brand.ts`: legal name, address, phone, WhatsApp, email, hours, GSTIN, domain, social links (blocking for launch, not for review)
