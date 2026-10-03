@@ -189,9 +189,21 @@ try {
   assert.equal(vA.json.paymentRecorded, true); assert.equal(vA.json.rewardsLate, true);
   const lateA = (await ledger.doc(`spend_${rzpA}_cashback`).get()).data();
   assert.equal(lateA.status, 'active'); assert.equal(lateA.late, true); assert.equal(lateA.hold, false);
+  // The shop must see it on the order: reconcile flags it for review, once.
+  await db.collection('orders').doc(rzpA).set({ userId: uid, razorpayOrderId: rzpA, orderId: 'HC-LATE', status: 'pending',
+    paymentStatus: 'pending', total: 1, items, createdAt: admin.firestore.Timestamp.now() });
+  created.orders.add(rzpA);
+  const lateRec = async () => reconcileRewards(db, rzpA, (await db.collection('orders').doc(rzpA).get()).data());
+  await lateRec();
+  const lateOrder = (await db.collection('orders').doc(rzpA).get()).data();
+  assert.equal(lateOrder.needsManualReview, true, 'late re-spend flags the order for review');
+  assert.equal(lateOrder.rewardsLate, true);
+  await db.collection('orders').doc(rzpA).update({ needsManualReview: false });
+  await lateRec();
+  assert.equal((await db.collection('orders').doc(rzpA).get()).data().needsManualReview, false, 'flagged once, not after it is cleared');
   // Undo it so the rest of the check starts from the demo balance again.
   await ledger.doc(`spend_${rzpA}_cashback`).update({ status: 'void', voidReason: 'test-cleanup' });
-  step('late payment: spend re-activated (late), payment recorded');
+  step('late payment: spend re-activated (late), payment recorded, order flagged for review once');
 
   // 5. Normal paid checkout with points + cashback; rules around the order document.
   const b5 = await balances();

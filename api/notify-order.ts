@@ -384,6 +384,14 @@ export async function reconcileRewards(
   const returnOpen = isReturnOpen(order);
   const changed: string[] = [];
   const orderUpdate: Record<string, unknown> = {};
+  // Flag the order once (rewardsLate) so the shop sees it, even if the flag is later cleared by hand.
+  const flagLate = () => {
+    if (order.rewardsLate === true) return;
+    orderUpdate.rewardsLate = true;
+    orderUpdate.needsManualReview = true;
+    orderUpdate.manualReviewReason =
+      'Points or cashback reserved for this payment were released before it completed, then spent again: the customer balance may be below zero.';
+  };
 
   const spendRefs = { points: ledger.doc(`spend_${rzp}_points`), cashback: ledger.doc(`spend_${rzp}_cashback`) };
   const refundRefs = { points: ledger.doc(`refund_${rzp}_points`), cashback: ledger.doc(`refund_${rzp}_cashback`) };
@@ -427,15 +435,15 @@ export async function reconcileRewards(
         await ref.update({ hold: false, confirmedAt: now, orderId });
         changed.push(`${ref.id}:confirm`);
       }
+      // verify-payment already re-spent a released reservation (paid late).
+      if (d.late === true) flagLate();
       spent[currency] = -Number(d.amount) || 0;
     } else if (d.voidReason === RELEASED) {
       // Released as abandoned, then paid after all: spend it after all.
       await ref.update({ status: 'active', hold: false, late: true, confirmedAt: now, orderId });
       changed.push(`${ref.id}:late`);
       spent[currency] = -Number(d.amount) || 0;
-      orderUpdate.needsManualReview = true;
-      orderUpdate.manualReviewReason =
-        'Points or cashback reserved for this payment were released before it completed, then spent again: the customer balance may be below zero.';
+      flagLate();
     }
     // Voided by the shop: leave it.
   }
