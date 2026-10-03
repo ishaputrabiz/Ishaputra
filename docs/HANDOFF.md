@@ -106,8 +106,25 @@ The full rules are in `src/lib/rewards.ts`. Its `rewards-core` block is copied i
   - GST settings and business details. The WhatsApp number and GSTIN are empty on purpose.
   - The Playwright trace skill and the two MCP additions.
 
-## Working economically (owner's request)
+## Workflows, ultracode and chats (owner's standing rules)
 
-- **One task per session.** Start each session with "Read ssecommerce/docs/HANDOFF.md and do next step N". End by updating this file.
-- **Agents.** No multi-agent workflows unless the owner asks. Prefer single-agent work. Use a cheaper model for simple sub-tasks.
-- **Context.** Keep it small: read file ranges, not whole large files. `ssecommerce/CLAUDE.md` is 27 KB and loads into every session in this folder, so trimming it would cut the cost of every turn.
+The full rules are in `~/.claude/CLAUDE.md`, in the section "Workflows, ultracode and sessions". In short:
+
+- **Workflows:** Claude decides, and uses them only when a single agent can't do the job well. Examples: a multi-file security review, a whole-site UI audit, or vetting many sources. Before launching one, Claude says why in one line.
+- **Ultracode:** the owner switches it on. Claude asks for it at the start of a big or risky task ("please turn on ultracode and send the task again"), and says so when it can be turned off.
+- **Ending a task:** Claude updates this file, then ends with one of:
+  - "Next: start a new chat and send: ..." (the default);
+  - "Continue in this chat: ..." (only when needed);
+  - "Nothing else is needed."
+
+Which next steps need ultracode:
+
+| Step | Ultracode? |
+|---|---|
+| 1. Review the display fixes | No |
+| 2. Re-verify | Optional, for an adversarial review |
+| 3. Notes and merge | No |
+| 4. Toolbox | No |
+| 5. World-class UI audit | Yes, for the first full-site audit; individual pages after that don't need it |
+
+**Context:** read file ranges, not whole large files. `ssecommerce/CLAUDE.md` is 27 KB and loads into every session in this folder, so trimming it would cut the cost of every turn.
