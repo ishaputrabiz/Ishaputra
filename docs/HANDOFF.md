@@ -12,41 +12,48 @@ Last updated: 2026-10-03.
 ## State
 
 - **Branch:** `step-2b-rewards`. Not merged into `main`, and never pushed (local commits only).
-  - `102bef7` Rewards hardening: one order per payment, server-owned facts, reservations.
-  - `9469bea` Reservation timeout and a 20 s `maxDuration` for the 3 payment functions.
-- **Firestore rules:** the hardened rules from `firestore.rules` are deployed to the `ishaputrabotanicals` project.
-- **Verification:**
-  - `npm test` passes (15 tests).
-  - The end-to-end check `docs/handoff/hardening-check.mjs` passes against the real Firestore and rules, with Razorpay faked.
-- **Not committed, not reviewed:** display fixes written by 3 agents. The workflow was stopped before its review stage to save usage. Files:
-  - `src/pages/admin/AdminOrderDetails.tsx`, `src/pages/AdminOrders.tsx`
-  - `src/pages/OrderDetailsPage.tsx`, `src/pages/Account.tsx`, `src/services/invoiceService.ts`
-  - `src/components/rewards/RewardsWalletCard.tsx`, `src/components/admin/RewardsAdminPanel.tsx`, `src/pages/admin/AdminCommerceSettings.tsx` (RewardsTab only)
-
-  Their exact requirements are in the `TASKS` array of `docs/handoff/rewards-ui-tasks.js`.
+  - `102bef7` Rewards hardening. `9469bea` reservation timeout. `7128f23` rewards display fixes.
+  - `d2573f4` (2026-10-03) Fixes found in the display screenshots:
+    - Wallet "Total spent" was always ₹0: it summed `order.totalAmount`, a field no order has. It now uses `order.total`, so membership tiers finally move.
+    - "Out for delivery" orders were never counted as pending.
+    - The points card showed a false "0 points / ₹0" while loading. It now shows a shimmer, and an honest message if the ledger can't be read (`useRewards` has a new `error` flag).
+    - Order page: one card style (`panel tx-sheet`) for every block, buttons in the brand palette, no old-theme blue banner, and the delivered card shows the delivery time.
+    - Footer map is muted monochrome, with colour on hover or focus.
+- **Firestore rules:** the hardened rules are deployed to `ishaputrabotanicals`.
+- **Verification (2026-10-03, after `d2573f4`):**
+  - `npm test` passes (15). `npm run build` passes. `tsc`: only the known old errors (`videoCallService`, `DeliveryDashboard`, `VideoCallRequestModal`). See the `tsc` gotcha below.
+  - `hardening-check.mjs`: **PASS** against the real Firestore and rules.
+  - Screenshots taken with the owner's OK (step 1, option A): `/wallet`, `/account/orders/<id>`, `/admin/orders/<id>` and the mismatch state, at 390 and 1440 px, light and dark. All look right. The demo data was deleted afterwards.
+  - One reviewer checked the diff `1191020..HEAD` against the 27 findings: all resolved, one new defect fixed in `6982afc`, one open for the owner (see "Review result").
+  - `6982afc` re-verified: `hardening-check` PASS (it now also checks the late-payment flag; it failed on the old code).
 
 ## Next steps (in order)
 
-1. **Review and finish the uncommitted display fixes.** Work through them in this order:
-   - `git diff --stat`, then read the diff of each file against its task in `docs/handoff/rewards-ui-tasks.js`.
-   - `npx tsc --noEmit -p tsconfig.app.json --ignoreDeprecations 5.0`. Four files have known old errors: `videoCallService`, `invoiceService` (3 old ones), `DeliveryDashboard` and `VideoCallRequestModal`.
-   - Fix what is missing or wrong, then run `npm test`.
-   - Take screenshots at 390 and 1440 px, light and dark, of `/wallet`, a customer order page and the admin order page.
-   - Commit.
-2. **Re-verify the rewards branch.**
-   - From `ssecommerce/`, run `node docs/handoff/hardening-check.mjs docs/handoff/shopper.local`. Expect `hardening check: PASS`. It cleans up after itself.
-   - Optionally, one reviewer (not a workflow) checks `git diff 1191020..HEAD` against the 27 findings in `docs/handoff/rewards-review-findings.txt`.
-3. **Write the "Rewards (Task 8)" notes in `CLIENT.md`, then merge locally:** `git checkout main && git merge --no-ff step-2b-rewards`. The notes should cover:
+1. **Write the "Rewards (Task 8)" notes in `CLIENT.md`, then merge locally:** `git checkout main && git merge --no-ff step-2b-rewards`. The notes should cover:
    - `FIREBASE_ADMIN_SDK_BASE64` is now required on Vercel. Without it, every paid order is saved as "payment pending, needs review".
    - The `payments` collection.
    - Reservations and holds, and the "Check payment & rewards" button.
    - The known limits listed below.
-4. **Finish the toolbox.** See "Skills" below.
-5. **World-class Ishaputra UI/UX (the big goal).** Do one area per session: home, product page, cart and checkout, account, admin.
-   - **Per area:** audit, then prioritised fixes, then screenshots.
+   - Ask the owner about "Review result" B (return window) and note the decision. It doesn't block the merge.
+2. **World-class Ishaputra UI/UX (the owner's top priority, 2026-10-03).** The owner wants people who see the site to ask "who made this?": perfect design, smooth animation and transitions, every old Sreerasthu bug fixed.
+   - **Needs ultracode** for the first full-site audit.
+   - **Evidence:** 84 component files still use old-theme colours. The worst are `AdminOrders`, `AdminDeliveryBoys`, `AdminOrderDetails`, `ProductForm`, `Account` and `SecurityPage`. The order page still has emerald, purple and red return-status banners.
+   - **Plan:** audit the whole site (workflow, about 6 agents: home, product and listing, cart and checkout, account, admin, global header/footer/motion), then fix one area at a time with screenshots.
    - **Skills:** `ui-ux-pro-max` and the taste skills for direction; `emil-design-eng`, `animate` and `motion` for motion; `better-interface` and `web-quality-audit` for review.
    - **Rule:** keep the layout, change the design.
-6. **Later:** Scratch & Win, Dealer Membership, Loyalty Card (rest of Step 2B), then Step 3 accounts.
+   - **Also fix:** the order page loads all of a customer's orders to show one (slow; use one document read). The full-page loaders are bare spinners; use skeletons.
+3. **Finish the toolbox.** See "Skills" below.
+4. **Later:** Scratch & Win, Dealer Membership, Loyalty Card (rest of Step 2B), then Step 3 accounts.
+
+## Review result
+
+One reviewer (2026-10-03) checked `git diff 1191020..HEAD` against the 27 findings: **all 27 are resolved.** It found 3 new issues:
+
+- **A. Fixed (`6982afc`).** A reservation released as unpaid and then paid late was re-spent silently. The order was never flagged, so repeated late payments could push a balance far below zero unseen. Reconcile now flags such an order for review once (`rewardsLate`), and `hardening-check` covers it.
+- **B. Open, owner decides.** `firestore.rules` `isValidReturnRequest` has no time limit; only the app's button enforces the 7-day window. A customer writing straight to Firestore could spend earned points (they unlock after 7 days), then request a return; if the shop approves it, the points are voided and the balance goes negative. The shop still has to approve. Options:
+  1. Add a rule: `request.time < resource.data.deliveredAt + duration.value(7, 'd')`. This needs a rules deploy to the live project, and orders without `deliveredAt` need handling.
+  2. In admin, warn when a return was requested after the window.
+- **C. Low, theoretical.** Someone who learned another customer's Razorpay order id before that customer saved the order could create `orders/<id>` first and block them. Razorpay ids are not guessable. No action.
 
 ## How rewards work now (short)
 
@@ -92,8 +99,18 @@ The full rules are in `src/lib/rewards.ts`. Its `rewards-core` block is copied i
   - Regenerate the catalog: `node ~/.claude/tools/skills-catalog.mjs out.json`, then `node ~/.claude/tools/write-catalog.mjs out.json ~/.claude/SKILLS-CATALOG.md`.
 - **Research:** the full results (50 candidates and their vetting notes) are in `~/.claude/vendor/skills-research-2026-10-03.json`.
 
+## Screenshots
+
+- **Script:** `docs/handoff/display-shots.mjs` (committed; holds no secrets, reads the shopper login from `shopper.local`). It waits for real content and scrolls before each shot. Full-page shots still show the footer map as an empty box (lazy iframe); in a real viewport it loads.
+- **Run (only with the owner's OK, it writes to the live Firestore):**
+  1. `npx vite --port 5182 --strictPort --host 127.0.0.1` (never 5173).
+  2. From `ssecommerce/`: `node docs/handoff/display-shots.mjs http://127.0.0.1:5182 <output folder>`.
+- **It uses** the global `playwright` package and sets the theme through the `ishaputra-theme` localStorage key.
+
 ## Gotchas
 
+- **`tsc`.** `tsconfig.app.json` sets `ignoreDeprecations: "6.0"`, which the installed TypeScript 5.9 rejects, so `tsc -p tsconfig.app.json` stops at once. To type-check, copy the config with `"5.0"` and run `npx tsc -p <copy> --noEmit`, then delete the copy.
+- **Dev server.** A background `vite` started by Claude is cut off after 30 minutes but its node process keeps port 5182. Check `netstat -ano | grep :5182` before starting another.
 - **Line endings.** Working-tree files are CRLF (`core.autocrlf=true`). Git Bash `grep`, `sed` and `od` hide the `\r`. Patch scripts must normalise `\r\n` before matching.
 - **Writing scripts.** Write scripts with the Write tool. Avoid bash heredocs with backticks or quotes; they broke twice.
 - **Function limit.** Vercel Hobby allows 12 functions, and all 12 are used. Put new server actions inside `api/notify-order.ts`, as an `action` value.
@@ -121,10 +138,8 @@ Which next steps need ultracode:
 
 | Step | Ultracode? | Effort |
 |---|---|---|
-| 1. Review the display fixes | No | High |
-| 2. Re-verify | Optional, for an adversarial review | Extra high (it's payment logic) |
-| 3. Notes and merge | No | Medium |
-| 4. Toolbox | No | Medium |
-| 5. World-class UI audit | Yes, for the first full-site audit; individual pages after that don't need it | High |
+| 1. Notes and merge | No | Medium |
+| 2. World-class UI audit | Yes, for the first full-site audit; individual areas after that don't need it | High |
+| 3. Toolbox | No | Medium |
 
 **Context:** read file ranges, not whole large files. `ssecommerce/CLAUDE.md` is 27 KB and loads into every session in this folder, so trimming it would cut the cost of every turn.
