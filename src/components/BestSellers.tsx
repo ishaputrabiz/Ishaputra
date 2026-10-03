@@ -1,22 +1,73 @@
-import { useRef, useEffect, useState } from "react";
-import { motion, useInView } from "framer-motion";
-import { Package, ShoppingCart, Heart, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Package, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { UIProduct, adaptFirebaseArrayToUI } from "@/lib/productAdapter";
-import { useNavigate } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useToast } from "@/hooks/use-toast";
 import useAutoScroll from "@/hooks/useAutoScroll";
 import { SmartImage } from "@/components/ui/smart-image";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ProductRowSkeleton } from "@/components/skeletons";
+import ProductCard from "@/components/ProductCard";
+import { WishlistToggle } from "@/components/WishlistToggle";
+import { EmptyState } from "@/components/EmptyState";
+import Reveal from "@/components/Reveal";
+import { formatINR } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { subscribeToActiveProductsByFlag } from '@/services/productCache';
 
+const HEADING_FONT = { fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" };
+const INERT = { inert: "" } as Record<string, string>;
+const BEST_SELLERS_LINK = "/products?tag=best-sellers";
+
+const rankLabel = (rank: number) => `No. ${String(rank).padStart(2, "0")}`;
+
+/** The rank tag on a best seller's photo: the section's one label per card. */
+const RankTag = ({ rank, className }: { rank: number; className?: string }) => (
+  <span className={cn("tag-dark pointer-events-none absolute z-raised tabular-nums", className)}>
+    <span className="sr-only">Best seller </span>
+    {rankLabel(rank)}
+  </span>
+);
+
+/**
+ * A row card with its rank on the photo. Loop copies (the second set that makes
+ * the drift seamless) are hidden from screen readers and the keyboard.
+ */
+const RankedCard = ({
+  product,
+  index,
+  rank,
+  isLoopCopy,
+  widthClass,
+}: {
+  product: UIProduct;
+  index: number;
+  rank: number | null;
+  isLoopCopy: boolean;
+  widthClass: string;
+}) => (
+  <div
+    className={cn("group/rank relative flex-none", widthClass)}
+    aria-hidden={isLoopCopy || undefined}
+    {...(isLoopCopy ? INERT : {})}
+  >
+    <ProductCard product={product} index={index} size="row" className="w-full" />
+    {rank !== null && (
+      <RankTag
+        rank={rank}
+        // Lifts with the card on hover (.card-product moves 3px with a mouse).
+        className="left-3.5 top-3.5 transition-transform [transition-duration:220ms] ease-out lg:left-4 lg:top-4 [@media(hover:hover)_and_(pointer:fine)]:group-hover/rank:-translate-y-[3px]"
+      />
+    )}
+  </div>
+);
+
 const BestSellers = () => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, amount: 0.2 });
   const [products, setProducts] = useState<UIProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { toast } = useToast();
@@ -56,9 +107,7 @@ const BestSellers = () => {
     return () => unsubscribe();
   }, []);
 
-  const handleAddToCart = async (e: React.MouseEvent, product: UIProduct) => {
-    e.stopPropagation();
-    
+  const handleAddToCart = (product: UIProduct) => {
     try {
       const added = addToCart({
         id: product.id,
@@ -69,24 +118,19 @@ const BestSellers = () => {
         stock: product.stock,
       });
       if (!added) return;
-      
+
       toast({
         title: "Added to cart",
-        description: `${product.title} has been added to your cart.`,
+        description: product.title,
       });
     } catch (error) {
       console.error('Error adding to cart:', error);
       toast({
-        title: "Error",
-        description: "Failed to add item to cart. Please try again.",
+        title: "Could not add to cart",
+        description: "Please try again.",
         variant: "destructive",
       });
     }
-  };
-
-  const handleWishlistClick = (e: React.MouseEvent, productId: string, productTitle: string) => {
-    e.stopPropagation();
-    toggleWishlist(productId, productTitle);
   };
 
   const mobileBaseProducts = products.slice(1);
@@ -97,344 +141,202 @@ const BestSellers = () => {
   const desktopCarouselProducts =
     canDesktopBSScroll && products.length > 1 ? [...products, ...products] : products;
 
-  return (
-    <section ref={ref} className="relative py-6 md:py-16">
+  const spotlight = products[0];
+
+  const empty = (
+    <EmptyState icon={Package} title="Best sellers will appear here soon" as="h3" className="py-10" />
+  );
+
+  // Desktop arrows: shown on hover or keyboard focus with a mouse, always on touch screens.
+  const desktopArrowClass = cn(
+    "btn-round absolute top-1/2 z-raised !size-11 -translate-y-1/2 !bg-card shadow-panel transition-[opacity,border-color,color,transform]",
+    canDesktopBSScroll
+      ? "pointer-events-none opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover/best-sellers:pointer-events-auto group-hover/best-sellers:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
+      : "hidden",
+  );
+
+  const panel = (
+    <section className="relative py-8 md:py-12" aria-busy={loading || undefined}>
       <div className="container-custom">
         <div className="panel tx-sheet relative overflow-hidden px-4 py-5 md:px-8 md:py-10">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="mb-6 md:mb-8 hidden md:flex items-end justify-between"
-        >
-          <div>
-            <p className="eyebrow-no mb-3"><b>02</b><span>Best Sellers</span></p>
-            <h2 className="text-3xl lg:text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
+          {/* Header: one heading at every width */}
+          <div className="mb-4 flex items-end justify-between gap-3 px-1 md:mb-8 md:px-0">
+            <h2 className="text-xl font-semibold text-foreground [text-wrap:balance] md:text-3xl lg:text-4xl" style={HEADING_FONT}>
               Most loved right now
             </h2>
-            <p className="text-sm text-muted-foreground mt-1 font-light">Our most loved rituals, chosen by you</p>
-          </div>
-          <button
-            onClick={() => navigate('/products?tag=best-sellers')}
-            className="link-arrow"
-          >
-            View All <ChevronRight className="w-4 h-4" />
-          </button>
-        </motion.div>
-        {/* Mobile header */}
-        <div className="mb-4 md:hidden px-1">
-          <p className="eyebrow-no mb-2"><b>02</b><span>Best Sellers</span></p>
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
-              Signature Collection
-            </h2>
-            <div className="flex items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
                 aria-label="Scroll best sellers left"
                 onClick={() => mobileBSScrollByPage('prev')}
                 disabled={!canMobileBSScroll}
-                className="btn-round !h-8 !w-8"
+                className="btn-round md:hidden"
               >
-                <ChevronLeft className="w-3.5 h-3.5" />
+                <ChevronLeft aria-hidden="true" className="size-4" />
               </button>
               <button
                 type="button"
                 aria-label="Scroll best sellers right"
                 onClick={() => mobileBSScrollByPage('next')}
                 disabled={!canMobileBSScroll}
-                className="btn-round !h-8 !w-8"
+                className="btn-round md:hidden"
               >
-                <ChevronRight className="w-3.5 h-3.5" />
+                <ChevronRight aria-hidden="true" className="size-4" />
               </button>
-              <button
-                onClick={() => navigate('/products?tag=best-sellers')}
-                className="link-arrow ml-1"
-              >
-                View All
-              </button>
+              <Link to={BEST_SELLERS_LINK} className="link-arrow ml-1.5 md:ml-0">
+                View all <ChevronRight aria-hidden="true" className="hidden size-4 md:block" />
+              </Link>
             </div>
           </div>
-        </div>
 
-        {/* Products Container */}
-        <div className="relative">
-          <div className="md:hidden pb-2">
-            {loading ? (
-              <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={`skeleton-${index}`} className="animate-pulse flex-shrink-0 w-[150px]">
-                    <div className="bg-foreground/[0.06] rounded-[var(--radius-card)] aspect-square mb-2"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-zinc-800 rounded mb-1"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-zinc-800 rounded w-2/3"></div>
-                  </div>
-                ))}
-              </div>
-            ) : products.length === 0 ? (
-              <div className="w-full py-12 text-center">
-                <Package className="w-12 h-12 mx-auto mb-3 text-primary/40" />
-                <p className="text-base font-medium text-foreground/70 mb-1">Best Sellers Coming Soon</p>
-                <p className="text-sm text-muted-foreground">Our most loved products will appear here. Check back shortly!</p>
-              </div>
-            ) : (
-              <>
-                {/* Hero spotlight card (#1 best seller) */}
-                {products[0] && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5 }}
-                    onClick={() => navigate(`/product/${products[0].id}`)}
-                    className="card-product relative mb-3 cursor-pointer overflow-hidden"
-                  >
-                    <div className="flex">
+          {/* Products Container */}
+          <div className="relative">
+            <div className="pb-2 md:hidden">
+              {loading ? (
+                <>
+                  <span className="sr-only" role="status">Loading best sellers</span>
+                  <Skeleton className="mb-3 h-[191px] w-full rounded-card" />
+                  <ProductRowSkeleton count={3} label="" className="pb-2" itemClassName="h-[259px] w-[160px] overflow-hidden" />
+                </>
+              ) : products.length === 0 ? (
+                empty
+              ) : (
+                <>
+                  {/* Spotlight card (#1 best seller) */}
+                  {spotlight && (
+                    <article
+                      className={cn(
+                        "card-product group relative mb-3 flex overflow-hidden",
+                        "has-[a[data-card-link]:focus-visible]:outline has-[a[data-card-link]:focus-visible]:outline-2 has-[a[data-card-link]:focus-visible]:outline-offset-2 has-[a[data-card-link]:focus-visible]:outline-ring",
+                      )}
+                    >
                       <div className="relative w-[44%] overflow-hidden">
                         <SmartImage
-                          src={products[0].image}
-                          alt={products[0].title}
-                          className="w-full h-full object-cover aspect-[4/5]" preset="detail" />
-                        <span className="absolute top-2 left-2 inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-[4px] bg-charcoal/85 text-[10px] font-bold tracking-[0.12em] text-highlight-soft backdrop-blur-sm">No. 01</span>
+                          src={spotlight.image}
+                          alt={spotlight.alt || spotlight.title}
+                          className="aspect-[4/5] h-full w-full object-cover"
+                          preset="detail"
+                        />
+                        <RankTag rank={1} className="left-2 top-2" />
                       </div>
-                      <div className="flex-1 p-4 flex flex-col justify-between">
+                      <div className="flex flex-1 flex-col justify-between gap-3 p-4">
                         <div>
-                          <p className="eyebrow-no mb-2 !text-[9px]"><span>Most loved</span></p>
-                          <h3 className="text-base font-semibold text-foreground line-clamp-2 mb-2 leading-snug" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
-                            {products[0].title}
+                          <h3
+                            title={spotlight.title}
+                            className="mb-2 line-clamp-2 text-base font-semibold leading-snug text-foreground [text-wrap:pretty]"
+                            style={HEADING_FONT}
+                          >
+                            <Link
+                              to={`/product/${spotlight.id}`}
+                              data-card-link=""
+                              className="outline-none after:absolute after:inset-0 after:content-['']"
+                            >
+                              {spotlight.title}
+                            </Link>
                           </h3>
-                          <div className="flex items-baseline gap-2 mb-3">
-                            <span className="price-now text-lg">₹{products[0].price.toLocaleString()}</span>
-                            {products[0].oldPrice && products[0].oldPrice > products[0].price && (
-                              <span className="price-was text-[11px]">₹{products[0].oldPrice.toLocaleString()}</span>
+                          <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                            <span className="price-now text-lg">{formatINR(spotlight.price)}</span>
+                            {spotlight.oldPrice && spotlight.oldPrice > spotlight.price && (
+                              <span className="price-was text-xs">
+                                <span className="sr-only">Was </span>
+                                {formatINR(spotlight.oldPrice)}
+                              </span>
                             )}
-                          </div>
+                            {(spotlight.discount ?? 0) > 0 && <span className="chip-off">{spotlight.discount}% off</span>}
+                          </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="relative z-raised flex items-center gap-2">
                           <button
-                            onClick={(e) => handleAddToCart(e, products[0])}
-                            className="btn-copper flex-1 !px-3 !py-2.5"
+                            type="button"
+                            onClick={() => handleAddToCart(spotlight)}
+                            className="btn-copper h-11 flex-1 !px-3 !py-0"
                           >
-                            <ShoppingCart className="w-3.5 h-3.5" />
-                            Add
+                            <ShoppingCart aria-hidden="true" className="size-4" />
+                            Add<span className="sr-only"> {spotlight.title} to cart</span>
                           </button>
-                          <button
-                            onClick={(e) => handleWishlistClick(e, products[0].id, products[0].title)}
-                            className="w-9 h-9 rounded-full border border-foreground/15 bg-card flex items-center justify-center"
-                          >
-                            <Heart className={`w-4 h-4 ${isInWishlist(products[0].id) ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
-                          </button>
+                          <WishlistToggle
+                            name={spotlight.title}
+                            saved={isInWishlist(spotlight.id)}
+                            onToggle={() => toggleWishlist(spotlight.id, spotlight.title)}
+                          />
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                )}
+                    </article>
+                  )}
 
-                {/* Horizontal auto-scroll row for the rest (lighter than the previous 3-row grid) */}
-                <div
-                  ref={mobileBSRef}
-                  className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-1 px-1"
-                  style={{ WebkitOverflowScrolling: 'touch' }}
-                >
-                  {mobileCarouselProducts.map((product, idx) => {
-                    const sourceIndex = mobileBaseProducts.length > 0 ? idx % mobileBaseProducts.length : idx;
-                    const rank = sourceIndex + 2; // continues from #2
-                    return (
-                      <motion.div
-                        key={`${product.id}-${idx}`}
-                        initial={{ opacity: 0 }}
-                        whileInView={{ opacity: 1 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: Math.min(idx, 4) * 0.05, duration: 0.4 }}
-                        onClick={() => navigate(`/product/${product.id}`)}
-                        className="card-product group cursor-pointer flex-shrink-0 w-[150px] flex flex-col overflow-hidden p-1.5 active:scale-[0.98]"
-                      >
-                        <div className="tile-img relative aspect-square overflow-hidden">
-                          <SmartImage
-                            src={product.image}
-                            alt={product.title}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" preset="card" />
-                          {rank <= 5 && (
-                            <span className="absolute top-2 left-2 inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-[4px] bg-charcoal/85 text-[10px] font-bold tracking-[0.12em] text-highlight-soft backdrop-blur-sm">
-                              {String(rank).padStart(2, '0')}
-                            </span>
-                          )}
-                          <button
-                            onClick={(e) => handleWishlistClick(e, product.id, product.title)}
-                            className="absolute top-1.5 right-1.5 p-1.5 bg-background/95 dark:bg-card/95 backdrop-blur-sm rounded-full shadow-sm"
-                            aria-label="Add to wishlist"
-                          >
-                            <Heart className={`w-3 h-3 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
-                          </button>
-                        </div>
-                        <div className="p-2.5 flex flex-col flex-grow">
-                          <h3 className="text-[11px] font-medium text-foreground line-clamp-1 mb-1">
-                            {product.title}
-                          </h3>
-                          <div className="mt-auto flex items-end justify-between">
-                            <div>
-                              <div className="flex flex-wrap items-center gap-1">
-                                <p className="price-now text-sm">₹{product.price.toLocaleString()}</p>
-                                {product.oldPrice && product.oldPrice > product.price && (
-                                  <p className="price-was text-[9px]">₹{product.oldPrice.toLocaleString()}</p>
-                                )}
-                              </div>
-                              {product.discount && product.discount > 0 && (
-                                <p className="chip-off mt-1 w-fit !text-[9px]">{product.discount}% off</p>
-                              )}
-                            </div>
-                            <button
-                              onClick={(e) => handleAddToCart(e, product)}
-                              className="w-8 h-8 rounded-full border border-foreground/15 hover:bg-primary hover:border-primary flex items-center justify-center transition-colors group/cart"
-                              aria-label="Add to cart"
-                            >
-                              <ShoppingCart className="w-3.5 h-3.5 text-muted-foreground group-hover/cart:text-white" />
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="relative hidden md:block">
-            {loading ? (
-              <div className="grid grid-cols-4 gap-4 pb-4">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={`desktop-skeleton-${index}`} className="animate-pulse card-product p-3">
-                    <div className="mb-3 aspect-square rounded-2xl bg-gray-200 dark:bg-zinc-800 dark:bg-muted" />
-                    <div className="mb-2 h-4 rounded bg-gray-200 dark:bg-zinc-800 dark:bg-muted" />
-                    <div className="h-4 w-2/3 rounded bg-gray-200 dark:bg-zinc-800 dark:bg-muted" />
-                  </div>
-                ))}
-              </div>
-            ) : products.length === 0 ? (
-              <div className="w-full py-12 text-center">
-                <Package className="w-12 h-12 mx-auto mb-3 text-primary/40" />
-                <p className="text-base font-medium text-foreground/70 mb-1">Best Sellers Coming Soon</p>
-                <p className="text-sm text-muted-foreground">Our most loved products will appear here. Check back shortly!</p>
-              </div>
-            ) : (
-              <div className="group/best-sellers relative overflow-hidden rounded-[var(--radius-card)] py-2">
-                <div
-                  ref={desktopBSRef}
-                  className="overflow-x-auto scrollbar-hide px-2 py-2"
-                >
-                  <div className={`flex gap-4 px-2 ${canDesktopBSScroll ? 'w-max' : 'justify-center'}`}>
-                    {desktopCarouselProducts.map((product, index) => {
-                      const sourceIndex = products.length > 0 ? index % products.length : index;
-                      const showRankBadge = sourceIndex < Math.min(products.length, 5);
-
+                  {/* Horizontal auto-scroll row for the rest */}
+                  <div
+                    ref={mobileBSRef}
+                    className="-mx-1 flex gap-3 overflow-x-auto scrollbar-hide px-1 pb-2"
+                    style={{ WebkitOverflowScrolling: 'touch' }}
+                  >
+                    {mobileCarouselProducts.map((product, idx) => {
+                      const sourceIndex = mobileBaseProducts.length > 0 ? idx % mobileBaseProducts.length : idx;
+                      const rank = sourceIndex + 2; // continues from #2
                       return (
-                        <div
-                          key={`desktop-${product.id}-${index}`}
-                          className="w-[230px] flex-shrink-0 cursor-pointer"
-                          onClick={() => navigate(`/product/${product.id}`)}
-                        >
-                          <div className="card-product overflow-hidden h-full flex flex-col group p-2.5">
-                            <div className="tile-img aspect-square overflow-hidden relative">
-                              <SmartImage
-                                src={product.image}
-                                alt={product.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" preset="card" />
-
-                              {showRankBadge && (
-                                <div className="absolute top-2.5 left-2.5 z-10">
-                                  <span className={`inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-[4px] bg-charcoal/85 text-[10px] font-bold tracking-[0.12em] text-highlight-soft backdrop-blur-sm`}>
-                                    No. {String(sourceIndex + 1).padStart(2, '0')}
-                                  </span>
-                                </div>
-                              )}
-
-                              <button
-                                onClick={(e) => handleWishlistClick(e, product.id, product.title)}
-                                className="absolute top-2.5 right-2.5 p-2 bg-card/90 backdrop-blur-sm rounded-full border border-foreground/10 transition-all duration-200 z-10 hover:border-primary/40"
-                                aria-label="Add to wishlist"
-                              >
-                                <Heart 
-                                  className={`w-4 h-4 ${
-                                    isInWishlist(product.id) 
-                                      ? 'fill-red-500 text-red-500' 
-                                      : 'text-muted-foreground'
-                                  }`}
-                                />
-                              </button>
-                            </div>
-
-                            <div className="px-1.5 pt-3.5 pb-1 flex flex-col flex-grow">
-                              <h3 className="text-sm font-medium text-foreground line-clamp-1 mb-2">
-                                {product.title}
-                              </h3>
-
-                              <div className="mt-auto">
-                                <div className="flex items-end justify-between">
-                                  <div>
-                                    <div className="flex flex-wrap items-center gap-1.5">
-                                      <p className="price-now text-lg">
-                                        ₹{product.price.toLocaleString()}
-                                      </p>
-                                      {product.oldPrice && product.oldPrice > product.price && (
-                                        <p className="price-was text-xs">
-                                          ₹{product.oldPrice.toLocaleString()}
-                                        </p>
-                                      )}
-                                    </div>
-                                    {product.discount && product.discount > 0 && (
-                                      <p className="chip-off mt-1.5 w-fit">
-                                        {product.discount}% off
-                                      </p>
-                                    )}
-                                  </div>
-
-                                  <button
-                                    onClick={(e) => handleAddToCart(e, product)}
-                                    className="w-9 h-9 rounded-full border border-foreground/15 hover:bg-primary hover:border-primary flex items-center justify-center transition-all duration-200 group/cart"
-                                    aria-label="Add to cart"
-                                  >
-                                    <ShoppingCart className="w-[18px] h-[18px] text-muted-foreground group-hover/cart:text-white transition-colors" />
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                        <RankedCard
+                          key={`${product.id}-${idx}`}
+                          product={product}
+                          index={idx}
+                          rank={rank <= 5 ? rank : null}
+                          isLoopCopy={idx >= mobileBaseProducts.length}
+                          widthClass="w-[160px]"
+                        />
                       );
                     })}
                   </div>
+                </>
+              )}
+            </div>
+
+            <div className="relative hidden md:block">
+              {loading ? (
+                <ProductRowSkeleton count={5} label="" className="px-4 py-4" itemClassName="h-[332px] w-[230px] overflow-hidden lg:h-[341px]" />
+              ) : products.length === 0 ? (
+                empty
+              ) : (
+                <div className="group/best-sellers relative overflow-hidden rounded-card py-2">
+                  <div ref={desktopBSRef} className="overflow-x-auto scrollbar-hide px-2 py-2">
+                    <div className={cn("flex gap-4 px-2", canDesktopBSScroll ? "w-max" : "justify-center")}>
+                      {desktopCarouselProducts.map((product, index) => {
+                        const sourceIndex = products.length > 0 ? index % products.length : index;
+                        return (
+                          <RankedCard
+                            key={`desktop-${product.id}-${index}`}
+                            product={product}
+                            index={index}
+                            rank={sourceIndex < Math.min(products.length, 5) ? sourceIndex + 1 : null}
+                            isLoopCopy={index >= products.length}
+                            widthClass="w-[230px]"
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => desktopBSScrollByPage("prev")}
+                    disabled={!canDesktopBSScroll}
+                    className={cn(desktopArrowClass, "left-4")}
+                    aria-label="Show previous best sellers"
+                  >
+                    <ChevronLeft aria-hidden="true" className="size-5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => desktopBSScrollByPage("next")}
+                    disabled={!canDesktopBSScroll}
+                    className={cn(desktopArrowClass, "right-4")}
+                    aria-label="Show next best sellers"
+                  >
+                    <ChevronRight aria-hidden="true" className="size-5" />
+                  </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    desktopBSScrollByPage("prev");
-                  }}
-                  disabled={!canDesktopBSScroll}
-                  className={`btn-round absolute left-4 top-1/2 z-20 !h-11 !w-11 -translate-y-1/2 !bg-card shadow-lg ${canDesktopBSScroll ? 'pointer-events-none opacity-0 group-hover/best-sellers:pointer-events-auto group-hover/best-sellers:opacity-100' : 'pointer-events-none opacity-0'}`}
-                  aria-label="Show previous best sellers"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    desktopBSScrollByPage("next");
-                  }}
-                  disabled={!canDesktopBSScroll}
-                  className={`btn-round absolute right-4 top-1/2 z-20 !h-11 !w-11 -translate-y-1/2 !bg-card shadow-lg ${canDesktopBSScroll ? 'pointer-events-none opacity-0 group-hover/best-sellers:pointer-events-auto group-hover/best-sellers:opacity-100' : 'pointer-events-none opacity-0'}`}
-                  aria-label="Show next best sellers"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
         </div>
       </div>
 
@@ -449,6 +351,9 @@ const BestSellers = () => {
       `}</style>
     </section>
   );
+
+  // The reveal waits for the data, so the panel and its cards appear together.
+  return loading ? panel : <Reveal>{panel}</Reveal>;
 };
 
 export default BestSellers;

@@ -1,44 +1,27 @@
-import { motion } from "framer-motion";
-
 const phrases = [
-  "Earn Loyalty Points On Every Order",
-  "Delivery Across India",
-  "Secure Razorpay Checkout",
-  "Pure Wellness For A Stronger You",
+  "Earn loyalty points on every order",
+  "Delivery across India",
+  "Secure Razorpay checkout",
+  "Pure wellness for a stronger you",
 ];
 
-const FreeShippingBand = () => {
-  const duplicatedPhrases = [...phrases, ...phrases, ...phrases];
-
-  return (
-    <section className="hidden md:block py-3.5 tx-sheet border-y border-foreground/[0.08] overflow-hidden">
-      <div className="relative">
-        <motion.div
-          className="flex items-center gap-12 whitespace-nowrap"
-          animate={{
-            x: [0, -100 * phrases.length],
-          }}
-          transition={{
-            x: {
-              repeat: Infinity,
-              repeatType: "loop",
-              duration: 25,
-              ease: "linear",
-            },
-          }}
-        >
-          {duplicatedPhrases.map((phrase, index) => (
-            <div key={index} className="flex items-center gap-12">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-foreground/70">
-                {phrase}
-              </span>
-              <span className="sep-diamond !bg-primary/70" />
-            </div>
-          ))}
-        </motion.div>
-      </div>
-    </section>
-  );
-};
+/**
+ * Service promises on a paper strip (tablet and desktop only, as before).
+ * Static and centred: the marquee band higher up is the page's one moving strip.
+ */
+const FreeShippingBand = () => (
+  <section className="tx-sheet hidden border-y border-foreground/[0.08] py-3.5 md:block">
+    <ul className="container-custom flex flex-wrap items-center justify-center gap-x-10 gap-y-2">
+      {phrases.map((phrase, index) => (
+        <li key={phrase} className="flex items-center gap-10">
+          {index > 0 && <span aria-hidden="true" className="sep-diamond !bg-primary/70" />}
+          <span className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.22em] text-foreground/75">
+            {phrase}
+          </span>
+        </li>
+      ))}
+    </ul>
+  </section>
+);
 
 export default FreeShippingBand;

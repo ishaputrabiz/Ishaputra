@@ -1,25 +1,31 @@
-import { useRef, useEffect, useState } from "react";
-import { motion, useInView } from "framer-motion";
-import { ChevronLeft, ChevronRight, Package, ShoppingCart, Heart } from "lucide-react";
-import ProductQuickView from "./ProductQuickView";
+import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, Package, ShoppingCart } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { UIProduct, adaptFirebaseArrayToUI } from "@/lib/productAdapter";
-import { useNavigate } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useToast } from "@/hooks/use-toast";
 import useAutoScroll from "@/hooks/useAutoScroll";
 import { SmartImage } from "@/components/ui/smart-image";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ProductRowSkeleton } from "@/components/skeletons";
+import ProductCard from "@/components/ProductCard";
+import { WishlistToggle } from "@/components/WishlistToggle";
+import { EmptyState } from "@/components/EmptyState";
+import Reveal from "@/components/Reveal";
+import { formatINR } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { subscribeToActiveProductsByFlag } from '@/services/productCache';
 
+const HEADING_FONT = { fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" };
+const INERT = { inert: "" } as Record<string, string>;
+const NEW_ARRIVALS_LINK = "/products?tag=new-arrivals";
+
+/** New arrivals: a wide spotlight and a drifting row on phones, one drifting row on larger screens. */
 const TrendProducts = () => {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, amount: 0.2 });
-  const [selectedProduct, setSelectedProduct] = useState<UIProduct | null>(null);
-  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [products, setProducts] = useState<UIProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { toast } = useToast();
@@ -47,10 +53,9 @@ const TrendProducts = () => {
     pageStep: 246,
   });
 
-
   // Real-time listener for new arrivals
   useEffect(() => {
-    const unsubscribe = subscribeToActiveProductsByFlag('isNewArrival', 
+    const unsubscribe = subscribeToActiveProductsByFlag('isNewArrival',
       (fetchedProducts) => {
         const uiProducts = adaptFirebaseArrayToUI(fetchedProducts);
         setProducts(uiProducts);
@@ -62,14 +67,7 @@ const TrendProducts = () => {
     return () => unsubscribe();
   }, []);
 
-  const closeQuickView = () => {
-    setIsQuickViewOpen(false);
-    setSelectedProduct(null);
-  };
-
-  const handleAddToCart = async (e: React.MouseEvent, product: UIProduct) => {
-    e.stopPropagation();
-    
+  const handleAddToCart = (product: UIProduct) => {
     try {
       const added = addToCart({
         id: product.id,
@@ -80,28 +78,23 @@ const TrendProducts = () => {
         stock: product.stock,
       });
       if (!added) return;
-      
+
       toast({
         title: "Added to cart",
-        description: `${product.title} has been added to your cart.`,
+        description: product.title,
       });
     } catch (error) {
       console.error('Error adding to cart:', error);
       toast({
-        title: "Error",
-        description: "Failed to add item to cart. Please try again.",
+        title: "Could not add to cart",
+        description: "Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  const handleWishlistClick = (e: React.MouseEvent, productId: string, productTitle: string) => {
-    e.stopPropagation();
-    toggleWishlist(productId, productTitle);
-  };
-
-  const displayProducts = products;
-  const mobileBaseProducts = displayProducts.slice(1);
+  const spotlight = products[0];
+  const mobileBaseProducts = products.slice(1);
   const mobileTrackProducts =
     canMobileScroll && mobileBaseProducts.length > 1
       ? [...mobileBaseProducts, ...mobileBaseProducts]
@@ -109,189 +102,138 @@ const TrendProducts = () => {
   const desktopTrackProducts =
     canDesktopNAScroll && products.length > 1 ? [...products, ...products] : products;
 
-  return (
-    <section ref={ref} className="tx-contour py-6 md:py-16">
+  const empty = (
+    <EmptyState
+      icon={Package}
+      title="New arrivals coming soon"
+      description="New formulations are on their way."
+      as="h3"
+      className="py-10"
+    />
+  );
+
+  const desktopArrowClass = cn(
+    "btn-round absolute top-1/2 z-raised !size-11 -translate-y-1/2 !bg-card shadow-panel transition-[opacity,border-color,color,transform]",
+    canDesktopNAScroll
+      ? "pointer-events-none opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover/new-arrivals:pointer-events-auto group-hover/new-arrivals:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
+      : "hidden",
+  );
+
+  const section = (
+    <section className="tx-contour py-12 md:py-20" aria-busy={loading || undefined}>
       <div className="container-custom">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="mb-3 md:mb-8 hidden md:flex md:items-end md:justify-between"
-        >
-          <div>
-            <p className="eyebrow-no mb-3"><b>04</b><span>New arrivals</span></p>
-            <h2 className="text-3xl lg:text-4xl font-semibold text-foreground font-serif">
-              New Arrivals
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1 font-light">Fresh formulations, just in</p>
-          </div>
-          <button onClick={() => navigate('/products?tag=new-arrivals')} className="link-arrow">
-            View All <ChevronRight className="w-4 h-4" />
-          </button>
-        </motion.div>
-        {/* Mobile header without animation */}
-        <div className="mb-3 md:mb-6 md:hidden px-1">
-          <p className="eyebrow-no mb-2"><b>04</b><span>New arrivals</span></p>
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground font-serif">
-              Freshly dropped
-            </h2>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                aria-label="Scroll new arrivals left"
-                onClick={() => mobileScrollByPage('prev')}
-                disabled={!canMobileScroll}
-                className="btn-round !h-8 !w-8"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                aria-label="Scroll new arrivals right"
-                onClick={() => mobileScrollByPage('next')}
-                disabled={!canMobileScroll}
-                className="btn-round !h-8 !w-8"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={() => navigate('/products?tag=new-arrivals')} className="link-arrow ml-1">
-                View All
-              </button>
-            </div>
+        {/* Header: one heading at every width */}
+        <div className="mb-4 flex items-end justify-between gap-3 px-1 md:mb-8 md:px-0">
+          <h2 className="text-xl font-semibold text-foreground [text-wrap:balance] md:text-3xl lg:text-4xl" style={HEADING_FONT}>
+            New arrivals
+          </h2>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              aria-label="Scroll new arrivals left"
+              onClick={() => mobileScrollByPage('prev')}
+              disabled={!canMobileScroll}
+              className="btn-round md:hidden"
+            >
+              <ChevronLeft aria-hidden="true" className="size-4" />
+            </button>
+            <button
+              type="button"
+              aria-label="Scroll new arrivals right"
+              onClick={() => mobileScrollByPage('next')}
+              disabled={!canMobileScroll}
+              className="btn-round md:hidden"
+            >
+              <ChevronRight aria-hidden="true" className="size-4" />
+            </button>
+            <Link to={NEW_ARRIVALS_LINK} className="link-arrow ml-1.5 md:ml-0">
+              View all <ChevronRight aria-hidden="true" className="hidden size-4 md:block" />
+            </Link>
           </div>
         </div>
 
         {/* Products Container */}
         <div className="relative">
-          {/* Mobile premium layout: featured hero + horizontal snap row */}
-          <div className="md:hidden pb-2">
+          {/* Mobile: wide spotlight + drifting row */}
+          <div className="pb-2 md:hidden">
             {loading ? (
-              <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-4">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={`skeleton-${index}`} className="flex-shrink-0 w-[150px]">
-                    <div className="animate-pulse">
-                      <div className="bg-foreground/[0.06] rounded-[var(--radius-card)] aspect-square mb-2"></div>
-                      <div className="h-3 bg-gray-200 dark:bg-zinc-800 dark:bg-muted rounded mb-1"></div>
-                      <div className="h-3 bg-gray-200 dark:bg-zinc-800 dark:bg-muted rounded w-2/3"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <>
+                <span className="sr-only" role="status">Loading new arrivals</span>
+                <Skeleton className="mb-3 aspect-[16/10] w-full rounded-card" />
+                <ProductRowSkeleton count={3} label="" className="pb-2" itemClassName="h-[259px] w-[160px] overflow-hidden" />
+              </>
             ) : products.length === 0 ? (
-              <div className="w-full py-12 text-center">
-                <Package className="w-12 h-12 mx-auto mb-3 text-primary/40" />
-                <p className="text-base font-medium text-foreground/70 mb-1">New Arrivals Coming Soon</p>
-                <p className="text-sm text-muted-foreground">New formulations are on their way. Stay tuned!</p>
-              </div>
+              empty
             ) : (
               <>
-                {/* Featured wide hero card */}
-                {displayProducts[0] && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5 }}
-                    onClick={() => navigate(`/product/${displayProducts[0].id}`)}
-                    className="relative mb-3 cursor-pointer overflow-hidden rounded-[var(--radius-card)] aspect-[16/10] border border-foreground/10"
-                  >
+                {spotlight && (
+                  <article className="group relative isolate mb-3 flex aspect-[16/10] flex-col justify-end overflow-hidden rounded-card border border-foreground/10 bg-charcoal has-[a[data-card-link]:focus-visible]:outline has-[a[data-card-link]:focus-visible]:outline-2 has-[a[data-card-link]:focus-visible]:outline-offset-2 has-[a[data-card-link]:focus-visible]:outline-ring">
                     <SmartImage
-                      src={displayProducts[0].image}
-                      alt={displayProducts[0].title}
-                      className="absolute inset-0 w-full h-full object-cover" preset="detail" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-                    <div className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-[4px] bg-charcoal/85 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-highlight-soft backdrop-blur-sm">
-                      <span className="w-1.5 h-1.5 rounded-full bg-highlight-soft animate-pulse" />
-                      Just in
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleWishlistClick(e, displayProducts[0].id, displayProducts[0].title); }}
-                      className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/15 backdrop-blur-md border border-white/25 flex items-center justify-center"
-                    >
-                      <Heart className={`w-4 h-4 ${isInWishlist(displayProducts[0].id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-                    </button>
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <h3 className="text-white text-lg font-semibold leading-tight mb-1.5 line-clamp-1" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
-                        {displayProducts[0].title}
-                      </h3>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-white text-base font-bold">₹{displayProducts[0].price.toLocaleString()}</span>
-                          {displayProducts[0].oldPrice && displayProducts[0].oldPrice > displayProducts[0].price && (
-                            <span className="text-white/60 text-xs line-through">₹{displayProducts[0].oldPrice.toLocaleString()}</span>
-                          )}
-                        </div>
-                        <button
-                          onClick={(e) => handleAddToCart(e, displayProducts[0])}
-                          className="btn-copper !px-4 !py-2"
+                      src={spotlight.image}
+                      alt=""
+                      className="absolute inset-0 -z-10 h-full w-full object-cover"
+                      preset="detail"
+                    />
+                    <div aria-hidden="true" className="photo-scrim absolute inset-0 -z-10" />
+                    <WishlistToggle
+                      name={spotlight.title}
+                      saved={isInWishlist(spotlight.id)}
+                      onToggle={() => toggleWishlist(spotlight.id, spotlight.title)}
+                      variant="onPhoto"
+                      className="absolute right-3 top-3 z-raised"
+                    />
+                    <div className="p-4 text-charcoal-foreground">
+                      <h3 title={spotlight.title} className="on-photo mb-1.5 line-clamp-2 text-lg font-semibold leading-tight" style={HEADING_FONT}>
+                        <Link
+                          to={`/product/${spotlight.id}`}
+                          data-card-link=""
+                          className="outline-none after:absolute after:inset-0 after:content-['']"
                         >
-                          <ShoppingCart className="w-3.5 h-3.5" />
-                          Add
+                          {spotlight.title}
+                        </Link>
+                      </h3>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="on-photo flex flex-wrap items-baseline gap-x-2">
+                          <span className="text-base font-bold tabular-nums">{formatINR(spotlight.price)}</span>
+                          {spotlight.oldPrice && spotlight.oldPrice > spotlight.price && (
+                            <span className="text-xs tabular-nums text-charcoal-foreground/75 line-through">
+                              <span className="sr-only">Was </span>
+                              {formatINR(spotlight.oldPrice)}
+                            </span>
+                          )}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => handleAddToCart(spotlight)}
+                          className="btn-copper relative z-raised h-10 !px-4 !py-0"
+                        >
+                          <ShoppingCart aria-hidden="true" className="size-4" />
+                          Add<span className="sr-only"> {spotlight.title} to cart</span>
                         </button>
                       </div>
                     </div>
-                  </motion.div>
+                  </article>
                 )}
 
-                {/* Horizontal snap row of remaining */}
+                {/* Drifting row of the rest */}
                 <div
                   ref={scrollRef}
-                  className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4"
+                  className="-mx-4 flex gap-3 overflow-x-auto scrollbar-hide px-4 pb-2"
                   style={{ WebkitOverflowScrolling: 'touch', scrollPaddingLeft: '16px' }}
                 >
-                  {mobileTrackProducts.map((product, index) => (
-                    <div
-                      key={`${product.id}-${index}`}
-                      className="w-[148px] flex-shrink-0 cursor-pointer"
-                      onClick={() => navigate(`/product/${product.id}`)}
-                    >
-                      <div className="card-product flex h-full flex-col overflow-hidden p-1.5">
-                        <div className="tile-img aspect-square overflow-hidden relative">
-                          <SmartImage
-                            src={product.image}
-                            alt={product.title}
-                            className="w-full h-full object-cover" preset="card" />
-                          <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-[4px] bg-charcoal/85 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-highlight-soft backdrop-blur-sm">
-                            New
-                          </span>
-                          <button
-                            onClick={(e) => handleWishlistClick(e, product.id, product.title)}
-                            className="absolute top-1.5 right-1.5 p-1.5 bg-background/90 dark:bg-card/90 backdrop-blur-sm rounded-full shadow-sm"
-                            aria-label="Add to wishlist"
-                          >
-                            <Heart className={`w-3 h-3 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
-                          </button>
-                        </div>
-                        <div className="p-2.5 flex flex-col flex-grow">
-                          <h3 className="text-[11px] font-medium text-foreground line-clamp-1 mb-1">
-                            {product.title}
-                          </h3>
-                          <div className="mt-auto flex items-end justify-between">
-                            <div>
-                              <div className="flex flex-wrap items-center gap-1">
-                                <p className="price-now text-sm">₹{product.price.toLocaleString()}</p>
-                                {product.oldPrice && product.oldPrice > product.price && (
-                                  <p className="price-was text-[9px]">₹{product.oldPrice.toLocaleString()}</p>
-                                )}
-                              </div>
-                              {product.discount && product.discount > 0 && (
-                                <p className="chip-off mt-1 w-fit !text-[9px]">{product.discount}% off</p>
-                              )}
-                            </div>
-                            <button
-                              onClick={(e) => handleAddToCart(e, product)}
-                              className="w-8 h-8 rounded-full border border-foreground/15 hover:bg-primary hover:border-primary flex items-center justify-center transition-colors group/cart"
-                              aria-label="Add to cart"
-                            >
-                              <ShoppingCart className="w-3.5 h-3.5 text-muted-foreground group-hover/cart:text-white" />
-                            </button>
-                          </div>
-                        </div>
+                  {mobileTrackProducts.map((product, index) => {
+                    const isLoopCopy = index >= mobileBaseProducts.length;
+                    return (
+                      <div
+                        key={`${product.id}-${index}`}
+                        className="w-[160px] flex-none"
+                        aria-hidden={isLoopCopy || undefined}
+                        {...(isLoopCopy ? INERT : {})}
+                      >
+                        <ProductCard product={product} index={index} size="row" className="w-full" />
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -299,127 +241,53 @@ const TrendProducts = () => {
 
           <div className="relative hidden md:block">
             {loading ? (
-              <div className="grid grid-cols-4 gap-4 pb-4">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={`desktop-skeleton-${index}`} className="animate-pulse card-product p-3">
-                    <div className="mb-3 aspect-square rounded-2xl bg-gray-200 dark:bg-zinc-800 dark:bg-muted" />
-                    <div className="mb-2 h-4 rounded bg-gray-200 dark:bg-zinc-800 dark:bg-muted" />
-                    <div className="h-4 w-2/3 rounded bg-gray-200 dark:bg-zinc-800 dark:bg-muted" />
-                  </div>
-                ))}
-              </div>
+              <ProductRowSkeleton count={5} label="" className="px-4 py-4" itemClassName="h-[332px] w-[230px] overflow-hidden lg:h-[341px]" />
             ) : products.length === 0 ? (
-              <div className="w-full py-12 text-center">
-                <Package className="mx-auto mb-3 h-12 w-12 text-primary/40" />
-                <p className="mb-1 text-base font-medium text-foreground/70">New Arrivals Coming Soon</p>
-                <p className="text-sm text-muted-foreground">New formulations are on their way. Stay tuned!</p>
-              </div>
+              empty
             ) : (
               <div className="group/new-arrivals relative overflow-hidden py-2">
-                <div
-                  ref={desktopNARef}
-                  className="overflow-x-auto scrollbar-hide px-2 py-2"
-                >
-                  <div className={`flex gap-4 px-2 ${canDesktopNAScroll ? 'w-max' : 'justify-center'}`}>
-                    {desktopTrackProducts.map((product, index) => (
-                      <div
-                        key={`desktop-${product.id}-${index}`}
-                        className="w-[230px] flex-shrink-0 cursor-pointer"
-                        onClick={() => navigate(`/product/${product.id}`)}
-                      >
-                        <div className="card-product group flex h-full flex-col overflow-hidden p-2.5">
-                          <div className="tile-img relative aspect-square overflow-hidden">
-                            <SmartImage
-                              src={product.image}
-                              alt={product.title}
-                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" preset="card" />
-                            <button
-                              onClick={(e) => handleWishlistClick(e, product.id, product.title)}
-                              className="absolute right-2.5 top-2.5 rounded-full border border-foreground/10 bg-card/90 p-2 backdrop-blur-sm transition-all duration-200 hover:border-primary/40"
-                              aria-label="Add to wishlist"
-                            >
-                              <Heart
-                                className={`h-4 w-4 ${
-                                  isInWishlist(product.id)
-                                    ? 'fill-red-500 text-red-500'
-                                    : 'text-muted-foreground'
-                                }`}
-                              />
-                            </button>
-                          </div>
-
-                          <div className="flex flex-grow flex-col px-1.5 pt-3.5 pb-1">
-                            <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                              <span className="inline-flex items-center gap-1 rounded-[4px] bg-charcoal/85 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-highlight-soft backdrop-blur-sm">
-                                <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                                New
-                              </span>
-                              {product.discount && product.discount > 0 && (
-                                <span className="chip-off">
-                                  {product.discount}% off
-                                </span>
-                              )}
-                            </div>
-                            <h3 className="mb-2 line-clamp-1 text-sm font-medium text-foreground">{product.title}</h3>
-                            <div className="mt-auto flex items-end justify-between">
-                              <div>
-                                <p className="price-now text-lg">₹{product.price.toLocaleString()}</p>
-                                {product.oldPrice && product.oldPrice > product.price && (
-                                  <p className="price-was text-xs">₹{product.oldPrice.toLocaleString()}</p>
-                                )}
-                              </div>
-                              <button
-                                onClick={(e) => handleAddToCart(e, product)}
-                                className="group/cart flex h-9 w-9 items-center justify-center rounded-full border border-foreground/15 transition-colors duration-200 hover:bg-primary hover:border-primary"
-                                aria-label="Add to cart"
-                              >
-                                <ShoppingCart className="h-[18px] w-[18px] text-muted-foreground group-hover/cart:text-white" />
-                              </button>
-                            </div>
-                          </div>
+                <div ref={desktopNARef} className="overflow-x-auto scrollbar-hide px-2 py-2">
+                  <div className={cn("flex gap-4 px-2", canDesktopNAScroll ? "w-max" : "justify-center")}>
+                    {desktopTrackProducts.map((product, index) => {
+                      const isLoopCopy = index >= products.length;
+                      return (
+                        <div
+                          key={`desktop-${product.id}-${index}`}
+                          className="w-[230px] flex-none"
+                          aria-hidden={isLoopCopy || undefined}
+                          {...(isLoopCopy ? INERT : {})}
+                        >
+                          <ProductCard product={product} index={index} size="row" className="w-full" />
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    desktopNAScrollByPage("prev");
-                  }}
+                  onClick={() => desktopNAScrollByPage("prev")}
                   disabled={!canDesktopNAScroll}
-                  className={`btn-round absolute left-4 top-1/2 z-20 !h-11 !w-11 -translate-y-1/2 !bg-card shadow-lg ${canDesktopNAScroll ? 'pointer-events-none opacity-0 group-hover/new-arrivals:pointer-events-auto group-hover/new-arrivals:opacity-100' : 'pointer-events-none opacity-0'}`}
+                  className={cn(desktopArrowClass, "left-4")}
                   aria-label="Show previous new arrivals"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft aria-hidden="true" className="size-5" />
                 </button>
 
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    desktopNAScrollByPage("next");
-                  }}
+                  onClick={() => desktopNAScrollByPage("next")}
                   disabled={!canDesktopNAScroll}
-                  className={`btn-round absolute right-4 top-1/2 z-20 !h-11 !w-11 -translate-y-1/2 !bg-card shadow-lg ${canDesktopNAScroll ? 'pointer-events-none opacity-0 group-hover/new-arrivals:pointer-events-auto group-hover/new-arrivals:opacity-100' : 'pointer-events-none opacity-0'}`}
+                  className={cn(desktopArrowClass, "right-4")}
                   aria-label="Show next new arrivals"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight aria-hidden="true" className="size-5" />
                 </button>
               </div>
             )}
           </div>
         </div>
       </div>
-
-      {/* Product Quick View Modal */}
-      <ProductQuickView
-        product={selectedProduct}
-        isOpen={isQuickViewOpen}
-        onClose={closeQuickView}
-      />
 
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
@@ -432,6 +300,8 @@ const TrendProducts = () => {
       `}</style>
     </section>
   );
+
+  return loading ? section : <Reveal>{section}</Reveal>;
 };
 
 export default TrendProducts;

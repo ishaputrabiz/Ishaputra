@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { DUR, EASE_OUT } from "@/lib/motion";
 import { Play, Youtube as YoutubeIcon, ChevronLeft, ChevronRight, Maximize } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
@@ -8,6 +9,9 @@ import {
   type HomeVideo,
 } from "@/services/homeContentService";
 import useAutoScroll from "@/hooks/useAutoScroll";
+import { subscribeFooterSettings } from "@/services/siteSettingsService";
+
+const INERT = { inert: "" } as Record<string, string>;
 
 const aspectClass = (r?: HomeVideo["aspectRatio"]) =>
   r === "9:16" ? "aspect-[9/16]" : "aspect-video";
@@ -18,7 +22,7 @@ const InlinePlayer = ({
   onPlay,
   onOpen,
   className = "",
-  rounded = "rounded-2xl",
+  rounded = "rounded-card",
 }: {
   video: HomeVideo;
   playing: boolean;
@@ -31,7 +35,7 @@ const InlinePlayer = ({
 
   return (
     <div
-      className={`relative w-full ${ratioCls} ${rounded} overflow-hidden bg-black ${className}`}
+      className={`relative w-full ${ratioCls} ${rounded} overflow-hidden bg-charcoal ${className}`}
     >
       {playing ? (
         <iframe
@@ -51,27 +55,26 @@ const InlinePlayer = ({
         >
           <img
             src={video.thumbnailUrl || youtubeThumb(video.videoId)}
-            alt={video.title}
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
             loading="lazy"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+          <div aria-hidden="true" className="photo-scrim absolute inset-0" />
           <div className="absolute inset-0 grid place-items-center">
-            <span className="relative grid place-items-center w-14 h-14 md:w-20 md:h-20 rounded-full bg-primary text-primary-foreground shadow-2xl transition-transform group-hover:scale-110">
-              <span className="absolute inset-0 rounded-full animate-ping bg-primary/40" />
-              <Play className="w-5 h-5 md:w-7 md:h-7 ml-1 fill-current" />
+            <span className="relative grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-panel transition-transform duration-press ease-out group-hover:scale-105 group-active:scale-[0.97] md:size-20">
+              <Play aria-hidden="true" className="ml-1 size-5 fill-current md:size-7" />
             </span>
           </div>
         </button>
       )}
-      {/* Full Screen button — opens popup dialog */}
+      {/* Full screen button: opens the video in a dialog */}
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onOpen(); }}
-        className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-1 rounded-full bg-black/65 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-sm transition-all duration-300 hover:bg-black/80 hover:scale-105"
+        className="absolute bottom-3 right-3 z-raised inline-flex h-8 items-center gap-1.5 rounded-control bg-charcoal/75 px-2.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-charcoal-foreground backdrop-blur-sm transition-[background-color,transform] duration-press ease-out after:absolute after:-inset-1.5 after:content-[''] hover:bg-charcoal/90 active:scale-[0.97]"
         aria-label={`Open ${video.title} in full screen`}
       >
-        <Maximize className="h-3 w-3" /> Full Screen
+        <Maximize aria-hidden="true" className="size-3" /> Full screen
       </button>
     </div>
   );
@@ -82,6 +85,7 @@ const YouTubeShowcase = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<HomeVideo | null>(null);
   const [playingIds, setPlayingIds] = useState<Set<string>>(new Set());
+  const [channelUrl, setChannelUrl] = useState<string | null>(null);
   const { scrollerRef, scrollByPage, canScroll } = useAutoScroll({
     speed: 0.45,
     resumeDelay: 2600,
@@ -94,6 +98,17 @@ const YouTubeShowcase = () => {
     const unsub = subscribeHomeVideos((vids) => {
       const active = vids.filter((v) => v.active && v.videoId);
       setVideos(active);
+    });
+    return unsub;
+  }, []);
+
+  // "View channel" appears only when Admin > Site settings has an active YouTube link.
+  useEffect(() => {
+    const unsub = subscribeFooterSettings((settings) => {
+      const youtube = settings.socialLinks?.find(
+        (l) => l.platform === "youtube" && l.active && /^https?:\/\//.test(l.url || "")
+      );
+      setChannelUrl(youtube ? youtube.url : null);
     });
     return unsub;
   }, []);
@@ -139,41 +154,42 @@ const YouTubeShowcase = () => {
   const stripVideos = canScroll && videos.length > 1 ? [...videos, ...videos] : videos;
 
   return (
-    <section className="relative w-full py-14 md:py-24 overflow-hidden">
+    <section className="relative w-full overflow-hidden py-12 md:py-20">
       {/* gold ambient glow */}
 
       <div className="container-custom relative">
         {/* header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8 md:mb-10 px-1 md:px-0">
           <div>
-            <p className="eyebrow-no mb-3"><b>10</b><span>Watch · Discover · Shop</span></p>
             <h2
-              className="text-2xl md:text-4xl font-semibold text-foreground"
+              className="text-2xl font-semibold text-foreground [text-wrap:balance] md:text-4xl"
               style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
             >
-              The Ishaputra Film Reel
+              The Ishaputra film reel
             </h2>
-            <p className="hidden md:block mt-3 text-sm text-muted-foreground max-w-xl font-light">
+            <p className="mt-3 hidden max-w-xl text-sm text-muted-foreground md:block">
               How we make it, how to use it, and the herbs behind every formula.
             </p>
           </div>
-          <a
-            href="https://www.youtube.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="link-arrow hidden md:inline-flex"
-          >
-            View Channel <YoutubeIcon className="w-4 h-4" />
-          </a>
+          {channelUrl && (
+            <a
+              href={channelUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link-arrow hidden md:inline-flex"
+            >
+              View channel <YoutubeIcon aria-hidden="true" className="size-4" />
+            </a>
+          )}
         </div>
 
         {/* Featured spotlight (only when admin has explicitly marked at least one as featured) */}
         {featured && (
           <motion.div
             key={featured.videoId}
-            initial={{ opacity: 0, y: 14 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: DUR.modal, ease: EASE_OUT }}
             className={`relative mx-auto w-full ${
               featured.aspectRatio === "9:16" ? "max-w-[22rem] md:max-w-[26rem]" : "max-w-[72rem]"
             }`}
@@ -187,32 +203,20 @@ const YouTubeShowcase = () => {
                   setPlayingIds(prev => { const s = new Set(prev); s.delete(featured.id || featured.videoId); return s; });
                   openVideo(featured);
                 }}
-                rounded="rounded-[var(--radius-panel)]"
+                rounded="rounded-panel"
               />
               {!playingIds.has(featured.id || featured.videoId) && (
                 <>
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/55 backdrop-blur-md border border-white/15 z-10"
-                >
-                  <span className="relative flex w-2 h-2">
-                    <span className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-                  </span>
-                  <span className="text-[10px] uppercase tracking-[0.26em] text-white font-semibold">
-                    Featured
-                  </span>
-                </motion.div>
-                <div className="absolute left-0 right-0 bottom-0 p-5 md:p-8 text-left z-10 pointer-events-none">
+                <span className="tag-dark absolute left-4 top-4 z-raised">Featured</span>
+                <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-raised p-5 text-left md:p-8">
                   <h3
-                    className="text-white text-lg md:text-2xl font-medium leading-tight"
+                    className="on-photo text-lg font-medium leading-tight text-charcoal-foreground md:text-2xl"
                     style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
                   >
                     {featured.title}
                   </h3>
                   {featured.description && (
-                    <p className="mt-1.5 text-white/75 text-xs md:text-sm font-light line-clamp-2 max-w-2xl">
+                    <p className="on-photo mt-1.5 line-clamp-2 max-w-2xl text-xs text-charcoal-foreground/85 md:text-sm">
                       {featured.description}
                     </p>
                   )}
@@ -229,27 +233,27 @@ const YouTubeShowcase = () => {
         {videos.length > 1 && (
         <div className={featured ? "mt-8 md:mt-12" : ""}>
           <div className="flex items-center justify-between mb-4 px-1">
-            <h4 className="text-xs md:text-sm uppercase tracking-[0.28em] text-muted-foreground font-medium">
-              {featured ? "More from the Reel" : "Latest Stories"}
-            </h4>
+            <h3 className="text-xs font-medium uppercase tracking-[0.28em] text-muted-foreground md:text-sm">
+              {featured ? "More from the reel" : "Latest stories"}
+            </h3>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 aria-label="Scroll videos left"
                 onClick={() => scrollByPage("prev")}
                 disabled={!canScroll}
-                className="btn-round !h-8 !w-8 md:!h-10 md:!w-10"
+                className="btn-round"
               >
-                <ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <ChevronLeft aria-hidden="true" className="size-4" />
               </button>
               <button
                 type="button"
                 aria-label="Scroll videos right"
                 onClick={() => scrollByPage("next")}
                 disabled={!canScroll}
-                className="btn-round !h-8 !w-8 md:!h-10 md:!w-10"
+                className="btn-round"
               >
-                <ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <ChevronRight aria-hidden="true" className="size-4" />
               </button>
             </div>
           </div>
@@ -268,12 +272,13 @@ const YouTubeShowcase = () => {
                   featured && key === (featured.id || featured.videoId);
                 const isPortrait = v.aspectRatio === "9:16";
                 const isPlaying = playingIds.has(cardKey);
+                const isLoopCopy = i >= videos.length;
                 return (
-                  <motion.div
+                  <div
                     key={cardKey}
-                    whileHover={{ y: -4 }}
-                    transition={{ duration: 0.25 }}
-                    className={`group flex-shrink-0 snap-center text-left rounded-[var(--radius-card)] overflow-hidden border transition-all bg-card ${
+                    aria-hidden={isLoopCopy || undefined}
+                    {...(isLoopCopy ? INERT : {})}
+                    className={`group flex-shrink-0 snap-center overflow-hidden rounded-card border bg-card text-left transition-[transform,border-color,box-shadow] [transition-duration:220ms] ease-out hover:-translate-y-1 ${
                       // Phone cards are sized off the viewport so a reel is
                       // watchable, with the next one peeking to invite a swipe.
                       isPortrait
@@ -297,13 +302,11 @@ const YouTubeShowcase = () => {
                         rounded=""
                       />
                       {!isPlaying && v.featured && (
-                        <span className="tag-dark absolute top-2 left-2 z-10">
-                          ★ Featured
-                        </span>
+                        <span className="tag-dark absolute left-2 top-2 z-raised">Featured</span>
                       )}
                       {!isPlaying && isFeaturedActive && (
-                        <span className="absolute top-2 right-2 z-10 rounded-[4px] bg-primary px-2 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-primary-foreground">
-                          In Spotlight
+                        <span className="absolute right-2 top-2 z-raised rounded-chip bg-primary px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary-foreground">
+                          In spotlight
                         </span>
                       )}
                     </div>
@@ -315,7 +318,7 @@ const YouTubeShowcase = () => {
                         {v.title}
                       </p>
                     </div>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
@@ -325,7 +328,7 @@ const YouTubeShowcase = () => {
       </div>
 
       <Dialog open={!!selectedVideo} onOpenChange={(open) => !open && setSelectedVideo(null)}>
-        <DialogContent className="w-[96vw] max-w-7xl border-none bg-black/95 p-0 text-white shadow-[0_32px_90px_-24px_rgba(0,0,0,0.85)] sm:rounded-2xl overflow-hidden">
+        <DialogContent className="w-[96vw] max-w-7xl overflow-hidden rounded-panel border-none bg-charcoal p-0 text-charcoal-foreground shadow-panel">
           {/* Accessible title/description for screen readers (Radix requirement) */}
           <DialogTitle className="sr-only">{selectedVideo?.title || "Video story"}</DialogTitle>
           <DialogDescription className="sr-only">
@@ -334,15 +337,15 @@ const YouTubeShowcase = () => {
           {selectedVideo && (
             <div className="flex max-h-[90vh] flex-col overflow-y-auto">
               <div className="px-5 pt-5 pr-14 sm:px-6 sm:pt-6">
-                <p className="text-[10px] uppercase tracking-[0.28em] text-white/60">Video Story</p>
+                <p className="text-[10px] uppercase tracking-[0.28em] text-charcoal-foreground/65">Video story</p>
                 <h3
-                  className="mt-2 text-lg font-medium text-white sm:text-2xl"
+                  className="mt-2 text-lg font-medium text-charcoal-foreground sm:text-2xl"
                   style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
                 >
                   {selectedVideo.title}
                 </h3>
                 {selectedVideo.description && (
-                  <p className="mt-2 max-w-3xl text-sm font-light text-white/70">
+                  <p className="mt-2 max-w-3xl text-sm text-charcoal-foreground/75">
                     {selectedVideo.description}
                   </p>
                 )}
@@ -350,7 +353,7 @@ const YouTubeShowcase = () => {
 
               <div className="px-4 pb-4 pt-4 sm:px-6 sm:pb-6">
                 <div className={`mx-auto w-full ${selectedVideo.aspectRatio === "9:16" ? "max-w-[26rem]" : "max-w-6xl"}`}>
-                  <div className={`relative overflow-hidden rounded-2xl bg-black ${aspectClass(selectedVideo.aspectRatio)}`}>
+                  <div className={`relative overflow-hidden rounded-card bg-charcoal ${aspectClass(selectedVideo.aspectRatio)}`}>
                     <iframe
                       key={selectedVideo.videoId}
                       title={selectedVideo.title}
