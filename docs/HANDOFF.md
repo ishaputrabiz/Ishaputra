@@ -119,12 +119,12 @@ The full rules are in `~/.claude/CLAUDE.md`, in the section "Workflows, ultracod
 
 Which next steps need ultracode:
 
-| Step | Ultracode? |
-|---|---|
-| 1. Review the display fixes | No |
-| 2. Re-verify | Optional, for an adversarial review |
-| 3. Notes and merge | No |
-| 4. Toolbox | No |
-| 5. World-class UI audit | Yes, for the first full-site audit; individual pages after that don't need it |
+| Step | Ultracode? | Effort |
+|---|---|---|
+| 1. Review the display fixes | No | High |
+| 2. Re-verify | Optional, for an adversarial review | Extra high (it's payment logic) |
+| 3. Notes and merge | No | Medium |
+| 4. Toolbox | No | Medium |
+| 5. World-class UI audit | Yes, for the first full-site audit; individual pages after that don't need it | High |
 
 **Context:** read file ranges, not whole large files. `ssecommerce/CLAUDE.md` is 27 KB and loads into every session in this folder, so trimming it would cut the cost of every turn.
