@@ -6,11 +6,14 @@ import {
   policySectionClassName,
 } from "@/components/PolicyPageLayout";
 import PolicyPageLayout from "@/components/PolicyPageLayout";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { BRAND } from "@/config/brand";
 
 const CancellationRefundPolicy = () => {
+  usePageMeta({ title: "Cancellation and refund policy", description: "How to cancel an order, return a product and get a refund from Ishaputra Botanicals." });
+
   return (
-    <PolicyPageLayout title="Cancellation & Refund Policy" effectiveDate="Last Updated: February 17, 2026">
+    <PolicyPageLayout title="Cancellation and refund policy" effectiveDate="Draft: pending review by Ishaputra Botanicals">
       <>
             {/* Introduction */}
             <section className={policySectionClassName}>
@@ -21,7 +24,7 @@ const CancellationRefundPolicy = () => {
 
             {/* Return Window */}
             <section className={policySectionClassName}>
-              <h2 className={policyHeadingClassName}>1. Return Window</h2>
+              <h2 className={policyHeadingClassName}>1. Return window</h2>
               <p className={policyBodyClassName}>
                 Customers may request a return within 7 days from the date of delivery.
               </p>
@@ -29,17 +32,17 @@ const CancellationRefundPolicy = () => {
 
             {/* Eligibility for Return */}
             <section className={policySectionClassName}>
-              <h2 className={policyHeadingClassName}>2. Eligibility for Return</h2>
+              <h2 className={policyHeadingClassName}>2. Eligibility for return</h2>
               <p className={`${policyBodyClassName} mb-3`}>
                 Products must:
               </p>
               <ul className={policyListClassName}>
-                <li>Be unused</li>
-                <li>Be in original packaging</li>
-                <li>Include invoice and tags</li>
+                <li>Be unopened and unused, with the seal intact</li>
+                <li>Be in the original packaging</li>
+                <li>Include the invoice</li>
               </ul>
               <p className={`${policyBodyClassName} mt-4`}>
-                Customized or damaged products are not eligible for return.
+                Damaged products are not eligible for return.
               </p>
             </section>
 
@@ -53,7 +56,7 @@ const CancellationRefundPolicy = () => {
 
             {/* Refund Process */}
             <section className={policySectionClassName}>
-              <h2 className={policyHeadingClassName}>4. Refund Process</h2>
+              <h2 className={policyHeadingClassName}>4. Refund process</h2>
               <p className={`${policyBodyClassName} mb-3`}>
                 After we receive and inspect the returned product:
               </p>
@@ -66,7 +69,7 @@ const CancellationRefundPolicy = () => {
 
             {/* Non-Refundable Cases */}
             <section className={policySectionClassName}>
-              <h2 className={policyHeadingClassName}>5. Non-Refundable Cases</h2>
+              <h2 className={policyHeadingClassName}>5. Non-refundable cases</h2>
               <ul className={policyListClassName}>
                 <li>Used products</li>
                 <li>Damaged items not due to shipping</li>

@@ -12,12 +12,35 @@ import {
   Send,
   HeadphonesIcon,
   CheckCircle,
-  HelpCircle,
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import { subscribeCustomerSupportSettings, DEFAULT_SUPPORT, CustomerSupportSettings } from '@/services/siteSettingsService';
+import { EASE_OUT, staggerDelay, tap } from '@/lib/motion';
+import { usePageMeta } from '@/hooks/usePageMeta';
+
+/** A swapped view: fades up 8px in, fades out faster. */
+const viewMotion = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.24, ease: EASE_OUT } },
+  exit: { opacity: 0, transition: { duration: 0.18, ease: EASE_OUT } },
+};
+
+/** List rows entering one after another, 40ms apart. */
+const rowMotion = (index: number) => ({
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.24, ease: EASE_OUT, delay: staggerDelay(index) },
+});
+
+const OPTION_CARD =
+  'w-full rounded-card border border-foreground/[0.08] bg-card/80 p-4 text-left shadow-panel transition-[transform,border-color,background-color] duration-hover ease-out hover:-translate-y-0.5 hover:border-primary/35 active:bg-foreground/[0.06] lg:p-5';
+const ROW_BUTTON =
+  'w-full rounded-card bg-foreground/[0.03] p-3.5 text-left transition-colors duration-hover hover:bg-foreground/[0.05] active:bg-foreground/[0.06] lg:p-4';
+const TINT_BOX = 'rounded-card border border-primary/20 bg-primary/[0.06] p-3.5 lg:p-4';
+const SECTION_LABEL = 'mb-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground lg:mb-3';
+const LINK = 'text-foreground underline-offset-4 transition-colors duration-hover hover:text-primary hover:underline';
 
 const CustomerSupport = () => {
   const navigate = useNavigate();
@@ -25,6 +48,11 @@ const CustomerSupport = () => {
   const [support, setSupport] = useState<CustomerSupportSettings>(DEFAULT_SUPPORT);
 
   useEffect(() => subscribeCustomerSupportSettings(setSupport), []);
+
+  usePageMeta({
+    title: 'Customer support',
+    description: 'Reach us about an order, a product or your routine by email, phone or WhatsApp.',
+  });
 
   // Contact details (admin-managed; whatsapp normalised by stripping non-digits)
   const contactInfo = {
@@ -47,7 +75,7 @@ const CustomerSupport = () => {
     {
       id: 2,
       question: 'What is your return policy?',
-      message: 'Hello, I would like to inquire about your return and exchange policy.',
+      message: 'Hello, I would like to know more about your return and refund policy.',
     },
     {
       id: 3,
@@ -85,33 +113,28 @@ const CustomerSupport = () => {
   const whatsappMessages = [
     {
       id: 1,
-      title: 'General Inquiry',
-      message: 'Hello, I have a question about your products and services.',
-    },
-    {
-      id: 2,
-      title: 'Order Status',
+      title: 'Order status',
       message: 'Hello, I would like to check the status of my order.',
     },
     {
+      id: 2,
+      title: 'Product question',
+      message: 'Hello, I have a question about one of your products.',
+    },
+    {
       id: 3,
-      title: 'Product Information',
-      message: 'Hello, I need more information about a specific product.',
+      title: 'Which product suits me',
+      message: 'Hello, could you help me choose the right Ishaputra products for my needs?',
     },
     {
       id: 4,
-      title: 'Custom Order',
-      message: 'Hello, I am interested in placing a custom order.',
+      title: 'Return or refund',
+      message: 'Hello, I would like help with a return or a refund.',
     },
     {
       id: 5,
-      title: 'Pricing Query',
-      message: 'Hello, I would like to inquire about pricing for bulk orders.',
-    },
-    {
-      id: 6,
-      title: 'Visit Store',
-      message: 'Hello, I would like to visit your store. Could you provide the address and timing?',
+      title: 'Bulk or gifting enquiry',
+      message: 'Hello, I would like to ask about bulk or gifting orders.',
     },
   ];
 
@@ -119,355 +142,313 @@ const CustomerSupport = () => {
   const phoneOptions = [
     {
       id: 1,
-      title: 'Sales Inquiry',
-      description: 'For product information and purchases',
+      title: 'Product questions',
+      description: 'Ingredients, usage and which product suits you',
     },
     {
       id: 2,
-      title: 'Order Support',
+      title: 'Order support',
       description: 'Track your order or delivery status',
     },
     {
       id: 3,
-      title: 'Technical Support',
-      description: 'Help with website or account issues',
+      title: 'Website and account',
+      description: 'Help with signing in, checkout or your account',
     },
     {
       id: 4,
-      title: 'Returns & Exchange',
-      description: 'Initiate returns or exchanges',
+      title: 'Returns and refunds',
+      description: 'Start a return or ask about a refund',
     },
   ];
 
-  const handleEmailClick = (message: string) => {
-    const subject = 'Customer Support Inquiry';
-    const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=${contactInfo.email}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
-    window.open(gmailLink, '_blank');
+  // Opens the visitor's own email app (works without Gmail).
+  const handleEmailClick = (message: string, subject = 'Customer support enquiry') => {
+    window.location.href = `mailto:${contactInfo.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
   };
 
   const handleWhatsAppClick = (message: string) => {
     const whatsappLink = `https://wa.me/${contactInfo.whatsapp}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappLink, '_blank');
+    window.open(whatsappLink, '_blank', 'noopener,noreferrer');
   };
 
   const handlePhoneCall = () => {
     window.location.href = `tel:${contactInfo.phone}`;
   };
 
+  const telHref = `tel:${(contactInfo.phone || '').replace(/\s+/g, '')}`;
+
   return (
     <div className="min-h-screen tx-paper">
       <Header />
-      
-      <div className="max-w-2xl mx-auto px-3 py-4 pb-24 lg:px-4 lg:py-6 lg:pb-8">
-        {/* Back Button - Mobile */}
+
+      <main id="main" tabIndex={-1} className="mx-auto max-w-2xl px-4 py-4 pb-24 outline-none lg:py-6 lg:pb-8">
         <button
+          type="button"
           onClick={() => {
             if (selectedOption) { setSelectedOption(null); return; }
             navigate('/account');
           }}
-          className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-foreground/10 bg-card/80 px-3 py-2 text-foreground/80 backdrop-blur transition-colors hover:text-primary lg:mb-6"
+          className="-ml-2 mb-3 inline-flex h-10 items-center gap-1.5 rounded-control px-2 text-sm font-medium text-foreground/80 transition-[color,background-color,transform] duration-hover ease-out hover:bg-muted hover:text-foreground active:scale-[0.97] lg:mb-5"
         >
-          <ArrowLeft className="h-4 w-4 lg:h-5 lg:w-5" />
-          <span className="text-xs lg:text-sm font-medium">Back</span>
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          Back
         </button>
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" initial={false}>
           {!selectedOption ? (
-            <motion.div
-              key="options"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
+            <motion.div key="options" {...viewMotion}>
               {/* Header */}
-              <div className="mb-5 panel tx-sheet tx-contour overflow-hidden px-5 py-7 text-center lg:mb-8 lg:px-8">
-                <p className="eyebrow-no eyebrow-center mb-4"><span>We're here to help</span></p>
-                <div className="tx-slate mx-auto mb-3 grid h-12 w-12 place-items-center rounded-[10px] text-highlight-soft">
-                  <HeadphonesIcon className="h-6 w-6" />
+              <div className="panel tx-sheet tx-contour mb-5 overflow-hidden px-5 py-7 text-center lg:mb-8 lg:px-8">
+                <p className="eyebrow-no eyebrow-center mb-4"><span>We&rsquo;re here to help</span></p>
+                <div className="tx-slate mx-auto mb-3 grid h-12 w-12 place-items-center rounded-card text-highlight-soft">
+                  <HeadphonesIcon aria-hidden="true" className="size-6" />
                 </div>
-                <h1 className="mb-1 text-2xl font-semibold text-foreground lg:mb-2 lg:text-4xl" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Customer support</h1>
-                <p className="mx-auto max-w-md text-xs text-muted-foreground lg:text-sm">
-                  Choose the fastest way to reach us for orders, custom requests, and after-sales help.
+                <h1 className="mb-1.5 font-heading text-2xl font-semibold tracking-tight text-foreground [text-wrap:balance] lg:mb-2 lg:text-4xl">
+                  Customer support
+                </h1>
+                <p className="mx-auto max-w-md text-sm text-muted-foreground [text-wrap:pretty]">
+                  Reach us about an order, a product or your routine.
                 </p>
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground">
-                  <span className="rounded-full border border-highlight/20 bg-cream px-3 py-1 dark:bg-highlight/5">{contactInfo.hours}</span>
-                  <span className="rounded-full border border-highlight/20 bg-cream px-3 py-1 dark:bg-highlight/5">{contactInfo.responseTime}</span>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+                  {contactInfo.hours && (
+                    <span className="rounded-chip border border-foreground/10 bg-muted px-2.5 py-1">{contactInfo.hours}</span>
+                  )}
+                  {contactInfo.responseTime && (
+                    <span className="rounded-chip border border-foreground/10 bg-muted px-2.5 py-1">
+                      Replies: {contactInfo.responseTime.toLowerCase()}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {/* Contact Options */}
-              <div className="space-y-2 lg:space-y-3 mb-5 lg:mb-8">
-                {/* Email Support */}
-                <motion.button
-                  onClick={() => setSelectedOption('email')}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full rounded-[10px] border border-foreground/[0.08] bg-card/80 p-3 text-left shadow-[var(--shadow-panel)] transition-all active:bg-foreground/[0.04] hover:-translate-y-0.5 hover:border-primary/35 lg:rounded-2xl lg:p-5"
-                >
-                  <div className="flex items-center gap-3 lg:gap-4">
-                    <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center flex-shrink-0">
-                      <Mail className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
+              {/* Contact options */}
+              <div className="mb-5 space-y-2.5 lg:mb-8 lg:space-y-3">
+                {contactInfo.email && (
+                  <motion.button type="button" onClick={() => setSelectedOption('email')} whileTap={tap} className={OPTION_CARD}>
+                    <div className="flex items-center gap-3 lg:gap-4">
+                      <div className="grid size-10 shrink-0 place-items-center rounded-card bg-primary/[0.08] text-primary lg:size-12">
+                        <Mail aria-hidden="true" className="size-5 lg:size-6" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-sm font-semibold text-foreground lg:text-base">Email support</h2>
+                        <p className="text-xs text-muted-foreground lg:text-sm">Pick a question to start an email</p>
+                      </div>
+                      <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground lg:size-5" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="mb-0.5 text-sm font-semibold text-foreground lg:text-lg">Email Support</h3>
-                      <p className="text-xs text-muted-foreground lg:text-sm">
-                        Send us your questions via email
-                      </p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground/70 lg:h-5 lg:w-5" />
-                  </div>
-                </motion.button>
+                  </motion.button>
+                )}
 
-                {/* Phone Support */}
-                <motion.button
-                  onClick={() => setSelectedOption('phone')}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full rounded-[10px] border border-foreground/[0.08] bg-card/80 p-3 text-left shadow-[var(--shadow-panel)] transition-all active:bg-foreground/[0.04] hover:-translate-y-0.5 hover:border-primary/35 lg:rounded-2xl lg:p-5"
-                >
-                  <div className="flex items-center gap-3 lg:gap-4">
-                    <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center flex-shrink-0">
-                      <Phone className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
+                {contactInfo.phone && (
+                  <motion.button type="button" onClick={() => setSelectedOption('phone')} whileTap={tap} className={OPTION_CARD}>
+                    <div className="flex items-center gap-3 lg:gap-4">
+                      <div className="grid size-10 shrink-0 place-items-center rounded-card bg-primary/[0.08] text-primary lg:size-12">
+                        <Phone aria-hidden="true" className="size-5 lg:size-6" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-sm font-semibold text-foreground lg:text-base">Phone support</h2>
+                        <p className="text-xs text-muted-foreground lg:text-sm">Talk directly with our team</p>
+                      </div>
+                      <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground lg:size-5" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="mb-0.5 text-sm font-semibold text-foreground lg:text-lg">Phone Support</h3>
-                      <p className="text-xs text-muted-foreground lg:text-sm">
-                        Talk directly with our team
-                      </p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground/70 lg:h-5 lg:w-5" />
-                  </div>
-                </motion.button>
+                  </motion.button>
+                )}
 
-                {/* WhatsApp Support */}
                 {contactInfo.whatsapp && (
-                <motion.button
-                  onClick={() => setSelectedOption('message')}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full rounded-[10px] border border-foreground/[0.08] bg-card/80 p-3 text-left shadow-[var(--shadow-panel)] transition-all active:bg-foreground/[0.04] hover:-translate-y-0.5 hover:border-primary/35 lg:rounded-2xl lg:p-5"
-                >
-                  <div className="flex items-center gap-3 lg:gap-4">
-                    <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center flex-shrink-0">
-                      <MessageCircle className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
+                  <motion.button type="button" onClick={() => setSelectedOption('message')} whileTap={tap} className={OPTION_CARD}>
+                    <div className="flex items-center gap-3 lg:gap-4">
+                      <div className="grid size-10 shrink-0 place-items-center rounded-card bg-primary/[0.08] text-primary lg:size-12">
+                        <MessageCircle aria-hidden="true" className="size-5 lg:size-6" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-sm font-semibold text-foreground lg:text-base">WhatsApp chat</h2>
+                        <p className="text-xs text-muted-foreground lg:text-sm">Quick answers by message</p>
+                      </div>
+                      <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground lg:size-5" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="mb-0.5 text-sm font-semibold text-foreground lg:text-lg">WhatsApp Chat</h3>
-                      <p className="text-xs text-muted-foreground lg:text-sm">
-                        Quick messaging support
-                      </p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground/70 lg:h-5 lg:w-5" />
-                  </div>
-                </motion.button>
+                  </motion.button>
                 )}
               </div>
 
-              {/* Additional Info */}
-              <div className="space-y-2 lg:space-y-3">
-                {/* Business Hours */}
-                <div className="border border-foreground/[0.08] bg-card/80 p-3 lg:p-5 rounded-[10px] lg:rounded-2xl shadow-[var(--shadow-panel)]">
-                  <div className="flex items-start gap-3 lg:gap-4">
-                    <div className="w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center flex-shrink-0">
-                      <Clock className="w-5 h-5 lg:w-7 lg:h-7 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm lg:text-base font-semibold text-foreground mb-1 lg:mb-2">Business Hours</h3>
-                      <p className="text-xs lg:text-sm text-muted-foreground mb-0.5 lg:mb-1">{contactInfo.hours}</p>
-                      <p className="text-xs lg:text-sm text-muted-foreground">Response time: {contactInfo.responseTime}</p>
-                    </div>
+              {/* Hours and direct contact, one panel with a divider */}
+              <div className="panel tx-sheet divide-y divide-foreground/[0.08]">
+                <div className="flex items-start gap-3 p-4 lg:gap-4 lg:p-5">
+                  <Clock aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+                  <div>
+                    <h2 className="mb-1 text-sm font-semibold text-foreground lg:text-base">Business hours</h2>
+                    {contactInfo.hours && <p className="text-sm text-muted-foreground">{contactInfo.hours}</p>}
+                    {contactInfo.responseTime && (
+                      <p className="text-sm text-muted-foreground">Response time: {contactInfo.responseTime.toLowerCase()}</p>
+                    )}
                   </div>
                 </div>
-
-                {/* Contact Summary */}
-                <div className="border border-foreground/[0.08] bg-card/80 p-3 lg:p-5 rounded-[10px] lg:rounded-2xl shadow-[var(--shadow-panel)]">
-                  <div className="flex items-start gap-3 lg:gap-4">
-                    <div className="w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center flex-shrink-0">
-                      <MapPin className="w-5 h-5 lg:w-7 lg:h-7 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm lg:text-base font-semibold text-foreground mb-1 lg:mb-2">Reach Us Directly</h3>
-                      <p className="text-xs lg:text-sm text-muted-foreground">Phone: {contactInfo.phone}</p>
-                      <p className="text-xs lg:text-sm text-muted-foreground break-all">Email: {contactInfo.email}</p>
-                      {contactInfo.whatsapp && (
-                        <p className="text-xs lg:text-sm text-muted-foreground">WhatsApp: +{contactInfo.whatsapp}</p>
+                <div className="flex items-start gap-3 p-4 lg:gap-4 lg:p-5">
+                  <MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+                  <div className="min-w-0">
+                    <h2 className="mb-1 text-sm font-semibold text-foreground lg:text-base">Reach us directly</h2>
+                    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
+                      {contactInfo.phone && (
+                        <>
+                          <dt className="text-muted-foreground">Phone</dt>
+                          <dd><a href={telHref} className={`${LINK} tabular-nums`}>{contactInfo.phone}</a></dd>
+                        </>
                       )}
-                    </div>
+                      {contactInfo.email && (
+                        <>
+                          <dt className="text-muted-foreground">Email</dt>
+                          <dd className="min-w-0 [overflow-wrap:anywhere]"><a href={`mailto:${contactInfo.email}`} className={LINK}>{contactInfo.email}</a></dd>
+                        </>
+                      )}
+                      {contactInfo.whatsapp && (
+                        <>
+                          <dt className="text-muted-foreground">WhatsApp</dt>
+                          <dd>
+                            <a
+                              href={`https://wa.me/${contactInfo.whatsapp}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`${LINK} tabular-nums`}
+                            >
+                              +{contactInfo.whatsapp}
+                            </a>
+                          </dd>
+                        </>
+                      )}
+                    </dl>
                   </div>
                 </div>
               </div>
             </motion.div>
           ) : selectedOption === 'email' ? (
-            <motion.div
-              key="email"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <div className="mb-4 lg:mb-6">
-                <div className="flex items-center gap-2.5 lg:gap-3 mb-3 lg:mb-4">
-                  <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center">
-                    <Mail className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-base lg:text-xl font-bold text-foreground">Email Support</h2>
-                    <p className="text-xs lg:text-sm text-muted-foreground">Choose a question or write your own</p>
-                  </div>
+            <motion.div key="email" {...viewMotion}>
+              <div className="mb-5 flex items-center gap-3 lg:mb-6">
+                <div className="grid size-10 shrink-0 place-items-center rounded-card bg-primary/[0.08] text-primary lg:size-12">
+                  <Mail aria-hidden="true" className="size-5 lg:size-6" />
+                </div>
+                <div>
+                  <h1 className="font-heading text-lg font-semibold tracking-tight text-foreground lg:text-2xl">Email support</h1>
+                  <p className="text-sm text-muted-foreground">Pick a question to start an email.</p>
                 </div>
               </div>
 
-              <div className="space-y-1.5 lg:space-y-2 mb-4 lg:mb-6">
-                <h3 className="font-semibold text-foreground mb-2 lg:mb-3 text-xs lg:text-sm uppercase tracking-wide">Common Questions</h3>
-                {faqQuestions.map((faq, index) => (
-                  <motion.button
-                    key={faq.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => handleEmailClick(faq.message)}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full text-left bg-foreground/[0.03] active:bg-gray-100 p-3 lg:p-4 rounded-lg lg:rounded-xl transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-2 lg:gap-3">
-                      <span className="text-xs lg:text-sm font-medium text-foreground flex-1">
-                        {faq.question}
-                      </span>
-                      <Send className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-muted-foreground/70 flex-shrink-0" />
-                    </div>
-                  </motion.button>
-                ))}
+              <div className="mb-5 lg:mb-6">
+                <h2 className={SECTION_LABEL}>Common questions</h2>
+                <ul className="space-y-2">
+                  {faqQuestions.map((faq, index) => (
+                    <motion.li key={faq.id} {...rowMotion(index)}>
+                      <motion.button
+                        type="button"
+                        onClick={() => handleEmailClick(faq.message, faq.question)}
+                        whileTap={tap}
+                        className={ROW_BUTTON}
+                      >
+                        <span className="flex items-center justify-between gap-3">
+                          <span className="flex-1 text-sm font-medium text-foreground">{faq.question}</span>
+                          <Send aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+                        </span>
+                      </motion.button>
+                    </motion.li>
+                  ))}
+                </ul>
               </div>
 
-              <div className="bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,hsl(var(--highlight)/0.12)_100%)] border border-highlight/12 p-3 lg:p-4 rounded-lg lg:rounded-xl mb-4 lg:mb-6">
-                <p className="text-xs lg:text-sm text-foreground/80">
-                  <span className="font-semibold">Tip:</span> We typically respond {contactInfo.responseTime.toLowerCase()} during business days.
-                </p>
-              </div>
+              {contactInfo.responseTime && (
+                <div className={TINT_BOX}>
+                  <p className="text-sm text-foreground/80">
+                    <span className="font-semibold text-foreground">Tip:</span> We usually reply {contactInfo.responseTime.toLowerCase()} on business days.
+                  </p>
+                </div>
+              )}
             </motion.div>
           ) : selectedOption === 'phone' ? (
-            <motion.div
-              key="phone"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <div className="mb-4 lg:mb-6">
-                <div className="flex items-center gap-2.5 lg:gap-3 mb-3 lg:mb-4">
-                  <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center">
-                    <Phone className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-base lg:text-xl font-bold text-foreground">Phone Support</h2>
-                    <p className="text-xs lg:text-sm text-muted-foreground">Speak with our team directly</p>
-                  </div>
+            <motion.div key="phone" {...viewMotion}>
+              <div className="mb-5 flex items-center gap-3 lg:mb-6">
+                <div className="grid size-10 shrink-0 place-items-center rounded-card bg-primary/[0.08] text-primary lg:size-12">
+                  <Phone aria-hidden="true" className="size-5 lg:size-6" />
+                </div>
+                <div>
+                  <h1 className="font-heading text-lg font-semibold tracking-tight text-foreground lg:text-2xl">Phone support</h1>
+                  <p className="text-sm text-muted-foreground">Speak with our team directly.</p>
                 </div>
               </div>
 
-              {/* Call Now Button */}
-              <motion.button
-                onClick={handlePhoneCall}
-                whileTap={{ scale: 0.98 }}
-                className="w-full border border-highlight/20 bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,hsl(var(--highlight)/0.12)_100%)] active:bg-blue-50 text-primary rounded-[10px] lg:rounded-2xl p-4 lg:p-6 mb-4 lg:mb-6 transition-colors shadow-[0_20px_45px_-35px_rgba(0,0,0,0.45)]"
-              >
-                <div className="flex items-center justify-center gap-2 lg:gap-3">
-                  <Phone className="w-5 h-5 lg:w-6 lg:h-6" />
-                  <div className="text-center">
-                    <div className="text-base lg:text-xl font-bold">Call Now</div>
-                    <div className="text-xs lg:text-sm">{contactInfo.phone}</div>
-                  </div>
+              {contactInfo.phone && (
+                <div className="mb-6">
+                  <button type="button" onClick={handlePhoneCall} className="btn-copper h-14 w-full">
+                    <Phone aria-hidden="true" className="size-4" />
+                    Call now
+                  </button>
+                  <p className="mt-2 text-center text-sm tabular-nums text-muted-foreground">{contactInfo.phone}</p>
                 </div>
-              </motion.button>
+              )}
 
-              <div className="mb-2 lg:mb-3">
-                <h3 className="font-semibold text-foreground mb-2 lg:mb-3 text-xs lg:text-sm uppercase tracking-wide">We Can Help With</h3>
-              </div>
-
-              <div className="space-y-1.5 lg:space-y-2 mb-4 lg:mb-6">
+              <h2 className={SECTION_LABEL}>We can help with</h2>
+              <ul className="mb-5 space-y-2 lg:mb-6">
                 {phoneOptions.map((option, index) => (
-                  <motion.div
-                    key={option.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="p-3 lg:p-4 rounded-lg lg:rounded-xl bg-foreground/[0.03]"
-                  >
-                    <div className="flex items-start gap-2 lg:gap-3">
-                      <div className="w-6 h-6 lg:w-8 lg:h-8 flex items-center justify-center flex-shrink-0">
-                        <CheckCircle className="w-5 h-5 lg:w-6 lg:h-6 text-primary" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-foreground text-xs lg:text-sm mb-0.5 lg:mb-1">{option.title}</h4>
-                        <p className="text-[11px] lg:text-xs text-muted-foreground">{option.description}</p>
-                      </div>
+                  <motion.li key={option.id} {...rowMotion(index)} className="flex items-start gap-3 rounded-card bg-foreground/[0.03] p-3.5 lg:p-4">
+                    <CheckCircle aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">{option.title}</h3>
+                      <p className="text-xs text-muted-foreground lg:text-sm">{option.description}</p>
                     </div>
-                  </motion.div>
+                  </motion.li>
                 ))}
-              </div>
+              </ul>
 
-              <div className="p-3 lg:p-4 bg-[linear-gradient(135deg,rgba(34,197,94,0.08)_0%,hsl(var(--highlight)/0.10)_100%)] border border-highlight/12 rounded-lg lg:rounded-xl">
-                <div className="flex items-start gap-2 lg:gap-3">
-                  <Clock className="w-4 h-4 lg:w-5 lg:h-5 text-primary flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs lg:text-sm font-semibold text-foreground mb-0.5 lg:mb-1">Available Hours</p>
-                    <p className="text-xs lg:text-sm text-foreground/80">{contactInfo.hours}</p>
-                    <p className="text-xs lg:text-sm text-foreground/80">Response time: {contactInfo.responseTime}</p>
-                  </div>
+              <div className={`${TINT_BOX} flex items-start gap-3`}>
+                <Clock aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary lg:size-5" />
+                <div className="text-sm">
+                  <p className="mb-0.5 font-semibold text-foreground">Available hours</p>
+                  {contactInfo.hours && <p className="text-foreground/80">{contactInfo.hours}</p>}
+                  {contactInfo.responseTime && (
+                    <p className="text-foreground/80">Response time: {contactInfo.responseTime.toLowerCase()}</p>
+                  )}
                 </div>
               </div>
             </motion.div>
           ) : selectedOption === 'message' ? (
-            <motion.div
-              key="message"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <div className="mb-4 lg:mb-6">
-                <div className="flex items-center gap-2.5 lg:gap-3 mb-3 lg:mb-4">
-                  <div className="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center">
-                    <MessageCircle className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-base lg:text-xl font-bold text-foreground">WhatsApp Chat</h2>
-                    <p className="text-xs lg:text-sm text-muted-foreground">Quick and convenient messaging</p>
-                  </div>
+            <motion.div key="message" {...viewMotion}>
+              <div className="mb-5 flex items-center gap-3 lg:mb-6">
+                <div className="grid size-10 shrink-0 place-items-center rounded-card bg-primary/[0.08] text-primary lg:size-12">
+                  <MessageCircle aria-hidden="true" className="size-5 lg:size-6" />
+                </div>
+                <div>
+                  <h1 className="font-heading text-lg font-semibold tracking-tight text-foreground lg:text-2xl">WhatsApp chat</h1>
+                  <p className="text-sm text-muted-foreground">Pick a message to start the chat.</p>
                 </div>
               </div>
 
-              <div className="mb-2 lg:mb-3">
-                <h3 className="font-semibold text-foreground mb-2 lg:mb-3 text-xs lg:text-sm uppercase tracking-wide">Message Templates</h3>
-              </div>
-
-              <div className="space-y-1.5 lg:space-y-2 mb-4 lg:mb-6">
+              <h2 className={SECTION_LABEL}>Message templates</h2>
+              <ul className="mb-5 space-y-2 lg:mb-6">
                 {whatsappMessages.map((msg, index) => (
-                  <motion.button
-                    key={msg.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => handleWhatsAppClick(msg.message)}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full text-left p-3 lg:p-4 rounded-lg lg:rounded-xl bg-foreground/[0.03] active:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-2 lg:gap-3">
-                      <div className="flex-1">
-                        <div className="text-xs lg:text-sm font-semibold text-foreground mb-0.5 lg:mb-1">
-                          {msg.title}
-                        </div>
-                        <div className="text-[11px] lg:text-xs text-muted-foreground">{msg.message}</div>
-                      </div>
-                      <MessageCircle className="w-4 h-4 lg:w-5 lg:h-5 text-muted-foreground/70 flex-shrink-0" />
-                    </div>
-                  </motion.button>
+                  <motion.li key={msg.id} {...rowMotion(index)}>
+                    <motion.button
+                      type="button"
+                      onClick={() => handleWhatsAppClick(msg.message)}
+                      whileTap={tap}
+                      className={ROW_BUTTON}
+                    >
+                      <span className="flex items-center justify-between gap-3">
+                        <span className="flex-1">
+                          <span className="mb-0.5 block text-sm font-semibold text-foreground">{msg.title}</span>
+                          <span className="block text-xs text-muted-foreground">{msg.message}</span>
+                        </span>
+                        <MessageCircle aria-hidden="true" className="size-4 shrink-0 text-muted-foreground lg:size-5" />
+                      </span>
+                    </motion.button>
+                  </motion.li>
                 ))}
-              </div>
+              </ul>
 
-              <div className="p-3 lg:p-4 bg-[linear-gradient(135deg,rgba(168,85,247,0.08)_0%,hsl(var(--highlight)/0.10)_100%)] border border-highlight/12 rounded-lg lg:rounded-xl">
-                <p className="text-xs lg:text-sm text-foreground/80">
-                  <span className="font-semibold">Note:</span> Our team is available during business hours to assist you promptly on WhatsApp.
+              <div className={TINT_BOX}>
+                <p className="text-sm text-foreground/80">
+                  <span className="font-semibold text-foreground">Note:</span> We answer WhatsApp messages during business hours.
                 </p>
               </div>
             </motion.div>
           ) : null}
         </AnimatePresence>
-      </div>
+      </main>
 
       <Footer />
       <MobileBottomNav />

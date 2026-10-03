@@ -11,52 +11,58 @@ interface PolicyPageLayoutProps {
   children: ReactNode;
 }
 
-export const policySectionClassName = "rounded-[var(--radius-card)] border border-foreground/[0.08] bg-card/70 p-5 md:p-7";
-export const policyHeadingClassName = "text-xl md:text-2xl font-semibold text-foreground mb-3";
-export const policyBodyClassName = "text-sm md:text-base leading-7 text-muted-foreground";
-export const policyListClassName = "list-disc space-y-2 pl-5 text-sm md:text-base leading-7 text-muted-foreground marker:text-primary/70";
-export const policyNoteClassName = "rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 p-5 md:p-6";
-export const policyCardClassName = "rounded-[var(--radius-card)] border border-foreground/[0.08] bg-foreground/[0.02] p-5 md:p-6";
+/** Sections sit in one panel, separated by hairlines (no card per section). */
+export const policySectionClassName = "border-t border-foreground/[0.08] pt-7 first:border-t-0 first:pt-0";
+export const policyHeadingClassName = "mb-3 font-heading text-lg font-semibold tracking-tight text-foreground [text-wrap:balance] md:text-2xl";
+export const policyBodyClassName = "max-w-[68ch] text-[15px] leading-relaxed text-muted-foreground [text-wrap:pretty] md:text-base";
+export const policyListClassName = "max-w-[68ch] list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-muted-foreground marker:text-primary md:text-base";
+/** The one tinted box a policy page may use. */
+export const policyNoteClassName = "max-w-[68ch] rounded-card border border-primary/20 bg-primary/[0.06] p-4 md:p-5";
+/** Contact details block: plain rows, no box (the panel already groups them). */
+export const policyCardClassName = "space-y-1";
 export const policyLinkClassName = "text-primary underline-offset-4 hover:underline";
 
 /**
- * Shared shell for the legal / informational pages so they all get the
- * same header, footer, breadcrumb and premium page-header band.
+ * Shared shell for the legal and information pages: header, a charcoal title
+ * band with a real breadcrumb, then one paper panel holding the sections.
  */
 const PolicyPageLayout = ({ title, effectiveDate, children }: PolicyPageLayoutProps) => {
   return (
     <div className="min-h-screen flex flex-col tx-paper">
       <Header />
 
-      {/* Premium page header band */}
-      <section className="tx-slate tx-contour relative overflow-hidden text-white">
-        <div className="container-custom relative py-10 md:py-14">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-1.5 text-xs text-white/60 mb-4">
-            <Link to="/" className="inline-flex items-center gap-1 hover:text-white transition-colors">
-              <Home className="w-3.5 h-3.5" /> Home
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-white/90">{title}</span>
-          </nav>
-          <h1 className="text-3xl md:text-5xl font-serif font-semibold">
-            {title}
-          </h1>
-          {effectiveDate && (
-            <p className="mt-2 text-xs md:text-sm text-white/55 tracking-wide">
-              {effectiveDate}
-            </p>
-          )}
-          {/* Gold accent underline */}
-          <div className="mt-5 h-[2px] w-16 bg-gradient-to-r from-highlight-soft to-transparent rounded-full" />
-        </div>
-      </section>
+      <main id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
+        {/* Title band */}
+        <section className="tx-slate tx-contour relative overflow-hidden text-charcoal-foreground">
+          <div className="container-custom relative py-10 md:py-14">
+            <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-xs text-charcoal-foreground/70">
+              <Link
+                to="/"
+                className="inline-flex min-h-6 items-center gap-1 transition-colors duration-hover hover:text-charcoal-foreground"
+              >
+                <Home aria-hidden="true" className="size-3.5" /> Home
+              </Link>
+              <ChevronRight aria-hidden="true" className="size-3.5" />
+              <span aria-current="page" className="text-charcoal-foreground/90">{title}</span>
+            </nav>
+            <h1 className="font-heading text-3xl font-semibold tracking-tight [text-wrap:balance] md:text-5xl">
+              {title}
+            </h1>
+            {effectiveDate && (
+              <p className="mt-3 text-xs text-charcoal-foreground/70 md:text-sm">
+                {effectiveDate}
+              </p>
+            )}
+            <div aria-hidden="true" className="mt-5 h-0.5 w-16 bg-gradient-to-r from-highlight-soft to-transparent" />
+          </div>
+        </section>
 
-      <main className="flex-1 py-10 md:py-14">
-        <div className="container-custom max-w-4xl">
-          <div className="panel tx-sheet text-card-foreground p-6 sm:p-8 md:p-12">
-            <div className="prose prose-gray dark:prose-invert max-w-none space-y-8">
-              {children}
+        <div className="flex-1 py-8 md:py-14">
+          <div className="container-custom max-w-4xl">
+            <div className="panel tx-sheet p-5 text-card-foreground sm:p-8 md:p-12">
+              <div className="space-y-7">
+                {children}
+              </div>
             </div>
           </div>
         </div>
