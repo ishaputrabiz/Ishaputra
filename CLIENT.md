@@ -21,7 +21,7 @@
     - Address: Road No. 12, Banjara Hills, Hyderabad 500034
     - Phone: +91 98765 43210
     - Email: hello@ishaputra.com
-    - Hours: Mon–Sat 10–7
+    - Hours: Mon to Sat, 10 am to 7 pm
     - Domain: ishaputra.com
     - Map: a city-level embed of Banjara Hills
 - Deliberately left empty (hidden on the site):
@@ -140,7 +140,7 @@ Loyalty points and wallet cashback, built in Step 2B and merged into `main` on 2
         - `tx-contour`: faint topographic rings, used in place of leaves or mandalas.
         - In dark mode, paper turns into soft slate.
     - **Shapes:** panels 18px, cards 12px, buttons 6px (squared-off, masculine). Round is kept only for icon buttons.
-    - **Numbered eyebrows:** "01 Top deals" through "10 Watch" run down the home page (`eyebrow-no`, plus `eyebrow-center` and `on-dark`).
+    - **Eyebrows (changed 2026-10-04, world-class pass):** the numbers ("01 Top deals" to "10 Watch", "12 The full range") and the star glyphs are gone; eyebrows show words only. On home only Top deals, Shop by concern and Testimonials keep one; other pages have at most one (in the title band). Every section stays.
     - **Buttons:**
         - `btn-copper`: the main call to action, tracked caps with a foil sweep on hover.
         - `btn-line`: the outline version, used on photos.
@@ -177,7 +177,7 @@ Loyalty points and wallet cashback, built in Step 2B and merged into `main` on 2
         - `/profile` was a static mock-up that nothing linked to: no working buttons, "Venkat Plus", a hard-coded offer. It now redirects to `/account`, and the mock page is removed.
     - **Remaining pages** (wishlist, orders, order details, cancel, addresses, wallet, security, support, video calls, buy again, search, categories, reviews, password and email pages, policies, 404):
         - Paper background with sheet cards.
-        - Neutrals, blues and greens mapped to brand tokens. Order-status colours (green delivered, red cancelled, purple returns) are kept.
+        - Neutrals, blues and greens mapped to brand tokens. Order-status colours (green delivered, red cancelled, purple returns) are kept, now as the muted status palette below.
         - Empty states use a charcoal icon tile with copper buttons. This replaces the pink heart and gray "Tanishq style" drawing on the wishlist.
     - **Wallet (`/wallet`):**
         - The loyalty tier is now a charcoal-stone card: metal-toned tier badges, copper top tier, and each tier's threshold shown under it.
@@ -187,7 +187,29 @@ Loyalty points and wallet cashback, built in Step 2B and merged into `main` on 2
     - **Customer support:** WhatsApp no longer falls back to the phone number. The option shows only once a WhatsApp number is set in Admin > Customer support.
     - **Policy pages:** charcoal header band and sheet card. The privacy policy's sections 2 and 3 were numbered the wrong way round.
 - Not screenshot-checked yet (need a real order): order details and cancel order. Their colours were mapped with the rest.
+- **World-class UI pass, shared system (2026-10-04).** Guide for developers: `docs/ui-system.md`.
+    - **Theme:** new visitors follow their device (System); Light and Dark still work. The saved theme is applied before the first paint, so dark visitors never see a light flash, and the browser bar and native controls follow the theme.
+    - **Status palette:** six muted tones with light and dark values, all at least 5:1: success (green), danger (red), warning (amber), info (blue), returns (plum, still the "purple" for returns), neutral. Every status chip shows an icon and a label, never colour alone. One map (`src/lib/orderStatus.ts`) so the order list, order page and admin agree.
+    - **Motion:** one set of speeds and curves for the whole site (presses 140 ms, menus 200 ms, dialogs 240 ms, drawers 300 ms, exits faster than entries). Pages fade in over 200 ms. Visitors who ask their device for less motion get fades only, and moving rows stop for them; rows also stop while off screen or in a hidden tab. Product rows still drift for everyone else (owner decision).
+    - **Loading:** pages and sections show a grey outline of their final layout (skeletons) instead of spinners; spinners appear only inside buttons.
+    - **Toasts:** one system (Sonner), on the paper card, following the site theme, bottom-centre on phones.
+    - **Focus:** a copper keyboard ring on everything (light bronze on charcoal), and form fields get a copper border with a soft glow.
+    - **Shapes:** panels and dialogs 18 px, cards and menus 12 px, buttons and fields 6 px, chips 4 px.
+    - **Product cards:** the card title is now a real link (keyboard, screen readers, open in new tab), names wrap to two lines, the saved heart is copper (was red), prices use one Indian format. The products page keeps its own card and the empty grey stars stay (owner decisions, 2026-10-04).
+    - **Product gallery:** the "01 / 04" counter becomes hidden text for screen readers; the dots stay. One label at most on each product photo.
+    - **Old Sreerasthu links** (`/jewelry`, `/shop/rings`, `/gifts`, `/furniture`, `/home-decor`, `/articles`...) now open the full catalogue at `/products` (owner decision, 2026-10-04).
+    - **Faster first visit:** Google Analytics loads after the page is ready, and the second sign-in instance (used only when an admin creates a delivery partner) is created only when needed.
 - Preview test account for screenshots: `preview-shopper@ishaputra.test`, created through the site's signup with one dummy Hyderabad address and items in its cart. The password is kept outside the repo. **Delete it in Firebase Authentication (and its `users`/`carts` docs) before launch.**
+
+## Placeholders for the client
+Shown or used on the site but not confirmed. Each must be replaced or confirmed before launch.
+- **Contact details (dummy on purpose, owner's choice):** phone `+91 98765 43210`, address `Road No. 12, Banjara Hills, Hyderabad 500034`, email `hello@ishaputra.com`, hours "Mon to Sat, 10 am to 7 pm", domain `ishaputra.com`, map of Banjara Hills. All in `src/config/brand.ts`.
+- **Demo testimonials:** the 3 seeded testimonials (`demo: true`). Remove with `node scripts/seed-demo.mjs --remove`.
+- **Claims to confirm or remove:** "24 h support" / "Within 24 hours" response time, "100% secure", "Insured" delivery, "wellness experts", "video consultation with an expert".
+- **Policies:** policy dates, and the return and replacement wording (7-day window) on the policy pages and checkout.
+- **Wallet tier benefits** and tier thresholds (`BRAND.loyaltyTiers`).
+- **GST rate** and whether prices include GST (Admin > Commerce settings).
+- **"Ships from" state** on invoices and the product page (Telangana today).
 
 ## Progress
 - [x] Step 0 safe preview (2026-09-23): home, products and product pages show demo content on Ishaputra Firebase; only the YouTube section is hidden (no videos yet)

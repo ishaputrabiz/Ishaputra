@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Mail, RefreshCw, CheckCircle, X } from 'lucide-react';
+import { Lightbulb, Mail, RefreshCw, CheckCircle } from 'lucide-react';
 import { sendEmailVerification } from 'firebase/auth';
 import { auth } from '@/config/firebase';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import { PanelSkeleton } from '@/components/skeletons';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -102,7 +105,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       await currentUser.reload();
       
       if (currentUser.emailVerified) {
-        toast.success('Email verified successfully!');
+        toast.success('Email verified');
         setShowVerificationModal(false);
         // Force re-render by reloading the page
         window.location.reload();
@@ -122,20 +125,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     try {
       await logout();
       setShowVerificationModal(false);
-      toast.success('Logged out successfully.');
+      toast.success('Signed out');
     } catch (err) {
       console.error('Logout error:', err);
-      toast.error('Failed to logout. Please try again.');
+      toast.error('Could not sign out. Please try again.');
     }
   };
 
-  // Show loading state while checking auth
+  // While Firebase restores the session: the page's shape, not a spinner.
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-highlight mx-auto" />
-          <p className="mt-4 text-gray-600">Loading...</p>
+      <div aria-busy="true" className="tx-paper min-h-dvh">
+        <span className="sr-only" role="status">Loading your account</span>
+        <div className="h-[var(--sticky-top)] border-b border-foreground/[0.08] bg-background" />
+        <div className="container-custom flex flex-col gap-5 py-8 md:py-12">
+          <Skeleton className="h-8 w-48" />
+          <PanelSkeleton lines={3} label="" />
+          <PanelSkeleton lines={4} label="" />
         </div>
       </div>
     );
@@ -150,114 +156,66 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (requireEmailVerification && !user.emailVerified) {
     return (
       <>
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="tx-paper min-h-dvh flex items-center justify-center px-4">
           <div className="text-center">
-            <Mail className="h-16 w-16 text-blue-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Email Verification Required</h2>
-            <p className="text-gray-600">Please verify your email to access this page.</p>
+            <div className="tx-slate mx-auto mb-5 grid size-14 place-items-center rounded-card">
+              <Mail aria-hidden="true" className="size-6 text-highlight-soft" />
+            </div>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground mb-2">Verify your email</h1>
+            <p className="text-sm text-muted-foreground">Verify your email address to open this page.</p>
           </div>
         </div>
 
         {/* Email Verification Modal */}
         <Dialog open={showVerificationModal} onOpenChange={setShowVerificationModal}>
-          <DialogContent className="sm:max-w-md rounded-2xl border-0 shadow-2xl backdrop-blur-sm bg-white/95 p-0 gap-0 overflow-hidden">
-            {/* Close Button */}
-            <button
-              onClick={() => setShowVerificationModal(false)}
-              className="absolute right-4 top-4 rounded-full p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors z-10"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="p-8">
-              {/* Email Icon */}
-              <div className="flex justify-center mb-6">
-                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center">
-                  <Mail className="h-10 w-10 text-blue-500" />
+          <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+            <div className="p-6 sm:p-8">
+              <div className="flex justify-center mb-5">
+                <div className="tx-slate grid size-14 place-items-center rounded-card">
+                  <Mail aria-hidden="true" className="size-6 text-highlight-soft" />
                 </div>
               </div>
 
-              {/* Header */}
-              <DialogHeader className="text-center space-y-3 mb-6">
-                <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-2">
-                  📩 Verify Your Email
-                </DialogTitle>
-                <DialogDescription className="text-gray-600 text-base leading-relaxed">
-                  Your email address is not verified yet.
-                  <br />
-                  Please check your inbox and click the verification link.
+              <DialogHeader className="text-center sm:text-center gap-2 mb-6">
+                <DialogTitle className="text-2xl px-8 sm:px-8">Verify your email</DialogTitle>
+                <DialogDescription className="text-sm leading-relaxed">
+                  Your email address is not verified yet. Open the link we sent to your inbox.
                 </DialogDescription>
               </DialogHeader>
 
-              {/* User Email Display */}
-              <div className="bg-blue-50 rounded-xl p-4 mb-6 text-center">
-                <p className="text-sm text-gray-500 mb-1">Verification email sent to:</p>
-                <p className="text-blue-600 font-semibold text-lg break-all">
-                  {user.email}
-                </p>
+              <div className="rounded-card bg-muted p-4 mb-6 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Verification email sent to</p>
+                <p className="text-foreground font-semibold break-all">{user.email}</p>
               </div>
 
-              {/* Action Buttons */}
-              <div className="space-y-3">
-                {/* Resend Verification Email Button */}
+              <div className="flex flex-col gap-3">
+                <Button onClick={handleVerifyCheck} disabled={verifyLoading} className="w-full">
+                  {verifyLoading ? <Spinner /> : <CheckCircle aria-hidden="true" />}
+                  {verifyLoading ? 'Checking' : 'I have verified'}
+                </Button>
                 <Button
                   variant="outline"
                   onClick={handleResendVerification}
                   disabled={resendCountdown > 0 || resendLoading}
-                  className="w-full h-12 border-blue-300 text-blue-600 hover:bg-blue-50 rounded-xl font-medium transition-all"
+                  className="w-full"
                 >
-                  {resendLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Sending...
-                    </>
-                  ) : resendCountdown > 0 ? (
-                    <>
-                      <RefreshCw className="mr-2 h-5 w-5" />
-                      Resend in {resendCountdown}s
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-5 w-5" />
-                      Resend Verification Email
-                    </>
-                  )}
-                </Button>
-
-                {/* I Have Verified Button */}
-                <Button
-                  onClick={handleVerifyCheck}
-                  disabled={verifyLoading}
-                  className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-all"
-                >
-                  {verifyLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Checking...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="mr-2 h-5 w-5" />
-                      I Have Verified
-                    </>
-                  )}
+                  {resendLoading ? <Spinner /> : <RefreshCw aria-hidden="true" />}
+                  {resendLoading ? 'Sending' : resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend email'}
                 </Button>
               </div>
 
-              {/* Tip */}
-              <div className="mt-6 p-3 bg-highlight/10 rounded-lg border border-highlight/20">
-                <p className="text-sm text-highlight text-center">
-                  💡 <span className="font-medium">Tip:</span> Didn't receive email? Check your spam folder.
-                </p>
-              </div>
+              <p className="mt-6 flex items-start justify-center gap-2 text-sm text-muted-foreground">
+                <Lightbulb aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-highlight" />
+                <span>No email yet? Check your spam folder.</span>
+              </p>
 
-              {/* Logout Link */}
-              <div className="mt-6 text-center">
+              <div className="mt-5 text-center">
                 <button
+                  type="button"
                   onClick={handleLogoutFromModal}
-                  className="text-sm text-gray-500 hover:text-gray-700 underline transition-colors"
+                  className="text-sm text-primary underline-offset-4 hover:underline"
                 >
-                  Logout and try different account
+                  Sign out and use another account
                 </button>
               </div>
             </div>

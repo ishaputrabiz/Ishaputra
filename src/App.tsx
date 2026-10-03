@@ -1,9 +1,10 @@
-import { useState, lazy, Suspense } from "react";
-import { Toaster } from "@/components/ui/toaster";
+import { useState, useEffect, lazy, Suspense, type ReactNode } from "react";
+import { MotionConfig } from "framer-motion";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { RouteSkeleton } from "@/components/skeletons";
+import { loadAnalytics } from "@/config/firebase";
 
 // Auth Provider
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -38,7 +39,6 @@ const SavedAddresses = lazy(() => import("./pages/SavedAddresses"));
 const BuyAgain = lazy(() => import("./pages/BuyAgain"));
 import LoadingScreen from "./components/LoadingScreen";
 import ScrollToTop from "./components/ScrollToTop";
-const MobileCart = lazy(() => import("./pages/MobileCart"));
 const MobileOrders = lazy(() => import("./pages/MobileOrders"));
 const OrderDetailsPage = lazy(() => import("./pages/OrderDetailsPage"));
 const CancelOrderPage = lazy(() => import("./pages/CancelOrderPage"));
@@ -49,7 +49,6 @@ const SearchResults = lazy(() => import("./pages/SearchResults"));
 const PurchaseSummary = lazy(() => import("./pages/PurchaseSummary"));
 const SecurityPage = lazy(() => import("./pages/SecurityPage"));
 // Auth Pages
-const Login = lazy(() => import("./pages/auth/Login"));
 const Signup = lazy(() => import("./pages/auth/Signup"));
 const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
@@ -96,42 +95,44 @@ const DeliveryLogin = lazy(() => import("./pages/delivery/DeliveryLogin"));
 const DeliveryDashboard = lazy(() => import("./pages/delivery/DeliveryDashboard"));
 const DeliveryOrderDetails = lazy(() => import("./pages/delivery/DeliveryOrderDetails"));
 const DeliveryMapPage = lazy(() => import("./pages/delivery/DeliveryMapPage"));
-const queryClient = new QueryClient();
+/**
+ * Old Sreerasthu URLs (jewellery, furniture, gifts, articles...) all land on the
+ * full catalogue (owner decision PERF-23, 2026-10-04). The route paths stay so
+ * old links and bookmarks still resolve; only the target changed.
+ */
+const LegacyRedirect = () => <Navigate to="/products" replace />;
 
-const LEGACY_SHOP_REDIRECTS: Record<string, string> = {
-  rings: "/category/jewellery",
-  necklaces: "/category/jewellery",
-  chains: "/category/jewellery",
-  earrings: "/category/jewellery",
-  bracelets: "/category/jewellery",
-  bangles: "/category/jewellery",
-  anklets: "/category/jewellery",
-  pendants: "/category/jewellery",
-};
+/** After the first paint: load analytics, then warm the two most-visited page chunks. */
+function useIdleWarmup() {
+  useEffect(() => {
+    const idle = (fn: () => void) =>
+      typeof window.requestIdleCallback === "function"
+        ? window.requestIdleCallback(fn, { timeout: 4000 })
+        : window.setTimeout(fn, 1500);
+    const start = () =>
+      idle(() => {
+        void loadAnalytics();
+        void import("./pages/CategoryPage");
+        void import("./pages/ProductDetail");
+      });
+    if (document.readyState === "complete") start();
+    else window.addEventListener("load", start, { once: true });
+    return () => window.removeEventListener("load", start);
+  }, []);
+}
 
-const LegacyShopRedirect = () => {
-  const { shopSlug } = useParams<{ shopSlug: string }>();
-  return <Navigate to={LEGACY_SHOP_REDIRECTS[shopSlug ?? ""] ?? "/category/jewellery"} replace />;
-};
-
-const LegacyArticlesRedirect = () => {
-  const { articleSlug } = useParams<{ articleSlug: string }>();
-  return <Navigate to={articleSlug === "gift-articles" ? "/category/gifting" : "/category/articles"} replace />;
-};
-
-const LegacyFurnitureRedirect = () => <Navigate to="/category/furniture" replace />;
-
-const LegacyOtherProductsRedirect = () => <Navigate to="/category/others" replace />;
-
-const LegacyHomeDecorRedirect = () => <Navigate to="/category/others" replace />;
-
-const LegacyGiftsRedirect = () => <Navigate to="/category/gifting" replace />;
-
-/** Shown while a route's JS chunk downloads. Deliberately dependency-free. */
-function RouteFallback() {
+/**
+ * Each page fades in (200ms, opacity only: a transform here would trap every
+ * fixed header, drawer and sticky bar inside it). Keyed by path, so a
+ * query-string change does not re-run it, and admin pages share one key so
+ * the admin sidebar does not remount on every click.
+ */
+function RouteFade({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  const key = pathname.startsWith("/admin/") ? "/admin" : pathname;
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    <div key={key} className="route-enter">
+      {children}
     </div>
   );
 }
@@ -147,49 +148,56 @@ const App = () => {
     sessionStorage.setItem('appLoaded', 'true');
   };
 
+  useIdleWarmup();
+
   return (
-    <QueryClientProvider client={queryClient}>
+    // reducedMotion="user": framer-motion drops transforms for visitors who ask
+    // for less motion and keeps the fades. No default transition, so drag
+    // springs keep their own physics.
+    <MotionConfig reducedMotion="user">
       <AuthProvider>
         <CartProvider>
           <SilverRateProvider>
             <TooltipProvider>
-            <Toaster />
             <Sonner />
             {!isLoaded && <LoadingScreen onComplete={handleLoadingComplete} />}
-            <BrowserRouter>
+            {/* v7_startTransition: navigation runs in a transition, so the current
+                page stays on screen while the next page's code loads. */}
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <ScrollToTop />
               <ShoppingCart />
-            {/* Route components are lazy-loaded; this fallback covers the chunk fetch. */}
-            <Suspense fallback={<RouteFallback />}>
+            {/* Route components are lazy-loaded; the skeleton shows only if a chunk takes over 150ms. */}
+            <Suspense fallback={<RouteSkeleton />}>
+            <RouteFade>
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Index />} />
               
-              {/* Mobile Cart Page — redirect to checkout (cart is now step 1 of checkout) */}
+              {/* Mobile Cart Page: redirect to checkout (cart is now step 1 of checkout) */}
               <Route path="/cart" element={<Navigate to="/checkout" replace />} />
               
               {/* Mobile Search Pages */}
               <Route path="/search" element={<MobileSearch />} />
               <Route path="/search-results" element={<SearchResults />} />
               
-              {/* Category Pages – unified */}
+              {/* Category Pages: unified */}
               <Route path="/categories" element={<MobileCategories />} />
               <Route path="/category/:categorySlug" element={<CategoryPage />} />
               
               {/* Legacy redirects */}
-              <Route path="/jewelry" element={<Navigate to="/category/jewellery" replace />} />
-              <Route path="/furniture" element={<Navigate to="/category/furniture" replace />} />
-              <Route path="/articles" element={<Navigate to="/category/articles" replace />} />
-              <Route path="/articles/:articleSlug" element={<LegacyArticlesRedirect />} />
+              <Route path="/jewelry" element={<LegacyRedirect />} />
+              <Route path="/furniture" element={<LegacyRedirect />} />
+              <Route path="/articles" element={<LegacyRedirect />} />
+              <Route path="/articles/:articleSlug" element={<LegacyRedirect />} />
               <Route path="/products" element={<CategoryPage />} />
-              <Route path="/home-decor" element={<Navigate to="/category/others" replace />} />
-              <Route path="/home-decor/:itemSlug" element={<LegacyHomeDecorRedirect />} />
-              <Route path="/gifts" element={<Navigate to="/category/articles" replace />} />
-              <Route path="/gifts/:giftSlug" element={<LegacyGiftsRedirect />} />
-              <Route path="/shop/:shopSlug" element={<LegacyShopRedirect />} />
-              <Route path="/furniture/:itemSlug" element={<LegacyFurnitureRedirect />} />
-              <Route path="/other-products/:itemSlug" element={<LegacyOtherProductsRedirect />} />
-              <Route path="/jewelry-collections" element={<Navigate to="/category/jewellery" replace />} />
+              <Route path="/home-decor" element={<LegacyRedirect />} />
+              <Route path="/home-decor/:itemSlug" element={<LegacyRedirect />} />
+              <Route path="/gifts" element={<LegacyRedirect />} />
+              <Route path="/gifts/:giftSlug" element={<LegacyRedirect />} />
+              <Route path="/shop/:shopSlug" element={<LegacyRedirect />} />
+              <Route path="/furniture/:itemSlug" element={<LegacyRedirect />} />
+              <Route path="/other-products/:itemSlug" element={<LegacyRedirect />} />
+              <Route path="/jewelry-collections" element={<LegacyRedirect />} />
               
               <Route path="/product/:productId" element={<ProductDetail />} />
               <Route path="/write-review" element={
@@ -322,7 +330,7 @@ const App = () => {
                 <Route path="products/:productId" element={<ProductForm />} />
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="orders/:orderId" element={<AdminOrderDetails />} />
-                {/* Delivery-partner management — gated by feature flag (kept for future re-enable) */}
+                {/* Delivery-partner management: gated by feature flag (kept for future re-enable) */}
                 <Route path="delivery-boys" element={DELIVERY_PARTNERS_ENABLED ? <AdminDeliveryBoys /> : <Navigate to="/admin/dashboard" replace />} />
                 <Route path="delivery-boys/:deliveryBoyId" element={DELIVERY_PARTNERS_ENABLED ? <AdminDeliveryBoyDetails /> : <Navigate to="/admin/dashboard" replace />} />
                 <Route path="media" element={<Media />} />
@@ -352,7 +360,7 @@ const App = () => {
               </Route>
 
               {/* Delivery Partner Routes (always rendered in light mode).
-                  Gated by DELIVERY_PARTNERS_ENABLED — when off, every /delivery*
+                  Gated by DELIVERY_PARTNERS_ENABLED: when off, every /delivery*
                   URL redirects home. The components are intentionally kept so the
                   workflow can be re-enabled by flipping the flag. */}
               {DELIVERY_PARTNERS_ENABLED ? (
@@ -410,13 +418,14 @@ const App = () => {
               {/* 404 Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </RouteFade>
             </Suspense>
           </BrowserRouter>
             </TooltipProvider>
           </SilverRateProvider>
         </CartProvider>
       </AuthProvider>
-    </QueryClientProvider>
+    </MotionConfig>
   );
 };
 
