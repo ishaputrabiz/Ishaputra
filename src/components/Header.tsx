@@ -50,9 +50,8 @@ const Header = () => {
   const optionId = (i: number) => `${listId}-opt-${i}`;
 
   // Check if current page is an auth page
-  const isAuthPage = location.pathname.startsWith('/signup') ||
-                     location.pathname.startsWith('/forgot-password') ||
-                     location.pathname.startsWith('/admin');
+  // Every storefront page, the auth pages included, shows the site chrome; only admin hides it.
+  const isAuthPage = location.pathname.startsWith('/admin');
 
   const onWishlist = location.pathname.startsWith("/wishlist");
   const onAccount = location.pathname.startsWith("/account");
