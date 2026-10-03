@@ -49,6 +49,12 @@ const AMOUNT_TOLERANCE_PAISE = 100;
 const HOLD_MS = 30 * 60_000;
 /** The Admin SDK can retry for many seconds; checkout must not hang on it. */
 const ADMIN_TIMEOUT_MS = 6000;
+/**
+ * Two checkouts reserving at once are serialised by the customer lock: the
+ * second waits for the first and retries, which takes a few seconds. Long
+ * enough for it to see the first one and answer rewards_changed.
+ */
+const RESERVE_TIMEOUT_MS = 9000;
 
 /**
  * Firestore access uses the REST API with the public web key, not the Admin SDK.
@@ -396,7 +402,7 @@ async function reserveRewards(
       }
       return true;
     }),
-    ADMIN_TIMEOUT_MS,
+    RESERVE_TIMEOUT_MS,
     'Rewards reservation',
   );
 }
