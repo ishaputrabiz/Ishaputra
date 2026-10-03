@@ -16,7 +16,13 @@ import { getActiveProductsCached } from '@/services/productCache';
 import { adaptFirebaseToUI, UIProduct } from '@/lib/productAdapter';
 import { getUserAddresses, getDefaultAddress, Address, addAddress, AddressFormData } from '@/services/addressService';
 import { createPaidOrder, preflightCart, generateOrderNumber, OrderFormData, OrderItem } from '@/services/orderService';
-import { payWithRazorpay, PaymentCancelledError, RewardsUnavailableError, type VerifiedPayment } from '@/services/razorpayService';
+import {
+  payWithRazorpay,
+  PaymentCancelledError,
+  RewardsChangedError,
+  RewardsUnavailableError,
+  type VerifiedPayment,
+} from '@/services/razorpayService';
 import { useRewards } from '@/hooks/useRewards';
 import { reconcileOrderRewards } from '@/services/rewardsService';
 import { RewardsRedeemCard, RewardsBillLines } from '@/components/checkout/RewardsRedeemCard';
@@ -495,6 +501,7 @@ const MobileCheckout = () => {
           // `amount` is a cross-check only; /api/create-order re-prices these
           // line items from Firestore and refuses to charge a mismatched total.
           amount: total,
+          amountBeforeRewards: pricing.totalBeforeRewards,
           lineItems: items.map((i) => ({ productId: i.id, quantity: i.quantity })),
           paymentMethod: selectedPaymentMethod,
           shippingState: selectedAddress.state,
@@ -560,7 +567,9 @@ const MobileCheckout = () => {
           razorpayOrderId: verifiedPayment.razorpayOrderId,
           razorpaySignature: verifiedPayment.razorpaySignature,
         } : {}),
-        ...(verifiedPayment?.pointsApplied ? { pointsUsed: verifiedPayment.pointsApplied } : {}),
+        ...(verifiedPayment?.pointsApplied
+          ? { pointsUsed: verifiedPayment.pointsApplied, pointsValue: verifiedPayment.pointsValue }
+          : {}),
         ...(verifiedPayment?.cashbackApplied ? { cashbackUsed: verifiedPayment.cashbackApplied } : {}),
         status: 'pending',
       };
@@ -571,7 +580,9 @@ const MobileCheckout = () => {
       // charged and left without a record of it.
       const created = await createPaidOrder(orderData);
       const docId = created.id;
-      if (verifiedPayment?.pointsApplied || verifiedPayment?.cashbackApplied) void reconcileOrderRewards(docId);
+      // Confirms the payment record and any points/cashback with the server
+      // (and repairs them if verify-payment could not write them in time).
+      void reconcileOrderRewards(docId);
       setFirestoreOrderId(docId);
       if (created.needsReview) {
         toast({
@@ -603,6 +614,11 @@ const MobileCheckout = () => {
         setUsePoints(false);
         setUseCashback(false);
         toast({ title: 'Rewards unavailable right now', description: error.message });
+        return;
+      }
+      if (error instanceof RewardsChangedError) {
+        // The live ledger has already updated the total on this page.
+        toast({ title: 'Your rewards balance changed', description: error.message });
         return;
       }
       if (error instanceof PaymentCancelledError) {
@@ -2227,6 +2243,7 @@ const Checkout = () => {
           // `amount` is a cross-check only; /api/create-order re-prices these
           // line items from Firestore and refuses to charge a mismatched total.
           amount: total,
+          amountBeforeRewards: pricing.totalBeforeRewards,
           lineItems: items.map((i) => ({ productId: i.id, quantity: i.quantity })),
           paymentMethod: selectedPaymentMethod,
           shippingState: selectedAddress.state,
@@ -2292,7 +2309,9 @@ const Checkout = () => {
           razorpayOrderId: verifiedPayment.razorpayOrderId,
           razorpaySignature: verifiedPayment.razorpaySignature,
         } : {}),
-        ...(verifiedPayment?.pointsApplied ? { pointsUsed: verifiedPayment.pointsApplied } : {}),
+        ...(verifiedPayment?.pointsApplied
+          ? { pointsUsed: verifiedPayment.pointsApplied, pointsValue: verifiedPayment.pointsValue }
+          : {}),
         ...(verifiedPayment?.cashbackApplied ? { cashbackUsed: verifiedPayment.cashbackApplied } : {}),
         status: 'pending',
       };
@@ -2303,7 +2322,9 @@ const Checkout = () => {
       // charged and left without a record of it.
       const created = await createPaidOrder(orderData);
       const docId = created.id;
-      if (verifiedPayment?.pointsApplied || verifiedPayment?.cashbackApplied) void reconcileOrderRewards(docId);
+      // Confirms the payment record and any points/cashback with the server
+      // (and repairs them if verify-payment could not write them in time).
+      void reconcileOrderRewards(docId);
       setFirestoreOrderId(docId);
       if (created.needsReview) {
         toast({
@@ -2329,6 +2350,11 @@ const Checkout = () => {
         setUsePoints(false);
         setUseCashback(false);
         toast({ title: 'Rewards unavailable right now', description: error.message });
+        return;
+      }
+      if (error instanceof RewardsChangedError) {
+        // The live ledger has already updated the total on this page.
+        toast({ title: 'Your rewards balance changed', description: error.message });
         return;
       }
       if (error instanceof PaymentCancelledError) {

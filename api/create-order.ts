@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createHash } from 'node:crypto';
 
 /**
  * POST /api/create-order
@@ -15,21 +16,39 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  * coupons, silver rate) is server-controlled data.
  *
  * Body:    { items: [{ productId, quantity }], paymentMethod?, couponCode?,
- *            usePoints?, useCashback?,
- *            currency?, receipt?, notes?, amount? (client's claim, checked) }
- * Returns: { order_id, amount, currency, key_id, pointsApplied, cashbackApplied }
+ *            usePoints?, useCashback?, currency?, receipt?, notes?,
+ *            amount? (client's claim, checked),
+ *            amountBeforeRewards? (client's claim before points/cashback, checked) }
+ * Header:  Authorization: Bearer <Firebase ID token> (sent whenever signed in)
+ * Returns: { order_id, amount, currency, key_id, pointsApplied, pointsValue, cashbackApplied }
  *
- * Loyalty points / wallet cashback: when either flag is set the customer's
- * private ledger is read with the Admin SDK (needs the Bearer ID token), the
- * redemption is priced with the shared rules below, and the amounts are
- * written into the Razorpay order notes (rw_uid / rw_points / rw_cashback),
- * which api/verify-payment.ts turns into ledger entries after payment. If
- * rewards cannot be priced safely the answer is 409 and nothing is charged.
+ * The server's facts about the payment travel in the Razorpay order notes,
+ * which only this function writes (any rw_* note from the browser is dropped):
+ *   rw_uid    the signed-in customer (from the verified ID token)
+ *   rw_base   rupees paid for products, which points are earned on (earnBase)
+ *   rw_cart   SHA-256 of the cart (cartKey), to compare with the order later
+ *   rw_points / rw_pv / rw_cashback   points spent, their rupee value, cashback spent
+ * api/verify-payment.ts copies them into payments/<razorpay order id>, the
+ * record an order document must be created against.
+ *
+ * Loyalty points / wallet cashback: the customer's private ledger is read with
+ * the Admin SDK, the redemption is priced with the shared rules below, and the
+ * amounts are RESERVED before the order id is returned: spend entries
+ * (spend_<razorpay order id>_<currency>, hold: true) are written in a
+ * transaction that re-checks the balance under a per-customer lock, so two
+ * checkouts cannot spend one balance. verify-payment confirms the hold; a hold
+ * whose payment never happens is released by the 'release-holds' action in
+ * api/notify-order.ts. 409 rewards_unavailable when rewards cannot be priced
+ * safely, 409 rewards_changed when the balance moved; nothing is charged.
  */
 
 const RAZORPAY_API_BASE = 'https://api.razorpay.com/v1';
 /** Client and server both round; allow a rupee of drift before rejecting. */
 const AMOUNT_TOLERANCE_PAISE = 100;
+/** How long a checkout keeps the customer's points/cashback reserved. */
+const HOLD_MS = 30 * 60_000;
+/** The Admin SDK can retry for many seconds; checkout must not hang on it. */
+const ADMIN_TIMEOUT_MS = 6000;
 
 /**
  * Firestore access uses the REST API with the public web key, not the Admin SDK.
@@ -90,6 +109,7 @@ function setCors(res: VercelResponse) {
 
 // >>> rewards-core
 type RewardCurrency = 'points' | 'cashback';
+type RewardKind = 'earn' | 'spend' | 'refund' | 'adjust';
 
 interface RewardSettings {
   enabled: boolean;
@@ -116,7 +136,11 @@ interface LedgerLike {
   currency: RewardCurrency;
   amount: number;
   status: 'active' | 'void';
+  kind: RewardKind;
+  /** When earned points become spendable. Only earn entries wait; every other entry counts at once. */
   unlockAtMs: number;
+  /** Earned points frozen while their order has a return open. */
+  held?: boolean;
 }
 
 interface RewardBalances {
@@ -139,6 +163,12 @@ function normaliseRewardSettings(raw: Partial<RewardSettings> | null | undefined
   };
 }
 
+/**
+ * Balances from ledger entries. Only earned points can be pending (until their
+ * unlock date, or while their order has a return open). Spends, refunds and
+ * adjustments count the moment they exist, so the browser and the server agree
+ * whatever their clocks say.
+ */
 function summariseRewards(entries: LedgerLike[], nowMs: number): RewardBalances {
   const out: RewardBalances = {
     points: { available: 0, pending: 0 },
@@ -149,8 +179,9 @@ function summariseRewards(entries: LedgerLike[], nowMs: number): RewardBalances 
     const bucket = out[e.currency];
     if (!bucket) continue;
     const amount = Number(e.amount) || 0;
-    if (e.unlockAtMs <= nowMs) bucket.available += amount;
-    else bucket.pending += amount;
+    const waiting = e.kind === 'earn' && amount > 0 && (e.held === true || e.unlockAtMs > nowMs);
+    if (waiting) bucket.pending += amount;
+    else bucket.available += amount;
   }
   return out;
 }
@@ -196,29 +227,68 @@ function computeRedemption(i: RedemptionInput): Redemption {
   return { points, pointsValue, cashback, payable };
 }
 
-function pointsForOrder(
-  order: { total?: number; deliveryCharge?: number; taxAmount?: number; gstInclusive?: boolean },
-  s: RewardSettings,
-): number {
-  if (!s.enabled) return 0;
-  const tax = order.gstInclusive ? 0 : Number(order.taxAmount) || 0;
-  const base = (Number(order.total) || 0) - (Number(order.deliveryCharge) || 0) - tax;
-  return Math.max(0, Math.floor((base / 100) * s.pointsPer100));
+interface EarnBaseInput {
+  subtotal: number;
+  couponDiscount: number;
+  /** Rupee value of the points spent on the order. */
+  pointsValue: number;
+  cashback: number;
+  /** The shop's GST settings when the order was priced. */
+  gstEnabled: boolean;
+  gstInclusive: boolean;
+  gstRate: number;
+}
+
+/**
+ * Rupees paid for products, which is what points are earned on: after the
+ * coupon, points and cashback, without delivery, and without the GST that
+ * GST-inclusive prices carry. Two decimals. Worked out by api/create-order.ts
+ * and kept with the payment, so nothing the browser writes can change it.
+ */
+function earnBase(i: EarnBaseInput): number {
+  const paid = Math.max(0, i.subtotal - i.couponDiscount - i.pointsValue - i.cashback);
+  const rate = i.gstEnabled && i.gstInclusive && i.gstRate > 0 ? i.gstRate : 0;
+  return Math.floor(((paid * 100) / (100 + rate)) * 100 + 1e-6) / 100;
+}
+
+/** Points earned on a base from earnBase. */
+function pointsForBase(base: number, s: RewardSettings): number {
+  if (!s.enabled || !(base > 0)) return 0;
+  // Multiply before dividing, with a hair of tolerance: ₹820 at 15 per ₹100 is 123, not 122.
+  return Math.max(0, Math.floor((base * s.pointsPer100) / 100 + 1e-9));
+}
+
+/**
+ * A cart in a canonical form (productId:quantity, merged and sorted) so what
+ * was paid for can be compared with what was ordered. Stored as a SHA-256 hash.
+ */
+function cartKey(items: Array<{ productId?: string; quantity?: unknown }>): string {
+  const qty = new Map<string, number>();
+  for (const it of items || []) {
+    const id = String(it?.productId || '');
+    if (id) qty.set(id, (qty.get(id) || 0) + (Number(it?.quantity) || 0));
+  }
+  return [...qty.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([id, q]) => `${id}:${q}`)
+    .join('|');
 }
 // <<< rewards-core
 
+/** Reject when `p` takes longer than `ms`, so a slow Admin SDK call cannot hang checkout. */
+function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what} timed out`)), ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
+}
+
 /**
- * Price the customer's opted-in points/cashback. Needs the Admin SDK (the
- * ledger is private), loaded only on this path so an ordinary checkout never
- * depends on it. Throws when it cannot price safely; the caller answers 409.
+ * The Admin SDK, loaded lazily: only the customer lookup and the rewards
+ * paths need it, so a broken service-account variable cannot stop pricing.
  */
-async function priceRewards(
-  req: VercelRequest,
-  input: Omit<RedemptionInput, 'balances' | 'settings'>,
-): Promise<Redemption & { uid: string }> {
-  const header = String(req.headers.authorization || '');
-  const idToken = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
-  if (!idToken) throw new Error('Sign in again to use your rewards');
+async function adminSdk() {
   const { default: admin } = await import('firebase-admin');
   const app = admin.apps.length
     ? admin.app()
@@ -227,28 +297,119 @@ async function priceRewards(
           JSON.parse(Buffer.from(process.env.FIREBASE_ADMIN_SDK_BASE64 || '', 'base64').toString('utf8')),
         ),
       });
-  const { uid } = await admin.auth(app).verifyIdToken(idToken);
-  const db = admin.firestore(app);
-  const [settingsSnap, ledgerSnap] = await Promise.all([
-    db.collection('siteSettings').doc('rewards').get(),
-    db.collection('users').doc(uid).collection('rewardLedger').get(),
-  ]);
+  return { admin, app, db: admin.firestore(app) };
+}
+
+/** The signed-in customer from the Bearer ID token; null when none was sent. Throws if it does not verify. */
+async function customerUid(req: VercelRequest): Promise<string | null> {
+  const header = String(req.headers.authorization || '');
+  const idToken = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  if (!idToken) return null;
+  const { admin, app } = await adminSdk();
+  const { uid } = await withTimeout(admin.auth(app).verifyIdToken(idToken), ADMIN_TIMEOUT_MS, 'Sign-in check');
+  return uid;
+}
+
+type LedgerDoc = { data: () => Record<string, any> };
+
+const toLedgerLike = (d: LedgerDoc): LedgerLike => {
+  const x = d.data();
+  return {
+    currency: x.currency === 'cashback' ? 'cashback' : 'points',
+    amount: Number(x.amount) || 0,
+    status: x.status === 'void' ? 'void' : 'active',
+    kind: x.kind === 'earn' || x.kind === 'spend' || x.kind === 'refund' ? x.kind : 'adjust',
+    unlockAtMs: typeof x.unlockAt?.toMillis === 'function' ? x.unlockAt.toMillis() : 0,
+    held: x.held === true,
+  };
+};
+
+/** Price the customer's opted-in points/cashback against their ledger as it stands. */
+async function priceRewards(
+  uid: string,
+  input: Omit<RedemptionInput, 'balances' | 'settings'>,
+): Promise<Redemption> {
+  const { db } = await adminSdk();
+  const [settingsSnap, ledgerSnap] = await withTimeout(
+    Promise.all([
+      db.collection('siteSettings').doc('rewards').get(),
+      db.collection('users').doc(uid).collection('rewardLedger').get(),
+    ]),
+    ADMIN_TIMEOUT_MS,
+    'Rewards lookup',
+  );
   const settings = normaliseRewardSettings(
     settingsSnap.exists ? (settingsSnap.data() as Partial<RewardSettings>) : null,
   );
-  const balances = summariseRewards(
-    ledgerSnap.docs.map((d) => {
-      const x = d.data();
-      return {
-        currency: x.currency === 'cashback' ? 'cashback' : 'points',
-        amount: Number(x.amount) || 0,
-        status: x.status === 'void' ? 'void' : 'active',
-        unlockAtMs: typeof x.unlockAt?.toMillis === 'function' ? x.unlockAt.toMillis() : 0,
-      } as LedgerLike;
+  const balances = summariseRewards(ledgerSnap.docs.map(toLedgerLike), Date.now());
+  return computeRedemption({ ...input, balances, settings });
+}
+
+const spendNote = (currency: RewardCurrency, amount: number) =>
+  currency === 'points' ? `Used ${amount} points on an order` : `Used ₹${amount} wallet cashback on an order`;
+
+/**
+ * Reserve the redemption for this Razorpay order: spend entries with
+ * hold: true, written in a transaction that re-reads the ledger and writes the
+ * customer's lock document, so concurrent checkouts are serialised and each
+ * sees the others' holds. Returns false when the balance no longer covers it.
+ */
+async function reserveRewards(
+  uid: string,
+  razorpayOrderId: string,
+  want: { points: number; cashback: number },
+): Promise<boolean> {
+  const { admin, db } = await adminSdk();
+  const user = db.collection('users').doc(uid);
+  const ledger = user.collection('rewardLedger');
+  const lock = user.collection('rewardState').doc('lock');
+  return withTimeout(
+    db.runTransaction(async (tx) => {
+      await tx.get(lock);
+      const snap = await tx.get(ledger);
+      const nowMs = Date.now();
+      const balances = summariseRewards(snap.docs.map(toLedgerLike), nowMs);
+      if (
+        want.points > Math.floor(balances.points.available) ||
+        want.cashback > Math.floor(balances.cashback.available)
+      ) {
+        return false;
+      }
+      const now = admin.firestore.Timestamp.fromMillis(nowMs);
+      tx.set(lock, { updatedAt: now, lastRazorpayOrderId: razorpayOrderId }, { merge: true });
+      for (const currency of ['points', 'cashback'] as const) {
+        const amount = want[currency];
+        if (amount <= 0) continue;
+        tx.create(ledger.doc(`spend_${razorpayOrderId}_${currency}`), {
+          currency,
+          amount: -amount,
+          kind: 'spend',
+          status: 'active',
+          hold: true,
+          holdUntil: admin.firestore.Timestamp.fromMillis(nowMs + HOLD_MS),
+          unlockAt: now,
+          razorpayOrderId,
+          note: spendNote(currency, amount),
+          createdAt: now,
+          createdBy: 'server',
+        });
+      }
+      return true;
     }),
-    Date.now(),
+    ADMIN_TIMEOUT_MS,
+    'Rewards reservation',
   );
-  return { uid, ...computeRedemption({ ...input, balances, settings }) };
+}
+
+/** Notes the browser may add to the Razorpay order: a few short ones, never rw_*. */
+function clientNotes(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== 'object') return {};
+  return Object.fromEntries(
+    Object.entries(raw as Record<string, unknown>)
+      .filter(([k, v]) => !k.startsWith('rw_') && (typeof v === 'string' || typeof v === 'number'))
+      .slice(0, 5)
+      .map(([k, v]) => [k.slice(0, 40), String(v).slice(0, 200)]),
+  );
 }
 
 // ── Pricing helpers: must mirror src/hooks/useCheckoutPricing.ts ─────────────
@@ -396,6 +557,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     /** Spend available wallet cashback. */
     useCashback?: boolean;
     amount?: unknown;
+    /** The browser's total before points/cashback, so a cart problem is told apart from a rewards one. */
+    amountBeforeRewards?: unknown;
     currency?: unknown;
     receipt?: unknown;
     notes?: Record<string, string>;
@@ -430,7 +593,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let serverTotal: number;
   // Kept for the rewards step, which prices after the coupon and delivery.
-  let parts = { subtotal: 0, discount: 0, deliveryCharge: 0, gstAmount: 0 };
+  let parts = {
+    subtotal: 0,
+    discount: 0,
+    deliveryCharge: 0,
+    gstAmount: 0,
+    gst: { enabled: false, inclusive: false, rate: 0 },
+  };
   try {
     // ── Settings (admin-managed documents, never client-supplied) ──
     const [deliveryDoc, gstDoc, silverDoc] = await Promise.all([
@@ -523,7 +692,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const deliveryCharge = computeDeliveryCharge(subtotal, delivery, products, destState);
     const gstAmount = computeGstOnTop(subtotal, gst);
 
-    parts = { subtotal, discount, deliveryCharge, gstAmount };
+    parts = {
+      subtotal,
+      discount,
+      deliveryCharge,
+      gstAmount,
+      gst: { enabled: gst.enabled === true, inclusive: gst.inclusive === true, rate: Number(gst.rate) || 0 },
+    };
     serverTotal = Math.max(0, subtotal + deliveryCharge + gstAmount - discount);
   } catch (error: unknown) {
     return res.status(500).json({
@@ -532,13 +707,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
+  const wantsRewards = body.usePoints === true || body.useCashback === true;
+  const conflict = (code: 'rewards_unavailable' | 'rewards_changed', detail?: string) =>
+    res.status(409).json({
+      code,
+      error:
+        code === 'rewards_changed'
+          ? 'Your points or cashback balance just changed. Check the new total and pay again.'
+          : 'Rewards are unavailable right now. Your balance is safe - pay without them or try again shortly.',
+      ...(detail ? { detail } : {}),
+    });
+
+  // Cross-check the client's figure before rewards. A mismatch means the two
+  // pricing paths have diverged (a bug) or someone is tampering - either way,
+  // do not take payment.
+  const mismatch = (claimed: number, server: number) =>
+    Number.isFinite(claimed) && Math.abs(claimed - server) > AMOUNT_TOLERANCE_PAISE;
+  const beforeRewardsPaise = Math.round(serverTotal * 100);
+  const claimedBefore = Number(body.amountBeforeRewards);
+  if (body.amountBeforeRewards != null && mismatch(claimedBefore, beforeRewardsPaise)) {
+    return res.status(400).json({
+      error: 'Order total mismatch. Please refresh your cart and try again.',
+      detail: `client=${claimedBefore} server=${beforeRewardsPaise}`,
+    });
+  }
+
+  // ── Who is paying ──
+  // Sent whenever the customer is signed in. It binds the payment to them
+  // (rw_uid), which is what lets an order be recorded as paid and earn points.
+  // Without rewards a failed check is not fatal: the customer can still pay,
+  // the order is then recorded for a manual payment check.
+  let uid: string | null = null;
+  try {
+    uid = await customerUid(req);
+  } catch (error: unknown) {
+    if (wantsRewards) return conflict('rewards_unavailable', error instanceof Error ? error.message : undefined);
+    console.warn('[create-order] could not verify the customer:', error instanceof Error ? error.message : error);
+  }
+  if (wantsRewards && !uid) return conflict('rewards_unavailable', 'Sign in again to use your rewards');
+
   // ── Loyalty points / wallet cashback (only when the customer opted in) ──
-  let pointsApplied = 0;
-  let cashbackApplied = 0;
-  let rewardNotes: Record<string, string> = {};
-  if (body.usePoints === true || body.useCashback === true) {
+  let redemption: Redemption = { points: 0, pointsValue: 0, cashback: 0, payable: serverTotal };
+  if (wantsRewards && uid) {
     try {
-      const r = await priceRewards(req, {
+      redemption = await priceRewards(uid, {
         subtotal: parts.subtotal,
         couponDiscount: parts.discount,
         deliveryCharge: parts.deliveryCharge,
@@ -546,30 +758,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         usePoints: body.usePoints === true,
         useCashback: body.useCashback === true,
       });
-      pointsApplied = r.points;
-      cashbackApplied = r.cashback;
-      serverTotal = r.payable;
-      if (r.points > 0 || r.cashback > 0) {
-        rewardNotes = { rw_uid: r.uid, rw_points: String(r.points), rw_cashback: String(r.cashback) };
-      }
     } catch (error: unknown) {
-      return res.status(409).json({
-        code: 'rewards_unavailable',
-        error: 'Rewards are unavailable right now. Your balance is safe - pay without them or try again shortly.',
-        detail: error instanceof Error ? error.message : 'Unknown rewards error',
-      });
+      return conflict('rewards_unavailable', error instanceof Error ? error.message : undefined);
     }
   }
+  const spendsRewards = redemption.points > 0 || redemption.cashback > 0;
 
-  const amountInPaise = Math.round(serverTotal * 100);
+  const amountInPaise = Math.round(redemption.payable * 100);
   if (amountInPaise < 100) {
     return res.status(400).json({ error: 'Order total is below the ₹1.00 minimum' });
   }
 
-  // Cross-check the client's figure. A mismatch means the two pricing paths have
-  // diverged (a bug) or someone is tampering - either way, do not take payment.
+  // The final figure. With rewards in play a difference here means the
+  // browser's view of the balance is out of date, not that the cart is wrong.
   const claimed = Number(body.amount);
-  if (Number.isFinite(claimed) && Math.abs(claimed - amountInPaise) > AMOUNT_TOLERANCE_PAISE) {
+  if (mismatch(claimed, amountInPaise)) {
+    if (wantsRewards) return conflict('rewards_changed', `client=${claimed} server=${amountInPaise}`);
     return res.status(400).json({
       error: 'Order total mismatch. Please refresh your cart and try again.',
       detail: `client=${claimed} server=${amountInPaise}`,
@@ -578,26 +782,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const currency = typeof body.currency === 'string' && body.currency ? body.currency : 'INR';
   const receipt =
-    typeof body.receipt === 'string' && body.receipt ? body.receipt : `rcpt_${Date.now()}`;
+    typeof body.receipt === 'string' && body.receipt ? body.receipt.slice(0, 40) : `rcpt_${Date.now()}`;
 
-  // Reward amounts in the notes come only from the server: drop any rw_* key the
-  // browser sent, then add ours. verify-payment trusts these notes.
-  const clientNotes = Object.fromEntries(
-    Object.entries(body.notes || {}).filter(([k]) => !k.startsWith('rw_')),
-  );
-  const notes: Record<string, string> = { ...clientNotes, ...rewardNotes };
+  // The server's facts about this payment. Only this function writes rw_* notes;
+  // verify-payment copies them into payments/<razorpay order id>.
+  const base = earnBase({
+    subtotal: parts.subtotal,
+    couponDiscount: parts.discount,
+    pointsValue: redemption.pointsValue,
+    cashback: redemption.cashback,
+    gstEnabled: parts.gst.enabled,
+    gstInclusive: parts.gst.inclusive,
+    gstRate: parts.gst.rate,
+  });
+  const notes: Record<string, string> = {
+    ...clientNotes(body.notes),
+    rw_base: String(base),
+    rw_cart: createHash('sha256').update(cartKey(items)).digest('hex'),
+    ...(uid ? { rw_uid: uid } : {}),
+    ...(spendsRewards
+      ? {
+          rw_points: String(redemption.points),
+          rw_pv: String(redemption.pointsValue),
+          rw_cashback: String(redemption.cashback),
+        }
+      : {}),
+  };
 
+  let orderId: string;
+  let orderAmount: number | undefined;
+  let orderCurrency: string | undefined;
   try {
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
     const resp = await fetch(`${RAZORPAY_API_BASE}/orders`, {
       method: 'POST',
       headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        amount: amountInPaise,
-        currency,
-        receipt,
-        ...(Object.keys(notes).length ? { notes } : {}),
-      }),
+      body: JSON.stringify({ amount: amountInPaise, currency, receipt, notes }),
     });
 
     const data = (await resp.json().catch(() => ({}))) as {
@@ -607,26 +827,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       error?: { description?: string };
     };
 
-    if (!resp.ok) {
+    if (!resp.ok || !data.id) {
       const detail = data?.error?.description || `Razorpay API error (HTTP ${resp.status})`;
       if (resp.status === 401) {
         return res.status(401).json({ error: 'Razorpay authentication failed', detail });
       }
       return res.status(500).json({ error: 'Failed to create Razorpay order', detail });
     }
-
-    return res.status(200).json({
-      order_id: data.id,
-      amount: data.amount,
-      currency: data.currency,
-      key_id: keyId,
-      pointsApplied,
-      cashbackApplied,
-    });
+    orderId = data.id;
+    orderAmount = data.amount;
+    orderCurrency = data.currency;
   } catch (error: unknown) {
     return res.status(500).json({
       error: 'Failed to create Razorpay order',
       detail: error instanceof Error ? error.message : 'Unknown Razorpay error',
     });
   }
+
+  // ── Reserve what this payment spends ──
+  // Until this succeeds the browser has no order id, so an order that loses
+  // the race (or times out) can never be paid; Razorpay lets it lapse.
+  if (spendsRewards && uid) {
+    try {
+      const reserved = await reserveRewards(uid, orderId, {
+        points: redemption.points,
+        cashback: redemption.cashback,
+      });
+      if (!reserved) return conflict('rewards_changed');
+    } catch (error: unknown) {
+      return conflict('rewards_unavailable', error instanceof Error ? error.message : undefined);
+    }
+  }
+
+  return res.status(200).json({
+    order_id: orderId,
+    amount: orderAmount,
+    currency: orderCurrency,
+    key_id: keyId,
+    pointsApplied: redemption.points,
+    pointsValue: redemption.pointsValue,
+    cashbackApplied: redemption.cashback,
+  });
 }

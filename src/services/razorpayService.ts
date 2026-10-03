@@ -12,6 +12,7 @@
  */
 
 import { auth } from '@/config/firebase';
+import { releaseRewardHolds } from '@/services/rewardsService';
 
 const CHECKOUT_SCRIPT_SRC = 'https://checkout.razorpay.com/v1/checkout.js';
 
@@ -38,8 +39,16 @@ export interface VerifiedPayment {
   razorpaySignature: string;
   /** Loyalty points the server applied to this payment. */
   pointsApplied: number;
+  /** Rupee value of pointsApplied. */
+  pointsValue: number;
   /** Wallet cashback (₹) the server applied to this payment. */
   cashbackApplied: number;
+  /**
+   * False when the server could not record the payment in time. The order is
+   * then saved for a payment check (firestore.rules accepts "paid" only against
+   * the server's record) and the reconcile action confirms it with Razorpay.
+   */
+  paymentRecorded: boolean;
   /** True when the spend could not be recorded yet (reconcile repairs it). */
   rewardsPending?: boolean;
 }
@@ -51,6 +60,11 @@ export interface RazorpayCheckoutOptions {
    * value in devtools cannot change what the customer is charged.
    */
   amount: number;
+  /**
+   * The total before points/cashback, also a cross-check. Lets the server tell
+   * a stale cart (400) from a balance that changed (409 rewards_changed).
+   */
+  amountBeforeRewards?: number;
   /** Cart contents. The server prices these; required for the order to be created. */
   lineItems: Array<{ productId: string; quantity: number }>;
   /** Recorded on the order; every payment now runs through Razorpay. */
@@ -102,6 +116,19 @@ export class RewardsUnavailableError extends Error {
   }
 }
 
+/**
+ * The points/cashback balance moved since the page priced the order (another
+ * checkout reserved it, or points unlocked or were voided): 409
+ * rewards_changed. Nothing was charged; the live balance is already on its way
+ * to the page, so the customer only needs to look at the new total.
+ */
+export class RewardsChangedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RewardsChangedError';
+  }
+}
+
 /** Inject checkout.js once and resolve when it is ready. */
 function loadRazorpayScript(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -142,19 +169,19 @@ interface CreateOrderResponse {
   currency: string;
   key_id: string;
   pointsApplied?: number;
+  pointsValue?: number;
   cashbackApplied?: number;
 }
 
 async function createOrder(options: RazorpayCheckoutOptions): Promise<CreateOrderResponse> {
   const amountInPaise = Math.round(options.amount * 100);
 
-  const wantsRewards = options.usePoints === true || options.useCashback === true;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (wantsRewards) {
-    // The reward ledger is private: the server reads it as this customer.
-    const idToken = await auth.currentUser?.getIdToken().catch(() => '');
-    if (idToken) headers.Authorization = `Bearer ${idToken}`;
-  }
+  // Always identify the customer: the server binds the payment to them, which
+  // is what lets the order be saved as paid and earn points, and reads their
+  // private reward ledger when points/cashback are used.
+  const idToken = await auth.currentUser?.getIdToken().catch(() => '');
+  if (idToken) headers.Authorization = `Bearer ${idToken}`;
 
   let res: Response;
   try {
@@ -170,6 +197,9 @@ async function createOrder(options: RazorpayCheckoutOptions): Promise<CreateOrde
         usePoints: options.usePoints === true,
         useCashback: options.useCashback === true,
         amount: amountInPaise,
+        ...(options.amountBeforeRewards != null
+          ? { amountBeforeRewards: Math.round(options.amountBeforeRewards * 100) }
+          : {}),
         currency: options.currency || 'INR',
         receipt: options.receipt,
         notes: options.notes,
@@ -191,6 +221,9 @@ async function createOrder(options: RazorpayCheckoutOptions): Promise<CreateOrde
   if (res.status === 409 && data.code === 'rewards_unavailable') {
     throw new RewardsUnavailableError(data.error || 'Rewards are unavailable right now.');
   }
+  if (res.status === 409 && data.code === 'rewards_changed') {
+    throw new RewardsChangedError(data.error || 'Your points or cashback balance just changed.');
+  }
   if (!res.ok || !data.order_id) {
     const detail =
       data.error ||
@@ -205,19 +238,29 @@ async function verifyPayment(
   response: RazorpaySuccessResponse,
   order: CreateOrderResponse,
 ): Promise<VerifiedPayment> {
-  const res = await fetch('/api/verify-payment', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      razorpay_order_id: response.razorpay_order_id,
-      razorpay_payment_id: response.razorpay_payment_id,
-      razorpay_signature: response.razorpay_signature,
-    }),
-  });
+  const ask = async () => {
+    const res = await fetch('/api/verify-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_signature: response.razorpay_signature,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.verified) {
+      throw new Error(data?.error || 'Payment could not be verified. You have not been charged.');
+    }
+    return data as { paymentRecorded?: boolean; rewardsPending?: boolean };
+  };
 
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data?.verified) {
-    throw new Error(data?.error || 'Payment could not be verified. You have not been charged.');
+  let data = await ask();
+  // Verified, but the server's record of the payment was not written in time.
+  // One more try (it is idempotent) before the order is saved without it.
+  if (data.paymentRecorded === false) {
+    await new Promise((r) => setTimeout(r, 1500));
+    data = await ask().catch(() => data);
   }
 
   return {
@@ -225,8 +268,10 @@ async function verifyPayment(
     razorpayOrderId: response.razorpay_order_id,
     razorpaySignature: response.razorpay_signature,
     pointsApplied: Number(order.pointsApplied) || 0,
+    pointsValue: Number(order.pointsValue) || 0,
     cashbackApplied: Number(order.cashbackApplied) || 0,
-    ...(data?.rewardsPending === true ? { rewardsPending: true } : {}),
+    paymentRecorded: data.paymentRecorded !== false,
+    ...(data.rewardsPending === true ? { rewardsPending: true } : {}),
   };
 }
 
@@ -247,8 +292,13 @@ export async function payWithRazorpay(
     throw new Error('Razorpay checkout is unavailable. Please try again.');
   }
 
+  const reservedRewards = Number(order.pointsApplied) > 0 || Number(order.cashbackApplied) > 0;
+
   return new Promise<VerifiedPayment>((resolve, reject) => {
     let settled = false;
+    let paying = false;
+    /** The last failed attempt; Razorpay keeps the window open so the customer can retry. */
+    let lastFailure = '';
     const finish = (fn: () => void) => {
       if (settled) return;
       settled = true;
@@ -265,21 +315,31 @@ export async function payWithRazorpay(
       ...(options.prefill ? { prefill: options.prefill } : {}),
       ...(options.notes ? { notes: options.notes } : {}),
       theme: { color: options.themeColor || '#A4532C' },
+      // Well inside the 30 minutes the server keeps points/cashback reserved.
+      timeout: 15 * 60,
       modal: {
-        ondismiss: () => finish(() => reject(new PaymentCancelledError())),
+        ondismiss: () => {
+          if (paying) return;
+          // Closed without paying: give back what this checkout reserved now
+          // rather than in 30 minutes. The server checks Razorpay first.
+          if (reservedRewards) void releaseRewardHolds(order.order_id);
+          finish(() => reject(lastFailure ? new Error(lastFailure) : new PaymentCancelledError()));
+        },
       },
       handler: (response: RazorpaySuccessResponse) => {
+        paying = true;
         verifyPayment(response, order)
           .then((verified) => finish(() => resolve(verified)))
           .catch((err) => finish(() => reject(err)));
       },
     });
 
-    // Surface gateway-reported failures (card declined, etc.).
+    // A failed attempt (card declined, etc.) does not end the checkout: the
+    // window stays open for a retry, and a retry that succeeds must still
+    // reach the handler above. Rejecting here used to leave such a customer
+    // charged with no order. Remember it for when the window is closed.
     rzp.on('payment.failed', (response) => {
-      finish(() =>
-        reject(new Error(response?.error?.description || 'Payment failed. Please try again.')),
-      );
+      lastFailure = response?.error?.description || 'Payment failed. Please try again.';
     });
 
     rzp.open();

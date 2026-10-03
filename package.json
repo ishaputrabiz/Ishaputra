@@ -11,7 +11,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --test \"tests/**/*.test.ts\""
+    "test": "node --test \"tests/**/*.test.ts\"",
+    "sync:rewards": "node scripts/sync-rewards-core.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.48.0",

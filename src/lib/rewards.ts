@@ -9,6 +9,7 @@
 
 // >>> rewards-core
 type RewardCurrency = 'points' | 'cashback';
+type RewardKind = 'earn' | 'spend' | 'refund' | 'adjust';
 
 interface RewardSettings {
   enabled: boolean;
@@ -35,7 +36,11 @@ interface LedgerLike {
   currency: RewardCurrency;
   amount: number;
   status: 'active' | 'void';
+  kind: RewardKind;
+  /** When earned points become spendable. Only earn entries wait; every other entry counts at once. */
   unlockAtMs: number;
+  /** Earned points frozen while their order has a return open. */
+  held?: boolean;
 }
 
 interface RewardBalances {
@@ -58,6 +63,12 @@ function normaliseRewardSettings(raw: Partial<RewardSettings> | null | undefined
   };
 }
 
+/**
+ * Balances from ledger entries. Only earned points can be pending (until their
+ * unlock date, or while their order has a return open). Spends, refunds and
+ * adjustments count the moment they exist, so the browser and the server agree
+ * whatever their clocks say.
+ */
 function summariseRewards(entries: LedgerLike[], nowMs: number): RewardBalances {
   const out: RewardBalances = {
     points: { available: 0, pending: 0 },
@@ -68,8 +79,9 @@ function summariseRewards(entries: LedgerLike[], nowMs: number): RewardBalances 
     const bucket = out[e.currency];
     if (!bucket) continue;
     const amount = Number(e.amount) || 0;
-    if (e.unlockAtMs <= nowMs) bucket.available += amount;
-    else bucket.pending += amount;
+    const waiting = e.kind === 'earn' && amount > 0 && (e.held === true || e.unlockAtMs > nowMs);
+    if (waiting) bucket.pending += amount;
+    else bucket.available += amount;
   }
   return out;
 }
@@ -115,16 +127,70 @@ function computeRedemption(i: RedemptionInput): Redemption {
   return { points, pointsValue, cashback, payable };
 }
 
-function pointsForOrder(
-  order: { total?: number; deliveryCharge?: number; taxAmount?: number; gstInclusive?: boolean },
-  s: RewardSettings,
-): number {
-  if (!s.enabled) return 0;
-  const tax = order.gstInclusive ? 0 : Number(order.taxAmount) || 0;
-  const base = (Number(order.total) || 0) - (Number(order.deliveryCharge) || 0) - tax;
-  return Math.max(0, Math.floor((base / 100) * s.pointsPer100));
+interface EarnBaseInput {
+  subtotal: number;
+  couponDiscount: number;
+  /** Rupee value of the points spent on the order. */
+  pointsValue: number;
+  cashback: number;
+  /** The shop's GST settings when the order was priced. */
+  gstEnabled: boolean;
+  gstInclusive: boolean;
+  gstRate: number;
+}
+
+/**
+ * Rupees paid for products, which is what points are earned on: after the
+ * coupon, points and cashback, without delivery, and without the GST that
+ * GST-inclusive prices carry. Two decimals. Worked out by api/create-order.ts
+ * and kept with the payment, so nothing the browser writes can change it.
+ */
+function earnBase(i: EarnBaseInput): number {
+  const paid = Math.max(0, i.subtotal - i.couponDiscount - i.pointsValue - i.cashback);
+  const rate = i.gstEnabled && i.gstInclusive && i.gstRate > 0 ? i.gstRate : 0;
+  return Math.floor(((paid * 100) / (100 + rate)) * 100 + 1e-6) / 100;
+}
+
+/** Points earned on a base from earnBase. */
+function pointsForBase(base: number, s: RewardSettings): number {
+  if (!s.enabled || !(base > 0)) return 0;
+  // Multiply before dividing, with a hair of tolerance: ₹820 at 15 per ₹100 is 123, not 122.
+  return Math.max(0, Math.floor((base * s.pointsPer100) / 100 + 1e-9));
+}
+
+/**
+ * A cart in a canonical form (productId:quantity, merged and sorted) so what
+ * was paid for can be compared with what was ordered. Stored as a SHA-256 hash.
+ */
+function cartKey(items: Array<{ productId?: string; quantity?: unknown }>): string {
+  const qty = new Map<string, number>();
+  for (const it of items || []) {
+    const id = String(it?.productId || '');
+    if (id) qty.set(id, (qty.get(id) || 0) + (Number(it?.quantity) || 0));
+  }
+  return [...qty.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([id, q]) => `${id}:${q}`)
+    .join('|');
 }
 // <<< rewards-core
 
-export type { RewardCurrency, RewardSettings, LedgerLike, RewardBalances, RedemptionInput, Redemption };
-export { DEFAULT_REWARD_SETTINGS, normaliseRewardSettings, summariseRewards, computeRedemption, pointsForOrder };
+export type {
+  RewardCurrency,
+  RewardKind,
+  RewardSettings,
+  LedgerLike,
+  RewardBalances,
+  RedemptionInput,
+  Redemption,
+  EarnBaseInput,
+};
+export {
+  DEFAULT_REWARD_SETTINGS,
+  normaliseRewardSettings,
+  summariseRewards,
+  computeRedemption,
+  earnBase,
+  pointsForBase,
+  cartKey,
+};

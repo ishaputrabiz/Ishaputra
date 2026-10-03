@@ -15,23 +15,32 @@ import {
   normaliseRewardSettings,
   type LedgerLike,
   type RewardCurrency,
+  type RewardKind,
   type RewardSettings,
 } from '@/lib/rewards';
 
 /**
  * Loyalty points + wallet cashback, browser side. The ledger is read-only for
- * customers (firestore.rules); points are earned, spent and refunded by the
- * payment functions and the reconcile action in api/notify-order.ts.
+ * customers (firestore.rules); points are reserved by api/create-order.ts,
+ * confirmed by api/verify-payment.ts, and earned, frozen, voided and refunded
+ * by the reconcile action in api/notify-order.ts.
  */
 
-export type RewardKind = 'earn' | 'spend' | 'refund' | 'adjust';
+export type { RewardKind };
 
 export interface RewardEntry extends LedgerLike {
   id: string;
-  kind: RewardKind;
   note: string;
   orderId?: string;
   razorpayOrderId?: string;
+  /** A spend reserved for a checkout whose payment has not been confirmed yet. */
+  hold?: boolean;
+  /** When an unconfirmed reservation may be released. */
+  holdUntilMs?: number;
+  /** A spend confirmed only after its reservation had been released. */
+  late?: boolean;
+  /** Why the server voided it, e.g. 'payment-not-completed', 'order-returned'. */
+  voidReason?: string;
   createdAtMs: number;
   createdBy: string;
 }
@@ -39,14 +48,21 @@ export interface RewardEntry extends LedgerLike {
 const millis = (v: unknown): number =>
   v instanceof Timestamp ? v.toMillis() : typeof v === 'number' ? v : 0;
 
+const KINDS: RewardKind[] = ['earn', 'spend', 'refund', 'adjust'];
+
 const toEntry = (id: string, d: Record<string, any>): RewardEntry => ({
   id,
   currency: d.currency === 'cashback' ? 'cashback' : 'points',
   amount: Number(d.amount) || 0,
   status: d.status === 'void' ? 'void' : 'active',
-  // A just-written admin entry has no server time yet: treat it as unlocked.
+  kind: KINDS.includes(d.kind) ? d.kind : 'adjust',
+  // A just-written admin entry has no server time yet; only earn entries wait anyway.
   unlockAtMs: millis(d.unlockAt),
-  kind: (d.kind || 'adjust') as RewardKind,
+  held: d.held === true,
+  hold: d.hold === true,
+  holdUntilMs: millis(d.holdUntil) || undefined,
+  late: d.late === true,
+  voidReason: typeof d.voidReason === 'string' ? d.voidReason : undefined,
   note: String(d.note || ''),
   orderId: d.orderId,
   razorpayOrderId: d.razorpayOrderId,
@@ -80,13 +96,14 @@ export const subscribeRewardSettings = (cb: (s: RewardSettings) => void) =>
     () => cb(DEFAULT_REWARD_SETTINGS),
   );
 
+/** Throws when the settings cannot be read, so the admin form never mistakes defaults for saved values. */
 export const getRewardSettings = async (): Promise<RewardSettings> => {
   const snap = await getDoc(settingsRef());
   return normaliseRewardSettings(snap.exists() ? (snap.data() as Partial<RewardSettings>) : null);
 };
 
 export const saveRewardSettings = (s: RewardSettings) =>
-  setDoc(settingsRef(), { ...normaliseRewardSettings(s), updatedAt: serverTimestamp() });
+  setDoc(settingsRef(), { ...normaliseRewardSettings(s), updatedAt: serverTimestamp() }, { merge: true });
 
 /** Admin: credit (+) or debit (−) a customer's points or cashback by hand. */
 export const adminAdjustRewards = async (
@@ -110,25 +127,56 @@ export const adminAdjustRewards = async (
   });
 };
 
-/**
- * Ask the server to bring this order's points/cashback in line with its
- * status (earn on delivery, void + refund on cancel/return). Idempotent, so it
- * is safe after every status change. Never throws.
- */
-export async function reconcileOrderRewards(orderId: string): Promise<{ ok: boolean; detail?: string }> {
+/** POST an action to /api/notify-order as the signed-in user. Never throws. */
+async function rewardsAction(
+  payload: Record<string, unknown>,
+): Promise<{ ok: boolean; status: number; data: Record<string, any>; detail?: string }> {
   try {
     const current = auth.currentUser;
-    if (!current) return { ok: false, detail: 'Not signed in' };
+    if (!current) return { ok: false, status: 0, data: {}, detail: 'Not signed in' };
     const idToken = await current.getIdToken();
     const res = await fetch('/api/notify-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-      body: JSON.stringify({ action: 'reconcile-rewards', orderId }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
-    return res.ok ? { ok: true } : { ok: false, detail: data?.error || `HTTP ${res.status}` };
+    return res.ok
+      ? { ok: true, status: res.status, data }
+      : { ok: false, status: res.status, data, detail: data?.error || `HTTP ${res.status}` };
   } catch (err) {
-    console.warn('[rewards] reconcile failed:', err);
-    return { ok: false, detail: err instanceof Error ? err.message : 'Network error' };
+    console.warn('[rewards] request failed:', err);
+    return { ok: false, status: 0, data: {}, detail: err instanceof Error ? err.message : 'Network error' };
   }
+}
+
+export interface ReconcileResult {
+  ok: boolean;
+  /** Entries the server wrote or changed (empty: already in line). */
+  changed?: string[];
+  /** Why the server left this order alone, e.g. 'payment_not_verified'. */
+  skipped?: string;
+  detail?: string;
+}
+
+/**
+ * Ask the server to bring this order's payment record and points/cashback in
+ * line with its status (confirm the payment, earn on delivery, freeze during a
+ * return, void + refund on cancel/return). Idempotent, so it is safe after
+ * every status change. Never throws.
+ */
+export async function reconcileOrderRewards(orderId: string): Promise<ReconcileResult> {
+  const r = await rewardsAction({ action: 'reconcile-rewards', orderId });
+  if (!r.ok) return { ok: false, detail: r.detail };
+  return { ok: true, changed: Array.isArray(r.data.changed) ? r.data.changed : [], skipped: r.data.skipped };
+}
+
+/**
+ * Free points/cashback reserved by checkouts that were never paid. With an id,
+ * only that checkout's (the customer closed the payment window); without, every
+ * reservation that has run out. The server asks Razorpay first. Never throws.
+ */
+export async function releaseRewardHolds(razorpayOrderId?: string): Promise<{ ok: boolean; detail?: string }> {
+  const r = await rewardsAction({ action: 'release-holds', ...(razorpayOrderId ? { razorpayOrderId } : {}) });
+  return r.ok ? { ok: true } : { ok: false, detail: r.detail };
 }
