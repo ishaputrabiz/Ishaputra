@@ -39,10 +39,26 @@ import {
   Share2,
   MessageCircle,
   Star,
+  Coins,
 } from 'lucide-react';
 import { SmartImage } from "@/components/ui/smart-image";
 import { BRAND } from "@/config/brand";
 import { SITE_HOST } from "@/lib/siteUrl";
+
+/**
+ * Loyalty points and wallet cashback that paid part of an order, as price rows
+ * in rupees. order.total is what was charged after them, so listing them makes
+ * the summary add up. Orders saved before pointsValue existed used 1 point = ₹1.
+ */
+const rewardsPaidRows = (order: Order): Array<[string, number]> => {
+  const points = Math.max(0, Number(order.pointsUsed) || 0);
+  const pointsValue = typeof order.pointsValue === 'number' ? order.pointsValue : points;
+  const cashback = Number(order.cashbackUsed) || 0;
+  const rows: Array<[string, number]> = [];
+  if (pointsValue > 0) rows.push([`Points (${points.toLocaleString('en-IN')})`, pointsValue]);
+  if (cashback > 0) rows.push(['Wallet cashback', cashback]);
+  return rows;
+};
 
 // Order Status Stepper Component
 const OrderStatusStepper = ({ status, isReturnPickedState = false }: { status: string; isReturnPickedState?: boolean }) => {
@@ -334,6 +350,23 @@ const OrderDetailsPage = () => {
     }
   };
 
+  // One line about the points this order earned. The server credits them on
+  // delivery, freezes them while a return is open and voids them if the order
+  // ends (cancelled / returned / refunded).
+  const getPointsEarnedNote = (o: Order): string | null => {
+    const n = Math.floor(Number(o.pointsEarned) || 0);
+    if (n <= 0 || !o.pointsEarnedState) return null;
+    const pts = `${n.toLocaleString('en-IN')} ${n === 1 ? 'point' : 'points'}`;
+    if (o.pointsEarnedState === 'held') return `${pts} on hold while your return is open`;
+    if (o.pointsEarnedState === 'void') {
+      const why = ['cancelled', 'returned', 'refunded'].includes(o.status) ? ` because the order was ${o.status}` : '';
+      return `${pts} ${n === 1 ? 'was' : 'were'} not credited${why}`;
+    }
+    const unlockAt = typeof o.pointsUnlockAt?.toDate === 'function' ? o.pointsUnlockAt.toDate() : null;
+    if (unlockAt && unlockAt.getTime() > Date.now()) return `You earned ${pts} · usable from ${formatDate(unlockAt)}`;
+    return `${pts} added to your wallet`;
+  };
+
   // Check if order can be returned (within 7 days of delivery)
   const canReturnOrder = (order: Order) => {
     if (order.status !== 'delivered') return false;
@@ -599,6 +632,13 @@ const OrderDetailsPage = () => {
   if (!order) {
     return null;
   }
+
+  // Price details: points and cashback are listed so the lines add up to
+  // order.total (paid after them). GST inside GST-inclusive prices is already
+  // in the selling price, so it is not counted again as a fee.
+  const rewardsRows = rewardsPaidRows(order);
+  const totalFees = (order.deliveryCharge || 0) + (order.gstInclusive ? 0 : order.taxAmount || 0);
+  const pointsEarnedNote = getPointsEarnedNote(order);
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,hsl(var(--highlight)/0.05)_0%,rgba(255,255,255,1)_20%),linear-gradient(135deg,hsl(var(--primary)/0.03)_0%,rgba(255,255,255,1)_55%)] dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "var(--font-body)" }}>
@@ -1149,18 +1189,30 @@ const OrderDetailsPage = () => {
             </div>
             {order.discount > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-green-600">Discount</span>
-                <span className="text-green-600">-₹{order.discount.toLocaleString()}</span>
+                <span className="text-green-700 dark:text-green-500">Discount</span>
+                <span className="text-green-700 dark:text-green-500">-₹{order.discount.toLocaleString()}</span>
               </div>
             )}
+            {rewardsRows.map(([label, amount]) => (
+              <div key={label} className="flex justify-between text-sm">
+                <span className="text-green-700 dark:text-green-500">{label}</span>
+                <span className="text-green-700 dark:text-green-500">-₹{amount.toLocaleString()}</span>
+              </div>
+            ))}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total fees</span>
-              <span className="text-foreground">₹{(order.deliveryCharge + order.taxAmount).toLocaleString()}</span>
+              <span className="text-foreground">₹{totalFees.toLocaleString()}</span>
             </div>
             <div className="pt-3 border-t border-foreground/[0.08] flex justify-between">
               <span className="text-base font-semibold text-primary">Total amount</span>
               <span className="text-base font-bold text-foreground">₹{order.total.toLocaleString()}</span>
             </div>
+            {pointsEarnedNote && (
+              <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                <Coins className="mt-px h-3.5 w-3.5 flex-shrink-0 text-primary" aria-hidden="true" />
+                <span>{pointsEarnedNote}</span>
+              </p>
+            )}
           </div>
         </div>
 
@@ -1276,9 +1328,15 @@ const OrderDetailsPage = () => {
                   <span style={{ fontSize: '12px', color: '#16a34a' }}>-₹{order.discount.toLocaleString('en-IN')}</span>
                 </div>
               )}
+              {rewardsRows.map(([label, amount]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#16a34a' }}>{label}</span>
+                  <span style={{ fontSize: '12px', color: '#16a34a' }}>-₹{amount.toLocaleString('en-IN')}</span>
+                </div>
+              ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                 <span style={{ fontSize: '12px', color: '#6b7280' }}>Total Fees</span>
-                <span style={{ fontSize: '12px', color: '#1f2937' }}>₹{(order.deliveryCharge + order.taxAmount).toLocaleString('en-IN')}</span>
+                <span style={{ fontSize: '12px', color: '#1f2937' }}>₹{totalFees.toLocaleString('en-IN')}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: '2px solid #f97316' }}>
                 <span style={{ fontSize: '14px', fontWeight: '700', color: '#f97316' }}>Total Amount</span>

@@ -61,6 +61,22 @@ import {
 } from 'lucide-react';
 import { SmartImage } from "@/components/ui/smart-image";
 
+/**
+ * Loyalty points and wallet cashback that paid part of an order, as summary
+ * rows in rupees. order.total is what was charged after them, so listing them
+ * makes the summary add up. Orders saved before pointsValue existed used
+ * 1 point = ₹1.
+ */
+const rewardsPaidRows = (order: Order): Array<[string, number]> => {
+  const points = Math.max(0, Number(order.pointsUsed) || 0);
+  const pointsValue = typeof order.pointsValue === 'number' ? order.pointsValue : points;
+  const cashback = Number(order.cashbackUsed) || 0;
+  const rows: Array<[string, number]> = [];
+  if (pointsValue > 0) rows.push([`Points (${points.toLocaleString('en-IN')})`, pointsValue]);
+  if (cashback > 0) rows.push(['Wallet cashback', cashback]);
+  return rows;
+};
+
 const Account = () => {
   const { user, loading, logout, updateUserProfile } = useAuth();
   const navigate = useNavigate();
@@ -1529,15 +1545,22 @@ const AccountPage = () => {
                       <span className="text-foreground">₹{selectedOrder.deliveryCharge.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Tax</span>
+                      {/* GST-inclusive prices already carry this tax, so it is not added again. */}
+                      <span className="text-muted-foreground">Tax{selectedOrder.gstInclusive && selectedOrder.taxAmount > 0 ? ' (included)' : ''}</span>
                       <span className="text-foreground">₹{selectedOrder.taxAmount.toLocaleString()}</span>
                     </div>
                     {selectedOrder.discount > 0 && (
-                      <div className="flex justify-between text-sm text-green-600">
+                      <div className="flex justify-between text-sm text-green-800 dark:text-green-500">
                         <span>Discount</span>
                         <span>-₹{selectedOrder.discount.toLocaleString()}</span>
                       </div>
                     )}
+                    {rewardsPaidRows(selectedOrder).map(([label, amount]) => (
+                      <div key={label} className="flex justify-between text-sm text-green-800 dark:text-green-500">
+                        <span>{label}</span>
+                        <span>-₹{amount.toLocaleString()}</span>
+                      </div>
+                    ))}
                     <div className="border-t border-border pt-2 mt-2">
                       <div className="flex justify-between">
                         <span className="font-semibold text-foreground">Total</span>
