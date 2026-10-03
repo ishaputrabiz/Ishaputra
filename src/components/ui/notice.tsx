@@ -58,8 +58,8 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
         ref={ref}
         role={role ?? (tone === "danger" ? "alert" : "status")}
         className={cn(
-          "tx-sheet flex gap-3 rounded-panel border border-foreground/10 border-l-[3px] text-sm text-foreground",
-          compact ? "px-3 py-2.5" : "p-4",
+          "tx-sheet flex gap-3 border border-foreground/10 border-l-[3px] text-sm text-foreground",
+          compact ? "rounded-card px-3 py-2.5" : "rounded-panel p-4",
           RULE[tone],
           className,
         )}

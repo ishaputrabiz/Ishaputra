@@ -152,7 +152,7 @@ export const BarcodeScannerDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) stop(); onOpenChange(v); }}>
-      <DialogContent className="sm:max-w-md bg-white dark:bg-gray-900">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera className="w-4 h-4 text-highlight" /> {title}
