@@ -1240,7 +1240,7 @@ const OrderDetailsPage = () => {
                   </div>
                   <Button
                     variant="outline"
-                    onClick={() => navigate('/write-review', {
+                    onClick={() => navigate(`/write-review?productId=${encodeURIComponent(order.items[0]?.productId ?? '')}`, {
                       state: {
                         productId: order.items[0]?.productId,
                         productName: order.items[0]?.name,

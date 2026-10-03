@@ -50,6 +50,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       style={
         {
           zIndex: "var(--z-toast)",
+          // Stay clickable (Undo, close) while a modal sets pointer-events: none on body.
+          pointerEvents: "auto",
           "--normal-bg": "hsl(var(--card))",
           "--normal-border": "hsl(var(--foreground) / 0.1)",
           "--normal-text": "hsl(var(--foreground))",

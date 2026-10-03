@@ -97,6 +97,8 @@ All Radix. Dialog: centred, fade + zoom from 0.96 (240ms in, 180ms out), charcoa
 
 **`<ConfirmDialog open onOpenChange title description confirmLabel cancelLabel="Cancel" tone="danger"|"default" onConfirm />`** (`src/components/ConfirmDialog.tsx`): every destructive or irreversible action. Title names the object ("Delete this address?"), confirm label 1-3 words. Cancel has focus on open. If `onConfirm` returns a promise, the button shows a spinner and the dialog closes when it resolves (stays open if it throws).
 
+**Focus return for dialogs opened from state.** Radix returns focus to the opener only when a `*Trigger` opened the dialog. When one opens from state (`open={x}`), focus falls to `<body>` on close. For ConfirmDialog pass `returnFocusRef={buttonRef}`; for a Dialog or Sheet add `onCloseAutoFocus={(e) => { e.preventDefault(); triggerRef.current?.focus(); }}` to its Content.
+
 ## 6. Buttons
 
 | Level | Use |

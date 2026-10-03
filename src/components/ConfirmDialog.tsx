@@ -34,6 +34,11 @@ export interface ConfirmDialogProps {
    */
   onConfirm: () => void | Promise<unknown>;
   children?: React.ReactNode;
+  /**
+   * For a dialog opened from state (no Trigger): the element to focus when it
+   * closes, usually the button that opened it. Radix would otherwise drop focus on body.
+   */
+  returnFocusRef?: React.RefObject<HTMLElement>;
 }
 
 /**
@@ -50,6 +55,7 @@ export function ConfirmDialog({
   tone = "default",
   onConfirm,
   children,
+  returnFocusRef,
 }: ConfirmDialogProps) {
   const [busy, setBusy] = React.useState(false);
 
@@ -71,7 +77,14 @@ export function ConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={(next) => (!busy ? onOpenChange(next) : undefined)}>
-      <AlertDialogContent>
+      <AlertDialogContent
+        onCloseAutoFocus={(event) => {
+          if (returnFocusRef?.current) {
+            event.preventDefault();
+            returnFocusRef.current.focus();
+          }
+        }}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           {description && <AlertDialogDescription>{description}</AlertDialogDescription>}

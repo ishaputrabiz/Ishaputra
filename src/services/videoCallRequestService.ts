@@ -17,7 +17,7 @@ import { db } from '@/config/firebase';
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type VideoCallMode = 'instant' | 'scheduled';
+export type VideoCallMode = 'instant' | 'scheduled' | 'whatsapp';
 export type VideoCallStatus =
   | 'pending'
   | 'confirmed'

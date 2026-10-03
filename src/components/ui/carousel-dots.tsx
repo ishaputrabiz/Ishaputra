@@ -52,7 +52,7 @@ export function CarouselDots({
             <span aria-hidden="true" className={cn("relative h-0.5 w-4 overflow-hidden rounded-full", track)}>
               <span
                 className={cn(
-                  "absolute inset-0 origin-left rounded-full transition-transform duration-[240ms] ease-out",
+                  "absolute inset-0 origin-left rounded-full transition-transform duration-modal ease-out",
                   fill,
                   current ? "scale-x-100" : "scale-x-0 group-hover/dot:scale-x-[0.35]",
                 )}

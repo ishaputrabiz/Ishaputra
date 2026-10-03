@@ -149,7 +149,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Redirect to login if not authenticated
   if (!user) {
-    return <Navigate to={redirectTo} state={{ from: location }} replace />;
+    // reason lets the sign-in page say why the visitor was sent there.
+    const reason = location.pathname.startsWith('/checkout') ? 'checkout'
+      : location.pathname.startsWith('/wishlist') ? 'wishlist' : undefined;
+    return <Navigate to={redirectTo} state={{ from: location, reason }} replace />;
   }
 
   // Show verification modal if email not verified
