@@ -1,7 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Loader2, ArrowLeft, Image as ImageIcon, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, ArrowLeft, Image as ImageIcon, ChevronUp, ChevronDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { IconButton } from '@/components/ui/icon-button';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { EmptyState } from '@/components/EmptyState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { MediaGridSkeleton } from '@/components/skeletons';
+import { fadeUp, staggerDelay } from '@/lib/motion';
 import { useAuth } from '@/contexts/AuthContext';
 import ImageUploader from '@/components/ImageUploader';
 import {
@@ -25,6 +38,7 @@ const AdminGallery = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [images, setImages] = useState<GalleryImage[]>([]);
+  const confirmReturnRef = useRef<HTMLElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<GalleryImage | null>(null);
@@ -35,6 +49,7 @@ const AdminGallery = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState('');
   const [imageMethod, setImageMethod] = useState<'upload' | 'url'>('upload');
+  const [toDelete, setToDelete] = useState<GalleryImage | null>(null);
 
   useEffect(() => {
     if (!user) { navigate('/'); return; }
@@ -46,7 +61,7 @@ const AdminGallery = () => {
       setLoading(true);
       setImages(await getAllGalleryImages());
     } catch {
-      toast.error('Failed to load gallery images');
+      toast.error('Could not load gallery images');
     } finally {
       setLoading(false);
     }
@@ -55,11 +70,11 @@ const AdminGallery = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (imageMethod === 'upload' && !selectedFile && !editing) {
-      toast.error('Please select an image');
+      toast.error('Choose an image');
       return;
     }
     if (imageMethod === 'url' && !imageUrl && !editing) {
-      toast.error('Please enter image URL');
+      toast.error('Paste the image URL');
       return;
     }
 
@@ -68,9 +83,9 @@ const AdminGallery = () => {
       let finalImageUrl = editing?.imageUrl || '';
 
       if (imageMethod === 'upload' && selectedFile) {
-        toast.loading('Uploading image...', { id: 'image-upload' });
+        toast.loading('Uploading the image', { id: 'image-upload' });
         finalImageUrl = await uploadGalleryImage(selectedFile);
-        toast.success('Image uploaded!', { id: 'image-upload' });
+        toast.success('Image uploaded', { id: 'image-upload' });
       } else if (imageMethod === 'url' && imageUrl) {
         finalImageUrl = imageUrl;
       }
@@ -82,15 +97,15 @@ const AdminGallery = () => {
 
       if (editing) {
         await updateGalleryImage(editing.id!, payload);
-        toast.success('Gallery image updated!');
+        toast.success('Image saved');
       } else {
         await createGalleryImage(payload);
-        toast.success('Gallery image added!');
+        toast.success('Image added');
       }
       resetForm();
       await loadData();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save gallery image');
+      toast.error(err.message || 'Could not save gallery image');
     } finally {
       setIsSubmitting(false);
     }
@@ -109,14 +124,13 @@ const AdminGallery = () => {
   };
 
   const handleDelete = async (img: GalleryImage) => {
-    if (!confirm('Delete this gallery image?')) return;
     try {
-      toast.loading('Deleting...', { id: 'del' });
+      toast.loading('Deleting the image', { id: 'del' });
       await deleteGalleryImage(img.id!);
-      toast.success('Deleted!', { id: 'del' });
+      toast.success('Image deleted', { id: 'del' });
       await loadData();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to delete', { id: 'del' });
+      toast.error(err.message || 'Could not delete the image', { id: 'del' });
     }
   };
 
@@ -129,270 +143,256 @@ const AdminGallery = () => {
     setShowForm(false);
   };
 
+  const header = (
+    <AdminPageHeader
+      title="Gallery"
+      description="Grid shown on the home page."
+      leading={
+        <IconButton label="Back to dashboard" tooltip onClick={() => navigate('/admin')}>
+          <ArrowLeft />
+        </IconButton>
+      }
+      actions={
+        !showForm && (
+          <Button onClick={() => setShowForm(true)}>
+            <Plus aria-hidden="true" />
+            Add image
+          </Button>
+        )
+      }
+    />
+  );
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="mx-auto max-w-6xl">
+        {header}
+        <MediaGridSkeleton count={12} className="md:grid-cols-3 lg:grid-cols-6" label="Loading gallery" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container-custom max-w-6xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/admin')}
-              className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors flex-shrink-0"
-            >
-              <ArrowLeft className="w-4 h-4 md:w-5 md:h-5" />
-            </button>
+    <div className="mx-auto max-w-6xl">
+      {header}
+
+      {/* Form */}
+      {showForm && (
+        <motion.section
+          {...fadeUp}
+          aria-labelledby="gallery-form-title"
+          className="mb-8 rounded-card border border-border bg-card p-4 shadow-sm sm:p-6"
+        >
+          <h2 id="gallery-form-title" className="mb-6 text-lg font-semibold text-foreground">
+            {editing ? 'Edit gallery image' : 'Add gallery image'}
+          </h2>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Image upload or URL */}
             <div>
-              <h1 className="text-base md:text-3xl font-bold text-gray-900 whitespace-nowrap">Gallery</h1>
-              <p className="hidden md:block text-gray-600 mt-1">Manage homepage gallery images (shown below banner)</p>
-            </div>
-          </div>
-          {!showForm && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-1 px-3 py-2 md:px-6 md:py-3 bg-transparent md:bg-blue-600 border border-blue-600 text-blue-600 md:text-white rounded-lg hover:bg-blue-50 md:hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="hidden md:inline text-sm font-medium">Add Image</span>
-            </button>
-          )}
-        </div>
+              <p className="mb-2 block text-sm font-medium text-foreground/80">
+                Image <span aria-hidden="true" className="text-status-danger-fg">*</span>
+              </p>
+              <ToggleGroup
+                type="single"
+                value={imageMethod}
+                onValueChange={(v) => v && setImageMethod(v as 'upload' | 'url')}
+                aria-label="How to add the image"
+                className="mb-4"
+              >
+                <ToggleGroupItem value="upload" size="sm">Upload image</ToggleGroupItem>
+                <ToggleGroupItem value="url" size="sm">Image URL</ToggleGroupItem>
+              </ToggleGroup>
 
-        {/* Form */}
-        {showForm && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8"
-          >
-            <h2 className="text-xl font-bold text-gray-900 mb-6">
-              {editing ? 'Edit Gallery Image' : 'Add New Gallery Image'}
-            </h2>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Image Upload/URL */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Image <span className="text-red-500">*</span>
-                </label>
-                {/* Tabs */}
-                <div className="flex gap-2 mb-4">
-                  {(['upload', 'url'] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setImageMethod(m)}
-                      className={`px-4 py-2 text-sm font-medium rounded-lg capitalize transition-colors ${
-                        imageMethod === m
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {m === 'upload' ? 'Upload Image' : 'Image URL'}
-                    </button>
-                  ))}
-                </div>
-
-                {imageMethod === 'upload' ? (
-                  <ImageUploader
-                    key={editing?.id || 'new'}
-                    onImageSelected={setSelectedFile}
-                    existingImageUrl={editing?.imageUrl}
-                    onRemove={() => setSelectedFile(null)}
-                    isUploading={isSubmitting}
-                  />
-                ) : (
-                  <div>
-                    <input
-                      type="text"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      placeholder="https://example.com/image.jpg"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    {imageUrl && (
-                      <div className="mt-3">
-                        <SmartImage
-                          src={imageUrl}
-                          alt="Preview"
-                          className="w-32 h-32 rounded-lg object-cover border-2 border-gray-200"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }} preset="card" />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Alt Text */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description / Alt Text (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.alt}
-                  onChange={(e) => setFormData({ ...formData, alt: e.target.value })}
-                  placeholder="e.g., Gold ring with diamonds"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              {imageMethod === 'upload' ? (
+                <ImageUploader
+                  key={editing?.id || 'new'}
+                  onImageSelected={setSelectedFile}
+                  existingImageUrl={editing?.imageUrl}
+                  onRemove={() => setSelectedFile(null)}
+                  isUploading={isSubmitting}
                 />
-              </div>
-
-              {/* Order & Status */}
-              <div className="grid grid-cols-2 gap-4">
+              ) : (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Display Order</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={formData.order}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        // Allow empty or valid numbers
-                        if (val === '' || /^\d+$/.test(val)) {
-                          setFormData({ ...formData, order: val === '' ? '' as any : parseInt(val) });
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || parseInt(val) < 1 || isNaN(parseInt(val))) {
-                          setFormData({ ...formData, order: 1 });
-                        }
-                      }}
-                      placeholder="1"
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <div className="flex flex-col gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, order: (Number(formData.order) || 0) + 1 })}
-                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded transition-colors"
-                      >
-                        <ChevronUp className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, order: Math.max(1, (Number(formData.order) || 1) - 1) })}
-                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded transition-colors"
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
+                  <Input
+                    type="text"
+                    aria-label="Image URL"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  {imageUrl && (
+                    <div className="mt-3">
+                      <SmartImage
+                        src={imageUrl}
+                        alt="Preview"
+                        className="h-32 w-32 rounded-card border border-border object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }} preset="card" />
                     </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Alt text */}
+            <div>
+              <Label htmlFor="gl-alt" className="mb-2 block text-sm font-medium text-foreground/80">
+                Description <span className="font-normal text-muted-foreground">(optional, read aloud by screen readers)</span>
+              </Label>
+              <Input
+                id="gl-alt"
+                type="text"
+                value={formData.alt}
+                onChange={(e) => setFormData({ ...formData, alt: e.target.value })}
+                placeholder="e.g., Beard oil on a stone plinth"
+              />
+            </div>
+
+            {/* Order and status */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="gl-order" className="mb-2 block text-sm font-medium text-foreground/80">Display order</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="gl-order"
+                    type="text"
+                    inputMode="numeric"
+                    value={formData.order}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Allow empty or valid numbers
+                      if (val === '' || /^\d+$/.test(val)) {
+                        setFormData({ ...formData, order: val === '' ? '' as any : parseInt(val) });
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || parseInt(val) < 1 || isNaN(parseInt(val))) {
+                        setFormData({ ...formData, order: 1 });
+                      }
+                    }}
+                    placeholder="1"
+                    className="flex-1 tabular-nums"
+                  />
+                  <IconButton
+                    label="Increase order number"
+                    variant="solid"
+                    onClick={() => setFormData({ ...formData, order: (Number(formData.order) || 0) + 1 })}
+                  >
+                    <ChevronUp />
+                  </IconButton>
+                  <IconButton
+                    label="Decrease order number"
+                    variant="solid"
+                    onClick={() => setFormData({ ...formData, order: Math.max(1, (Number(formData.order) || 1) - 1) })}
+                  >
+                    <ChevronDown />
+                  </IconButton>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="gl-status" className="mb-2 block text-sm font-medium text-foreground/80">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(v) => setFormData({ ...formData, status: v as 'active' | 'inactive' })}
+                >
+                  <SelectTrigger id="gl-status"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 border-t border-border pt-4">
+              <Button type="button" variant="outline" onClick={resetForm} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Spinner />}
+                {isSubmitting
+                  ? editing ? 'Saving' : 'Adding'
+                  : editing ? 'Save image' : 'Add image'}
+              </Button>
+            </div>
+          </form>
+        </motion.section>
+      )}
+
+      {/* Gallery grid */}
+      <section aria-labelledby="gallery-list-title" className="overflow-hidden rounded-card border border-border bg-card shadow-sm">
+        <div className="border-b border-border px-4 py-4 sm:px-6">
+          <h2 id="gallery-list-title" className="text-base font-semibold text-foreground">
+            All images <span className="font-normal tabular-nums text-muted-foreground">({images.length})</span>
+          </h2>
+        </div>
+
+        {images.length === 0 ? (
+          <div className="px-4 py-12">
+            <EmptyState
+              icon={ImageIcon}
+              title="No gallery images yet"
+              description="Add your first image."
+              action={!showForm ? { label: 'Add image', onClick: () => setShowForm(true) } : undefined}
+            />
+          </div>
+        ) : (
+          <ul className="grid grid-cols-2 gap-4 p-4 sm:p-6 md:grid-cols-3 lg:grid-cols-6">
+            {images.map((img, index) => (
+              <motion.li
+                key={img.id}
+                {...fadeUp}
+                transition={{ ...fadeUp.transition, delay: staggerDelay(index) }}
+                className="group relative"
+              >
+                <div className="relative aspect-square overflow-hidden rounded-card border border-border bg-muted">
+                  <SmartImage
+                    src={img.imageUrl}
+                    alt={img.alt}
+                    className={`h-full w-full object-cover ${img.status === 'inactive' ? 'opacity-50' : ''}`} preset="tile" />
+                  {img.status === 'inactive' && (
+                    <span className="absolute bottom-2 left-2">
+                      <StatusBadge tone="neutral" icon={EyeOff} label="Inactive" />
+                    </span>
+                  )}
+                  <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-100 transition-opacity duration-hover lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+                    <IconButton label={`Edit image ${index + 1}`} variant="solid" size="sm" onClick={() => handleEdit(img)}>
+                      <Edit2 />
+                    </IconButton>
+                    <IconButton label={`Delete image ${index + 1}`} variant="solid" size="sm" onClick={(e) => { confirmReturnRef.current = e.currentTarget; setToDelete(img); }} className="hover:text-status-danger-fg">
+                      <Trash2 />
+                    </IconButton>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-4">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      {editing ? 'Updating...' : 'Adding...'}
-                    </span>
-                  ) : editing ? 'Update Image' : 'Add Image'}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  disabled={isSubmitting}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 font-medium"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        )}
-
-        {/* Gallery Grid */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-bold text-gray-900">All Images ({images.length})</h2>
-            <p className="text-sm text-gray-500 mt-1">Grid below "Shop The Latest Trends" banner</p>
-          </div>
-
-          {images.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">
-              <ImageIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p>No gallery images yet. Add your first one!</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 p-6">
-              {images.map((img, index) => (
-                <motion.div
-                  key={img.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.03 }}
-                  className="relative group"
-                >
-                  <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200">
-                    <SmartImage
-                      src={img.imageUrl}
-                      alt={img.alt}
-                      className="w-full h-full object-cover" preset="tile" />
-                    {img.status === 'inactive' && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="text-xs font-semibold text-white bg-red-500 px-2 py-1 rounded">Inactive</span>
-                      </div>
+                <div className="mt-2">
+                  <p className="truncate text-xs text-foreground/80">{img.alt || 'No description'}</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="text-xs tabular-nums text-muted-foreground">Position {index + 1}</span>
+                    {img.status === 'active' && (
+                      <Eye aria-label="Active" className="h-3 w-3 text-status-success-fg" />
                     )}
                   </div>
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => handleEdit(img)}
-                      className="w-8 h-8 rounded-lg bg-white shadow-lg border border-gray-200 flex items-center justify-center hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                    >
-                      <Edit2 className="w-4 h-4 text-blue-600" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(img)}
-                      className="w-8 h-8 rounded-lg bg-white shadow-lg border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:border-red-300 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-600" />
-                    </button>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-xs text-gray-600 truncate">{img.alt}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-gray-400">Order: {img.order}</span>
-                      {img.status === 'active' ? (
-                        <Eye className="w-3 h-3 text-green-500" />
-                      ) : (
-                        <EyeOff className="w-3 h-3 text-gray-400" />
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+                </div>
+              </motion.li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <ConfirmDialog
+        returnFocusRef={confirmReturnRef}
+        open={!!toDelete}
+        onOpenChange={(open) => !open && setToDelete(null)}
+        title="Delete this gallery image?"
+        description="It is removed from the home page grid. This cannot be undone."
+        confirmLabel="Delete image"
+        tone="danger"
+        onConfirm={() => (toDelete ? handleDelete(toDelete) : undefined)}
+      />
     </div>
   );
 };

@@ -1,21 +1,18 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { toast } from 'sonner';
 import { Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { TableSkeleton } from '@/components/skeletons';
+import { formatDateTime } from '@/lib/format';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useRewards } from '@/hooks/useRewards';
 import { adminAdjustRewards, type RewardEntry } from '@/services/rewardsService';
 import type { RewardCurrency } from '@/lib/rewards';
 
-const fmt = (ms: number) =>
-  new Date(ms).toLocaleString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+const fmt = (ms: number) => formatDateTime(ms);
 
 /** "+120 pts", "−₹50". */
 const signed = (value: number, unit: 'pts' | '₹', plus = false) => {
@@ -25,10 +22,10 @@ const signed = (value: number, unit: 'pts' | '₹', plus = false) => {
 };
 
 const TONE = {
-  ok: 'text-gray-600',
-  wait: 'text-amber-700',
-  warn: 'font-medium text-red-700 dark:text-red-400',
-  off: 'text-gray-500',
+  ok: 'text-foreground/80',
+  wait: 'text-status-warning-fg',
+  warn: 'font-medium text-status-danger-fg',
+  off: 'text-muted-foreground',
 } as const;
 
 /**
@@ -76,6 +73,7 @@ export const RewardsAdminPanel = ({ customerId }: { customerId: string }) => {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const uid = useId();
   const now = Date.now();
   // Earned points frozen by an open return: part of "pending", not of "available".
   const heldPoints = entries.reduce(
@@ -99,24 +97,24 @@ export const RewardsAdminPanel = ({ customerId }: { customerId: string }) => {
 
   const figure = (label: string, value: number, unit: 'pts' | '₹', detail?: string) => (
     <div
-      className={`rounded-xl border p-4 ${
-        value < 0 ? 'border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/40' : 'border-gray-200 bg-gray-50'
+      className={`rounded-card border p-4 ${
+        value < 0 ? 'border-status-danger-line bg-status-danger-bg' : 'border-border bg-muted/50'
       }`}
     >
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className={`text-xl font-bold ${value < 0 ? 'text-red-700 dark:text-red-400' : 'text-gray-900'}`}>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`text-xl font-semibold tabular-nums ${value < 0 ? 'text-status-danger-fg' : 'text-foreground'}`}>
         {signed(value, unit)}
       </p>
-      {value < 0 && <p className="text-[11px] text-red-700 dark:text-red-400">Negative balance - review</p>}
-      {detail && <p className="mt-0.5 text-[11px] text-amber-700">{detail}</p>}
+      {value < 0 && <p className="text-xs text-status-danger-fg">Negative balance. Review it.</p>}
+      {detail && <p className="mt-0.5 text-xs text-status-warning-fg">{detail}</p>}
     </div>
   );
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+    <section className="rounded-card border border-border bg-card p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex items-center gap-2">
-        <Coins className="h-5 w-5 text-highlight" />
-        <h2 className="text-lg font-semibold text-gray-900">Rewards</h2>
+        <Coins aria-hidden="true" className="h-5 w-5 text-muted-foreground" />
+        <h2 className="text-base font-semibold text-foreground">Rewards</h2>
       </div>
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {figure(
@@ -141,9 +139,9 @@ export const RewardsAdminPanel = ({ customerId }: { customerId: string }) => {
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-[150px_150px_1fr_auto] sm:items-end">
         <div>
-          <p className="mb-1 text-xs font-medium text-gray-600">Type</p>
+          <Label htmlFor={`${uid}-type`} className="mb-1.5 block text-xs font-medium text-foreground/80">Type</Label>
           <Select value={currency} onValueChange={(v) => setCurrency(v as RewardCurrency)}>
-            <SelectTrigger>
+            <SelectTrigger id={`${uid}-type`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -153,32 +151,33 @@ export const RewardsAdminPanel = ({ customerId }: { customerId: string }) => {
           </Select>
         </div>
         <div>
-          <p className="mb-1 text-xs font-medium text-gray-600">Amount (− to debit)</p>
-          <Input type="number" step={1} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 100" />
+          <Label htmlFor={`${uid}-amount`} className="mb-1.5 block text-xs font-medium text-foreground/80">Amount (minus to debit)</Label>
+          <Input id={`${uid}-amount`} type="number" step={1} className="tabular-nums" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 100" />
         </div>
         <div>
-          <p className="mb-1 text-xs font-medium text-gray-600">Reason (shown to the customer)</p>
-          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Goodwill for a late delivery" />
+          <Label htmlFor={`${uid}-note`} className="mb-1.5 block text-xs font-medium text-foreground/80">Reason (shown to the customer)</Label>
+          <Input id={`${uid}-note`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Goodwill for a late delivery" />
         </div>
         <Button onClick={submit} disabled={saving || !amount || !note.trim()}>
-          {saving ? 'Saving…' : 'Apply'}
+          {saving && <Spinner />}
+          {saving ? 'Saving' : 'Apply'}
         </Button>
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-500">Loading…</p>
+        <TableSkeleton rows={3} cols={5} label="Loading reward activity" />
       ) : entries.length === 0 ? (
-        <p className="text-sm text-gray-500">No reward activity yet.</p>
+        <p className="text-sm text-muted-foreground">No reward activity yet.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] text-sm">
             <thead>
-              <tr className="border-b text-left text-xs text-gray-500">
-                <th className="py-2 pr-3">Date</th>
-                <th className="py-2 pr-3">Kind</th>
-                <th className="py-2 pr-3">Note</th>
-                <th className="py-2 pr-3 text-right">Amount</th>
-                <th className="py-2">Status</th>
+              <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                <th scope="col" className="py-2 pr-3 font-medium">Date</th>
+                <th scope="col" className="py-2 pr-3 font-medium">Kind</th>
+                <th scope="col" className="py-2 pr-3 font-medium">Note</th>
+                <th scope="col" className="py-2 pr-3 text-right font-medium">Amount</th>
+                <th scope="col" className="py-2 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -186,17 +185,17 @@ export const RewardsAdminPanel = ({ customerId }: { customerId: string }) => {
                 const status = entryStatus(e, now);
                 const voided = e.status === 'void';
                 return (
-                  <tr key={e.id} className="border-b last:border-0">
-                    <td className="py-2 pr-3 whitespace-nowrap text-gray-500">{fmt(e.createdAtMs)}</td>
+                  <tr key={e.id} className="border-b border-border last:border-0">
+                    <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">{fmt(e.createdAtMs)}</td>
                     <td className="py-2 pr-3 capitalize">{e.kind}</td>
-                    <td className={`py-2 pr-3 ${voided ? 'text-gray-500' : ''}`}>{e.note}</td>
+                    <td className={`py-2 pr-3 ${voided ? 'text-muted-foreground' : ''}`}>{e.note}</td>
                     <td
-                      className={`py-2 pr-3 text-right font-medium whitespace-nowrap ${
+                      className={`whitespace-nowrap py-2 pr-3 text-right font-medium tabular-nums ${
                         voided
-                          ? 'text-gray-500 line-through'
+                          ? 'text-muted-foreground line-through'
                           : e.amount < 0
-                            ? 'text-gray-700'
-                            : 'text-emerald-700 dark:text-emerald-400'
+                            ? 'text-foreground/80'
+                            : 'text-status-success-fg'
                       }`}
                     >
                       {signed(e.amount, e.currency === 'cashback' ? '₹' : 'pts', true)}
@@ -211,6 +210,6 @@ export const RewardsAdminPanel = ({ customerId }: { customerId: string }) => {
           </table>
         </div>
       )}
-    </div>
+    </section>
   );
 };

@@ -340,20 +340,20 @@ const AdminDeliveryBoys = () => {
   return (
     <div className="min-h-screen bg-transparent">
       {/* Header Section */}
-      <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-sm p-6 mb-6">
+      <div className="bg-card border border-border rounded-panel shadow-sm p-6 mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-2">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
               Delivery Boys Management
             </h1>
-            <p className="text-gray-600 dark:text-zinc-400">Create and manage delivery partners</p>
+            <p className="text-foreground/80">Create and manage delivery partners</p>
           </div>
           <Button
             onClick={() => {
               resetForm();
               setShowAddModal(true);
             }}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Delivery Boy
@@ -366,15 +366,15 @@ const AdminDeliveryBoys = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-sm p-6"
+          className="bg-card border border-border rounded-panel shadow-sm p-6"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 dark:text-zinc-400 text-sm">Total Delivery Boys</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-zinc-100 mt-1">{stats.total}</p>
+              <p className="text-foreground/80 text-sm">Total Delivery Boys</p>
+              <p className="text-3xl font-bold text-foreground mt-1">{stats.total}</p>
             </div>
-            <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full">
-              <Users className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+            <div className="bg-muted p-3 rounded-full">
+              <Users className="h-6 w-6 text-primary" />
             </div>
           </div>
         </motion.div>
@@ -383,15 +383,15 @@ const AdminDeliveryBoys = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-sm p-6"
+          className="bg-card border border-border rounded-panel shadow-sm p-6"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 dark:text-zinc-400 text-sm">Active</p>
-              <p className="text-3xl font-bold text-green-600 dark:text-green-400 mt-1">{stats.active}</p>
+              <p className="text-foreground/80 text-sm">Active</p>
+              <p className="text-3xl font-bold text-status-success-fg mt-1">{stats.active}</p>
             </div>
-            <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full">
-              <Power className="h-6 w-6 text-green-600 dark:text-green-300" />
+            <div className="bg-status-success-bg p-3 rounded-full">
+              <Power className="h-6 w-6 text-status-success-fg" />
             </div>
           </div>
         </motion.div>
@@ -400,15 +400,15 @@ const AdminDeliveryBoys = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-sm p-6"
+          className="bg-card border border-border rounded-panel shadow-sm p-6"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 dark:text-zinc-400 text-sm">On Duty</p>
-              <p className="text-3xl font-bold text-highlight dark:text-highlight mt-1">{stats.onDuty}</p>
+              <p className="text-foreground/80 text-sm">On Duty</p>
+              <p className="text-3xl font-bold text-primary mt-1">{stats.onDuty}</p>
             </div>
-            <div className="bg-highlight/15 dark:bg-highlight/8 p-3 rounded-full">
-              <Truck className="h-6 w-6 text-highlight dark:text-highlight" />
+            <div className="bg-primary/15 p-3 rounded-full">
+              <Truck className="h-6 w-6 text-primary" />
             </div>
           </div>
         </motion.div>
@@ -417,28 +417,28 @@ const AdminDeliveryBoys = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-sm p-6"
+          className="bg-card border border-border rounded-panel shadow-sm p-6"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 dark:text-zinc-400 text-sm">Total Deliveries</p>
-              <p className="text-3xl font-bold text-purple-600 dark:text-purple-400 mt-1">
+              <p className="text-foreground/80 text-sm">Total Deliveries</p>
+              <p className="text-3xl font-bold text-status-returns-fg mt-1">
                 {stats.totalDeliveries}
               </p>
             </div>
-            <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-full">
-              <Package className="h-6 w-6 text-purple-600 dark:text-purple-300" />
+            <div className="bg-status-returns-bg p-3 rounded-full">
+              <Package className="h-6 w-6 text-status-returns-fg" />
             </div>
           </div>
         </motion.div>
       </div>
 
       {/* Filters Section */}
-      <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-sm p-4 mb-6">
+      <div className="bg-card border border-border rounded-panel shadow-sm p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-zinc-500" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Search by name, email, or phone..."
@@ -463,16 +463,16 @@ const AdminDeliveryBoys = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex border border-gray-200 dark:border-zinc-700 rounded-md overflow-hidden">
+          <div className="flex border border-border rounded-md overflow-hidden">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800'}`}
+              className={`p-2 ${viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground/80 hover:bg-muted/60 '}`}
             >
               <LayoutGrid className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-2 ${viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800'}`}
+              className={`p-2 ${viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground/80 hover:bg-muted/60 '}`}
             >
               <List className="h-4 w-4" />
             </button>
@@ -482,19 +482,19 @@ const AdminDeliveryBoys = () => {
 
       {/* Delivery Boys View */}
       {loading ? (
-        <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-sm flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" />
+        <div className="bg-card border border-border rounded-panel shadow-sm flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : filteredDeliveryBoys.length === 0 ? (
-        <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-sm">
+        <div className="bg-card border border-border rounded-panel shadow-sm">
           <div className="flex flex-col items-center justify-center py-12">
-            <Users className="h-16 w-16 text-gray-300 dark:text-zinc-700 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-zinc-100 mb-2">
+            <Users className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               {searchQuery || statusFilter !== 'all'
                 ? 'No delivery boys found'
                 : 'No delivery partners added yet'}
             </h3>
-            <p className="text-gray-600 dark:text-zinc-400 mb-4">
+            <p className="text-foreground/80 mb-4">
               {searchQuery || statusFilter !== 'all'
                 ? 'Try adjusting your filters'
                 : 'Start by adding your first delivery partner'}
@@ -505,7 +505,7 @@ const AdminDeliveryBoys = () => {
                   resetForm();
                   setShowAddModal(true);
                 }}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add First Delivery Boy
@@ -521,7 +521,7 @@ const AdminDeliveryBoys = () => {
               key={deliveryBoy.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="group relative bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-xl dark:hover:shadow-zinc-950 transition-all duration-300 hover:-translate-y-0.5 p-5 flex flex-col"
+              className="group relative bg-card border border-border rounded-panel shadow-sm hover:shadow-xl transition-[transform,background-color,color,border-color,box-shadow,opacity] duration-300 hover:-translate-y-0.5 p-5 flex flex-col"
             >
               {/* Top: avatar + name + status pill */}
               <div className="flex items-start gap-3">
@@ -529,19 +529,19 @@ const AdminDeliveryBoys = () => {
                   <SmartImage
                     src={deliveryBoy.profileImage}
                     alt={deliveryBoy.name}
-                    className="h-14 w-14 rounded-full object-cover ring-2 ring-highlight/40 shadow-sm" preset="thumb" />
+                    className="h-14 w-14 rounded-full object-cover ring-2 ring-ring/40 shadow-sm" preset="thumb" />
                 ) : (
-                  <div className="h-14 w-14 rounded-full bg-gradient-to-br from-highlight/20 to-primary/10 dark:from-highlight/8 dark:to-highlight/7 flex items-center justify-center ring-2 ring-highlight/40">
-                    <span className="text-primary dark:text-highlight font-semibold text-lg">
+                  <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
+                    <span className="text-primary font-semibold text-lg">
                       {deliveryBoy.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 truncate">
+                  <h3 className="text-sm font-semibold text-foreground truncate">
                     {deliveryBoy.name}
                   </h3>
-                  <div className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-zinc-400 mt-1">
+                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-1">
                     <span className="text-base mr-0.5">{getVehicleIcon(deliveryBoy.vehicleType)}</span>
                     <span className="capitalize">{deliveryBoy.vehicleType}</span>
                   </div>
@@ -549,13 +549,13 @@ const AdminDeliveryBoys = () => {
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
                     deliveryBoy.isActive
-                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                      : 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400'
+                      ? 'bg-status-success-bg text-status-success-fg '
+                      : 'bg-muted text-foreground/80 '
                   }`}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
-                      deliveryBoy.isActive ? 'bg-green-500' : 'bg-gray-400'
+                      deliveryBoy.isActive ? 'bg-status-success-fg' : 'bg-muted-foreground'
                     }`}
                   />
                   {deliveryBoy.isActive ? 'Active' : 'Inactive'}
@@ -564,46 +564,46 @@ const AdminDeliveryBoys = () => {
 
               {/* Stat tiles */}
               <div className="grid grid-cols-3 gap-2 mt-4">
-                <div className="bg-gray-50 dark:bg-zinc-800/60 rounded-lg p-2 text-center">
-                  <div className="flex items-center justify-center gap-1 text-highlight">
+                <div className="bg-muted/50 rounded-lg p-2 text-center">
+                  <div className="flex items-center justify-center gap-1 text-primary">
                     <Star className="h-3 w-3 fill-current" />
-                    <span className="text-xs font-semibold text-gray-900 dark:text-zinc-100">
+                    <span className="text-xs font-semibold text-foreground">
                       {deliveryBoy.rating.toFixed(1)}
                     </span>
                   </div>
-                  <div className="text-[10px] text-gray-500 dark:text-zinc-500 mt-0.5">Rating</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">Rating</div>
                 </div>
-                <div className="bg-gray-50 dark:bg-zinc-800/60 rounded-lg p-2 text-center">
-                  <div className="text-xs font-semibold text-gray-900 dark:text-zinc-100">
+                <div className="bg-muted/50 rounded-lg p-2 text-center">
+                  <div className="text-xs font-semibold text-foreground">
                     {deliveryBoy.totalDeliveries}
                   </div>
-                  <div className="text-[10px] text-gray-500 dark:text-zinc-500 mt-0.5">Done</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">Done</div>
                 </div>
-                <div className="bg-gray-50 dark:bg-zinc-800/60 rounded-lg p-2 text-center">
-                  <div className="text-xs font-semibold text-gray-900 dark:text-zinc-100">
+                <div className="bg-muted/50 rounded-lg p-2 text-center">
+                  <div className="text-xs font-semibold text-foreground">
                     {deliveryBoy.currentOrdersCount}
                   </div>
-                  <div className="text-[10px] text-gray-500 dark:text-zinc-500 mt-0.5">Active</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">Active</div>
                 </div>
               </div>
 
               {/* Contact rows */}
-              <div className="space-y-1.5 text-xs text-gray-600 dark:text-zinc-300 mt-4">
+              <div className="space-y-1.5 text-xs text-foreground/80 mt-4">
                 <div className="flex items-center gap-2">
-                  <Phone className="h-3 w-3 text-gray-400 dark:text-zinc-500 flex-shrink-0" />
+                  <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                   <span className="truncate">{deliveryBoy.phone}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Mail className="h-3 w-3 text-gray-400 dark:text-zinc-500 flex-shrink-0" />
+                  <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                   <span className="truncate">{deliveryBoy.email}</span>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="pt-4 mt-4 border-t border-gray-100 dark:border-zinc-800 space-y-2">
+              <div className="pt-4 mt-4 border-t border-border space-y-2">
                 <button
                   onClick={() => navigate(`/admin/delivery-boys/${deliveryBoy.id}`)}
-                  className="w-full py-2 text-xs font-medium text-white bg-gradient-to-r from-primary to-primary rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 shadow-sm"
+                  className="w-full py-2 text-xs font-medium text-primary-foreground bg-primary rounded-control hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                 >
                   <UserCheck className="h-3.5 w-3.5" />
                   View Full Profile
@@ -611,7 +611,7 @@ const AdminDeliveryBoys = () => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleEdit(deliveryBoy)}
-                    className="flex-1 py-1.5 text-xs font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center justify-center gap-1"
+                    className="flex-1 py-1.5 text-xs font-medium rounded-lg bg-muted text-primary hover:bg-muted transition-colors flex items-center justify-center gap-1"
                   >
                     <Edit className="h-3.5 w-3.5" /> Edit
                   </button>
@@ -619,8 +619,8 @@ const AdminDeliveryBoys = () => {
                     onClick={() => handleToggleStatus(deliveryBoy)}
                     className={`p-1.5 rounded-lg transition-colors ${
                       deliveryBoy.isActive
-                        ? 'bg-highlight/10 dark:bg-highlight/5 text-highlight dark:text-highlight hover:bg-highlight/15 dark:hover:bg-highlight/10'
-                        : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/40'
+                        ? 'bg-primary/10 text-primary hover:bg-primary/15 '
+                        : 'bg-status-success-bg text-status-success-fg hover:bg-status-success-bg '
                     }`}
                     title={deliveryBoy.isActive ? 'Deactivate' : 'Activate'}
                   >
@@ -628,7 +628,7 @@ const AdminDeliveryBoys = () => {
                   </button>
                   <button
                     onClick={() => { setSelectedDeliveryBoy(deliveryBoy); setShowDeleteDialog(true); }}
-                    className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                    className="p-1.5 rounded-lg bg-status-danger-bg text-status-danger-fg hover:bg-status-danger-bg transition-colors"
                     title="Delete"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -640,68 +640,68 @@ const AdminDeliveryBoys = () => {
         </div>
       ) : (
         /* Table View */
-        <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-card border border-border rounded-panel shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-zinc-800/50 border-b border-gray-200 dark:border-zinc-800">
+              <thead className="bg-muted/50 border-b border-border">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-zinc-400 uppercase tracking-wider">Delivery Boy</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-zinc-400 uppercase tracking-wider">Contact</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-zinc-400 uppercase tracking-wider">Vehicle</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-zinc-400 uppercase tracking-wider">Current Orders</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-zinc-400 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-zinc-400 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/80 uppercase tracking-wider">Delivery Boy</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/80 uppercase tracking-wider">Contact</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/80 uppercase tracking-wider">Vehicle</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/80 uppercase tracking-wider">Current Orders</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/80 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-foreground/80 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-800">
+              <tbody className="bg-card divide-y divide-border">
                 {filteredDeliveryBoys.map((deliveryBoy) => (
-                  <motion.tr key={deliveryBoy.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
+                  <motion.tr key={deliveryBoy.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-muted/60 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
                           {deliveryBoy.profileImage ? (
                             <SmartImage src={deliveryBoy.profileImage} alt={deliveryBoy.name} className="h-10 w-10 rounded-full object-cover" preset="thumb" />
                           ) : (
-                            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                              <span className="text-blue-600 dark:text-blue-300 font-semibold text-sm">{deliveryBoy.name.charAt(0).toUpperCase()}</span>
+                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                              <span className="text-primary font-semibold text-sm">{deliveryBoy.name.charAt(0).toUpperCase()}</span>
                             </div>
                           )}
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900 dark:text-zinc-100">{deliveryBoy.name}</div>
-                          <div className="text-sm text-gray-500 dark:text-zinc-400 flex items-center mt-1">
-                            <Star className="h-3 w-3 text-highlight-soft mr-1 fill-current" />
+                          <div className="text-sm font-medium text-foreground">{deliveryBoy.name}</div>
+                          <div className="text-sm text-muted-foreground flex items-center mt-1">
+                            <Star className="h-3 w-3 text-primary mr-1 fill-current" />
                             {deliveryBoy.rating.toFixed(1)} ({deliveryBoy.totalDeliveries} deliveries)
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 dark:text-zinc-200 flex items-center mb-1"><Mail className="h-3 w-3 mr-2 text-gray-400 dark:text-zinc-500" />{deliveryBoy.email}</div>
-                      <div className="text-sm text-gray-500 dark:text-zinc-400 flex items-center"><Phone className="h-3 w-3 mr-2 text-gray-400 dark:text-zinc-500" />{deliveryBoy.phone}</div>
+                      <div className="text-sm text-foreground flex items-center mb-1"><Mail className="h-3 w-3 mr-2 text-muted-foreground" />{deliveryBoy.email}</div>
+                      <div className="text-sm text-muted-foreground flex items-center"><Phone className="h-3 w-3 mr-2 text-muted-foreground" />{deliveryBoy.phone}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <span className="text-2xl mr-2">{getVehicleIcon(deliveryBoy.vehicleType)}</span>
-                        <span className="text-sm text-gray-900 dark:text-zinc-200 capitalize">{deliveryBoy.vehicleType}</span>
+                        <span className="text-sm text-foreground capitalize">{deliveryBoy.vehicleType}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center"><Package className="h-4 w-4 text-gray-400 dark:text-zinc-500 mr-2" /><span className="text-sm font-semibold text-gray-900 dark:text-zinc-100">{deliveryBoy.currentOrdersCount}</span></div>
+                      <div className="flex items-center"><Package className="h-4 w-4 text-muted-foreground mr-2" /><span className="text-sm font-semibold text-foreground">{deliveryBoy.currentOrdersCount}</span></div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge variant={deliveryBoy.isActive ? 'default' : 'secondary'} className={deliveryBoy.isActive ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-100' : 'bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-zinc-300 hover:bg-gray-100'}>
+                      <Badge variant={deliveryBoy.isActive ? 'default' : 'secondary'} className={deliveryBoy.isActive ? 'bg-status-success-bg text-status-success-fg hover:bg-status-success-bg' : 'bg-muted text-foreground hover:bg-muted'}>
                         {deliveryBoy.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/delivery-boys/${deliveryBoy.id}`)} className="text-indigo-600 dark:text-indigo-300 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"><UserCheck className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(deliveryBoy)} className="text-blue-600 dark:text-blue-300 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30"><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleToggleStatus(deliveryBoy)} className={deliveryBoy.isActive ? 'text-highlight dark:text-highlight hover:text-highlight hover:bg-highlight/10 dark:hover:bg-highlight/8' : 'text-green-600 dark:text-green-300 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/30'}>
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/delivery-boys/${deliveryBoy.id}`)} className="text-primary hover:text-primary hover:bg-muted"><UserCheck className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(deliveryBoy)} className="text-primary hover:text-primary hover:bg-muted"><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleToggleStatus(deliveryBoy)} className={deliveryBoy.isActive ? 'text-primary hover:text-primary hover:bg-primary/10 ' : 'text-status-success-fg hover:text-status-success-fg hover:bg-status-success-bg '}>
                           {deliveryBoy.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => { setSelectedDeliveryBoy(deliveryBoy); setShowDeleteDialog(true); }} className="text-red-600 dark:text-red-300 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => { setSelectedDeliveryBoy(deliveryBoy); setShowDeleteDialog(true); }} className="text-status-danger-fg hover:text-status-danger-fg hover:bg-status-danger-bg"><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </td>
                   </motion.tr>
@@ -737,7 +737,7 @@ const AdminDeliveryBoys = () => {
               {/* Full Name */}
               <div className="space-y-2">
                 <Label htmlFor="name">
-                  Full Name <span className="text-red-500">*</span>
+                  Full Name <span className="text-status-danger-fg">*</span>
                 </Label>
                 <Input
                   id="name"
@@ -752,7 +752,7 @@ const AdminDeliveryBoys = () => {
               {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email">
-                  Email <span className="text-red-500">*</span>
+                  Email <span className="text-status-danger-fg">*</span>
                 </Label>
                 <Input
                   id="email"
@@ -768,7 +768,7 @@ const AdminDeliveryBoys = () => {
               {/* Phone Number */}
               <div className="space-y-2">
                 <Label htmlFor="phone">
-                  Phone Number <span className="text-red-500">*</span>
+                  Phone Number <span className="text-status-danger-fg">*</span>
                 </Label>
                 <Input
                   id="phone"
@@ -783,7 +783,7 @@ const AdminDeliveryBoys = () => {
               {/* Vehicle Type */}
               <div className="space-y-2">
                 <Label htmlFor="vehicleType">
-                  Vehicle Type <span className="text-red-500">*</span>
+                  Vehicle Type <span className="text-status-danger-fg">*</span>
                 </Label>
                 <Select
                   value={formData.vehicleType}
@@ -807,7 +807,7 @@ const AdminDeliveryBoys = () => {
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="password">
-                      Password <span className="text-red-500">*</span>
+                      Password <span className="text-status-danger-fg">*</span>
                     </Label>
                     <div className="relative">
                       <Input
@@ -823,7 +823,7 @@ const AdminDeliveryBoys = () => {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4" />
@@ -836,7 +836,7 @@ const AdminDeliveryBoys = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">
-                      Confirm Password <span className="text-red-500">*</span>
+                      Confirm Password <span className="text-status-danger-fg">*</span>
                     </Label>
                     <div className="relative">
                       <Input
@@ -852,7 +852,7 @@ const AdminDeliveryBoys = () => {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
                         {showConfirmPassword ? (
                           <EyeOff className="h-4 w-4" />
@@ -869,7 +869,7 @@ const AdminDeliveryBoys = () => {
             {/* Address */}
             <div className="space-y-2">
               <Label htmlFor="address">
-                Address <span className="text-red-500">*</span>
+                Address <span className="text-status-danger-fg">*</span>
               </Label>
               <Input
                 id="address"
@@ -896,10 +896,10 @@ const AdminDeliveryBoys = () => {
             </div>
 
             {/* Status Toggle */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
               <div className="space-y-0.5">
                 <Label htmlFor="isActive">Account Status</Label>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   {formData.isActive
                     ? 'Delivery boy can login and receive orders'
                     : 'Account is disabled'}
@@ -930,7 +930,7 @@ const AdminDeliveryBoys = () => {
               </Button>
               <Button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={submitting}
               >
                 {submitting ? (
@@ -957,7 +957,7 @@ const AdminDeliveryBoys = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.4 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black z-40"
+              className="fixed inset-0 bg-charcoal z-40"
               onClick={() => setProfileDeliveryBoy(null)}
             />
             <motion.div
@@ -965,92 +965,92 @@ const AdminDeliveryBoys = () => {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col"
+              className="fixed right-0 top-0 h-full w-full max-w-md bg-card shadow-2xl z-50 flex flex-col"
             >
               {/* Drawer Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card text-foreground">
                 <h2 className="text-lg font-semibold">Delivery Boy Profile</h2>
-                <button onClick={() => setProfileDeliveryBoy(null)} className="p-1 rounded-full hover:bg-white/20 transition-colors">
+                <button onClick={() => setProfileDeliveryBoy(null)} className="p-1 rounded-full hover:bg-muted transition-colors">
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto">
                 {/* Profile Info */}
-                <div className="px-6 py-5 flex items-center gap-4 border-b border-gray-100">
+                <div className="px-6 py-5 flex items-center gap-4 border-b border-border">
                   {profileDeliveryBoy.profileImage ? (
                     <SmartImage src={profileDeliveryBoy.profileImage} alt={profileDeliveryBoy.name} className="h-16 w-16 rounded-full object-cover" preset="thumb" />
                   ) : (
-                    <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-blue-600 text-xl font-bold">{profileDeliveryBoy.name.charAt(0).toUpperCase()}</span>
+                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                      <span className="text-primary text-xl font-bold">{profileDeliveryBoy.name.charAt(0).toUpperCase()}</span>
                     </div>
                   )}
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{profileDeliveryBoy.name}</h3>
-                    <p className="text-sm text-gray-500 capitalize">{profileDeliveryBoy.vehicleType}</p>
+                    <h3 className="text-lg font-semibold text-foreground">{profileDeliveryBoy.name}</h3>
+                    <p className="text-sm text-muted-foreground capitalize">{profileDeliveryBoy.vehicleType}</p>
                     <div className="flex items-center gap-1 mt-1">
-                      <Star className="h-4 w-4 text-highlight-soft fill-current" />
-                      <span className="text-sm font-medium text-gray-700">{profileDeliveryBoy.rating.toFixed(1)}</span>
-                      <span className="text-xs text-gray-400">({profileDeliveryBoy.totalDeliveries} deliveries)</span>
+                      <Star className="h-4 w-4 text-primary fill-current" />
+                      <span className="text-sm font-medium text-foreground/80">{profileDeliveryBoy.rating.toFixed(1)}</span>
+                      <span className="text-xs text-muted-foreground">({profileDeliveryBoy.totalDeliveries} deliveries)</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Contact Info */}
-                <div className="px-6 py-4 space-y-2 border-b border-gray-100">
-                  <div className="flex items-center gap-3 text-sm text-gray-600"><Mail className="h-4 w-4 text-gray-400" />{profileDeliveryBoy.email}</div>
-                  <div className="flex items-center gap-3 text-sm text-gray-600"><Phone className="h-4 w-4 text-gray-400" />{profileDeliveryBoy.phone}</div>
-                  {profileDeliveryBoy.address && <div className="flex items-center gap-3 text-sm text-gray-600"><MapPin className="h-4 w-4 text-gray-400" />{profileDeliveryBoy.address}</div>}
+                <div className="px-6 py-4 space-y-2 border-b border-border">
+                  <div className="flex items-center gap-3 text-sm text-foreground/80"><Mail className="h-4 w-4 text-muted-foreground" />{profileDeliveryBoy.email}</div>
+                  <div className="flex items-center gap-3 text-sm text-foreground/80"><Phone className="h-4 w-4 text-muted-foreground" />{profileDeliveryBoy.phone}</div>
+                  {profileDeliveryBoy.address && <div className="flex items-center gap-3 text-sm text-foreground/80"><MapPin className="h-4 w-4 text-muted-foreground" />{profileDeliveryBoy.address}</div>}
                 </div>
 
                 {/* Stats Row */}
-                <div className="px-6 py-4 grid grid-cols-3 gap-3 border-b border-gray-100">
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <p className="text-xl font-bold text-blue-600">{profileDeliveryBoy.totalDeliveries}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Deliveries</p>
+                <div className="px-6 py-4 grid grid-cols-3 gap-3 border-b border-border">
+                  <div className="text-center p-3 bg-muted rounded-lg">
+                    <p className="text-xl font-bold text-primary">{profileDeliveryBoy.totalDeliveries}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Deliveries</p>
                   </div>
-                  <div className="text-center p-3 bg-highlight/10 rounded-lg">
-                    <p className="text-xl font-bold text-highlight">{profileDeliveryBoy.rating.toFixed(1)}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Avg Rating</p>
+                  <div className="text-center p-3 bg-primary/10 rounded-lg">
+                    <p className="text-xl font-bold text-primary">{profileDeliveryBoy.rating.toFixed(1)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Avg Rating</p>
                   </div>
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <p className="text-xl font-bold text-green-600">{profileDeliveryBoy.currentOrdersCount}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Active</p>
+                  <div className="text-center p-3 bg-status-success-bg rounded-lg">
+                    <p className="text-xl font-bold text-status-success-fg">{profileDeliveryBoy.currentOrdersCount}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Active</p>
                   </div>
                 </div>
 
                 {profileLoading ? (
                   <div className="flex items-center justify-center py-10">
-                    <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
                 ) : (
                   <>
                     {/* Recent Deliveries */}
-                    <div className="px-6 py-4 border-b border-gray-100">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <Package className="h-4 w-4 text-gray-500" />
+                    <div className="px-6 py-4 border-b border-border">
+                      <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                        <Package className="h-4 w-4 text-muted-foreground" />
                         Recent Deliveries ({profileOrders.length})
                       </h4>
                       {profileOrders.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-4">No deliveries yet</p>
+                        <p className="text-sm text-muted-foreground text-center py-4">No deliveries yet</p>
                       ) : (
                         <div className="space-y-2">
                           {profileOrders.slice(0, 10).map((ord) => (
-                            <div key={ord.id} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+                            <div key={ord.id} className="flex items-center justify-between p-2.5 bg-muted/50 rounded-lg">
                               <div>
-                                <p className="text-xs font-medium text-gray-900">ORD-{ord.orderId || ord.id.slice(0, 6).toUpperCase()}</p>
-                                <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                                <p className="text-xs font-medium text-foreground">ORD-{ord.orderId || ord.id.slice(0, 6).toUpperCase()}</p>
+                                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                   <Clock className="h-3 w-3" />
                                   {ord.createdAt?.seconds
                                     ? new Date(ord.createdAt.seconds * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-                                    : '—'}
+                                    : 'None'}
                                 </p>
                               </div>
                               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                                ord.status === 'delivered' ? 'bg-green-100 text-green-700' :
-                                ord.status === 'outForDelivery' ? 'bg-blue-100 text-blue-700' :
-                                ord.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                'bg-gray-100 text-gray-600'
+                                ord.status === 'delivered' ? 'bg-status-success-bg text-status-success-fg' :
+                                ord.status === 'outForDelivery' ? 'bg-muted text-primary' :
+                                ord.status === 'cancelled' ? 'bg-status-danger-bg text-status-danger-fg' :
+                                'bg-muted text-foreground/80'
                               }`}>
                                 {ord.status === 'outForDelivery' ? 'Out for Delivery' : ord.status?.charAt(0).toUpperCase() + ord.status?.slice(1)}
                               </span>
@@ -1062,27 +1062,27 @@ const AdminDeliveryBoys = () => {
 
                     {/* Customer Ratings */}
                     <div className="px-6 py-4">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <Star className="h-4 w-4 text-highlight-soft" />
+                      <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                        <Star className="h-4 w-4 text-primary" />
                         Customer Ratings ({profileRatings.length})
                       </h4>
                       {profileRatings.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-4">No ratings yet</p>
+                        <p className="text-sm text-muted-foreground text-center py-4">No ratings yet</p>
                       ) : (
                         <div className="space-y-3">
                           {profileRatings.map((r) => (
-                            <div key={r.id} className="p-3 border border-gray-100 rounded-lg">
+                            <div key={r.id} className="p-3 border border-border rounded-lg">
                               <div className="flex items-center gap-1 mb-1">
                                 {[1,2,3,4,5].map(n => (
-                                  <Star key={n} className={`h-3.5 w-3.5 ${n <= r.rating ? 'text-highlight-soft fill-current' : 'text-gray-200'}`} />
+                                  <Star key={n} className={`h-3.5 w-3.5 ${n <= r.rating ? 'text-primary fill-current' : 'text-muted-foreground'}`} />
                                 ))}
-                                <span className="text-xs text-gray-400 ml-1">
+                                <span className="text-xs text-muted-foreground ml-1">
                                   {r.createdAt?.seconds
                                     ? new Date(r.createdAt.seconds * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
                                     : ''}
                                 </span>
                               </div>
-                              {r.comment && <p className="text-xs text-gray-600">{r.comment}</p>}
+                              {r.comment && <p className="text-xs text-foreground/80">{r.comment}</p>}
                             </div>
                           ))}
                         </div>
@@ -1111,7 +1111,7 @@ const AdminDeliveryBoys = () => {
             <AlertDialogAction
               onClick={handleDelete}
               disabled={submitting}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
             >
               {submitting ? (
                 <>

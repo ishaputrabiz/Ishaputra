@@ -4,8 +4,7 @@ import {
   Sparkles,
   Copy,
   Check,
-  Loader2,
-  Gem,
+  UserRound,
   Image as ImageIcon,
   Wand2,
   ChevronDown,
@@ -14,10 +13,18 @@ import {
   X,
   Shield,
   Camera,
-  Gift,
+  GalleryHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { IconButton } from '@/components/ui/icon-button';
+import { Spinner } from '@/components/ui/spinner';
+import { Skeleton } from '@/components/ui/skeleton';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { fadeUp } from '@/lib/motion';
+import { formatTime } from '@/lib/format';
 import {
   generateProductModelPrompt,
   generateProductStudioPrompt,
@@ -114,7 +121,7 @@ function ImageDropZone({
       setDragOver(false);
       const file = e.dataTransfer.files[0];
       if (file && file.type.startsWith('image/')) onSelect(file);
-      else toast.error('Please drop an image file');
+      else toast.error('Drop an image file');
     },
     [onSelect]
   );
@@ -128,41 +135,43 @@ function ImageDropZone({
   return (
     <div>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
+        <p className="mb-1.5 block text-sm font-medium text-foreground/80">
+          {label} {required && <span aria-hidden="true" className="text-status-danger-fg">*</span>}
+        </p>
       )}
       {image && preview ? (
-        <div className="relative group rounded-lg border border-cream-dark overflow-hidden bg-gray-50">
-          <SmartImage src={preview} alt="preview" className="w-full h-36 object-contain bg-white" preset="card" />
-          <button
-            type="button"
+        <div className="group relative overflow-hidden rounded-card border border-border bg-muted/50">
+          <SmartImage src={preview} alt="Preview" className="h-36 w-full bg-card object-contain" preset="card" />
+          <IconButton
+            label={`Remove ${label ? label.toLowerCase() : 'image'}`}
+            variant="onPhoto"
+            size="sm"
             onClick={onClear}
-            className="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute right-1.5 top-1.5 opacity-100 transition-opacity duration-hover lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
           >
-            <X className="h-3.5 w-3.5" />
-          </button>
+            <X />
+          </IconButton>
         </div>
       ) : (
-        <div
+        <button
+          type="button"
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
-          className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors ${
+          aria-label={label ? `${label}: drop an image or choose a file` : 'Drop an image or choose a file'}
+          className={`block w-full cursor-pointer rounded-card border-2 border-dashed p-5 text-center transition-colors duration-hover ${
             dragOver
-              ? 'border-highlight bg-highlight/10'
-              : required
-                ? 'border-highlight/45 hover:border-highlight hover:bg-cream/30 bg-cream/10'
-                : 'border-cream-dark hover:border-highlight/70 hover:bg-cream/30'
+              ? 'border-primary bg-primary/10'
+              : 'border-input bg-muted/30 hover:border-primary hover:bg-muted/60'
           }`}
         >
-          <Upload className="h-6 w-6 mx-auto text-gray-400 mb-1.5" />
-          <p className="text-xs text-gray-500">
-            Drop image or <span className="text-highlight font-medium">click to upload</span>
-          </p>
-          {hint && <p className="text-[10px] text-gray-400 mt-1">{hint}</p>}
-        </div>
+          <Upload aria-hidden="true" className="mx-auto mb-1.5 h-6 w-6 text-muted-foreground" />
+          <span className="block text-xs text-muted-foreground">
+            Drop image or <span className="font-medium text-primary">click to upload</span>
+          </span>
+          {hint && <span className="mt-1 block text-xs text-muted-foreground">{hint}</span>}
+        </button>
       )}
       <input
         ref={inputRef}
@@ -170,6 +179,8 @@ function ImageDropZone({
         accept="image/*"
         onChange={handleFileChange}
         className="hidden"
+        tabIndex={-1}
+        aria-hidden="true"
       />
     </div>
   );
@@ -199,7 +210,7 @@ function HeroImageDropZone({
       } else if (files.length === 1 && files[0].type.startsWith('image/')) {
         onSelectSingle(files[0]);
       } else {
-        toast.error('Please drop image files');
+        toast.error('Drop image files');
       }
     },
     [onSelectMultiple, onSelectSingle]
@@ -215,28 +226,30 @@ function HeroImageDropZone({
 
   return (
     <>
-      <div
+      <button
+        type="button"
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+        aria-label="Reference images: drop images or choose files"
+        className={`block w-full cursor-pointer rounded-card border-2 border-dashed p-4 text-center transition-colors duration-hover ${
           dragOver
-            ? 'border-highlight bg-highlight/10'
-            : 'border-cream-dark hover:border-highlight/70 hover:bg-cream/30'
+            ? 'border-primary bg-primary/10'
+            : 'border-input bg-muted/30 hover:border-primary hover:bg-muted/60'
         }`}
       >
-        <Upload className="h-5 w-5 mx-auto text-gray-400 mb-1" />
-        <p className="text-xs text-gray-500">
+        <Upload aria-hidden="true" className="mx-auto mb-1 h-5 w-5 text-muted-foreground" />
+        <span className="block text-xs text-muted-foreground">
           {imageCount === 0
-            ? <>Drop images or <span className="text-highlight font-medium">click to upload</span> (select multiple)</>
-            : <>Add more images — <span className="text-highlight font-medium">click or drop</span></>
+            ? <>Drop images or <span className="text-primary font-medium">click to upload</span> (select multiple)</>
+            : <>Add more images: <span className="text-primary font-medium">click or drop</span></>
           }
-        </p>
-        <p className="text-[10px] text-gray-400 mt-1">
-          Upload products, style references, banner inspiration — AI studies all and creates one banner
-        </p>
-      </div>
+        </span>
+        <span className="mt-1 block text-xs text-muted-foreground">
+          Upload products, style references and banner ideas. AI studies them all and creates one banner
+        </span>
+      </button>
       <input
         ref={inputRef}
         type="file"
@@ -244,6 +257,8 @@ function HeroImageDropZone({
         multiple
         onChange={handleFileChange}
         className="hidden"
+        tabIndex={-1}
+        aria-hidden="true"
       />
     </>
   );
@@ -295,13 +310,13 @@ const AdminImagePrompts = () => {
   // Auto-load contrast-aware logo variants
   useEffect(() => {
     Promise.allSettled([
-      urlToImageInput('/black_logo.png'),
-      urlToImageInput('/white_logo.png'),
+      urlToImageInput('/black_logo_full.png'),
+      urlToImageInput('/white_logo_full.png'),
       urlToImageInput('/logo-new.png'),
     ]).then(([blackResult, whiteResult, fallbackResult]) => {
       if (blackResult.status === 'fulfilled') {
         setBlackLogoImage(blackResult.value);
-        setBlackLogoPreview('/black_logo.png');
+        setBlackLogoPreview('/black_logo_full.png');
       } else if (fallbackResult.status === 'fulfilled') {
         setBlackLogoImage(fallbackResult.value);
         setBlackLogoPreview('/logo-new.png');
@@ -309,7 +324,7 @@ const AdminImagePrompts = () => {
 
       if (whiteResult.status === 'fulfilled') {
         setWhiteLogoImage(whiteResult.value);
-        setWhiteLogoPreview('/white_logo.png');
+        setWhiteLogoPreview('/white_logo_full.png');
       }
     });
   }, []);
@@ -398,20 +413,20 @@ const AdminImagePrompts = () => {
   const activeLogoCount = getLogoImages().length;
 
   const activeLogoStatus = activeLogoCount === 0
-    ? 'No logo loaded. Add black_logo.png / white_logo.png in public or upload a custom logo.'
+    ? 'No logo loaded. Add black_logo_full.png and white_logo_full.png to public, or upload a custom logo.'
     : logoMode === 'auto-contrast'
-      ? `${activeLogoCount} logo reference${activeLogoCount > 1 ? 's' : ''} active — prompts will choose black or white based on the generated background.`
+      ? `${activeLogoCount} logo reference${activeLogoCount > 1 ? 's' : ''} active. Prompts choose black or white to suit the generated background.`
       : logoMode === 'black'
-        ? 'Black logo active — prompts will use it on light or high-contrast backgrounds.'
+        ? 'Black logo active. Prompts use it on light or high-contrast backgrounds.'
         : logoMode === 'white'
-          ? 'White logo active — prompts will use it on dark or rich backgrounds.'
-          : 'Custom logo active — prompts will place the uploaded mark directly without recreating it.';
+          ? 'White logo active. Prompts use it on dark or rich backgrounds.'
+          : 'Custom logo active. Prompts place the uploaded mark directly without recreating it.';
 
   const tabs = [
-    { id: 'product-model' as PromptCategory, label: 'Product + Model', icon: Gem, description: 'Website-ready model product photo' },
-    { id: 'product-studio' as PromptCategory, label: 'Studio Product', icon: Camera, description: 'Clean studio product shots' },
-    { id: 'hero-section' as PromptCategory, label: 'Hero Banners', icon: Gift, description: 'Festival / Offer hero banners' },
-    { id: 'custom' as PromptCategory, label: 'Custom Prompt', icon: Wand2, description: 'Any custom image need' },
+    { id: 'product-model' as PromptCategory, label: 'Product and model', icon: UserRound, description: 'Website-ready model product photo' },
+    { id: 'product-studio' as PromptCategory, label: 'Studio product', icon: Camera, description: 'Clean studio product shots' },
+    { id: 'hero-section' as PromptCategory, label: 'Hero banners', icon: GalleryHorizontal, description: 'Festival and offer hero banners' },
+    { id: 'custom' as PromptCategory, label: 'Custom prompt', icon: Wand2, description: 'Any custom image need' },
   ];
 
   const festivalSuggestions = [
@@ -435,7 +450,7 @@ const AdminImagePrompts = () => {
       switch (activeTab) {
         case 'product-model':
           if (!productImage) {
-            toast.error('Please upload a product image — it\'s required for model shots');
+            toast.error('Upload a product image. Model shots need one.');
             setLoading(false);
             return;
           }
@@ -447,7 +462,7 @@ const AdminImagePrompts = () => {
 
         case 'product-studio':
           if (!productImage) {
-            toast.error('Please upload a product image — it\'s required for studio shots');
+            toast.error('Upload a product image. Studio shots need one.');
             setLoading(false);
             return;
           }
@@ -459,12 +474,12 @@ const AdminImagePrompts = () => {
 
         case 'hero-section':
           if (!festivalOrEvent.trim()) {
-            toast.error('Please enter the festival, event, or offer type');
+            toast.error('Enter the festival, event or offer type');
             setLoading(false);
             return;
           }
           if (!offerTitle.trim()) {
-            toast.error('Please enter the offer title');
+            toast.error('Enter the offer title');
             setLoading(false);
             return;
           }
@@ -477,7 +492,7 @@ const AdminImagePrompts = () => {
           break;
 
         case 'custom':
-          if (!customRequirement.trim()) { toast.error('Please describe your requirement'); setLoading(false); return; }
+          if (!customRequirement.trim()) { toast.error('Describe what you need'); setLoading(false); return; }
           prompt = await generateCustomImagePrompt(
             customRequirement, customImageType,
             referenceImage || productImage || undefined, activeLogoImages, logoMode
@@ -505,10 +520,10 @@ const AdminImagePrompts = () => {
         ...(activeTab === 'hero-section' ? { modelMode: includeModel } : {}),
       }).catch((e) => console.warn('[promptHistory] save failed:', e));
 
-      toast.success('Prompt generated successfully!');
+      toast.success('Prompt generated');
     } catch (error: unknown) {
       console.error('Gemini API error:', error);
-      toast.error(getErrorMessage(error, 'Failed to generate prompt. Please try again.'));
+      toast.error(getErrorMessage(error, 'Could not generate prompt. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -518,10 +533,10 @@ const AdminImagePrompts = () => {
     try {
       await navigator.clipboard.writeText(generatedPrompt);
       setCopied(true);
-      toast.success('Prompt copied to clipboard!');
+      toast.success('Prompt copied');
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error('Failed to copy');
+      toast.error('Could not copy the prompt');
     }
   };
 
@@ -539,7 +554,7 @@ const AdminImagePrompts = () => {
       const refined = await refinePrompt(generatedPrompt, refineText);
       setGeneratedPrompt(refined);
       setRefineText('');
-      toast.success('Prompt refined!');
+      toast.success('Prompt refined');
       const newEntry: GeneratedPrompt = {
         id: Date.now().toString(),
         category: activeTab,
@@ -551,7 +566,7 @@ const AdminImagePrompts = () => {
       savePromptToHistory({ category: activeTab, prompt: refined, inputs: { type: 'Refined' } })
         .catch((e) => console.warn('[promptHistory] save failed:', e));
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to refine prompt'));
+      toast.error(getErrorMessage(error, 'Could not refine prompt'));
     } finally {
       setRefining(false);
     }
@@ -563,7 +578,7 @@ const AdminImagePrompts = () => {
     try {
       const variation = await generateVariationPrompt(generatedPrompt, productImage, getLogoImages(), logoMode);
       setGeneratedPrompt(variation);
-      toast.success('Variation generated — different angle & pose, same background!');
+      toast.success('Variation ready: a new angle and pose on the same background');
       const newEntry: GeneratedPrompt = {
         id: Date.now().toString(),
         category: 'product-model',
@@ -575,117 +590,109 @@ const AdminImagePrompts = () => {
       savePromptToHistory({ category: 'product-model', prompt: variation, inputs: { type: 'Variation' } })
         .catch((e) => console.warn('[promptHistory] save failed:', e));
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to generate variation'));
+      toast.error(getErrorMessage(error, 'Could not generate variation'));
     } finally {
       setVariationLoading(false);
     }
   };
 
-  const inputStyles = "w-full bg-white border border-cream-dark rounded-lg px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-highlight focus:ring-1 focus:ring-highlight/20 transition-colors";
-  const selectStyles = "w-full bg-white border border-cream-dark rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:border-highlight focus:ring-1 focus:ring-highlight/20 transition-colors appearance-none cursor-pointer";
-  const labelStyles = "block text-sm font-medium text-gray-700 mb-1.5";
-  const textareaStyles = "w-full bg-white border border-cream-dark rounded-lg px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-highlight focus:ring-1 focus:ring-highlight/20 transition-colors resize-none";
+  const inputStyles = "h-11 w-full rounded-control border border-input bg-background px-3 text-base text-foreground placeholder:text-muted-foreground transition-colors duration-hover focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:text-sm";
+  const selectStyles = "h-11 w-full cursor-pointer appearance-none rounded-control border border-input bg-background px-3 pr-9 text-base text-foreground transition-colors duration-hover focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:text-sm";
+  const labelStyles = "block text-sm font-medium text-foreground/80 mb-1.5";
+  const textareaStyles = "w-full resize-none rounded-control border border-input bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground transition-colors duration-hover focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:text-sm";
+  /** One look for every option group on this page: a quiet tile, copper outline when picked. */
+  const optionStyles = (on: boolean) =>
+    `rounded-control border px-3 py-2 text-xs font-medium transition-[background-color,border-color,color,transform] duration-press ease-out active:scale-[0.97] ${
+      on ? 'border-primary bg-primary/10 text-foreground' : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground'
+    }`;
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Sparkles className="h-7 w-7 text-highlight" />
-            AI Image Prompt Generator
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Upload your product image → generate reference-locked Nano Banana Pro prompts for product photos and banners
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-gray-400 bg-white px-3 py-1.5 rounded-full border border-cream-dark">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-          Gemini 2.5 Flash
-        </div>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <AdminPageHeader
+        title="AI image prompts"
+        description="Upload a product image, then generate reference-locked Nano Banana Pro prompts for product photos and banners."
+        className="pb-0"
+      >
+        <StatusBadge tone="neutral" label="Gemini 2.5 Flash" dot />
+      </AdminPageHeader>
 
-      {/* Tab Navigation */}
-      <div className="bg-white rounded-xl border border-cream-dark p-1.5 flex flex-wrap gap-1">
+      {/* Tab navigation */}
+      <ToggleGroup
+        type="single"
+        value={activeTab}
+        onValueChange={(v) => { if (!v) return; setActiveTab(v as PromptCategory); setGeneratedPrompt(''); setCopied(false); }}
+        aria-label="Prompt type"
+        className="grid w-full grid-cols-2 sm:grid-cols-4"
+      >
         {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => { setActiveTab(tab.id); setGeneratedPrompt(''); setCopied(false); }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 min-w-[140px] justify-center ${
-              activeTab === tab.id
-                ? 'bg-highlight text-white shadow-sm'
-                : 'text-gray-600 hover:bg-cream hover:text-highlight'
-            }`}
-          >
-            <tab.icon className="h-4 w-4" />
-            <span className="hidden sm:inline">{tab.label}</span>
-            <span className="sm:hidden text-xs">{tab.label.split(' ')[0]}</span>
-          </button>
+          <ToggleGroupItem key={tab.id} value={tab.id} className="min-w-0 gap-2">
+            <tab.icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+            <span className="truncate">{tab.label}</span>
+          </ToggleGroupItem>
         ))}
-      </div>
+      </ToggleGroup>
 
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
         {/* Input Section */}
         <div className="xl:col-span-2 space-y-4">
-          <motion.div
+          <motion.section
             key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className="bg-white rounded-xl border border-cream-dark p-6 space-y-5"
+            {...fadeUp}
+            aria-label={tabs.find(t => t.id === activeTab)?.label}
+            className="space-y-5 rounded-card border border-border bg-card p-4 sm:p-6"
           >
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 bg-highlight/15 rounded-lg flex items-center justify-center">
-                {activeTab === 'product-model' && <Gem className="h-4 w-4 text-highlight" />}
-                {activeTab === 'product-studio' && <Camera className="h-4 w-4 text-highlight" />}
-                {activeTab === 'hero-section' && <Gift className="h-4 w-4 text-highlight" />}
-                {activeTab === 'custom' && <Wand2 className="h-4 w-4 text-highlight" />}
+            <div className="mb-2 flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-control bg-muted text-foreground/70">
+                {activeTab === 'product-model' && <UserRound className="h-4 w-4" />}
+                {activeTab === 'product-studio' && <Camera className="h-4 w-4" />}
+                {activeTab === 'hero-section' && <GalleryHorizontal className="h-4 w-4" />}
+                {activeTab === 'custom' && <Wand2 className="h-4 w-4" />}
               </div>
               <div>
-                <h2 className="font-semibold text-gray-900 text-sm">
+                <h2 className="text-sm font-semibold text-foreground">
                   {tabs.find(t => t.id === activeTab)?.label}
                 </h2>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-muted-foreground">
                   {tabs.find(t => t.id === activeTab)?.description}
                 </p>
               </div>
             </div>
 
-            {/* Product Forms (Model & Studio — only image upload needed) */}
+            {/* Product forms (model and studio: only the image upload is needed) */}
             {(activeTab === 'product-model' || activeTab === 'product-studio') && (
               <>
-                {/* Product Image Upload — REQUIRED */}
+                {/* Product image upload: required */}
                 <ImageDropZone
-                  label="Upload Product Image"
+                  label="Product image"
                   image={productImage}
                   preview={productPreview}
                   onSelect={handleProductImageSelect}
                   onClear={() => { setProductImage(null); setProductPreview(''); }}
-                  hint="Prompt locks this exact product as the source asset — no manual product description needed"
+                  hint="The prompt locks this exact product as the source. No product description needed."
                   required
                 />
 
                 {activeTab === 'product-model' && (
-                  <div className="bg-highlight/10 border border-highlight/30 rounded-lg p-3 space-y-1.5">
-                    <p className="text-xs text-highlight font-semibold">Website Product Page Model Shot</p>
-                    <ul className="text-[11px] text-highlight space-y-0.5 list-disc list-inside">
-                      <li>Premium Indian model — DSLR photographed, not AI-looking</li>
+                  <div className="space-y-1.5 rounded-card border border-border bg-muted/40 p-3">
+                    <p className="text-xs font-semibold text-foreground">Website product page model shot</p>
+                    <ul className="list-inside list-disc space-y-0.5 text-xs text-foreground/80">
+                      <li>Premium Indian model, photographed on a DSLR, not AI-looking</li>
                       <li>Real skin pores, catchlights, hair flyaways, natural imperfections</li>
                       <li>Product stays large, sharp, centered, and inspectable for the product page</li>
                       <li>Your exact uploaded product is treated as the locked source asset</li>
                       <li>Background, pose, lighting, and styling improve without changing the product</li>
-                      <li>After generating, click <strong>"Different Angle / Pose"</strong> for variations</li>
-                      <li>Use <strong>"Refine"</strong> to modify any detail you want changed</li>
+                      <li>After generating, select <strong>New angle or pose</strong> for variations</li>
+                      <li>Use <strong>Refine prompt</strong> to change any detail</li>
                     </ul>
                   </div>
                 )}
                 {activeTab === 'product-studio' && (
-                  <div className="bg-highlight/10 border border-highlight/30 rounded-lg p-3 space-y-1.5">
-                    <p className="text-xs text-highlight font-semibold">Studio Product Photoshoot</p>
-                    <ul className="text-[11px] text-highlight space-y-0.5 list-disc list-inside">
-                      <li>Product-only premium studio shot — no model</li>
-                      <li>Keeps original metal color, stones, beads, pearls, and proportions</li>
-                      <li>Macro-level detail — every texture and engraving razor-sharp</li>
+                  <div className="space-y-1.5 rounded-card border border-border bg-muted/40 p-3">
+                    <p className="text-xs font-semibold text-foreground">Studio product photoshoot</p>
+                    <ul className="list-inside list-disc space-y-0.5 text-xs text-foreground/80">
+                      <li>Product-only premium studio shot, no model</li>
+                      <li>Keeps the original colours, label and proportions</li>
+                      <li>Macro-level detail: every texture and label razor-sharp</li>
                       <li>Premium surface auto-selected to complement the product</li>
                       <li>1:1, 4K, Canon macro lens, focus stacking</li>
                     </ul>
@@ -699,22 +706,24 @@ const AdminImagePrompts = () => {
               <>
                 {/* Multi-Image Upload for Hero */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Reference / Product Images <span className="text-gray-400 text-xs font-normal">(upload multiple)</span>
-                  </label>
+                  <p className="mb-1.5 block text-sm font-medium text-foreground/80">
+                    Reference or product images <span className="text-xs font-normal text-muted-foreground">(upload several)</span>
+                  </p>
                   {heroPreviews.length > 0 && (
                     <div className="grid grid-cols-3 gap-2 mb-2">
                       {heroPreviews.map((preview, idx) => (
-                        <div key={idx} className="relative group rounded-lg border border-cream-dark overflow-hidden bg-gray-50">
-                          <SmartImage src={preview} alt={`ref-${idx + 1}`} className="w-full h-24 object-contain bg-white" preset="card" />
-                          <button
-                            type="button"
+                        <div key={idx} className="group relative overflow-hidden rounded-card border border-border bg-muted/50">
+                          <SmartImage src={preview} alt={`Reference ${idx + 1}`} className="h-24 w-full bg-card object-contain" preset="card" />
+                          <IconButton
+                            label={`Remove image ${idx + 1}`}
+                            variant="onPhoto"
+                            size="sm"
                             onClick={() => handleHeroImageRemove(idx)}
-                            className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute right-1 top-1 opacity-100 transition-opacity duration-hover lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
                           >
-                            <X className="h-3 w-3" />
-                          </button>
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5">
+                            <X />
+                          </IconButton>
+                          <div className="absolute bottom-0 left-0 right-0 bg-charcoal/70 py-0.5 text-center text-[10px] text-charcoal-foreground">
                             Image {idx + 1}
                           </div>
                         </div>
@@ -728,11 +737,11 @@ const AdminImagePrompts = () => {
                   />
                   {heroPreviews.length > 0 && (
                     <div className="flex items-center justify-between mt-1.5">
-                      <p className="text-[10px] text-highlight font-medium">{heroPreviews.length} image{heroPreviews.length > 1 ? 's' : ''} uploaded — AI will study all and create one cohesive banner</p>
+                      <p className="text-xs text-muted-foreground">{heroPreviews.length} image{heroPreviews.length > 1 ? 's' : ''} uploaded. AI studies them all and creates one banner.</p>
                       <button
                         type="button"
                         onClick={() => { setHeroImages([]); setHeroPreviews([]); }}
-                        className="text-[10px] text-red-500 hover:text-red-700"
+                        className="shrink-0 rounded-control px-2 py-1 text-xs font-medium text-status-danger-fg hover:bg-status-danger-bg"
                       >
                         Clear all
                       </button>
@@ -740,12 +749,13 @@ const AdminImagePrompts = () => {
                   )}
                 </div>
                 <div>
-                  <label className={labelStyles}>Festival / Event / Offer Type <span className="text-red-500">*</span></label>
+                  <label htmlFor="ip-event" className={labelStyles}>Festival, event or offer type <span aria-hidden="true" className="text-status-danger-fg">*</span></label>
                   <input
+                    id="ip-event"
                     type="text"
                     value={festivalOrEvent}
                     onChange={(e) => setFestivalOrEvent(e.target.value)}
-                    placeholder="e.g., Diwali Sale, Wedding Season, Monsoon Hair Care..."
+                    placeholder="e.g., Diwali sale, Wedding season, Monsoon hair care"
                     className={inputStyles}
                   />
                   <div className="flex flex-wrap gap-1.5 mt-2">
@@ -754,11 +764,8 @@ const AdminImagePrompts = () => {
                         key={s}
                         type="button"
                         onClick={() => setFestivalOrEvent(s)}
-                        className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
-                          festivalOrEvent === s
-                            ? 'bg-highlight text-white border-highlight'
-                            : 'border-cream-dark text-gray-500 hover:border-highlight/70 hover:text-highlight'
-                        }`}
+                        aria-pressed={festivalOrEvent === s}
+                        className={optionStyles(festivalOrEvent === s) + ' px-2 py-1'}
                       >
                         {s}
                       </button>
@@ -766,21 +773,19 @@ const AdminImagePrompts = () => {
                     <div className="relative group">
                       <button
                         type="button"
-                        className="text-[10px] px-2 py-1 rounded-full border border-cream-dark text-gray-400 hover:text-highlight"
+                        aria-haspopup="true"
+                        className={optionStyles(false) + ' px-2 py-1'}
                       >
-                        More...
+                        More
                       </button>
-                      <div className="absolute bottom-full left-0 mb-1 hidden group-hover:flex flex-wrap gap-1 bg-white border border-cream-dark rounded-lg p-2 shadow-lg z-10 w-64">
+                      <div className="absolute bottom-full left-0 z-popover mb-1 hidden w-64 flex-wrap gap-1 rounded-card border border-border bg-popover p-2 shadow-lg group-focus-within:flex group-hover:flex">
                         {festivalSuggestions.slice(8).map(s => (
                           <button
                             key={s}
                             type="button"
                             onClick={() => setFestivalOrEvent(s)}
-                            className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
-                              festivalOrEvent === s
-                                ? 'bg-highlight text-white border-highlight'
-                                : 'border-cream-dark text-gray-500 hover:border-highlight/70 hover:text-highlight'
-                            }`}
+                            aria-pressed={festivalOrEvent === s}
+                            className={optionStyles(festivalOrEvent === s) + ' px-2 py-1'}
                           >
                             {s}
                           </button>
@@ -790,19 +795,21 @@ const AdminImagePrompts = () => {
                   </div>
                 </div>
                 <div>
-                  <label className={labelStyles}>Banner Headline <span className="text-gray-400 text-xs font-normal">(optional — AI creates one if blank)</span></label>
+                  <label htmlFor="ip-headline" className={labelStyles}>Banner headline <span className="text-muted-foreground text-xs font-normal">(optional, AI writes one if blank)</span></label>
                   <input
+                    id="ip-headline"
                     type="text"
                     value={bannerHeadline}
                     onChange={(e) => setBannerHeadline(e.target.value)}
                     placeholder="e.g., Rituals for a stronger you"
                     className={inputStyles}
                   />
-                  <p className="text-[10px] text-gray-400 mt-1">The emotional tagline rendered on the banner with aesthetic typography</p>
+                  <p className="mt-1 text-xs text-muted-foreground">The emotional tagline rendered on the banner with aesthetic typography</p>
                 </div>
                 <div>
-                  <label className={labelStyles}>Offer Title <span className="text-red-500">*</span></label>
+                  <label htmlFor="ip-offer" className={labelStyles}>Offer title <span aria-hidden="true" className="text-status-danger-fg">*</span></label>
                   <input
+                    id="ip-offer"
                     type="text"
                     value={offerTitle}
                     onChange={(e) => setOfferTitle(e.target.value)}
@@ -811,8 +818,9 @@ const AdminImagePrompts = () => {
                   />
                 </div>
                 <div>
-                  <label className={labelStyles}>Offer Details <span className="text-gray-400 text-xs font-normal">(optional)</span></label>
+                  <label htmlFor="ip-details" className={labelStyles}>Offer details <span className="text-xs font-normal text-muted-foreground">(optional)</span></label>
                   <textarea
+                    id="ip-details"
                     value={offerInfo}
                     onChange={(e) => setOfferInfo(e.target.value)}
                     placeholder="e.g., On all orders above ₹1,499. Valid till 31st Dec."
@@ -821,10 +829,10 @@ const AdminImagePrompts = () => {
                   />
                 </div>
                 <div>
-                  <label className={labelStyles}>Include Model?</label>
+                  <p className={labelStyles}>Include a model?</p>
                   <div className="flex gap-2">
                     {([
-                      { value: 'auto', label: 'AI Decides', desc: 'Recommended' },
+                      { value: 'auto', label: 'AI decides', desc: 'Recommended' },
                       { value: 'yes', label: 'Yes', desc: 'Include model' },
                       { value: 'no', label: 'No', desc: 'Product only' },
                     ] as const).map(opt => (
@@ -832,20 +840,17 @@ const AdminImagePrompts = () => {
                         key={opt.value}
                         type="button"
                         onClick={() => setIncludeModel(opt.value)}
-                        className={`flex-1 text-center px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
-                          includeModel === opt.value
-                            ? 'bg-highlight text-white border-highlight shadow-sm'
-                            : 'border-cream-dark text-gray-500 hover:border-highlight/70 hover:text-highlight'
-                        }`}
+                        aria-pressed={includeModel === opt.value}
+                        className={optionStyles(includeModel === opt.value) + ' flex-1 text-center'}
                       >
-                        <div>{opt.label}</div>
-                        <div className={`text-[10px] font-normal mt-0.5 ${includeModel === opt.value ? 'text-charcoal-foreground' : 'text-gray-400'}`}>{opt.desc}</div>
+                        <span className="block">{opt.label}</span>
+                        <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">{opt.desc}</span>
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className={labelStyles}>Hero Output Format</label>
+                  <p className={labelStyles}>Banner format</p>
                   <div className="grid grid-cols-3 gap-2">
                     {([
                       { value: 'desktop-16:9', label: 'Desktop', desc: '16:9' },
@@ -856,31 +861,28 @@ const AdminImagePrompts = () => {
                         key={opt.value}
                         type="button"
                         onClick={() => setHeroOutputFormat(opt.value)}
-                        className={`text-center px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
-                          heroOutputFormat === opt.value
-                            ? 'bg-highlight text-white border-highlight shadow-sm'
-                            : 'border-cream-dark text-gray-500 hover:border-highlight/70 hover:text-highlight'
-                        }`}
+                        aria-pressed={heroOutputFormat === opt.value}
+                        className={optionStyles(heroOutputFormat === opt.value) + ' text-center'}
                       >
-                        <div>{opt.label}</div>
-                        <div className={`text-[10px] font-normal mt-0.5 ${heroOutputFormat === opt.value ? 'text-charcoal-foreground' : 'text-gray-400'}`}>{opt.desc}</div>
+                        <span className="block">{opt.label}</span>
+                        <span className="mt-0.5 block text-[11px] font-normal tabular-nums text-muted-foreground">{opt.desc}</span>
                       </button>
                     ))}
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-1">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     Mobile banners use the homepage's 4:5 crop; Both asks Nano Banana Pro for two native campaign outputs.
                   </p>
                 </div>
-                <div className="bg-highlight/10 border border-highlight/30 rounded-lg p-3 space-y-1.5">
-                  <p className="text-xs text-highlight font-semibold">Complete Banner Design</p>
-                  <ul className="text-[11px] text-highlight space-y-0.5 list-disc list-inside">
-                    <li><strong>Upload multiple images</strong> — products, references, inspiration. AI studies ALL</li>
+                <div className="space-y-1.5 rounded-card border border-border bg-muted/40 p-3">
+                  <p className="text-xs font-semibold text-foreground">Complete banner design</p>
+                  <ul className="list-inside list-disc space-y-0.5 text-xs text-foreground/80">
+                    <li><strong>Upload several images</strong>: products, references, ideas. AI studies them all</li>
                     <li>Text rendered IN the image with aesthetic typography</li>
                     <li>Offer styled as a premium design element (not plain text)</li>
                     <li>SHOP NOW / CTA button included in the design</li>
                     <li>Logo placed where it fits best (not always bottom-right)</li>
-                    <li>AI decides model vs product-only — both equally premium</li>
-                    <li>Desktop 16:9, mobile 4:5, or both — luxury aesthetic, real DSLR camera quality</li>
+                    <li>AI decides model or product-only, both equally premium</li>
+                    <li>Desktop 16:9, mobile 4:5, or both, with real DSLR camera quality</li>
                   </ul>
                 </div>
               </>
@@ -890,17 +892,17 @@ const AdminImagePrompts = () => {
             {activeTab === 'custom' && (
               <>
                 <ImageDropZone
-                  label="Reference / Product Image (optional)"
+                  label="Reference or product image (optional)"
                   image={referenceImage || productImage}
                   preview={referencePreview || productPreview}
                   onSelect={handleReferenceImageSelect}
                   onClear={() => { setReferenceImage(null); setReferencePreview(''); setProductImage(null); setProductPreview(''); }}
-                  hint="Upload any image — AI will reference it exactly in the prompt"
+                  hint="Upload any image. AI references it exactly in the prompt."
                 />
                 <div>
-                  <label className={labelStyles}>Image Type</label>
+                  <label htmlFor="ip-type" className={labelStyles}>Image type</label>
                   <div className="relative">
-                    <select value={customImageType} onChange={(e) => setCustomImageType(e.target.value)} className={selectStyles}>
+                    <select id="ip-type" value={customImageType} onChange={(e) => setCustomImageType(e.target.value)} className={selectStyles}>
                       <option value="Product Photography">Product Photography</option>
                       <option value="Model Photography">Model Photography</option>
                       <option value="Banner/Hero Image">Banner / Hero Image</option>
@@ -909,20 +911,21 @@ const AdminImagePrompts = () => {
                       <option value="Promotional Image">Promotional Image</option>
                       <option value="Lifestyle Shot">Lifestyle Shot</option>
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   </div>
                 </div>
                 <div>
-                  <label className={labelStyles}>Describe Your Requirement <span className="text-red-500">*</span></label>
+                  <label htmlFor="ip-req" className={labelStyles}>Describe what you need <span aria-hidden="true" className="text-status-danger-fg">*</span></label>
                   <textarea
+                    id="ip-req"
                     value={customRequirement}
                     onChange={(e) => setCustomRequirement(e.target.value)}
-                    placeholder="Describe exactly what you want... e.g., 'A dark apothecary banner with amber bottles and a raw ashwagandha root under warm copper light'"
+                    placeholder="Describe exactly what you want, e.g., ‘A dark apothecary banner with amber bottles and a raw ashwagandha root under warm copper light’"
                     rows={5}
                     className={textareaStyles}
                   />
                 </div>
-                <div className="bg-highlight/10 border border-highlight/30 rounded-lg p-3 text-xs text-highlight">
+                <div className="rounded-card border border-border bg-muted/40 p-3 text-xs text-foreground/80">
                   <strong>Custom:</strong> Any image type. Upload a reference and AI will preserve it exactly while enhancing the scene around it.
                 </div>
               </>
@@ -932,74 +935,62 @@ const AdminImagePrompts = () => {
             <Button
               onClick={handleGenerate}
               disabled={loading}
-              className="w-full bg-highlight hover:bg-highlight text-white py-3 rounded-lg font-medium transition-all shadow-sm"
+              className="w-full"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generating with Gemini 2.5 Flash...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Generate Prompt
-                </>
-              )}
+              {loading ? <Spinner /> : <Sparkles aria-hidden="true" />}
+              {loading ? 'Generating' : 'Generate prompt'}
             </Button>
-          </motion.div>
+          </motion.section>
 
           {/* Logo / Watermark Card */}
-          <div className="bg-white rounded-xl border border-cream-dark p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Shield className="h-4 w-4 text-highlight" />
-              <h3 className="font-semibold text-gray-900 text-sm">Brand Watermark</h3>
+          <section aria-labelledby="ip-watermark" className="rounded-card border border-border bg-card p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Shield aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
+              <h2 id="ip-watermark" className="text-sm font-semibold text-foreground">Brand watermark</h2>
             </div>
             <div className="grid grid-cols-2 gap-2 mb-3">
               {([
-                { value: 'auto-contrast', label: 'Auto Contrast' },
-                { value: 'black', label: 'Black Logo' },
-                { value: 'white', label: 'White Logo' },
+                { value: 'auto-contrast', label: 'Auto contrast' },
+                { value: 'black', label: 'Black logo' },
+                { value: 'white', label: 'White logo' },
                 { value: 'custom', label: 'Custom' },
               ] as const).map(opt => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setLogoMode(opt.value)}
-                  className={`rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
-                    logoMode === opt.value
-                      ? 'bg-highlight text-white border-highlight shadow-sm'
-                      : 'border-cream-dark text-gray-500 hover:border-highlight/70 hover:text-highlight'
-                  }`}
+                  aria-pressed={logoMode === opt.value}
+                  className={optionStyles(logoMode === opt.value)}
                 >
                   {opt.label}
                 </button>
               ))}
             </div>
             {activeLogoPreview && logoMode !== 'custom' && (
-              <div className="mb-3 rounded-lg border border-cream-dark bg-gray-50 p-3">
-                <img src={activeLogoPreview} alt="selected logo" className="h-12 w-full object-contain" />
+              <div className="mb-3 rounded-card border border-border bg-muted/50 p-3">
+                <img src={activeLogoPreview} alt="Selected logo" className="h-12 w-full object-contain" />
               </div>
             )}
             <ImageDropZone
-              label="Custom Logo Upload"
+              label="Custom logo"
               image={logoImage}
               preview={logoPreview}
               onSelect={handleLogoSelect}
               onClear={() => { setLogoImage(null); setLogoPreview(''); }}
-              hint="Optional. Auto mode uses black_logo.png + white_logo.png and lets Nano Banana Pro choose contrast."
+              hint="Optional. Auto mode uses the black and white logos and lets Nano Banana Pro choose the contrast."
             />
-            <p className="text-[10px] text-gray-400 mt-2">
+            <p className="mt-2 text-xs text-muted-foreground">
               {activeLogoStatus}
             </p>
-          </div>
+          </section>
         </div>
 
         {/* Output Section */}
         <div className="xl:col-span-3 space-y-4">
           {/* Generated Prompt Display */}
-          <div className="bg-white rounded-xl border border-cream-dark overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-cream-dark">
-              <h3 className="font-semibold text-gray-900 text-sm">Generated Prompt</h3>
+          <section aria-labelledby="ip-output" className="overflow-hidden rounded-card border border-border bg-card">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 sm:px-6">
+              <h2 id="ip-output" className="text-sm font-semibold text-foreground">Generated prompt</h2>
               <div className="flex items-center gap-2">
                 {generatedPrompt && (
                   <>
@@ -1008,46 +999,36 @@ const AdminImagePrompts = () => {
                       size="sm"
                       onClick={handleGenerate}
                       disabled={loading}
-                      className="text-xs border-cream-dark hover:bg-highlight/10"
                     >
-                      <RefreshCw className={`h-3 w-3 mr-1 ${loading ? 'animate-spin' : ''}`} />
+                      <RefreshCw aria-hidden="true" className={loading ? 'animate-spin' : ''} />
                       Regenerate
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleCopy}
-                      className="text-xs border-cream-dark hover:bg-highlight/10"
                     >
-                      {copied ? (
-                        <>
-                          <Check className="h-3 w-3 mr-1 text-green-600" />
-                          <span className="text-green-600">Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copy
-                        </>
-                      )}
+                      {copied ? <Check aria-hidden="true" className="text-status-success-fg" /> : <Copy aria-hidden="true" />}
+                      {copied ? 'Copied' : 'Copy'}
                     </Button>
                   </>
                 )}
               </div>
             </div>
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-3">
-                  <div className="relative">
-                    <div className="w-12 h-12 border-4 border-highlight/30 border-t-highlight rounded-full animate-spin" />
-                    <Sparkles className="h-5 w-5 text-highlight absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                  </div>
-                  <p className="text-sm text-gray-500">Gemini 2.5 Flash is analyzing your product & crafting the prompt...</p>
+                <div aria-busy="true" className="space-y-3 py-4">
+                  <p className="text-sm text-muted-foreground" role="status">Gemini 2.5 Flash is studying your product and writing the prompt</p>
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-11/12" />
+                  <Skeleton className="h-4 w-4/5" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
                 </div>
               ) : generatedPrompt ? (
                 <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-lg p-4 max-h-[400px] overflow-y-auto">
-                    <pre className="whitespace-pre-wrap text-sm text-gray-800 leading-relaxed font-sans">
+                  <div className="max-h-[400px] overflow-y-auto rounded-card bg-muted/50 p-4">
+                    <pre className="whitespace-pre-wrap text-sm text-foreground leading-relaxed font-sans">
                       {generatedPrompt}
                     </pre>
                   </div>
@@ -1060,148 +1041,136 @@ const AdminImagePrompts = () => {
                         size="sm"
                         onClick={handleVariation}
                         disabled={variationLoading || refining}
-                        className="text-xs border-highlight/45 bg-highlight/10 hover:bg-highlight/15 text-highlight"
                       >
-                        {variationLoading ? (
-                          <>
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                            Generating Variation...
-                          </>
-                        ) : (
-                          <>
-                            <Camera className="h-3 w-3 mr-1" />
-                            Different Angle / Pose
-                          </>
-                        )}
+                        {variationLoading ? <Spinner /> : <Camera aria-hidden="true" />}
+                        {variationLoading ? 'Generating variation' : 'New angle or pose'}
                       </Button>
                     )}
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-muted-foreground">
                       Copy prompt → paste into Nano Banana Pro with the same reference images
                     </span>
                     {(productImage || referenceImage || heroImages.length > 0) && (
-                      <span className="bg-highlight/10 text-highlight px-2 py-0.5 rounded text-xs font-medium">
+                      <span className="rounded-chip bg-muted px-2 py-0.5 text-xs font-medium text-foreground/70">
                         Attach product/reference images alongside the prompt
                       </span>
                     )}
                     {activeTab === 'hero-section' && heroOutputFormat === 'both' && (
-                      <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">
+                      <span className="rounded-chip bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-foreground/70">
                         Expects two outputs: desktop 16:9 + mobile 4:5
                       </span>
                     )}
                   </div>
 
                   {/* Refine Section */}
-                  <div className="border border-cream-dark rounded-lg p-4 space-y-3 bg-cream">
+                  <div className="space-y-3 rounded-card border border-border bg-muted/40 p-4">
                     <div className="flex items-center gap-2">
-                      <Wand2 className="h-4 w-4 text-highlight" />
-                      <h4 className="text-sm font-medium text-gray-800">Refine this prompt</h4>
+                      <Wand2 aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
+                      <h3 className="text-sm font-medium text-foreground">Refine this prompt</h3>
                     </div>
                     <textarea
+                      aria-label="What to change"
                       value={refineText}
                       onChange={(e) => setRefineText(e.target.value)}
-                      placeholder="Tell AI what to change... e.g., 'Make the background darker', 'Change pose to side profile', 'Add more festive elements', 'Make the model look more traditional'"
+                      placeholder="Tell AI what to change, e.g., ‘Make the background darker’ or ‘Change the pose to a side profile’"
                       rows={2}
-                      className="w-full bg-white border border-cream-dark rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-highlight focus:ring-1 focus:ring-highlight/20 transition-colors resize-none"
+                      className="w-full bg-card border border-border rounded-control border-input bg-background px-3 py-2 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 transition-colors duration-hover resize-none md:text-sm"
                     />
                     <Button
                       onClick={handleRefine}
                       disabled={!refineText.trim() || refining || variationLoading}
                       size="sm"
-                      className="bg-highlight hover:bg-highlight text-white text-xs"
                     >
-                      {refining ? (
-                        <>
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          Refining...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-3 w-3 mr-1" />
-                          Refine Prompt
-                        </>
-                      )}
+                      {refining ? <Spinner /> : <Sparkles aria-hidden="true" />}
+                      {refining ? 'Refining' : 'Refine prompt'}
                     </Button>
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
-                  <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center">
-                    <Wand2 className="h-8 w-8 text-gray-300" />
+                <div className="flex flex-col items-center justify-center gap-3 py-16 text-center text-muted-foreground">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-card bg-muted">
+                    <Wand2 aria-hidden="true" className="h-7 w-7 text-muted-foreground" />
                   </div>
-                  <p className="text-sm">Upload your product image, then click "Generate Prompt"</p>
+                  <p className="text-sm">Upload your product image, then select Generate prompt</p>
                   <p className="text-xs">The prompt will lock your uploaded product as the exact source asset</p>
                 </div>
               )}
             </div>
-          </div>
+          </section>
 
           {/* How to use */}
-          <div className="bg-white rounded-xl border border-cream-dark p-6">
-            <h3 className="font-semibold text-gray-900 text-sm mb-3">How to use these prompts</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-600">
+          <section aria-labelledby="ip-howto" className="rounded-card border border-border bg-card p-4 sm:p-6">
+            <h2 id="ip-howto" className="mb-3 text-sm font-semibold text-foreground">How to use these prompts</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-foreground/80">
               <div className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-5 h-5 bg-highlight/15 text-highlight rounded-full flex items-center justify-center font-bold text-[10px]">1</span>
+                <span aria-hidden="true" className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold tabular-nums text-foreground">1</span>
                 <span><strong>Upload</strong> your product image → Gemini builds a prompt that uses it as a locked product reference, not a text description.</span>
               </div>
               <div className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-5 h-5 bg-highlight/15 text-highlight rounded-full flex items-center justify-center font-bold text-[10px]">2</span>
+                <span aria-hidden="true" className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold tabular-nums text-foreground">2</span>
                 <span><strong>Copy</strong> the prompt and paste into Nano Banana Pro. <strong>Attach the same product and logo references</strong> alongside it.</span>
               </div>
               <div className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-5 h-5 bg-highlight/15 text-highlight rounded-full flex items-center justify-center font-bold text-[10px]">3</span>
-                <span>The prompt says <strong>"use the attached product image directly"</strong> — Nano Banana Pro should preserve the original and enhance only the scene.</span>
+                <span aria-hidden="true" className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold tabular-nums text-foreground">3</span>
+                <span>The prompt says <strong>“use the attached product image directly”</strong>, so Nano Banana Pro should preserve the original and enhance only the scene.</span>
               </div>
               <div className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-5 h-5 bg-highlight/15 text-highlight rounded-full flex items-center justify-center font-bold text-[10px]">4</span>
+                <span aria-hidden="true" className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold tabular-nums text-foreground">4</span>
                 <span>Your <strong>logo watermark</strong> can use black or white variants. Auto Contrast asks the prompt to choose based on background readability.</span>
               </div>
             </div>
-          </div>
+          </section>
 
           {/* History */}
           {history.length > 0 && (
-            <div className="bg-white rounded-xl border border-cream-dark overflow-hidden">
+            <div className="bg-card rounded-card border border-border overflow-hidden">
               <button
+                type="button"
                 onClick={() => setShowHistory(!showHistory)}
-                className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
+                aria-expanded={showHistory}
+                className="focus-inset flex w-full items-center justify-between px-4 py-4 transition-colors duration-hover hover:bg-muted/60 sm:px-6"
               >
-                <h3 className="font-semibold text-gray-900 text-sm">
-                  Prompt History ({history.length})
-                </h3>
-                <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showHistory ? 'rotate-180' : ''}`} />
+                <span className="text-sm font-semibold text-foreground">
+                  Prompt history <span className="font-normal tabular-nums text-muted-foreground">({history.length})</span>
+                </span>
+                <ChevronDown aria-hidden="true" className={`h-4 w-4 text-muted-foreground transition-transform duration-dropdown ease-out ${showHistory ? 'rotate-180' : ''}`} />
               </button>
               {showHistory && (
-                <div className="border-t border-cream-dark divide-y divide-cream-dark max-h-[400px] overflow-y-auto">
+                <div className="border-t border-border divide-y divide-border max-h-[400px] overflow-y-auto">
                   {history.map((entry) => (
                     <div
                       key={entry.id}
-                      className="group relative w-full text-left px-6 py-3 hover:bg-cream/50 transition-colors cursor-pointer"
-                      onClick={() => loadFromHistory(entry)}
+                      className="group relative"
                     >
-                      <div className="flex items-center justify-between pr-8">
-                        <span className="text-xs font-medium text-highlight capitalize">
-                          {entry.category.replace('-', ' ')}
-                        </span>
-                        <span className="text-[10px] text-gray-400">
-                          {entry.timestamp.toLocaleTimeString()}
-                        </span>
-                      </div>
                       <button
                         type="button"
+                        onClick={() => loadFromHistory(entry)}
+                        className="focus-inset block w-full px-4 py-3 pr-14 text-left transition-colors duration-hover hover:bg-muted/60 sm:px-6 sm:pr-14"
+                      >
+                      <span className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-medium capitalize text-foreground">
+                          {entry.category.replace('-', ' ')}
+                        </span>
+                        <span className="text-xs tabular-nums text-muted-foreground">
+                          {formatTime(entry.timestamp)}
+                        </span>
+                      </span>
+                      <span className="mt-1 line-clamp-2 block text-xs text-foreground/80">
+                        {entry.prompt.slice(0, 120)}…
+                      </span>
+                      </button>
+                      <IconButton
                         onClick={(e) => {
                           e.stopPropagation();
                           deletePromptFromHistory(entry.id)
                             .then(() => toast.success('Removed from history'))
-                            .catch(() => toast.error('Failed to delete'));
+                            .catch(() => toast.error('Could not remove it'));
                         }}
-                        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-full bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center"
-                        aria-label="Delete from history"
+                        size="sm"
+                        label="Remove from history"
+                        className="absolute right-2 top-2 text-muted-foreground opacity-100 transition-opacity duration-hover hover:text-status-danger-fg lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
                       >
-                        <X className="h-3 w-3" />
-                      </button>
-                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                        {entry.prompt.slice(0, 120)}...
-                      </p>
+                        <X />
+                      </IconButton>
                     </div>
                   ))}
                 </div>

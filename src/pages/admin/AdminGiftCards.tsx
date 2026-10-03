@@ -3,15 +3,27 @@
 // Create, view, and manage user gift cards
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Gift, Search, Plus, X, Loader2, CreditCard, Clock, 
+  Gift, Search, Plus, X, CreditCard, Clock, 
   CheckCircle2, XCircle, Trash2, User, Mail, AlertCircle,
-  IndianRupee, Calendar, RefreshCcw, Copy, Check, LayoutGrid, List
+  IndianRupee, Calendar, RefreshCcw, Copy, Check, LayoutGrid, List, CircleSlash, EyeOff
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { IconButton } from '@/components/ui/icon-button';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { EmptyState } from '@/components/EmptyState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ListSkeleton, StatCardsSkeleton } from '@/components/skeletons';
+import { fadeUp } from '@/lib/motion';
+import { formatDate, formatINR } from '@/lib/format';
 import {
   collection, query, where, getDocs, addDoc, updateDoc, deleteDoc,
   doc, serverTimestamp, collectionGroup, orderBy, Timestamp
@@ -57,6 +69,7 @@ const AdminGiftCards: React.FC = () => {
 
   // Data
   const [giftCards, setGiftCards] = useState<GiftCard[]>([]);
+  const confirmReturnRef = useRef<HTMLElement | null>(null);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -76,6 +89,7 @@ const AdminGiftCards: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'expired' | 'used'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [cardToDelete, setCardToDelete] = useState<GiftCard | null>(null);
 
   // Load users and gift cards
   useEffect(() => {
@@ -104,7 +118,7 @@ const AdminGiftCards: React.FC = () => {
       await loadAllGiftCards(usersSnap.docs, map);
     } catch (error) {
       console.error('Error loading gift card data:', error);
-      toast({ title: 'Error', description: 'Failed to load coupons. Please try again.', variant: 'destructive' });
+      toast({ title: 'Could not load gift cards', description: 'Check your connection and try again.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -177,16 +191,16 @@ const AdminGiftCards: React.FC = () => {
 
   const handleCreateGiftCard = async () => {
     if (!selectedUser) {
-      toast({ title: 'Error', description: 'Please select a user', variant: 'destructive' });
+      toast({ title: 'Choose a customer', description: 'Search for the customer the gift card is for.', variant: 'destructive' });
       return;
     }
     const amount = parseFloat(giftAmount);
     if (!amount || amount <= 0) {
-      toast({ title: 'Error', description: 'Please enter a valid amount', variant: 'destructive' });
+      toast({ title: 'Enter an amount', description: 'The amount must be more than ₹0.', variant: 'destructive' });
       return;
     }
     if (!giftExpiry) {
-      toast({ title: 'Error', description: 'Please set an expiry date', variant: 'destructive' });
+      toast({ title: 'Set an expiry date', variant: 'destructive' });
       return;
     }
 
@@ -210,7 +224,7 @@ const AdminGiftCards: React.FC = () => {
         giftCardData
       );
 
-      toast({ title: 'Success', description: `Gift card ${giftCode} created for ${selectedUser.email}` });
+      toast({ title: 'Gift card issued', description: `${giftCode} for ${selectedUser.email}` });
       
       // Reset form
       setShowForm(false);
@@ -225,7 +239,7 @@ const AdminGiftCards: React.FC = () => {
       await loadAllGiftCards();
     } catch (error) {
       console.error('Error creating gift card:', error);
-      toast({ title: 'Error', description: 'Failed to create gift card', variant: 'destructive' });
+      toast({ title: 'Could not issue the gift card', description: 'Please try again.', variant: 'destructive' });
     } finally {
       setFormLoading(false);
     }
@@ -235,25 +249,23 @@ const AdminGiftCards: React.FC = () => {
     try {
       const cardRef = doc(db, 'users', card.userId, 'giftCards', card.id);
       await updateDoc(cardRef, { isActive: !card.isActive });
-      toast({ title: 'Updated', description: `Gift card ${card.code} ${card.isActive ? 'deactivated' : 'activated'}` });
+      toast({ title: card.isActive ? 'Gift card deactivated' : 'Gift card activated', description: card.code });
       await loadAllGiftCards();
     } catch (error) {
       console.error('Error toggling gift card:', error);
-      toast({ title: 'Error', description: 'Failed to update', variant: 'destructive' });
+      toast({ title: 'Could not update the gift card', description: 'Please try again.', variant: 'destructive' });
     }
   };
 
   const handleDeleteCard = async (card: GiftCard) => {
-    if (!confirm(`Delete gift card ${card.code}? This cannot be undone.`)) return;
-    
     try {
       const cardRef = doc(db, 'users', card.userId, 'giftCards', card.id);
       await deleteDoc(cardRef);
-      toast({ title: 'Deleted', description: `Gift card ${card.code} has been deleted` });
+      toast({ title: 'Gift card deleted', description: card.code });
       await loadAllGiftCards();
     } catch (error) {
       console.error('Error deleting gift card:', error);
-      toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
+      toast({ title: 'Could not delete the gift card', description: 'Please try again.', variant: 'destructive' });
     }
   };
 
@@ -294,365 +306,350 @@ const AdminGiftCards: React.FC = () => {
   const totalValue = giftCards.reduce((sum, c) => sum + c.amount, 0);
   const totalRemaining = giftCards.filter(c => c.isActive && new Date(c.expiryDate) >= new Date()).reduce((sum, c) => sum + c.remainingAmount, 0);
 
+  const header = (
+    <AdminPageHeader
+      title="Gift cards"
+      description="Issue gift cards and track their balances."
+      actions={
+        <Button
+          variant={showForm ? 'outline' : 'default'}
+          onClick={() => setShowForm(!showForm)}
+          aria-expanded={showForm}
+          aria-controls="gift-card-form"
+        >
+          {showForm ? <X aria-hidden="true" /> : <Plus aria-hidden="true" />}
+          {showForm ? 'Cancel' : 'New gift card'}
+        </Button>
+      }
+      className="pb-0"
+    />
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+      <div className="mx-auto max-w-6xl space-y-6">
+        {header}
+        <StatCardsSkeleton count={3} className="grid-cols-1 md:grid-cols-3 lg:grid-cols-3" label="Loading gift cards" />
+        <ListSkeleton rows={3} label="" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Coupons</h1>
-          <p className="text-sm text-gray-500 mt-1">Create and manage coupons for users</p>
-        </div>
-        <Button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-pink-600 hover:bg-pink-700 text-white gap-2"
-        >
-          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {showForm ? 'Cancel' : 'New Coupon'}
-        </Button>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      {header}
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-pink-50 rounded-lg flex items-center justify-center text-pink-600">
-              <Gift className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Active Cards</p>
-              <p className="text-xl font-bold text-gray-900">{totalActive}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
-              <IndianRupee className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Total Issued</p>
-              <p className="text-xl font-bold text-gray-900">₹{totalValue.toLocaleString('en-IN')}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center text-green-600">
-              <CreditCard className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Remaining Balance</p>
-              <p className="text-xl font-bold text-gray-900">₹{totalRemaining.toLocaleString('en-IN')}</p>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        <Stat icon={Gift} label="Active cards" value={String(totalActive)} />
+        <Stat icon={IndianRupee} label="Total issued" value={formatINR(totalValue)} />
+        <Stat icon={CreditCard} label="Remaining balance" value={formatINR(totalRemaining)} />
       </div>
 
-      {/* Create Form */}
-      <AnimatePresence>
+      {/* Create form */}
+      <AnimatePresence initial={false}>
         {showForm && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+          <motion.section
+            id="gift-card-form"
+            aria-labelledby="gift-card-form-title"
+            {...fadeUp}
+            className="space-y-5 rounded-card border border-border bg-card p-5 sm:p-6"
           >
-            <div className="bg-white rounded-xl border-2 border-pink-200 p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Gift className="w-5 h-5 text-pink-600" />
-                Create Coupon
-              </h3>
+            <h2 id="gift-card-form-title" className="flex items-center gap-2 text-base font-semibold text-foreground">
+              <Gift aria-hidden="true" className="h-5 w-5 text-muted-foreground" />
+              Issue a gift card
+            </h2>
 
-              {/* User Search */}
+            {/* User search */}
+            <div className="relative">
+              <Label htmlFor="gc-user" className="mb-1.5 block text-sm font-medium text-foreground/80">Customer</Label>
               <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Select User</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={selectedUser ? `${selectedUser.username || ''} (${selectedUser.email})` : userSearch}
-                    onChange={(e) => {
-                      setUserSearch(e.target.value);
-                      setSelectedUser(null);
-                      setShowUserDropdown(true);
-                    }}
-                    onFocus={() => setShowUserDropdown(true)}
-                    placeholder="Search by email or username..."
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none"
-                  />
-                  {selectedUser && (
-                    <button
-                      onClick={() => { setSelectedUser(null); setUserSearch(''); }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
-                    >
-                      <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-                    </button>
-                  )}
-                </div>
-                
-                {showUserDropdown && !selectedUser && userSearch.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                    {filteredUsers.length > 0 ? filteredUsers.slice(0, 10).map((u) => (
-                      <button
-                        key={u.uid}
-                        onClick={() => {
-                          setSelectedUser(u);
-                          setUserSearch('');
-                          setShowUserDropdown(false);
-                        }}
-                        className="w-full text-left px-4 py-2.5 hover:bg-pink-50 transition-colors flex items-center gap-2 border-b border-gray-50 last:border-0"
-                      >
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-gray-500" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{u.username || 'No name'}</p>
-                          <p className="text-xs text-gray-500">{u.email}</p>
-                        </div>
-                      </button>
-                    )) : (
-                      <p className="px-4 py-3 text-sm text-gray-500">No users found</p>
-                    )}
-                  </div>
+                <User aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="gc-user"
+                  type="text"
+                  role="combobox"
+                  aria-expanded={showUserDropdown && !selectedUser && userSearch.length > 0}
+                  aria-controls="gc-user-list"
+                  aria-autocomplete="list"
+                  autoComplete="off"
+                  value={selectedUser ? `${selectedUser.username || ''} (${selectedUser.email})` : userSearch}
+                  onChange={(e) => {
+                    setUserSearch(e.target.value);
+                    setSelectedUser(null);
+                    setShowUserDropdown(true);
+                  }}
+                  onFocus={() => setShowUserDropdown(true)}
+                  onKeyDown={(e) => e.key === 'Escape' && setShowUserDropdown(false)}
+                  placeholder="Search by email or name"
+                  className="pl-10 pr-12"
+                />
+                {selectedUser && (
+                  <IconButton
+                    label="Clear customer"
+                    size="sm"
+                    onClick={() => { setSelectedUser(null); setUserSearch(''); }}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  >
+                    <X />
+                  </IconButton>
                 )}
               </div>
 
-              {/* Amount + Code */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount (₹)</label>
-                  <div className="relative">
-                    <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="number"
-                      value={giftAmount}
-                      onChange={(e) => setGiftAmount(e.target.value)}
-                      placeholder="1000"
-                      min="1"
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-pink-500 outline-none"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Gift Code</label>
-                  <div className="relative">
-                    <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={giftCode}
-                      onChange={(e) => setGiftCode(e.target.value.toUpperCase())}
-                      className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-pink-500 outline-none"
-                    />
+              {showUserDropdown && !selectedUser && userSearch.length > 0 && (
+                <div id="gc-user-list" role="listbox" className="absolute z-popover mt-1 max-h-60 w-full overflow-y-auto rounded-card border border-border bg-popover text-popover-foreground shadow-lg">
+                  {filteredUsers.length > 0 ? filteredUsers.slice(0, 10).map((u) => (
                     <button
-                      onClick={() => setGiftCode(generateCode())}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
-                      title="Generate new code"
+                      key={u.uid}
+                      type="button"
+                      role="option"
+                      aria-selected={false}
+                      onClick={() => {
+                        setSelectedUser(u);
+                        setUserSearch('');
+                        setShowUserDropdown(false);
+                      }}
+                      className="focus-inset flex w-full items-center gap-3 border-b border-border px-4 py-2.5 text-left transition-colors duration-hover last:border-0 hover:bg-muted"
                     >
-                      <RefreshCcw className="w-4 h-4 text-gray-400 hover:text-pink-600 transition-colors" />
+                      <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground">
+                        {(u.username || u.email || '?').charAt(0).toUpperCase()}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-foreground">{u.username || 'No name'}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{u.email}</span>
+                      </span>
                     </button>
-                  </div>
+                  )) : (
+                    <p className="px-4 py-3 text-sm text-muted-foreground">No customers found</p>
+                  )}
                 </div>
-              </div>
+              )}
+            </div>
 
-              {/* Expiry + Description */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Expiry Date</label>
-                  <input
-                    type="date"
-                    value={giftExpiry}
-                    onChange={(e) => setGiftExpiry(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-pink-500 outline-none"
+            {/* Amount + code */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="gc-amount" className="mb-1.5 block text-sm font-medium text-foreground/80">Amount (₹)</Label>
+                <div className="relative">
+                  <IndianRupee aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="gc-amount"
+                    type="number"
+                    inputMode="decimal"
+                    value={giftAmount}
+                    onChange={(e) => setGiftAmount(e.target.value)}
+                    placeholder="1000"
+                    min="1"
+                    className="pl-10 tabular-nums"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-                  <input
+              </div>
+              <div>
+                <Label htmlFor="gc-code" className="mb-1.5 block text-sm font-medium text-foreground/80">Gift card code</Label>
+                <div className="relative">
+                  <CreditCard aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="gc-code"
                     type="text"
-                    value={giftDescription}
-                    onChange={(e) => setGiftDescription(e.target.value)}
-                    placeholder="e.g. Birthday Gift"
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-pink-500 outline-none"
+                    value={giftCode}
+                    onChange={(e) => setGiftCode(e.target.value.toUpperCase())}
+                    className="pl-10 pr-12 font-mono"
                   />
+                  <IconButton
+                    label="Generate a new code"
+                    tooltip
+                    size="sm"
+                    onClick={() => setGiftCode(generateCode())}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  >
+                    <RefreshCcw />
+                  </IconButton>
                 </div>
               </div>
+            </div>
 
+            {/* Expiry + description */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="gc-expiry" className="mb-1.5 block text-sm font-medium text-foreground/80">Expiry date</Label>
+                <Input
+                  id="gc-expiry"
+                  type="date"
+                  value={giftExpiry}
+                  onChange={(e) => setGiftExpiry(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              <div>
+                <Label htmlFor="gc-desc" className="mb-1.5 block text-sm font-medium text-foreground/80">Description<span className="ml-1 font-normal text-muted-foreground">(optional)</span></Label>
+                <Input
+                  id="gc-desc"
+                  type="text"
+                  value={giftDescription}
+                  onChange={(e) => setGiftDescription(e.target.value)}
+                  placeholder="e.g. Birthday gift"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end">
               <Button
                 onClick={handleCreateGiftCard}
                 disabled={formLoading || !selectedUser || !giftAmount || !giftExpiry}
-                className="w-full bg-pink-600 hover:bg-pink-700 text-white py-3 h-12 rounded-xl gap-2"
+                className="w-full sm:w-auto"
               >
-                {formLoading ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</>
-                ) : (
-                  <><Gift className="w-4 h-4" /> Create Coupon</>
-                )}
+                {formLoading ? <Spinner /> : <Gift aria-hidden="true" />}
+                {formLoading ? 'Issuing' : 'Issue gift card'}
               </Button>
             </div>
-          </motion.div>
+          </motion.section>
         )}
       </AnimatePresence>
 
-      {/* Search, Filter & View Toggle */}
-      <div className="flex gap-3">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
+      {/* Search, filter and view */}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1">
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            aria-label="Search gift cards"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by code, user, or description..."
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-pink-500 outline-none bg-white"
+            placeholder="Search by code, customer or description"
+            className="pl-10"
           />
         </div>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'expired' | 'used')}
-          className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-pink-500 outline-none"
-        >
-          <option value="all">All</option>
-          <option value="active">Active</option>
-          <option value="expired">Expired</option>
-          <option value="used">Used</option>
-        </select>
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            title="Grid view"
+        <div className="flex gap-3">
+          <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as 'all' | 'active' | 'expired' | 'used')}>
+            <SelectTrigger aria-label="Filter gift cards" className="w-full sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
+              <SelectItem value="used">Used up</SelectItem>
+            </SelectContent>
+          </Select>
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={(v) => v && setViewMode(v as 'grid' | 'list')}
+            aria-label="Gift card view"
+            className="h-11 shrink-0"
           >
-            <LayoutGrid className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            title="List view"
-          >
-            <List className="w-4 h-4" />
-          </button>
+            <ToggleGroupItem value="grid" aria-label="Grid view" size="sm" className="w-9 px-0">
+              <LayoutGrid aria-hidden="true" className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="List view" size="sm" className="w-9 px-0">
+              <List aria-hidden="true" className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
       </div>
 
-      {/* Coupons Grid/List */}
-      <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4' : 'space-y-3'}>
+      {/* Gift cards grid/list */}
+      <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3' : 'space-y-3'}>
         {filteredCards.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center col-span-full">
-            <div className="w-16 h-16 bg-gray-50 rounded-full mx-auto mb-4 flex items-center justify-center">
-              <Gift className="w-8 h-8 text-gray-300" />
-            </div>
-            <p className="text-sm font-medium text-gray-700">No coupons found</p>
-            <p className="text-xs text-gray-400 mt-1">Create your first coupon using the button above</p>
+          <div className="col-span-full rounded-card border border-border bg-card px-4 py-12">
+            <EmptyState
+              icon={Gift}
+              title={giftCards.length === 0 ? 'No gift cards yet' : 'No gift cards match'}
+              description={giftCards.length === 0 ? 'Issue one with New gift card.' : 'Try another search or filter.'}
+              action={giftCards.length === 0 && !showForm ? { label: 'New gift card', onClick: () => setShowForm(true) } : undefined}
+            />
           </div>
         ) : (
           filteredCards.map((card) => {
             const expired = new Date(card.expiryDate) < new Date();
             const fullyUsed = card.remainingAmount <= 0;
             const usagePercent = card.amount > 0 ? ((card.amount - card.remainingAmount) / card.amount) * 100 : 0;
+            const muted = expired || fullyUsed || !card.isActive;
 
             return (
               <div
                 key={`${card.userId}-${card.id}`}
-                className={`bg-white rounded-xl border p-5 transition-all ${
-                  expired || fullyUsed || !card.isActive
-                    ? 'border-gray-200 opacity-70'
-                    : 'border-pink-200 hover:shadow-md'
-                }`}
+                className="rounded-card border border-border bg-card p-5"
               >
-                <div className="flex items-start justify-between">
-                  {/* Left: Card info */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        expired ? 'bg-red-50 text-red-500' :
-                        fullyUsed ? 'bg-gray-100 text-gray-400' :
-                        !card.isActive ? 'bg-highlight/10 text-highlight' :
-                        'bg-pink-50 text-pink-600'
-                      }`}>
-                        <Gift className="w-5 h-5" />
+                <div className="flex items-start justify-between gap-3">
+                  {/* Left: card info */}
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex items-center gap-3">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-muted ${muted ? 'text-muted-foreground' : 'text-foreground/70'}`}>
+                        <Gift aria-hidden="true" className="h-5 w-5" />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold font-mono tracking-wider text-gray-900">{card.code}</span>
-                          <button onClick={() => copyCode(card.code)} className="p-0.5">
-                            {copiedCode === card.code ? (
-                              <Check className="w-3.5 h-3.5 text-green-500" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
-                            )}
-                          </button>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="font-mono text-sm font-bold tracking-wider text-foreground">{card.code}</span>
+                          <IconButton label={copiedCode === card.code ? 'Copied' : `Copy code ${card.code}`} size="sm" className="-my-2" onClick={() => copyCode(card.code)}>
+                            {copiedCode === card.code ? <Check className="text-status-success-fg" /> : <Copy />}
+                          </IconButton>
                           {expired ? (
-                            <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">Expired</span>
+                            <StatusBadge tone="danger" icon={XCircle} label="Expired" />
                           ) : fullyUsed ? (
-                            <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full font-medium">Used Up</span>
+                            <StatusBadge tone="neutral" icon={CircleSlash} label="Used up" />
                           ) : !card.isActive ? (
-                            <span className="text-[10px] bg-highlight/15 text-highlight px-1.5 py-0.5 rounded-full font-medium">Inactive</span>
+                            <StatusBadge tone="neutral" icon={EyeOff} label="Inactive" />
                           ) : (
-                            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">Active</span>
+                            <StatusBadge tone="success" icon={CheckCircle2} label="Active" />
                           )}
                         </div>
                         {card.description && (
-                          <p className="text-xs text-gray-500 mt-0.5">{card.description}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">{card.description}</p>
                         )}
                       </div>
                     </div>
 
-                    {/* User info */}
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2 ml-[52px]">
-                      <Mail className="w-3 h-3" />
-                      <span>{card.userEmail || card.userId}</span>
-                      {card.userName && <span className="text-gray-400">({card.userName})</span>}
-                    </div>
+                    <div className="space-y-2 sm:pl-[52px]">
+                      {/* Customer */}
+                      <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                        <Mail aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{card.userEmail || card.userId}</span>
+                        {card.userName && <span className="shrink-0">({card.userName})</span>}
+                      </p>
 
-                    {/* Amount & usage */}
-                    <div className="ml-[52px]">
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-lg font-bold text-gray-900">₹{card.remainingAmount.toLocaleString('en-IN')}</span>
-                        <span className="text-xs text-gray-400">of ₹{card.amount.toLocaleString('en-IN')}</span>
-                      </div>
-                      {card.usedAmount > 0 && (
-                        <div className="w-48">
-                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-pink-500 rounded-full" style={{ width: `${usagePercent}%` }} />
+                      {/* Amount and usage */}
+                      <div>
+                        <p className="flex items-baseline gap-2 tabular-nums">
+                          <span className="text-lg font-semibold text-foreground">{formatINR(card.remainingAmount)}</span>
+                          <span className="text-xs text-muted-foreground">of {formatINR(card.amount)}</span>
+                        </p>
+                        {card.usedAmount > 0 && (
+                          <div className="mt-1 w-48 max-w-full">
+                            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full bg-primary" style={{ width: `${usagePercent}%` }} />
+                            </div>
+                            <p className="mt-1 text-xs tabular-nums text-muted-foreground">{formatINR(card.usedAmount)} used</p>
                           </div>
-                          <p className="text-[10px] text-gray-400 mt-0.5">₹{card.usedAmount.toLocaleString('en-IN')} used</p>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
 
-                    {/* Expiry */}
-                    <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-2 ml-[52px]">
-                      <Calendar className="w-3 h-3" />
-                      <span>Expires {new Date(card.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      {/* Expiry */}
+                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Calendar aria-hidden="true" className="h-3.5 w-3.5" />
+                        <span>Expires {formatDate(new Date(card.expiryDate))}</span>
+                      </p>
                     </div>
                   </div>
 
-                  {/* Right: Actions */}
-                  <div className="flex flex-col gap-2 ml-4">
+                  {/* Right: actions */}
+                  <div className="flex shrink-0 flex-col items-end gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleToggleActive(card)}
-                      className={`text-xs h-8 ${card.isActive ? 'text-highlight border-highlight/30 hover:bg-highlight/10' : 'text-green-600 border-green-200 hover:bg-green-50'}`}
                     >
                       {card.isActive ? 'Deactivate' : 'Activate'}
                     </Button>
-                    <Button
-                      variant="outline"
+                    <IconButton
+                      label={`Delete gift card ${card.code}`}
+                      tooltip="Delete"
                       size="sm"
-                      onClick={() => handleDeleteCard(card)}
-                      className="text-xs h-8 text-red-600 border-red-200 hover:bg-red-50"
+                      className="text-muted-foreground hover:text-status-danger-fg"
+                      onClick={(e) => { confirmReturnRef.current = e.currentTarget; setCardToDelete(card); }}
                     >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                      <Trash2 />
+                    </IconButton>
                   </div>
                 </div>
               </div>
@@ -660,8 +657,31 @@ const AdminGiftCards: React.FC = () => {
           })
         )}
       </div>
+
+      <ConfirmDialog
+        returnFocusRef={confirmReturnRef}
+        open={!!cardToDelete}
+        onOpenChange={(open) => !open && setCardToDelete(null)}
+        title={`Delete gift card ${cardToDelete?.code ?? ''}?`}
+        description="The customer can no longer use its balance. This cannot be undone."
+        confirmLabel="Delete gift card"
+        tone="danger"
+        onConfirm={() => (cardToDelete ? handleDeleteCard(cardToDelete) : undefined)}
+      />
     </div>
   );
 };
+
+const Stat = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) => (
+  <div className="flex flex-col gap-3 rounded-card border border-border bg-card p-3 sm:flex-row sm:items-center sm:p-4">
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-muted text-foreground/70">
+      <Icon aria-hidden="true" className="h-5 w-5" />
+    </div>
+    <div className="min-w-0">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="truncate text-lg font-semibold tabular-nums text-foreground sm:text-xl">{value}</p>
+    </div>
+  </div>
+);
 
 export default AdminGiftCards;

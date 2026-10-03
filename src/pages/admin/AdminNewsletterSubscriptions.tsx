@@ -1,6 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Download, Users, Loader2, Search, Trash2 } from 'lucide-react';
+import { Download, Users, Search, Trash2 } from 'lucide-react';
+import { IconButton } from '@/components/ui/icon-button';
+import { Spinner } from '@/components/ui/spinner';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { EmptyState } from '@/components/EmptyState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { TableSkeleton } from '@/components/skeletons';
+import { staggerDelay } from '@/lib/motion';
+import { formatDate } from '@/lib/format';
 import { toast } from 'sonner';
 import {
   listenNewsletterSubscriptions,
@@ -13,9 +21,11 @@ import { Input } from '@/components/ui/input';
 
 const AdminNewsletterSubscriptions = () => {
   const [subs, setSubs] = useState<NewsletterSubscription[]>([]);
+  const confirmReturnRef = useRef<HTMLElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [toRemove, setToRemove] = useState<NewsletterSubscription | null>(null);
 
   useEffect(() => {
     const unsub = listenNewsletterSubscriptions((data) => {
@@ -29,14 +39,13 @@ const AdminNewsletterSubscriptions = () => {
     s.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleDelete = async (id: string, email: string) => {
-    if (!confirm(`Remove ${email} from newsletter?`)) return;
+  const handleDelete = async (id: string, _email?: string) => {
     setDeleting(id);
     try {
       await deleteDoc(doc(db, 'newsletterSubscriptions', id));
       toast.success('Removed from newsletter');
     } catch {
-      toast.error('Failed to remove');
+      toast.error('Could not remove the email');
     } finally {
       setDeleting(null);
     }
@@ -60,46 +69,37 @@ const AdminNewsletterSubscriptions = () => {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Mail className="w-6 h-6 text-highlight" />
-            Newsletter Subscribers
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Emails collected from the footer newsletter form
-          </p>
-        </div>
-        <Button
-          onClick={handleExportCSV}
-          variant="outline"
-          className="flex items-center gap-2"
-          disabled={filtered.length === 0}
-        >
-          <Download className="w-4 h-4" />
-          Export CSV
-        </Button>
-      </div>
+    <div className="mx-auto max-w-6xl">
+      <AdminPageHeader
+        title="Newsletter subscribers"
+        description="Emails collected from the footer newsletter form."
+        actions={
+          <Button onClick={handleExportCSV} variant="outline" size="sm" disabled={filtered.length === 0}>
+            <Download aria-hidden="true" />
+            Export CSV
+          </Button>
+        }
+      />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-highlight/10 dark:bg-highlight/6 border border-highlight/20 dark:border-highlight/50 rounded-xl p-4">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Subscribers</p>
-          <p className="text-3xl font-bold text-highlight dark:text-highlight mt-1">{subs.length}</p>
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="rounded-card border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Total subscribers</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground sm:text-3xl">{subs.length}</p>
         </div>
-        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 rounded-xl p-4">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Showing</p>
-          <p className="text-3xl font-bold text-blue-700 dark:text-blue-400 mt-1">{filtered.length}</p>
+        <div className="rounded-card border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Showing</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground sm:text-3xl">{filtered.length}</p>
         </div>
       </div>
 
       {/* Search */}
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search emails…"
+          type="search"
+          aria-label="Search emails"
+          placeholder="Search emails"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
@@ -108,57 +108,51 @@ const AdminNewsletterSubscriptions = () => {
 
       {/* List */}
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-highlight" />
-        </div>
+        <TableSkeleton rows={6} cols={3} label="Loading subscribers" />
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground">
-          <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">{search ? 'No matching emails' : 'No subscribers yet'}</p>
+        <div className="rounded-card border border-border bg-card px-4 py-12">
+          <EmptyState
+            icon={search ? Search : Users}
+            title={search ? 'No matching emails' : 'No subscribers yet'}
+            description={search ? 'Try a different search.' : 'Emails from the footer form appear here.'}
+          />
         </div>
       ) : (
-        <div className="rounded-xl border border-border overflow-hidden">
+        <div className="overflow-x-auto rounded-card border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/50">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">#</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Email</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Subscribed</th>
-                <th className="px-4 py-3" />
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"><span className="sr-only">Number</span>#</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Email</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Subscribed</th>
+                <th scope="col" className="px-4 py-3"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((sub, idx) => (
                 <motion.tr
                   key={sub.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.02 }}
-                  className="border-t border-border hover:bg-muted/30 transition-colors"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2, delay: staggerDelay(idx) }}
+                  className="border-t border-border transition-colors duration-hover hover:bg-muted/60"
                 >
-                  <td className="px-4 py-3 text-muted-foreground">{idx + 1}</td>
-                  <td className="px-4 py-3 font-medium">{sub.email}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {sub.subscribedAt?.toDate
-                      ? sub.subscribedAt.toDate().toLocaleDateString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                      : '—'}
+                  <td className="px-4 py-3 tabular-nums text-muted-foreground">{idx + 1}</td>
+                  <td className="break-all px-4 py-3 font-medium text-foreground">{sub.email}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+                    {sub.subscribedAt?.toDate ? formatDate(sub.subscribedAt.toDate()) : 'Unknown'}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => handleDelete(sub.id, sub.email)}
+                  <td className="px-2 py-1.5 text-right">
+                    <IconButton
+                      label={`Remove ${sub.email}`}
+                      tooltip="Remove"
+                      size="sm"
+                      onClick={(e) => { confirmReturnRef.current = e.currentTarget; setToRemove(sub); }}
                       disabled={deleting === sub.id}
-                      className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-muted-foreground hover:text-red-600 transition-colors"
+                      className="text-muted-foreground hover:text-status-danger-fg"
                     >
-                      {deleting === sub.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-4 h-4" />
-                      )}
-                    </button>
+                      {deleting === sub.id ? <Spinner /> : <Trash2 />}
+                    </IconButton>
                   </td>
                 </motion.tr>
               ))}
@@ -166,6 +160,17 @@ const AdminNewsletterSubscriptions = () => {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        returnFocusRef={confirmReturnRef}
+        open={!!toRemove}
+        onOpenChange={(open) => !open && setToRemove(null)}
+        title={`Remove ${toRemove?.email ?? 'this email'}?`}
+        description="They stop getting the newsletter. They can subscribe again from the footer."
+        confirmLabel="Remove"
+        tone="danger"
+        onConfirm={() => (toRemove ? handleDelete(toRemove.id, toRemove.email) : undefined)}
+      />
     </div>
   );
 };

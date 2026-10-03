@@ -34,6 +34,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { IconButton } from '@/components/ui/icon-button';
+import { Notice } from '@/components/ui/notice';
+import { Spinner } from '@/components/ui/spinner';
+import { FormSkeleton } from '@/components/skeletons';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { fadeUp } from '@/lib/motion';
 import {
   getCouponsSettings,
   saveCouponsSettings,
@@ -73,27 +79,32 @@ const Section = ({
   icon?: React.ComponentType<{ className?: string }>;
   children: React.ReactNode;
 }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 14 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.4 }}
-    className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl p-6 shadow-sm"
+  <motion.section
+    {...fadeUp}
+    className="rounded-card border border-border bg-card p-4 shadow-sm sm:p-6"
   >
-    <div className="flex items-center gap-3 mb-5">
+    <div className="mb-5 flex items-center gap-3">
       {Icon && (
-        <div className="w-9 h-9 rounded-lg bg-highlight/10 dark:bg-highlight/5 grid place-items-center text-highlight dark:text-highlight">
-          <Icon className="w-4 h-4" />
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-muted text-foreground/70">
+          <Icon className="h-4 w-4" aria-hidden="true" />
         </div>
       )}
       <div>
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{title}</h3>
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
         {subtitle && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
         )}
       </div>
     </div>
     {children}
-  </motion.div>
+  </motion.section>
+);
+
+/** Loading state for one tab: the panel it will become. */
+const TabSkeleton = ({ label }: { label: string }) => (
+  <div className="rounded-card border border-border bg-card p-4 sm:p-6">
+    <FormSkeleton fields={5} label={label} />
+  </div>
 );
 
 // ─── COUPONS TAB ─────────────────────────────────────────────────────────────
@@ -166,11 +177,7 @@ const CouponsTab = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
-      </div>
-    );
+    return <TabSkeleton label="Loading settings" />;
   }
 
   return (
@@ -184,14 +191,14 @@ const CouponsTab = () => {
           <Button
             type="button"
             onClick={addCoupon}
-            className="bg-highlight hover:bg-highlight text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Plus className="w-4 h-4 mr-1.5" /> Add Coupon
           </Button>
         </div>
 
         {settings.coupons.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
+          <p className="text-sm text-muted-foreground text-center py-8">
             No coupons yet. Click "Add Coupon" to create one.
           </p>
         ) : (
@@ -199,7 +206,7 @@ const CouponsTab = () => {
             {settings.coupons.map((c) => (
               <div
                 key={c.id}
-                className="border border-gray-200 dark:border-gray-800 rounded-xl p-4 bg-gray-50 dark:bg-gray-950"
+                className="border border-border rounded-card p-4 bg-muted/50"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -207,7 +214,7 @@ const CouponsTab = () => {
                       checked={c.active}
                       onCheckedChange={(v) => updateCoupon(c.id, { active: v })}
                     />
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                    <span className="text-xs text-foreground/80">
                       {c.active ? 'Active' : 'Inactive'}
                     </span>
                   </div>
@@ -216,7 +223,7 @@ const CouponsTab = () => {
                     variant="ghost"
                     size="icon"
                     onClick={() => removeCoupon(c.id)}
-                    className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+                    className="text-status-danger-fg hover:bg-status-danger-bg"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -332,7 +339,7 @@ const CouponsTab = () => {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-highlight hover:bg-highlight text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             {saving ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -361,7 +368,7 @@ const DeliveryGstTab = () => {
         setDelivery(d);
         setGst(g);
       } catch (e) {
-        toast.error('Could not load delivery / GST settings', { description: describeError(e) });
+        toast.error('Could not load delivery and GST settings', { description: describeError(e) });
       } finally {
         setLoading(false);
       }
@@ -392,41 +399,39 @@ const DeliveryGstTab = () => {
     setSaving(true);
     try {
       await Promise.all([saveDeliverySettings(delivery), saveGstSettings(gst)]);
-      toast.success('Delivery & GST saved');
+      toast.success('Delivery and GST saved');
     } catch (e) {
       console.error(e);
-      toast.error('Could not save delivery / GST settings', { description: describeError(e) });
+      toast.error('Could not save delivery and GST settings', { description: describeError(e) });
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
-      </div>
-    );
+    return <TabSkeleton label="Loading settings" />;
   }
 
   return (
     <div className="space-y-6">
       <Section
-        title="Delivery Charges"
+        title="Delivery charges"
         subtitle="One universal charge for the whole catalogue, priced by destination state"
         icon={Truck}
       >
         <div className="space-y-5">
-          <div className="flex items-start gap-3 rounded-lg border border-highlight/30 dark:border-highlight/20 bg-highlight/6 dark:bg-highlight/5 p-3">
+          <div className="flex items-start gap-3 rounded-card border border-border bg-muted/40 p-4">
             <Switch
+              id="cs-delivery-on"
+              aria-describedby="cs-delivery-on-hint"
               checked={delivery.enabled}
               onCheckedChange={(v) => updateDelivery('enabled', v)}
             />
             <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <Label htmlFor="cs-delivery-on" className="text-sm font-medium text-foreground">
                 Charge delivery on all products
-              </p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+              </Label>
+              <p id="cs-delivery-on-hint" className="mt-0.5 text-xs text-muted-foreground">
                 Off means free delivery everywhere. A product with its own delivery
                 charges (Products → edit → Delivery) always uses those instead.
               </p>
@@ -435,20 +440,26 @@ const DeliveryGstTab = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label className="text-xs">Ships From (state)</Label>
+              <Label htmlFor="cs-home-state" className="text-xs">Ships from (state)</Label>
               <Input
+                id="cs-home-state"
+                aria-describedby="cs-home-state-hint"
                 value={delivery.homeState}
                 onChange={(e) => updateDelivery('homeState', e.target.value)}
-                placeholder="Andhra Pradesh"
+                placeholder="e.g. Telangana"
                 disabled={!delivery.enabled}
+                className="mt-1.5"
               />
-              <p className="text-[11px] text-gray-500 mt-1">
+              <p id="cs-home-state-hint" className="mt-1.5 text-xs text-muted-foreground">
                 Orders to this state pay the within-state charge.
               </p>
             </div>
             <div>
-              <Label className="text-xs">Within {delivery.homeState || 'home state'} (₹)</Label>
+              <Label htmlFor="cs-within" className="text-xs">Within {delivery.homeState || 'home state'} (₹)</Label>
               <Input
+                id="cs-within"
+                className="mt-1.5 tabular-nums"
+                inputMode="decimal"
                 type="number"
                 min={0}
                 value={delivery.withinStateCharge}
@@ -457,8 +468,11 @@ const DeliveryGstTab = () => {
               />
             </div>
             <div>
-              <Label className="text-xs">Outside {delivery.homeState || 'home state'} (₹)</Label>
+              <Label htmlFor="cs-outside" className="text-xs">Outside {delivery.homeState || 'home state'} (₹)</Label>
               <Input
+                id="cs-outside"
+                className="mt-1.5 tabular-nums"
+                inputMode="decimal"
                 type="number"
                 min={0}
                 value={delivery.outsideStateCharge}
@@ -470,20 +484,26 @@ const DeliveryGstTab = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label className="text-xs">Free Delivery Above (₹)</Label>
+              <Label htmlFor="cs-free-above" className="text-xs">Free delivery above (₹)</Label>
               <Input
+                id="cs-free-above"
+                aria-describedby="cs-free-above-hint"
+                className="mt-1.5 tabular-nums"
+                inputMode="decimal"
                 type="number"
                 min={0}
                 value={delivery.freeDeliveryAbove}
                 onChange={(e) => updateDelivery('freeDeliveryAbove', Number(e.target.value) || 0)}
               />
-              <p className="text-[11px] text-gray-500 mt-1">
+              <p id="cs-free-above-hint" className="mt-1.5 text-xs text-muted-foreground">
                 Set 0 to disable. Applies to every product, including per-product charges.
               </p>
             </div>
             <div>
-              <Label className="text-xs">Estimated Delivery Time</Label>
+              <Label htmlFor="cs-eta" className="text-xs">Estimated delivery time</Label>
               <Input
+                id="cs-eta"
+                className="mt-1.5"
                 value={delivery.estimatedDays ?? ''}
                 onChange={(e) => updateDelivery('estimatedDays', e.target.value)}
                 placeholder="3-5 business days"
@@ -491,16 +511,16 @@ const DeliveryGstTab = () => {
             </div>
           </div>
 
-          <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
+          <div className="border-t border-border pt-4">
             <div className="flex items-start justify-between gap-4 mb-3">
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                <h3 className="text-sm font-semibold text-foreground/80">
                   Per-state rates
-                </h4>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                </h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   Everything ships from {delivery.homeState || 'your home state'}, so a far
                   state costs more than a neighbouring one. A state listed here is charged
-                  exactly this amount and ignores the outside-state rate — including for
+                  exactly this amount and ignores the outside-state rate, including for
                   products with their own delivery charges. Match the state name to what
                   customers pick in their address (e.g. "Delhi", "Kerala").
                 </p>
@@ -511,15 +531,15 @@ const DeliveryGstTab = () => {
                 size="sm"
                 onClick={addStateRate}
                 disabled={!delivery.enabled}
-                className="border-highlight/30 text-highlight hover:bg-highlight/10 shrink-0"
+                className="shrink-0"
               >
-                <Plus className="w-3.5 h-3.5 mr-1" /> Add State
+                <Plus aria-hidden="true" /> Add state
               </Button>
             </div>
 
             {(delivery.stateRates || []).length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 italic">
-                No state overrides — everywhere outside {delivery.homeState || 'the home state'}{' '}
+              <p className="text-xs text-muted-foreground">
+                No state overrides. Everywhere outside {delivery.homeState || 'the home state'}{' '}
                 pays ₹{delivery.outsideStateCharge}.
               </p>
             ) : (
@@ -527,11 +547,13 @@ const DeliveryGstTab = () => {
                 {(delivery.stateRates || []).map((r) => (
                   <div
                     key={r.id}
-                    className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end border border-gray-200 dark:border-gray-800 rounded-lg p-3 bg-gray-50 dark:bg-gray-950"
+                    className="grid grid-cols-[1fr_auto] items-end gap-2 rounded-card border border-border bg-muted/40 p-3 md:grid-cols-12"
                   >
-                    <div className="md:col-span-7">
-                      <Label className="text-xs">State</Label>
+                    <div className="col-span-2 md:col-span-7">
+                      <Label htmlFor={`cs-rate-state-${r.id}`} className="text-xs">State</Label>
                       <Input
+                        id={`cs-rate-state-${r.id}`}
+                        className="mt-1.5"
                         value={r.state}
                         onChange={(e) => updateStateRate(r.id, { state: e.target.value })}
                         placeholder="Delhi"
@@ -539,8 +561,11 @@ const DeliveryGstTab = () => {
                       />
                     </div>
                     <div className="md:col-span-4">
-                      <Label className="text-xs">Charge (₹)</Label>
+                      <Label htmlFor={`cs-rate-charge-${r.id}`} className="text-xs">Charge (₹)</Label>
                       <Input
+                        id={`cs-rate-charge-${r.id}`}
+                        className="mt-1.5 tabular-nums"
+                        inputMode="decimal"
                         type="number"
                         min={0}
                         value={r.charge}
@@ -548,16 +573,14 @@ const DeliveryGstTab = () => {
                         disabled={!delivery.enabled}
                       />
                     </div>
-                    <div className="md:col-span-1 flex justify-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
+                    <div className="flex justify-end md:col-span-1">
+                      <IconButton
+                        label={r.state ? `Remove ${r.state}` : 'Remove this state'}
                         onClick={() => removeStateRate(r.id)}
-                        className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+                        className="text-muted-foreground hover:text-status-danger-fg"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                        <Trash2 />
+                      </IconButton>
                     </div>
                   </div>
                 ))}
@@ -571,16 +594,21 @@ const DeliveryGstTab = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center gap-3">
             <Switch
+              id="cs-gst-on"
               checked={gst.enabled}
               onCheckedChange={(v) => updateGst('enabled', v)}
             />
-            <span className="text-sm">GST enabled</span>
+            <Label htmlFor="cs-gst-on" className="text-sm font-normal text-foreground">GST enabled</Label>
           </div>
           <div>
-            <Label className="text-xs flex items-center gap-1">
-              <Percent className="w-3 h-3" /> Rate (%)
+            <Label htmlFor="cs-gst-rate" className="flex items-center gap-1 text-xs">
+              <Percent aria-hidden="true" className="h-3 w-3" /> Rate (%)
             </Label>
             <Input
+              id="cs-gst-rate"
+              className="mt-1.5 tabular-nums"
+              inputMode="decimal"
+              placeholder="e.g. 12"
               type="number"
               min={0}
               step={0.01}
@@ -591,29 +619,34 @@ const DeliveryGstTab = () => {
           </div>
           <div className="flex items-center gap-3">
             <Switch
+              id="cs-gst-inclusive"
+              aria-describedby="cs-gst-inclusive-hint"
               checked={gst.inclusive}
               onCheckedChange={(v) => updateGst('inclusive', v)}
               disabled={!gst.enabled}
             />
-            <span className="text-sm">Inclusive (price already contains GST)</span>
+            <Label htmlFor="cs-gst-inclusive" className="text-sm font-normal text-foreground">Inclusive (price already contains GST)</Label>
           </div>
           <div className="md:col-span-2 -mt-1">
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            <p id="cs-gst-inclusive-hint" className="text-xs text-muted-foreground">
               Inclusive: checkout shows how much of the price is GST and adds nothing to
               the total. Exclusive: GST is calculated on the subtotal and added on top.
             </p>
           </div>
           <div className="flex items-center gap-3">
             <Switch
+              id="cs-gst-inline"
               checked={gst.displayInline}
               onCheckedChange={(v) => updateGst('displayInline', v)}
               disabled={!gst.enabled}
             />
-            <span className="text-sm">Show GST line at checkout</span>
+            <Label htmlFor="cs-gst-inline" className="text-sm font-normal text-foreground">Show GST line at checkout</Label>
           </div>
           <div className="md:col-span-2">
-            <Label className="text-xs">HSN Code (optional)</Label>
+            <Label htmlFor="cs-hsn" className="text-xs">HSN code <span className="font-normal text-muted-foreground">(optional)</span></Label>
             <Input
+              id="cs-hsn"
+              className="mt-1.5"
               value={gst.hsnCode ?? ''}
               onChange={(e) => updateGst('hsnCode', e.target.value)}
               disabled={!gst.enabled}
@@ -623,17 +656,9 @@ const DeliveryGstTab = () => {
       </Section>
 
       <div className="flex justify-end">
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-highlight hover:bg-highlight text-white"
-        >
-          {saving ? (
-            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-          ) : (
-            <Save className="w-4 h-4 mr-2" />
-          )}
-          Save Delivery & GST
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <Spinner /> : <Save aria-hidden="true" />}
+          Save delivery
         </Button>
       </div>
     </div>
@@ -689,11 +714,7 @@ const SupportTab = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
-      </div>
-    );
+    return <TabSkeleton label="Loading settings" />;
   }
 
   return (
@@ -701,32 +722,34 @@ const SupportTab = () => {
       <Section title="Contact" subtitle="Channels customers see on the support page" icon={HeadphonesIcon}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label className="text-xs flex items-center gap-1">
-              <Phone className="w-3 h-3" /> Phone
+            <Label htmlFor="cs-phone" className="flex items-center gap-1 text-xs">
+              <Phone aria-hidden="true" className="h-3 w-3" /> Phone
             </Label>
-            <Input value={s.phone} onChange={(e) => update('phone', e.target.value)} />
+            <Input id="cs-phone" className="mt-1.5" value={s.phone} onChange={(e) => update('phone', e.target.value)} />
           </div>
           <div>
-            <Label className="text-xs flex items-center gap-1">
-              <Mail className="w-3 h-3" /> Email
+            <Label htmlFor="cs-email" className="flex items-center gap-1 text-xs">
+              <Mail aria-hidden="true" className="h-3 w-3" /> Email
             </Label>
-            <Input value={s.email} onChange={(e) => update('email', e.target.value)} />
+            <Input id="cs-email" className="mt-1.5" value={s.email} onChange={(e) => update('email', e.target.value)} />
           </div>
           <div>
-            <Label className="text-xs flex items-center gap-1">
-              <MessageCircle className="w-3 h-3" /> WhatsApp
+            <Label htmlFor="cs-whatsapp" className="flex items-center gap-1 text-xs">
+              <MessageCircle aria-hidden="true" className="h-3 w-3" /> WhatsApp
             </Label>
-            <Input value={s.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} />
+            <Input id="cs-whatsapp" className="mt-1.5" value={s.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} />
           </div>
           <div>
-            <Label className="text-xs flex items-center gap-1">
-              <Clock className="w-3 h-3" /> Hours
+            <Label htmlFor="cs-hours" className="flex items-center gap-1 text-xs">
+              <Clock aria-hidden="true" className="h-3 w-3" /> Hours
             </Label>
-            <Input value={s.hours} onChange={(e) => update('hours', e.target.value)} />
+            <Input id="cs-hours" className="mt-1.5" value={s.hours} onChange={(e) => update('hours', e.target.value)} />
           </div>
           <div className="md:col-span-2">
-            <Label className="text-xs">Response Time</Label>
+            <Label htmlFor="cs-response" className="text-xs">Response time</Label>
             <Input
+              id="cs-response"
+              className="mt-1.5"
               value={s.responseTime}
               onChange={(e) => update('responseTime', e.target.value)}
               placeholder="Within 24 hours"
@@ -735,45 +758,41 @@ const SupportTab = () => {
         </div>
       </Section>
 
-      <Section title="FAQs" subtitle="Frequently Asked Questions for the support page" icon={HelpCircle}>
-        <div className="flex justify-end mb-4">
-          <Button
-            type="button"
-            onClick={addFaq}
-            className="bg-highlight hover:bg-highlight text-white"
-          >
-            <Plus className="w-4 h-4 mr-1.5" /> Add FAQ
+      <Section title="FAQs" subtitle="Questions and answers on the support page" icon={HelpCircle}>
+        <div className="mb-4 flex justify-end">
+          <Button type="button" variant="outline" size="sm" onClick={addFaq}>
+            <Plus aria-hidden="true" /> Add FAQ
           </Button>
         </div>
         {s.faqs.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
-            No FAQs yet. Click "Add FAQ" to create one.
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No FAQs yet. Add one with Add FAQ.
           </p>
         ) : (
           <div className="space-y-3">
-            {s.faqs.map((f) => (
+            {s.faqs.map((f, i) => (
               <div
                 key={f.id}
-                className="border border-gray-200 dark:border-gray-800 rounded-lg p-3 bg-gray-50 dark:bg-gray-950 space-y-2"
+                className="space-y-2 rounded-card border border-border bg-muted/40 p-3"
               >
                 <div className="flex items-start gap-2">
                   <Input
+                    aria-label={`Question ${i + 1}`}
                     value={f.question}
                     onChange={(e) => updateFaq(f.id, { question: e.target.value })}
                     placeholder="Question"
                     className="font-medium"
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
+                  <IconButton
+                    label={`Remove question ${i + 1}`}
                     onClick={() => removeFaq(f.id)}
-                    className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950 shrink-0"
+                    className="text-muted-foreground hover:text-status-danger-fg"
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                    <Trash2 />
+                  </IconButton>
                 </div>
                 <Textarea
+                  aria-label={`Answer ${i + 1}`}
                   value={f.answer}
                   onChange={(e) => updateFaq(f.id, { answer: e.target.value })}
                   placeholder="Answer"
@@ -786,17 +805,9 @@ const SupportTab = () => {
       </Section>
 
       <div className="flex justify-end">
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-highlight hover:bg-highlight text-white"
-        >
-          {saving ? (
-            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-          ) : (
-            <Save className="w-4 h-4 mr-2" />
-          )}
-          Save Support
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <Spinner /> : <Save aria-hidden="true" />}
+          Save support
         </Button>
       </div>
     </div>
@@ -833,49 +844,33 @@ const RewardsTab = () => {
 
   if (!s && !loadError) {
     return (
-      <div className="py-12 grid place-items-center" role="status">
-        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
-        <span className="sr-only">Loading reward settings</span>
-      </div>
+      <TabSkeleton label="Loading reward settings" />
     );
   }
 
   if (!s) {
     return (
       <Section
-        title="Loyalty points & cashback"
+        title="Loyalty points and cashback"
         subtitle="Placeholder values until the client confirms its loyalty rules."
         icon={Coins}
       >
-        <div
-          role="alert"
-          className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/60 dark:bg-red-950/30 sm:flex-row sm:items-center sm:justify-between mb-5"
+        <Notice
+          tone="danger"
+          title="Could not load the reward settings"
+          className="mb-5"
+          action={
+            <Button type="button" variant="outline" size="sm" onClick={() => setAttempt((n) => n + 1)}>
+              <RefreshCw aria-hidden="true" /> Retry
+            </Button>
+          }
         >
-          <div className="flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-red-700 dark:text-red-400" />
-            <div>
-              <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                Could not load the reward settings
-              </p>
-              <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">{loadError}</p>
-              <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-                Saving stays off until they load, so the current settings cannot be overwritten.
-              </p>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setAttempt((n) => n + 1)}
-            className="shrink-0 gap-1.5 self-start sm:self-auto"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Retry
-          </Button>
-        </div>
-        <Button disabled className="gap-2">
-          <Save className="w-4 h-4" />
-          Save
+          <p>{loadError}</p>
+          <p className="mt-1">Saving stays off until they load, so the current settings cannot be overwritten.</p>
+        </Notice>
+        <Button disabled>
+          <Save aria-hidden="true" />
+          Save rewards
         </Button>
       </Section>
     );
@@ -888,16 +883,19 @@ const RewardsTab = () => {
     step = 1,
   ) => (
     <div>
-      <Label className="text-sm">{label}</Label>
+      <Label htmlFor={`rw-${key}`} className="text-sm">{label}</Label>
       <Input
+        id={`rw-${key}`}
+        aria-describedby={`rw-${key}-hint`}
+        inputMode="decimal"
         type="number"
         step={step}
         min={0}
         value={s[key]}
         onChange={(e) => setS({ ...s, [key]: Number(e.target.value) })}
-        className="mt-1"
+        className="mt-1.5 tabular-nums"
       />
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{hint}</p>
+      <p id={`rw-${key}-hint`} className="mt-1.5 text-xs text-muted-foreground">{hint}</p>
     </div>
   );
 
@@ -924,18 +922,18 @@ const RewardsTab = () => {
 
   return (
     <Section
-      title="Loyalty points & cashback"
+      title="Loyalty points and cashback"
       subtitle="Placeholder values until the client confirms its loyalty rules."
       icon={Coins}
     >
       <div className="flex items-center justify-between gap-4 mb-5">
         <div>
-          <p className="text-sm font-medium text-gray-900 dark:text-white">Rewards on</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <Label htmlFor="rw-enabled" className="text-sm font-medium text-foreground">Rewards on</Label>
+          <p id="rw-enabled-hint" className="text-xs text-muted-foreground">
             Off hides the checkout toggles and stops new points. Balances are kept.
           </p>
         </div>
-        <Switch checked={s.enabled} onCheckedChange={(v) => setS({ ...s, enabled: v })} />
+        <Switch id="rw-enabled" aria-describedby="rw-enabled-hint" checked={s.enabled} onCheckedChange={(v) => setS({ ...s, enabled: v })} />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
         {field('pointsPer100', 'Points per ₹100 spent', 'On products paid for, once the order is delivered.')}
@@ -943,36 +941,34 @@ const RewardsTab = () => {
         {field('unlockDays', 'Days until points unlock', 'Match the return window.')}
         {field('maxPointsPercent', 'Max % of products payable with points', 'Wallet cashback has no cap.')}
       </div>
-      <Button onClick={save} disabled={saving || !s} className="gap-2">
-        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-        Save
-      </Button>
+      <div className="flex justify-end">
+        <Button onClick={save} disabled={saving || !s}>
+          {saving ? <Spinner /> : <Save aria-hidden="true" />}
+          Save rewards
+        </Button>
+      </div>
     </Section>
   );
 };
 
 const AdminCommerceSettings = () => {
   return (
-    <div className="admin-panel max-w-5xl mx-auto p-4 md:p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-          Commerce Settings
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Manage delivery, GST, customer support and rewards — applied site-wide at checkout.
-        </p>
-      </div>
+    <div className="mx-auto max-w-6xl [&>*]:max-w-4xl">
+      <AdminPageHeader
+        title="Commerce settings"
+        description="Delivery, GST, customer support and rewards. Rewards are applied site-wide."
+      />
 
       <Tabs defaultValue="delivery" className="w-full">
-        <TabsList className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 p-1 rounded-xl mb-6">
+        <TabsList className="mb-6 w-full justify-start overflow-x-auto sm:w-auto">
           <TabsTrigger value="delivery" className="gap-1.5">
-            <Truck className="w-4 h-4" /> Delivery & GST
+            <Truck aria-hidden="true" className="h-4 w-4" /> Delivery and GST
           </TabsTrigger>
           <TabsTrigger value="support" className="gap-1.5">
-            <HeadphonesIcon className="w-4 h-4" /> Support
+            <HeadphonesIcon aria-hidden="true" className="h-4 w-4" /> Support
           </TabsTrigger>
           <TabsTrigger value="rewards" className="gap-1.5">
-            <Coins className="w-4 h-4" /> Rewards
+            <Coins aria-hidden="true" className="h-4 w-4" /> Rewards
           </TabsTrigger>
         </TabsList>
 

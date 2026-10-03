@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
-  Loader2,
   Plus,
   Trash2,
   Save,
@@ -10,10 +9,19 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
-  Sparkles,
   ArrowUp,
   ArrowDown,
+  Star,
 } from 'lucide-react';
+import { IconButton } from '@/components/ui/icon-button';
+import { Spinner } from '@/components/ui/spinner';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { EmptyState } from '@/components/EmptyState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { MediaGridSkeleton } from '@/components/skeletons';
+import { fadeUp, staggerDelay } from '@/lib/motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +34,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   subscribeHomeVideos,
@@ -63,11 +72,11 @@ const VideoForm = ({
 
   const handleSave = async () => {
     if (!videoId) {
-      toast.error('Please paste a valid YouTube URL');
+      toast.error('Paste a YouTube link');
       return;
     }
     if (!title.trim()) {
-      toast.error('Title is required');
+      toast.error('Add a title');
       return;
     }
     setSaving(true);
@@ -85,7 +94,7 @@ const VideoForm = ({
       };
       if (initial?.id) {
         await updateHomeVideo(initial.id, payload);
-        toast.success('Video updated');
+        toast.success('Video saved');
       } else {
         await createHomeVideo(payload);
         toast.success('Video added');
@@ -94,7 +103,7 @@ const VideoForm = ({
       closeDialog();
     } catch (err) {
       console.error(err);
-      toast.error('Failed to save');
+      toast.error('Could not save the video');
     } finally {
       setSaving(false);
     }
@@ -103,31 +112,34 @@ const VideoForm = ({
   return (
     <div className="space-y-4">
       <div>
-        <Label className="text-xs text-gray-500">YouTube URL</Label>
+        <Label htmlFor="vd-url" className="text-xs font-medium text-foreground/80">YouTube URL</Label>
         <Input
+          id="vd-url"
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           placeholder="https://www.youtube.com/watch?v=..."
           className="mt-1.5"
         />
         {videoId && (
-          <div className="mt-3 aspect-video rounded-lg overflow-hidden border">
-            <SmartImage src={thumb} alt="Preview" className="w-full h-full object-cover" preset="tile" />
+          <div className="mt-3 aspect-video overflow-hidden rounded-card border border-border">
+            <SmartImage src={thumb} alt="Preview" className="h-full w-full object-cover" preset="tile" />
           </div>
         )}
       </div>
       <div>
-        <Label className="text-xs text-gray-500">Title</Label>
+        <Label htmlFor="vd-title" className="text-xs font-medium text-foreground/80">Title</Label>
         <Input
+          id="vd-title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="The Atelier Story"
+          placeholder="e.g., How we make our hair oil"
           className="mt-1.5"
         />
       </div>
       <div>
-        <Label className="text-xs text-gray-500">Description</Label>
+        <Label htmlFor="vd-desc" className="text-xs font-medium text-foreground/80">Description</Label>
         <Textarea
+          id="vd-desc"
           rows={3}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -137,80 +149,60 @@ const VideoForm = ({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label className="text-xs text-gray-500">Display order</Label>
+          <Label htmlFor="vd-order" className="text-xs font-medium text-foreground/80">Display order</Label>
           <Input
+            id="vd-order"
+            inputMode="numeric"
             type="number"
             value={order}
             onChange={(e) => setOrder(Number(e.target.value))}
-            className="mt-1.5"
+            className="mt-1.5 tabular-nums"
           />
         </div>
-        <div className="flex items-end gap-2">
-          <Switch checked={active} onCheckedChange={setActive} />
-          <span className="text-sm text-gray-600 dark:text-gray-300">
+        <div className="flex items-end gap-2 pb-2.5">
+          <Switch id="vd-active" checked={active} onCheckedChange={setActive} />
+          <Label htmlFor="vd-active" className="text-sm font-normal text-foreground/80">
             {active ? 'Visible' : 'Hidden'}
-          </span>
+          </Label>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <Label className="text-xs text-gray-500">Aspect ratio</Label>
-          <div className="mt-1.5 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setAspectRatio('16:9')}
-              className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                aspectRatio === '16:9'
-                  ? 'border-highlight bg-highlight/10 text-highlight dark:bg-highlight/5 dark:text-highlight'
-                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-              }`}
-            >
-              <span className="block text-[10px] uppercase tracking-wider opacity-70">Landscape</span>
-              16 : 9
-            </button>
-            <button
-              type="button"
-              onClick={() => setAspectRatio('9:16')}
-              className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                aspectRatio === '9:16'
-                  ? 'border-highlight bg-highlight/10 text-highlight dark:bg-highlight/5 dark:text-highlight'
-                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-              }`}
-            >
-              <span className="block text-[10px] uppercase tracking-wider opacity-70">Portrait</span>
-              9 : 16
-            </button>
-          </div>
-          <p className="mt-1.5 text-[11px] text-gray-400">
-            Choose the upload's true ratio so it plays inline without black bars.
+          <p id="vd-ratio-label" className="text-xs font-medium text-foreground/80">Aspect ratio</p>
+          <ToggleGroup
+            type="single"
+            value={aspectRatio}
+            onValueChange={(v) => v && setAspectRatio(v as '16:9' | '9:16')}
+            aria-labelledby="vd-ratio-label"
+            className="mt-1.5 grid grid-cols-2"
+          >
+            <ToggleGroupItem value="16:9" size="sm" className="tabular-nums">Landscape 16:9</ToggleGroupItem>
+            <ToggleGroupItem value="9:16" size="sm" className="tabular-nums">Portrait 9:16</ToggleGroupItem>
+          </ToggleGroup>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Choose the video&rsquo;s true ratio so it plays without black bars.
           </p>
         </div>
         <div className="flex flex-col">
-          <Label className="text-xs text-gray-500">Featured</Label>
-          <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-            <Switch checked={featured} onCheckedChange={setFeatured} />
-            <span className="text-sm text-gray-700 dark:text-gray-200">
-              {featured ? 'Show in featured spotlight' : 'Hide from featured area'}
-            </span>
+          <p className="text-xs font-medium text-foreground/80">Featured</p>
+          <div className="mt-1.5 flex min-h-11 items-center gap-2 rounded-control border border-border px-3 py-2">
+            <Switch id="vd-featured" checked={featured} onCheckedChange={setFeatured} />
+            <Label htmlFor="vd-featured" className="text-sm font-normal text-foreground/80">
+              {featured ? 'Show in featured spotlight' : 'Not featured'}
+            </Label>
           </div>
-          <p className="mt-1.5 text-[11px] text-gray-400">
-            Only featured videos appear in the home‑page hero. Leave off otherwise.
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Only featured videos appear in the home page hero.
           </p>
         </div>
       </div>
 
-      <DialogFooter className="pt-2">
-        <Button onClick={handleSave} disabled={saving} className="bg-highlight hover:bg-highlight text-white">
-          {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving…
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4 mr-2" /> Save
-            </>
-          )}
+      <DialogFooter className="gap-2 pt-2">
+        <Button variant="outline" onClick={closeDialog} disabled={saving}>Cancel</Button>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <Spinner /> : <Save aria-hidden="true" />}
+          {saving ? 'Saving' : 'Save video'}
         </Button>
       </DialogFooter>
     </div>
@@ -222,6 +214,8 @@ const AdminVideos = () => {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<HomeVideo | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<HomeVideo | null>(null);
+  const confirmReturnRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const unsub = subscribeHomeVideos((vids) => {
@@ -232,12 +226,11 @@ const AdminVideos = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this video?')) return;
     try {
       await deleteHomeVideo(id);
-      toast.success('Deleted');
+      toast.success('Video deleted');
     } catch {
-      toast.error('Failed to delete');
+      toast.error('Could not delete the video');
     }
   };
 
@@ -247,118 +240,122 @@ const AdminVideos = () => {
     try {
       await updateHomeVideo(v.id, { order: newOrder });
     } catch {
-      toast.error('Failed to reorder');
+      toast.error('Could not reorder');
     }
   };
 
+  const addVideoButton = (
+    <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus aria-hidden="true" /> Add video
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Add YouTube video</DialogTitle>
+          <DialogDescription>Paste a YouTube link. The thumbnail is picked up for you.</DialogDescription>
+        </DialogHeader>
+        <VideoForm onSaved={() => {}} closeDialog={() => setCreateOpen(false)} />
+      </DialogContent>
+    </Dialog>
+  );
+
+  const header = (
+    <AdminPageHeader
+      eyebrow="Home page"
+      title="Video stories"
+      description="The YouTube reel on the home page."
+      actions={addVideoButton}
+      className="pb-0"
+    />
+  );
+
   if (loading) {
     return (
-      <div className="grid place-items-center py-32">
-        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
+      <div className="mx-auto max-w-6xl space-y-6">
+        {header}
+        <MediaGridSkeleton count={4} className="grid-cols-1 md:grid-cols-2 lg:grid-cols-2 [&>*]:aspect-video" label="Loading videos" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-end justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-highlight dark:text-highlight font-medium mb-2 flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5" /> YouTube Showcase
-          </p>
-          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white">
-            Video Stories
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Curate the YouTube reel shown on the homepage.
-          </p>
-        </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-highlight hover:bg-highlight text-white">
-              <Plus className="w-4 h-4 mr-2" /> Add video
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add YouTube video</DialogTitle>
-            </DialogHeader>
-            <VideoForm onSaved={() => {}} closeDialog={() => setCreateOpen(false)} />
-          </DialogContent>
-        </Dialog>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      {header}
 
       {videos.length === 0 ? (
-        <div className="bg-white dark:bg-gray-900 border border-dashed border-cream-dark dark:border-gray-800 rounded-2xl p-16 text-center">
-          <YoutubeIcon className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-          <p className="text-gray-500">No videos yet. Add your first YouTube video above.</p>
+        <div className="rounded-card border border-dashed border-input bg-card px-4 py-12">
+          <EmptyState
+            icon={YoutubeIcon}
+            title="No videos yet"
+            description="Add your first YouTube video with Add video."
+          />
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          {videos.map((v) => (
-            <motion.div
+        <ul className="grid gap-4 md:grid-cols-2">
+          {videos.map((v, index) => (
+            <motion.li
               key={v.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm"
+              {...fadeUp}
+              transition={{ ...fadeUp.transition, delay: staggerDelay(index) }}
+              className="overflow-hidden rounded-card border border-border bg-card shadow-sm"
             >
-              <div className="aspect-video relative bg-black">
+              <div className="relative aspect-video bg-charcoal">
                 <img
                   src={v.thumbnailUrl || youtubeThumb(v.videoId)}
                   alt={v.title}
-                  className="w-full h-full object-cover"
+                  className={`h-full w-full object-cover ${!v.active ? 'opacity-40' : ''}`}
                 />
                 {v.featured && (
-                  <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-highlight text-white text-[10px] uppercase tracking-wider font-semibold shadow">
-                    ★ Featured
+                  <span className="absolute left-2 top-2">
+                    <StatusBadge tone="info" icon={Star} label="Featured" />
                   </span>
                 )}
-                <span className="absolute top-2 right-2 inline-flex items-center px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] uppercase tracking-wider font-medium backdrop-blur-sm">
+                <span className="tag-dark absolute right-2 top-2 tabular-nums">
                   {v.aspectRatio || '16:9'}
                 </span>
                 {!v.active && (
-                  <div className="absolute inset-0 bg-black/60 grid place-items-center">
-                    <span className="text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
-                      <EyeOff className="w-3.5 h-3.5" /> Hidden
-                    </span>
-                  </div>
+                  <span className="absolute bottom-2 left-2">
+                    <StatusBadge tone="neutral" icon={EyeOff} label="Hidden" />
+                  </span>
                 )}
               </div>
               <div className="p-4">
-                <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1">
+                <h3 className="line-clamp-1 font-semibold text-foreground">
                   {v.title}
                 </h3>
                 {v.description && (
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{v.description}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{v.description}</p>
                 )}
-                <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
-                  <span>Order: {v.order ?? 0}</span>
-                  <span>·</span>
+                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="tabular-nums">Order {v.order ?? 0}</span>
+                  <span aria-hidden="true">·</span>
                   <a
                     href={v.youtubeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-highlight hover:underline"
+                    className="inline-flex items-center gap-1 text-primary hover:underline"
                   >
-                    Open <ExternalLink className="w-3 h-3" />
+                    Open on YouTube <ExternalLink aria-hidden="true" className="h-3 w-3" />
                   </a>
                 </div>
-                <div className="mt-3 flex items-center justify-between gap-2">
+                <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
                   <div className="flex gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => move(v, -1)}>
-                      <ArrowUp className="w-4 h-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => move(v, 1)}>
-                      <ArrowDown className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
+                    <IconButton label={`Move ${v.title} up`} tooltip="Move up" size="sm" onClick={() => move(v, -1)}>
+                      <ArrowUp />
+                    </IconButton>
+                    <IconButton label={`Move ${v.title} down`} tooltip="Move down" size="sm" onClick={() => move(v, 1)}>
+                      <ArrowDown />
+                    </IconButton>
+                    <IconButton
+                      label={v.active ? `Hide ${v.title}` : `Show ${v.title}`}
+                      tooltip={v.active ? 'Hide' : 'Show'}
+                      size="sm"
                       onClick={() => v.id && updateHomeVideo(v.id, { active: !v.active })}
                     >
-                      {v.active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                    </Button>
+                      {v.active ? <Eye /> : <EyeOff />}
+                    </IconButton>
                   </div>
                   <div className="flex gap-1">
                     <Dialog
@@ -373,6 +370,7 @@ const AdminVideos = () => {
                       <DialogContent className="max-w-lg">
                         <DialogHeader>
                           <DialogTitle>Edit video</DialogTitle>
+                          <DialogDescription>{v.title}</DialogDescription>
                         </DialogHeader>
                         <VideoForm
                           initial={v}
@@ -381,21 +379,33 @@ const AdminVideos = () => {
                         />
                       </DialogContent>
                     </Dialog>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-red-500 hover:text-red-600"
-                      onClick={() => v.id && handleDelete(v.id)}
+                    <IconButton
+                      label={`Delete ${v.title}`}
+                      tooltip="Delete"
+                      size="sm"
+                      className="text-muted-foreground hover:text-status-danger-fg"
+                      onClick={(e) => { confirmReturnRef.current = e.currentTarget; setDeleteTarget(v); }}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                      <Trash2 />
+                    </IconButton>
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </motion.li>
           ))}
-        </div>
+        </ul>
       )}
+
+      <ConfirmDialog
+        returnFocusRef={confirmReturnRef}
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={`Delete ${deleteTarget?.title ?? 'this video'}?`}
+        description="It is removed from the home page. The video stays on YouTube."
+        confirmLabel="Delete video"
+        tone="danger"
+        onConfirm={() => (deleteTarget?.id ? handleDelete(deleteTarget.id) : undefined)}
+      />
     </div>
   );
 };

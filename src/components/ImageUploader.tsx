@@ -1,6 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone, type FileRejection } from 'react-dropzone';
-import { Upload, X, Loader2, FileText, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Upload, X, FileText, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
+import { Spinner } from '@/components/ui/spinner';
+import { DUR, EASE_OUT } from '@/lib/motion';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { SmartImage } from "@/components/ui/smart-image";
@@ -161,19 +165,19 @@ const ImageUploader = ({
         {preview ? (
           <motion.div
             key="preview"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1, transition: { duration: DUR.dropdown, ease: EASE_OUT } }}
+            exit={{ opacity: 0, transition: { duration: DUR.exit } }}
             className="space-y-3"
           >
-            <div className="relative w-full h-64 rounded-xl overflow-hidden border-2 border-gray-200 dark:border-zinc-800">
+            <div className="relative h-64 w-full overflow-hidden rounded-card border border-border">
               {previewKind === 'pdf' ? (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 dark:bg-zinc-900 gap-3">
-                  <FileText className="w-16 h-16 text-red-500" />
-                  <p className="text-sm font-medium text-gray-800 dark:text-zinc-200 max-w-[80%] truncate">
+                <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-muted/50">
+                  <FileText aria-hidden="true" className="h-14 w-14 text-muted-foreground" />
+                  <p className="text-sm font-medium text-foreground max-w-[80%] truncate">
                     {previewName || 'document.pdf'}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     PDF document{previewSize ? ` · ${formatBytes(previewSize)}` : ''}
                   </p>
                 </div>
@@ -184,38 +188,35 @@ const ImageUploader = ({
                   className="w-full h-full object-cover" preset="card" />
               )}
               {!isUploading && !hasPendingFile && (
-                <button
+                <IconButton
+                  label="Remove file"
+                  variant="onPhoto"
                   onClick={handleRemove}
-                  className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
-                  aria-label="Remove file"
+                  className="absolute right-2 top-2"
                 >
-                  <X className="w-5 h-5" />
-                </button>
+                  <X />
+                </IconButton>
               )}
               {isUploading && (
-                <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2">
-                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-charcoal/60 text-charcoal-foreground backdrop-blur-[2px]">
+                  <Spinner size={28} label="Uploading" />
                   {typeof uploadProgress === 'number' && (
                     <div className="w-3/4 max-w-xs">
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/30">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-charcoal-foreground/30" role="progressbar" aria-label="Upload progress" aria-valuenow={Math.round(uploadProgress)} aria-valuemin={0} aria-valuemax={100}>
                         <div
-                          className="h-full bg-white transition-all"
+                          className="h-full bg-charcoal-foreground"
                           style={{ width: `${Math.max(0, Math.min(100, uploadProgress))}%` }}
                         />
                       </div>
-                      <p className="mt-1 text-center text-xs font-semibold text-white">
+                      <p className="mt-1 text-center text-xs font-semibold tabular-nums">
                         {Math.round(uploadProgress)}%
                       </p>
                     </div>
                   )}
                   {onCancelUpload && (
-                    <button
-                      type="button"
-                      onClick={onCancelUpload}
-                      className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/50 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur hover:bg-white/25"
-                    >
-                      <X className="h-3.5 w-3.5" /> Stop upload
-                    </button>
+                    <Button type="button" variant="line" size="sm" onClick={onCancelUpload} className="mt-2">
+                      <X aria-hidden="true" /> Stop upload
+                    </Button>
                   )}
                 </div>
               )}
@@ -224,27 +225,15 @@ const ImageUploader = ({
             {/* Confirm-mode action bar */}
             {hasPendingFile && !isUploading && (
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleConfirmUpload}
-                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 transition-colors shadow-sm"
-                >
-                  <CheckCircle2 className="w-4 h-4" /> Upload
-                </button>
-                <button
-                  type="button"
-                  onClick={open}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-                >
-                  <RotateCcw className="w-4 h-4" /> Replace
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancelPending}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100 transition-colors dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
-                >
-                  <X className="w-4 h-4" /> Cancel
-                </button>
+                <Button type="button" onClick={handleConfirmUpload} className="flex-1">
+                  <CheckCircle2 aria-hidden="true" /> Upload
+                </Button>
+                <Button type="button" variant="outline" onClick={open}>
+                  <RotateCcw aria-hidden="true" /> Replace
+                </Button>
+                <Button type="button" variant="ghost" onClick={handleCancelPending}>
+                  Cancel
+                </Button>
               </div>
             )}
           </motion.div>
@@ -252,29 +241,29 @@ const ImageUploader = ({
           <motion.div
             key="dropzone"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { duration: DUR.dropdown, ease: EASE_OUT } }}
+            exit={{ opacity: 0, transition: { duration: DUR.exit } }}
           >
             <div
-              {...getRootProps()}
-              className={`w-full h-64 border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all ${
+              {...getRootProps({ 'aria-label': acceptPdf ? 'Upload an image or PDF' : 'Upload an image' })}
+              className={`flex h-64 w-full cursor-pointer flex-col items-center justify-center rounded-card border-2 border-dashed px-4 text-center transition-[background-color,border-color] duration-hover ${
                 isDragActive
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50 dark:border-zinc-700 dark:hover:border-zinc-500 dark:hover:bg-zinc-900/40'
+                  ? 'border-primary bg-muted'
+                  : 'border-input bg-muted/30 hover:border-primary hover:bg-muted/60'
               }`}
             >
               <input {...getInputProps()} />
-              <Upload className={`w-12 h-12 mb-4 ${isDragActive ? 'text-blue-500' : 'text-gray-400'}`} />
-              <p className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+              <Upload aria-hidden="true" className={`mb-4 h-10 w-10 ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
+              <p className="mb-1 text-sm font-medium text-foreground/80">
                 {isDragActive
                   ? acceptPdf ? 'Drop the file here' : 'Drop the image here'
-                  : acceptPdf ? 'Drag & drop image or PDF' : 'Drag & drop banner image'}
+                  : acceptPdf ? 'Drag and drop an image or PDF' : 'Drag and drop an image'}
               </p>
-              <p className="text-xs text-gray-500 dark:text-zinc-500">or click to browse</p>
-              <p className="text-xs text-gray-400 dark:text-zinc-500 mt-2">
+              <p className="text-xs text-muted-foreground">or click to browse</p>
+              <p className="mt-2 text-xs text-muted-foreground">
                 {acceptPdf
-                  ? `JPG, PNG, WebP up to ${formatBytes(maxImageBytesFor(category))} • PDF up to 1 MB`
-                  : `JPG, PNG or WebP • max ${formatBytes(maxImageBytesFor(category))}`}
+                  ? `JPG, PNG, WebP up to ${formatBytes(maxImageBytesFor(category))} · PDF up to 1 MB`
+                  : `JPG, PNG or WebP · max ${formatBytes(maxImageBytesFor(category))}`}
               </p>
             </div>
           </motion.div>

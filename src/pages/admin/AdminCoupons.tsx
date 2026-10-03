@@ -1,9 +1,27 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Plus, Edit2, Trash2, Eye, EyeOff, Loader2, X, Ticket, Percent, IndianRupee,
-  Calendar, Tag, Users as UsersIcon, Search, Copy, Check,
+  Plus, Edit2, Trash2, Eye, EyeOff, X, Ticket, Percent, IndianRupee,
+  Calendar, Tag, Users as UsersIcon, Search, Copy, Check, Megaphone, CircleCheck,
+  Clock, CircleSlash, EyeOff as EyeOffIcon, type LucideIcon,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+import { IconButton } from '@/components/ui/icon-button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { EmptyState } from '@/components/EmptyState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { fadeUp, staggerDelay } from '@/lib/motion';
+import { formatINR } from '@/lib/format';
 import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore';
 import { subscribeToCategories, type Category } from '@/services/categoryService';
@@ -54,7 +72,7 @@ const empty = (): DraftCoupon => ({
 });
 
 const fmtDate = (t?: Timestamp | null) => {
-  if (!t) return '—';
+  if (!t) return 'open';
   return t.toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
@@ -117,23 +135,26 @@ const STATE_LABEL: Record<CouponState, string> = {
   live: 'Live now',
 };
 
-const STATE_CLASS: Record<CouponState, string> = {
-  expired: 'bg-gray-100 text-gray-500',
-  scheduled: 'bg-blue-50 text-blue-700',
-  usedUp: 'bg-orange-50 text-orange-700',
-  hidden: 'bg-gray-100 text-gray-500',
-  live: 'bg-emerald-50 text-emerald-700',
+const STATE_TONE: Record<CouponState, { tone: StatusTone; icon: LucideIcon }> = {
+  expired: { tone: 'neutral', icon: CircleSlash },
+  scheduled: { tone: 'info', icon: Clock },
+  usedUp: { tone: 'warning', icon: CircleSlash },
+  hidden: { tone: 'neutral', icon: EyeOffIcon },
+  live: { tone: 'success', icon: CircleCheck },
 };
 
 const AdminCoupons = () => {
   const [items, setItems] = useState<Coupon[]>([]);
+  const confirmReturnRef = useRef<HTMLElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const [draft, setDraft] = useState<DraftCoupon>(empty());
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive' | 'expired'>('all');
   const [copied, setCopied] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -212,8 +233,13 @@ const AdminCoupons = () => {
     };
   }, [items]);
 
-  const openNew = () => { setDraft(empty()); setShowForm(true); };
+  const openNew = () => {
+    returnFocusRef.current = document.activeElement as HTMLElement | null;
+    setDraft(empty());
+    setShowForm(true);
+  };
   const openEdit = (c: Coupon) => {
+    returnFocusRef.current = document.activeElement as HTMLElement | null;
     setDraft({
       id: c.id,
       code: c.code,
@@ -239,9 +265,9 @@ const AdminCoupons = () => {
     e.preventDefault();
     const code = draft.code.toUpperCase().trim();
     if (!code) return toast.error('Coupon code is required');
-    if (!/^[A-Z0-9_-]{3,20}$/.test(code)) return toast.error('Code must be 3–20 chars (A-Z, 0-9, -, _)');
-    if (draft.value <= 0) return toast.error('Value must be > 0');
-    if (draft.type === 'percent' && draft.value > 100) return toast.error('Percent must be ≤ 100');
+    if (!/^[A-Z0-9_-]{3,20}$/.test(code)) return toast.error('Code must be 3 to 20 characters: A-Z, 0-9, - or _');
+    if (draft.value <= 0) return toast.error('Value must be more than 0');
+    if (draft.type === 'percent' && draft.value > 100) return toast.error('Percent cannot be more than 100');
 
     try {
       setSaving(true);
@@ -283,8 +309,7 @@ const AdminCoupons = () => {
 
   const onDelete = async (id?: string) => {
     if (!id) return;
-    if (!confirm('Delete this coupon? This cannot be undone.')) return;
-    try { await deleteCoupon(id); toast.success('Deleted'); }
+    try { await deleteCoupon(id); toast.success('Coupon deleted'); }
     catch (e: any) { toast.error(e?.message || 'Delete failed'); }
   };
 
@@ -302,122 +327,135 @@ const AdminCoupons = () => {
     } catch { /* ignore */ }
   };
 
+  const deleting = items.find((c) => c.id === deleteId);
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-highlight font-medium mb-2 flex items-center gap-2">
-            <Ticket className="w-3.5 h-3.5" /> Marketing
-          </p>
-          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">Coupons</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Create promotional coupon codes with minimum order value, expiry, and usage limits.
-          </p>
-        </div>
-        <button
-          onClick={openNew}
-          className="inline-flex items-center gap-2 rounded-full bg-highlight hover:bg-highlight text-white px-5 py-2.5 text-sm font-medium shadow-sm"
-        >
-          <Plus className="w-4 h-4" /> New Coupon
-        </button>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <AdminPageHeader
+        eyebrow="Marketing"
+        title="Coupons"
+        description="Create promotional codes with a minimum order value, expiry and usage limits."
+        actions={
+          <Button onClick={openNew}>
+            <Plus aria-hidden="true" /> New coupon
+          </Button>
+        }
+        className="pb-0"
+      />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard icon={<Ticket className="w-5 h-5" />} label="Total Coupons" value={stats.total} tint="bg-highlight/10 text-highlight" />
-        <StatCard icon={<Check className="w-5 h-5" />} label="Active" value={stats.active} tint="bg-emerald-50 text-emerald-700" />
-        <StatCard icon={<UsersIcon className="w-5 h-5" />} label="Total Redemptions" value={stats.uses} tint="bg-indigo-50 text-indigo-700" />
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        <StatCard icon={<Ticket aria-hidden="true" className="h-5 w-5" />} label="Total coupons" value={stats.total} />
+        <StatCard icon={<Check aria-hidden="true" className="h-5 w-5" />} label="Live now" value={stats.active} />
+        <StatCard icon={<UsersIcon aria-hidden="true" className="h-5 w-5" />} label="Redemptions" value={stats.uses} />
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            aria-label="Search coupon codes"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search coupon code…"
-            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:border-highlight/70"
+            placeholder="Search coupon code"
+            className="pl-9"
           />
         </div>
-        <div className="inline-flex rounded-xl border border-gray-200 bg-white overflow-hidden text-sm">
+        <ToggleGroup
+          type="single"
+          value={filter}
+          onValueChange={(v) => v && setFilter(v as typeof filter)}
+          aria-label="Filter coupons"
+          className="self-start"
+        >
           {(['all', 'active', 'inactive', 'expired'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 capitalize ${filter === f ? 'bg-highlight text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-            >
+            <ToggleGroupItem key={f} value={f} size="sm" className="capitalize">
               {f}
-            </button>
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-highlight" /></div>
+        <div aria-busy="true" className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <span className="sr-only">Loading coupons</span>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="space-y-4 rounded-card border border-border bg-card p-5">
+              <Skeleton className="h-5 w-1/2" />
+              <Skeleton className="h-8 w-1/3" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-4/5" />
+            </div>
+          ))}
+        </div>
       ) : list.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
-          <Ticket className="w-10 h-10 mx-auto text-gray-300 mb-3" />
-          <p className="text-sm text-gray-500">No coupons found. Create your first one to get started.</p>
+        <div className="rounded-card border border-dashed border-input bg-card px-4 py-12">
+          <EmptyState
+            icon={Ticket}
+            title={items.length === 0 ? 'No coupons yet' : 'No coupons match'}
+            description={items.length === 0 ? 'Create your first code with New coupon.' : 'Try another code or filter.'}
+            action={items.length === 0 ? { label: 'New coupon', onClick: openNew } : undefined}
+          />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {list.map((c) => {
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {list.map((c, i) => {
             const state = couponState(c);
-            const expired = state === 'expired';
             const usagePct = c.maxUses > 0 ? Math.min(100, Math.round((c.usedCount / c.maxUses) * 100)) : 0;
             return (
               <motion.div
                 key={c.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="relative rounded-2xl bg-white border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                {...fadeUp}
+                transition={{ ...fadeUp.transition, delay: staggerDelay(i) }}
+                className="relative overflow-hidden rounded-card border border-border bg-card shadow-sm"
               >
                 {/* Ticket left strip */}
-                <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${expired ? 'bg-gray-300' : c.active ? 'bg-highlight' : 'bg-gray-300'}`} />
+                <div aria-hidden="true" className={`absolute bottom-0 left-0 top-0 w-1 ${state === 'live' ? 'bg-primary' : 'bg-border'}`} />
                 <div className="p-5 pl-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <button
+                        type="button"
                         onClick={() => copyCode(c.code)}
-                        className="group inline-flex items-center gap-2 font-mono font-bold text-lg text-gray-900 hover:text-highlight"
-                        title="Copy code"
+                        className="group inline-flex items-center gap-2 rounded-control font-mono text-lg font-bold text-foreground transition-colors duration-hover hover:text-primary"
+                        aria-label={`Copy code ${c.code}`}
                       >
                         {c.code}
-                        {copied === c.code ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100" />}
+                        {copied === c.code
+                          ? <Check aria-hidden="true" className="h-4 w-4 text-status-success-fg" />
+                          : <Copy aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary" />}
                       </button>
-                      {c.description && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{c.description}</p>}
+                      <span className="sr-only" aria-live="polite">{copied === c.code ? 'Copied' : ''}</span>
+                      {c.description && <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{c.description}</p>}
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${STATE_CLASS[state]}`}>
-                        {STATE_LABEL[state]}
-                      </span>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <StatusBadge tone={STATE_TONE[state].tone} icon={STATE_TONE[state].icon} label={STATE_LABEL[state]} />
                       {c.showInBanner && (
                         // Switched on is not the same as showing: say which, so
                         // the owner is not left wondering why the ribbon is empty.
-                        <span
-                          className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                            state === 'live' ? 'bg-highlight/15 text-highlight' : 'bg-gray-100 text-gray-500'
-                          }`}
+                        <StatusBadge
+                          tone={state === 'live' ? 'info' : 'neutral'}
+                          icon={Megaphone}
+                          label={state === 'live' ? 'In banner' : 'Banner waiting'}
                           title={state === 'live' ? 'Shown in the offer banner' : 'Will show in the banner once it is live'}
-                        >
-                          {state === 'live' ? '✦ In banner' : 'Banner · waiting'}
-                        </span>
+                        />
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-baseline gap-2 mb-4">
-                    <span className="text-3xl font-bold text-highlight flex items-center">
-                      {c.type === 'percent' ? <>{c.value}<Percent className="w-5 h-5 ml-0.5" /></> : <><IndianRupee className="w-6 h-6" />{c.value}</>}
+                  <p className="mb-4 flex items-baseline gap-2">
+                    <span className="text-3xl font-semibold tabular-nums text-foreground">
+                      {c.type === 'percent' ? `${c.value}%` : formatINR(c.value)}
                     </span>
-                    <span className="text-xs text-gray-500">OFF</span>
-                  </div>
+                    <span className="text-xs text-muted-foreground">off</span>
+                  </p>
 
-                  <div className="space-y-2 text-xs text-gray-600 border-t border-dashed border-gray-200 pt-3">
-                    <Row label="Min order" value={`₹${(c.minOrderValue || 0).toLocaleString('en-IN')}`} />
+                  <div className="space-y-2 border-t border-dashed border-border pt-3 text-xs text-foreground/80">
+                    <Row label="Min order" value={formatINR(c.minOrderValue || 0)} />
                     {c.type === 'percent' && c.maxDiscount > 0 && (
-                      <Row label="Max discount" value={`₹${c.maxDiscount.toLocaleString('en-IN')}`} />
+                      <Row label="Max discount" value={formatINR(c.maxDiscount)} />
                     )}
                     {/* Only shown when set, so an unrestricted coupon stays uncluttered. */}
                     {c.applicableCategories && c.applicableCategories.length > 0 && (
@@ -432,29 +470,37 @@ const AdminCoupons = () => {
                     )}
                     <Row
                       label="Validity"
-                      value={`${fmtDate(c.validFrom)} → ${fmtDate(c.validTo)}`}
+                      value={
+                        !c.validFrom && !c.validTo
+                          ? 'No end date'
+                          : !c.validFrom
+                            ? `Until ${fmtDate(c.validTo)}`
+                            : !c.validTo
+                              ? `From ${fmtDate(c.validFrom)}`
+                              : `${fmtDate(c.validFrom)} to ${fmtDate(c.validTo)}`
+                      }
                     />
                     <Row
                       label="Used"
-                      value={c.maxUses > 0 ? `${c.usedCount} / ${c.maxUses}` : `${c.usedCount} (unlimited)`}
+                      value={c.maxUses > 0 ? `${c.usedCount} of ${c.maxUses}` : `${c.usedCount} (unlimited)`}
                     />
                     {c.maxUses > 0 && (
-                      <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                        <div className="h-full bg-highlight" style={{ width: `${usagePct}%` }} />
+                      <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Uses" aria-valuenow={usagePct} aria-valuemin={0} aria-valuemax={100}>
+                        <div className="h-full bg-primary" style={{ width: `${usagePct}%` }} />
                       </div>
                     )}
                   </div>
 
-                  <div className="flex items-center justify-end gap-1 mt-4 pt-3 border-t border-gray-100">
-                    <button onClick={() => toggle(c)} className="p-2 rounded-lg hover:bg-gray-100" title={c.active ? 'Deactivate' : 'Activate'}>
-                      {c.active ? <Eye className="w-4 h-4 text-gray-600" /> : <EyeOff className="w-4 h-4 text-gray-400" />}
-                    </button>
-                    <button onClick={() => openEdit(c)} className="p-2 rounded-lg hover:bg-gray-100" title="Edit">
-                      <Edit2 className="w-4 h-4 text-gray-600" />
-                    </button>
-                    <button onClick={() => onDelete(c.id)} className="p-2 rounded-lg hover:bg-red-50" title="Delete">
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </button>
+                  <div className="mt-4 flex items-center justify-end gap-1 border-t border-border pt-3">
+                    <IconButton label={c.active ? `Hide ${c.code}` : `Show ${c.code}`} tooltip={c.active ? 'Hide' : 'Show'} size="sm" onClick={() => toggle(c)}>
+                      {c.active ? <Eye /> : <EyeOff />}
+                    </IconButton>
+                    <IconButton label={`Edit ${c.code}`} tooltip="Edit" size="sm" onClick={() => openEdit(c)}>
+                      <Edit2 />
+                    </IconButton>
+                    <IconButton label={`Delete ${c.code}`} tooltip="Delete" size="sm" className="hover:text-status-danger-fg" onClick={(e) => { confirmReturnRef.current = e.currentTarget; if (c.id) setDeleteId(c.id); }}>
+                      <Trash2 />
+                    </IconButton>
                   </div>
                 </div>
               </motion.div>
@@ -463,247 +509,236 @@ const AdminCoupons = () => {
         </div>
       )}
 
-      {/* Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-              <h2 className="text-lg font-semibold text-gray-900">
-                {draft.id ? 'Edit Coupon' : 'New Coupon'}
-              </h2>
-              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg hover:bg-gray-100">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={submit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Code *">
-                  <input className="cf-input font-mono uppercase" value={draft.code}
-                    onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
-                    placeholder="WELCOME10" required />
-                </Field>
-                <Field label="Type">
-                  <select className="cf-input" value={draft.type}
-                    onChange={(e) => setDraft({ ...draft, type: e.target.value as CouponType })}>
-                    <option value="percent">Percentage off</option>
-                    <option value="flat">Flat amount off</option>
-                  </select>
-                </Field>
-              </div>
-              <Field label="Description">
-                <input className="cf-input" value={draft.description}
-                  onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-                  placeholder="e.g. New customer welcome offer" />
+      <ConfirmDialog
+        returnFocusRef={confirmReturnRef}
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title={`Delete coupon ${deleting?.code ?? ''}?`}
+        description="Customers can no longer use this code. This cannot be undone."
+        confirmLabel="Delete coupon"
+        tone="danger"
+        onConfirm={() => onDelete(deleteId ?? undefined)}
+      />
+
+      {/* Form dialog */}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent
+          className="max-h-[90vh] max-w-2xl overflow-y-auto"
+          onCloseAutoFocus={(e) => {
+            if (returnFocusRef.current?.isConnected) {
+              e.preventDefault();
+              returnFocusRef.current.focus();
+            }
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>{draft.id ? 'Edit coupon' : 'New coupon'}</DialogTitle>
+            <DialogDescription>Codes are 3 to 20 characters: letters, numbers, - and _.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={submit} className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Code" htmlFor="cf-code" required>
+                <Input id="cf-code" className="font-mono uppercase" value={draft.code}
+                  onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
+                  placeholder="WELCOME10" required />
               </Field>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Field label={draft.type === 'percent' ? 'Discount %' : 'Discount ₹'}>
-                  <input type="number" min={1} className="cf-input" value={draft.value}
-                    onChange={(e) => setDraft({ ...draft, value: Number(e.target.value) })} />
+              <Field label="Type" htmlFor="cf-type">
+                <Select value={draft.type} onValueChange={(v) => setDraft({ ...draft, type: v as CouponType })}>
+                  <SelectTrigger id="cf-type"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percent">Percentage off</SelectItem>
+                    <SelectItem value="flat">Flat amount off</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+            <Field label="Description" htmlFor="cf-desc">
+              <Input id="cf-desc" value={draft.description}
+                onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                placeholder="e.g. New customer welcome offer" />
+            </Field>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Field label={draft.type === 'percent' ? 'Discount %' : 'Discount ₹'} htmlFor="cf-value">
+                <Input id="cf-value" type="number" inputMode="decimal" min={1} className="tabular-nums" value={draft.value}
+                  onChange={(e) => setDraft({ ...draft, value: Number(e.target.value) })} />
+              </Field>
+              <Field label="Min order value (₹)" htmlFor="cf-min">
+                <Input id="cf-min" type="number" inputMode="decimal" min={0} className="tabular-nums" value={draft.minOrderValue}
+                  onChange={(e) => setDraft({ ...draft, minOrderValue: Number(e.target.value) })} />
+              </Field>
+              {draft.type === 'percent' && (
+                <Field label="Max discount (₹, 0 = none)" htmlFor="cf-max">
+                  <Input id="cf-max" type="number" inputMode="decimal" min={0} className="tabular-nums" value={draft.maxDiscount}
+                    onChange={(e) => setDraft({ ...draft, maxDiscount: Number(e.target.value) })} />
                 </Field>
-                <Field label="Min Order Value (₹)">
-                  <input type="number" min={0} className="cf-input" value={draft.minOrderValue}
-                    onChange={(e) => setDraft({ ...draft, minOrderValue: Number(e.target.value) })} />
-                </Field>
-                {draft.type === 'percent' && (
-                  <Field label="Max Discount (₹, 0 = none)">
-                    <input type="number" min={0} className="cf-input" value={draft.maxDiscount}
-                      onChange={(e) => setDraft({ ...draft, maxDiscount: Number(e.target.value) })} />
-                  </Field>
-                )}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Total Uses (0 = unlimited)">
-                  <input type="number" min={0} className="cf-input" value={draft.maxUses}
-                    onChange={(e) => setDraft({ ...draft, maxUses: Number(e.target.value) })} />
-                </Field>
-                <Field label="Per-User Limit (0 = unlimited)">
-                  <input type="number" min={0} className="cf-input" value={draft.perUserLimit}
-                    onChange={(e) => setDraft({ ...draft, perUserLimit: Number(e.target.value) })} />
-                </Field>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Valid From">
-                  <input type="date" className="cf-input" value={draft.validFrom}
-                    onChange={(e) => setDraft({ ...draft, validFrom: e.target.value })} />
-                </Field>
-                <Field label="Valid To">
-                  <input type="date" className="cf-input" value={draft.validTo}
-                    onChange={(e) => setDraft({ ...draft, validTo: e.target.value })} />
-                </Field>
-              </div>
-              {/*
-                Which products the code applies to. Nothing selected means the
-                whole shop, which is what every existing coupon expects, so the
-                default stays "all".
-              */}
-              <div className="rounded-xl border border-gray-200 p-4">
-                <div className="mb-2 flex items-baseline justify-between gap-3">
-                  <span className="text-sm font-medium text-gray-900">Limit to categories</span>
-                  <span className="text-xs text-gray-500">
-                    {draft.applicableCategories.length === 0
-                      ? 'All categories'
-                      : `${draft.applicableCategories.length} selected`}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {categories.length === 0 && (
-                    <span className="text-xs text-gray-400">Loading categories…</span>
-                  )}
-                  {categories.map((cat) => {
-                    const on = draft.applicableCategories.includes(cat.name);
-                    return (
-                      <button
-                        key={cat.id || cat.name}
-                        type="button"
-                        onClick={() => toggleCategory(cat.name)}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                          on
-                            ? 'border-highlight bg-highlight/10 text-highlight'
-                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                        }`}
-                      >
-                        {on ? '✓ ' : ''}
-                        {cat.name}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {draft.applicableCategories.length > 0 && (
-                  <div className="mt-4 border-t border-gray-100 pt-3">
-                    <div className="mb-2 flex items-baseline justify-between gap-3">
-                      <span className="text-sm font-medium text-gray-900">
-                        Narrow to subcategories <span className="font-normal text-gray-400">(optional)</span>
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {draft.applicableSubcategories.length === 0
-                          ? 'Whole category'
-                          : `${draft.applicableSubcategories.length} selected`}
-                      </span>
-                    </div>
-                    {subcategoryChoices.length === 0 ? (
-                      <p className="text-xs text-gray-400">
-                        These categories have no subcategories.
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {subcategoryChoices.map((name) => {
-                          const on = draft.applicableSubcategories.includes(name);
-                          return (
-                            <button
-                              key={name}
-                              type="button"
-                              onClick={() => toggleSubcategory(name)}
-                              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                                on
-                                  ? 'border-highlight bg-highlight/10 text-highlight'
-                                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                              }`}
-                            >
-                              {on ? '✓ ' : ''}
-                              {name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/*
-                Advertising is opt-in per coupon: a private code for one
-                customer should never appear in the site-wide ribbon.
-              */}
-              <label className="flex cursor-pointer items-start justify-between gap-4 rounded-xl border border-highlight/30 bg-highlight/6 p-4">
-                <span>
-                  <span className="block text-sm font-medium text-gray-900">Show in offer banner</span>
-                  <span className="mt-0.5 block text-xs text-gray-500">
-                    Advertise this code in the strip at the top of every page and under product prices.
-                    It only appears while the coupon is active, within its dates and not used up.
-                  </span>
+              )}
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Total uses (0 = unlimited)" htmlFor="cf-uses">
+                <Input id="cf-uses" type="number" inputMode="numeric" min={0} className="tabular-nums" value={draft.maxUses}
+                  onChange={(e) => setDraft({ ...draft, maxUses: Number(e.target.value) })} />
+              </Field>
+              <Field label="Per-customer limit (0 = unlimited)" htmlFor="cf-peruser">
+                <Input id="cf-peruser" type="number" inputMode="numeric" min={0} className="tabular-nums" value={draft.perUserLimit}
+                  onChange={(e) => setDraft({ ...draft, perUserLimit: Number(e.target.value) })} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Valid from" htmlFor="cf-from">
+                <Input id="cf-from" type="date" value={draft.validFrom}
+                  onChange={(e) => setDraft({ ...draft, validFrom: e.target.value })} />
+              </Field>
+              <Field label="Valid to" htmlFor="cf-to">
+                <Input id="cf-to" type="date" value={draft.validTo}
+                  onChange={(e) => setDraft({ ...draft, validTo: e.target.value })} />
+              </Field>
+            </div>
+            {/*
+              Which products the code applies to. Nothing selected means the
+              whole shop, which is what every existing coupon expects, so the
+              default stays "all".
+            */}
+            <fieldset aria-label="Limit to categories" className="rounded-card border border-border p-4">
+              <div className="mb-2 flex items-baseline justify-between gap-3">
+                <span className="text-sm font-medium text-foreground">Limit to categories</span>
+                <span className="text-xs text-muted-foreground">
+                  {draft.applicableCategories.length === 0
+                    ? 'All categories'
+                    : `${draft.applicableCategories.length} selected`}
                 </span>
-                <input
-                  type="checkbox"
-                  className="peer sr-only"
-                  checked={draft.showInBanner}
-                  onChange={(e) => setDraft({ ...draft, showInBanner: e.target.checked })}
-                />
-                <span
-                  aria-hidden
-                  className="relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full bg-gray-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-highlight peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-highlight/70"
-                />
-              </label>
-
-              <div className="flex flex-wrap gap-4">
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={draft.active}
-                    onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />
-                  Active
-                </label>
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={draft.firstOrderOnly}
-                    onChange={(e) => setDraft({ ...draft, firstOrderOnly: e.target.checked })} />
-                  First-order customers only
-                </label>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {categories.length === 0 && (
+                  <span className="text-xs text-muted-foreground">Loading categories</span>
+                )}
+                {categories.map((cat) => {
+                  const on = draft.applicableCategories.includes(cat.name);
+                  return (
+                    <ChipToggle key={cat.id || cat.name} on={on} onClick={() => toggleCategory(cat.name)}>
+                      {cat.name}
+                    </ChipToggle>
+                  );
+                })}
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-                <button type="button" onClick={() => setShowForm(false)}
-                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                <button type="submit" disabled={saving}
-                  className="inline-flex items-center gap-2 px-5 py-2 text-sm bg-highlight hover:bg-highlight disabled:opacity-60 text-white rounded-lg">
-                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {draft.id ? 'Save changes' : 'Create coupon'}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
+              {draft.applicableCategories.length > 0 && (
+                <div className="mt-4 border-t border-border pt-3">
+                  <div className="mb-2 flex items-baseline justify-between gap-3">
+                    <span className="text-sm font-medium text-foreground">
+                      Narrow to subcategories <span className="font-normal text-muted-foreground">(optional)</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {draft.applicableSubcategories.length === 0
+                        ? 'Whole category'
+                        : `${draft.applicableSubcategories.length} selected`}
+                    </span>
+                  </div>
+                  {subcategoryChoices.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      These categories have no subcategories.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {subcategoryChoices.map((name) => (
+                        <ChipToggle key={name} on={draft.applicableSubcategories.includes(name)} onClick={() => toggleSubcategory(name)}>
+                          {name}
+                        </ChipToggle>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </fieldset>
 
-      <style>{`
-        .cf-input {
-          width: 100%;
-          padding: 0.55rem 0.75rem;
-          border-radius: 0.6rem;
-          border: 1px solid rgb(229 231 235);
-          background: white;
-          color: rgb(17 24 39);
-          font-size: 0.875rem;
-        }
-        .cf-input:focus { outline: none; border-color: rgb(217 119 6); box-shadow: 0 0 0 3px hsl(var(--highlight)/0.15); }
-      `}</style>
+            {/*
+              Advertising is opt-in per coupon: a private code for one
+              customer should never appear in the site-wide ribbon.
+            */}
+            <div className="flex items-start justify-between gap-4 rounded-card border border-border bg-muted/40 p-4">
+              <div>
+                <Label htmlFor="cf-banner" className="text-sm font-medium text-foreground">Show in offer banner</Label>
+                <p id="cf-banner-hint" className="mt-0.5 text-xs text-muted-foreground">
+                  Advertise this code in the strip at the top of every page and under product prices.
+                  It only appears while the coupon is active, within its dates and not used up.
+                </p>
+              </div>
+              <Switch
+                id="cf-banner"
+                aria-describedby="cf-banner-hint"
+                checked={draft.showInBanner}
+                onCheckedChange={(checked) => setDraft({ ...draft, showInBanner: checked })}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-x-6 gap-y-3">
+              <div className="flex items-center gap-2">
+                <Checkbox id="cf-active" checked={draft.active}
+                  onCheckedChange={(checked) => setDraft({ ...draft, active: checked === true })} />
+                <Label htmlFor="cf-active" className="text-sm font-normal text-foreground">Active</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="cf-first" checked={draft.firstOrderOnly}
+                  onCheckedChange={(checked) => setDraft({ ...draft, firstOrderOnly: checked === true })} />
+                <Label htmlFor="cf-first" className="text-sm font-normal text-foreground">First-order customers only</Label>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 border-t border-border pt-4">
+              <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Spinner />}
+                {draft.id ? 'Save changes' : 'Create coupon'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-const StatCard = ({ icon, label, value, tint }: { icon: React.ReactNode; label: string; value: number; tint: string }) => (
-  <div className="rounded-2xl bg-white border border-gray-200 p-5 flex items-center gap-4 shadow-sm">
-    <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${tint}`}>{icon}</div>
-    <div>
-      <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
-      <p className="text-2xl font-semibold text-gray-900">{value}</p>
+const StatCard = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) => (
+  <div className="flex flex-col gap-3 rounded-card border border-border bg-card p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-muted text-foreground/70">{icon}</div>
+    <div className="min-w-0">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-2xl font-semibold tabular-nums text-foreground">{value}</p>
     </div>
   </div>
 );
 
 const Row = ({ label, value }: { label: string; value: string }) => (
   <div className="flex items-center justify-between gap-2">
-    <span className="text-gray-500">{label}</span>
-    <span className="font-medium text-gray-900">{value}</span>
+    <span className="text-muted-foreground">{label}</span>
+    <span className="text-right font-medium tabular-nums text-foreground">{value}</span>
   </div>
 );
 
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="block">
-    <span className="text-xs font-medium text-gray-600 mb-1 block">{label}</span>
+const Field = ({ label, htmlFor, required, children }: { label: string; htmlFor: string; required?: boolean; children: React.ReactNode }) => (
+  <div>
+    <Label htmlFor={htmlFor} className="mb-1.5 block text-xs font-medium text-foreground/80">
+      {label}
+      {required && <span aria-hidden="true" className="ml-0.5 text-status-danger-fg">*</span>}
+    </Label>
     {children}
-  </label>
+  </div>
+);
+
+/** A filter chip that toggles on and off (category and subcategory pickers). */
+const ChipToggle = ({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) => (
+  <button
+    type="button"
+    aria-pressed={on}
+    onClick={onClick}
+    className={`inline-flex h-9 items-center gap-1.5 rounded-control border px-3 text-xs font-medium transition-[background-color,border-color,color,transform] duration-press ease-out active:scale-[0.97] ${
+      on
+        ? 'border-primary bg-primary/10 text-foreground'
+        : 'border-border bg-card text-foreground/80 hover:border-foreground/30'
+    }`}
+  >
+    {on && <Check aria-hidden="true" className="h-3.5 w-3.5 text-primary" />}
+    {children}
+  </button>
 );
 
 export default AdminCoupons;

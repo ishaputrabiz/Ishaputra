@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
@@ -20,7 +21,7 @@ const AdminSettings = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim()) {
-      toast({ title: 'Validation Error', description: 'Name is required', variant: 'destructive' });
+      toast({ title: 'Add your name', variant: 'destructive' });
       return;
     }
     setSaving(true);
@@ -33,51 +34,47 @@ const AdminSettings = () => {
         { whatsappNumber: trimmedWhatsapp, updatedAt: serverTimestamp() },
         { merge: true }
       );
-      toast({ title: 'Success', description: 'Settings updated successfully' });
+      toast({ title: 'Settings saved' });
     } catch {
-      toast({ title: 'Error', description: 'Failed to update settings', variant: 'destructive' });
+      toast({ title: 'Could not save settings', description: 'Please try again.', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1 text-sm">Manage your account settings</p>
-      </div>
+    <div className="mx-auto max-w-6xl [&>*]:max-w-4xl">
+      <AdminPageHeader title="Settings" description="Your admin profile and the WhatsApp number that gets order alerts." />
 
-      <form onSubmit={handleSave}>
-        <Card className="bg-white border-gray-200">
+      <form onSubmit={handleSave} className="max-w-2xl">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-gray-900">Profile</CardTitle>
+            <h2 className="text-base font-semibold text-foreground leading-tight tracking-tight">Profile</h2>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
             <div>
-              <Label className="text-gray-700">Email</Label>
-              <Input value={userProfile?.email || ''} disabled className="mt-2 bg-gray-50 border-gray-300 text-gray-500" />
+              <Label htmlFor="st-email" className="text-foreground/80">Email</Label>
+              <Input id="st-email" type="email" value={userProfile?.email || ''} disabled className="mt-2" />
             </div>
             <div>
-              <Label className="text-gray-700">Display Name</Label>
-              <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Enter your name" className="mt-2 bg-gray-100 border-gray-300 text-gray-900" required />
+              <Label htmlFor="st-name" className="text-foreground/80">Display name</Label>
+              <Input id="st-name" autoComplete="name" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Your name" className="mt-2" required />
             </div>
             <div>
-              <Label className="text-gray-700">Phone</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number" className="mt-2 bg-gray-100 border-gray-300 text-gray-900" />
+              <Label htmlFor="st-phone" className="text-foreground/80">Phone</Label>
+              <Input id="st-phone" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number" className="mt-2" />
             </div>
             <div>
-              <Label className="text-gray-700">WhatsApp Number</Label>
-              <Input value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} placeholder="WhatsApp number" className="mt-2 bg-gray-100 border-gray-300 text-gray-900" />
+              <Label htmlFor="st-whatsapp" className="text-foreground/80">WhatsApp number</Label>
+              <Input id="st-whatsapp" type="tel" inputMode="tel" aria-describedby="st-whatsapp-hint" value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} placeholder="WhatsApp number" className="mt-2" />
+              <p id="st-whatsapp-hint" className="mt-1.5 text-xs text-muted-foreground">New order alerts are sent to this number.</p>
             </div>
-            <Button type="submit" className="bg-highlight hover:bg-highlight text-white" disabled={saving}>
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : 'Save Changes'}
-            </Button>
+            <div className="flex justify-end border-t border-border pt-4">
+              <Button type="submit" disabled={saving}>
+                {saving && <Spinner />}
+                {saving ? 'Saving' : 'Save changes'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </form>

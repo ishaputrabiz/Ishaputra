@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Plus,
   Search,
@@ -14,6 +14,10 @@ import {
   List,
   ScanLine,
   X,
+  CircleCheck,
+  CircleX,
+  ImageOff,
+  type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,16 +27,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
+import { IconButton } from '@/components/ui/icon-button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
+import { Notice } from '@/components/ui/notice';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { EmptyState } from '@/components/EmptyState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { formatINR, plural } from '@/lib/format';
 import { getAllProducts, deleteProduct, updateProduct, Product } from '@/services/productService';
 import {
   subscribeToCategories,
@@ -80,11 +84,11 @@ const inStatus = (p: Product, f: StatusFilter): boolean => {
  * What the card badge says. "Inactive" alone gave no clue whether the owner
  * hid a piece, it sold out, or it had no photo - three very different to-dos.
  */
-const statusBadge = (p: Product): { label: string; className: string } => {
-  if (p.flags?.isActive && stockOf(p) > 0) return { label: 'Live', className: 'bg-green-50 text-green-600' };
-  if (stockOf(p) <= 0) return { label: 'Sold out · hidden', className: 'bg-orange-50 text-orange-700' };
-  if (!hasImages(p)) return { label: 'No photo · hidden', className: 'bg-highlight/10 text-highlight' };
-  return { label: 'Hidden', className: 'bg-red-50 text-red-600' };
+const statusBadge = (p: Product): { label: string; tone: StatusTone; icon: LucideIcon } => {
+  if (p.flags?.isActive && stockOf(p) > 0) return { label: 'Live', tone: 'success', icon: CircleCheck };
+  if (stockOf(p) <= 0) return { label: 'Sold out · hidden', tone: 'danger', icon: CircleX };
+  if (!hasImages(p)) return { label: 'No photo · hidden', tone: 'warning', icon: ImageOff };
+  return { label: 'Hidden', tone: 'neutral', icon: EyeOff };
 };
 
 const STATUS_TABS: Array<{ value: StatusFilter; label: string }> = [
@@ -97,10 +101,10 @@ const STATUS_TABS: Array<{ value: StatusFilter; label: string }> = [
 
 const FilterOption = ({ label, count }: { label: string; count: number }) => (
   <span className="flex w-full items-center justify-between gap-3">
-    <span className={count === 0 ? 'text-gray-400' : undefined}>{label}</span>
+    <span className={count === 0 ? 'text-muted-foreground' : undefined}>{label}</span>
     <span
-      className={`rounded-full px-1.5 py-0.5 text-[11px] font-medium tabular-nums ${
-        count === 0 ? 'bg-gray-100 text-gray-400' : 'bg-highlight/10 text-highlight'
+      className={`rounded-chip px-1.5 py-0.5 text-[11px] font-medium tabular-nums ${
+        count === 0 ? 'bg-muted text-muted-foreground' : 'bg-muted text-foreground'
       }`}
     >
       {count}
@@ -112,8 +116,16 @@ const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  // The admin header search sends people here as /admin/products?q=...
+  const [searchParams] = useSearchParams();
+  const urlQuery = searchParams.get('q') || '';
+  const [searchQuery, setSearchQuery] = useState(urlQuery);
+  useEffect(() => {
+    setSearchQuery(urlQuery);
+  }, [urlQuery]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  // The menu trigger that opened the delete dialog, to get focus back on cancel.
+  const confirmReturnRef = useRef<HTMLElement | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -311,7 +323,7 @@ const Products = () => {
     // as far as checkout and be refused there. Say why instead of doing it.
     if (showing && stockOf(product) <= 0) {
       toast({
-        title: 'Out of stock - not shown',
+        title: 'Out of stock, not shown',
         description: `${product.name} has 0 in stock. Edit it and add stock; it goes live again on save.`,
         variant: 'destructive',
       });
@@ -333,8 +345,8 @@ const Products = () => {
       );
       
       toast({
-        title: 'Success',
-        description: `Product ${product.flags.isActive ? 'hidden' : 'shown'} on website`,
+        title: product.flags.isActive ? 'Product hidden' : 'Product shown',
+        description: `${product.name} is ${product.flags.isActive ? 'hidden from' : 'live on'} the store.`,
       });
     } catch (error) {
       console.error('Error toggling visibility:', error);
@@ -358,8 +370,8 @@ const Products = () => {
       await deleteProduct(productToDelete.id!);
       setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
       toast({
-        title: 'Success',
-        description: 'Product deleted successfully',
+        title: 'Product deleted',
+        description: productToDelete.name,
       });
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -375,145 +387,141 @@ const Products = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Premium Page Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-highlight/12 bg-gradient-to-br from-highlight/10 via-white to-primary/5 p-5 shadow-sm">
-        <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-highlight/8 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-highlight/28 to-transparent" />
-        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Products</h1>
-            <p className="text-gray-600 mt-1">Curate your silver collection — add, edit, and feature pieces</p>
-          </div>
-          <Link to="/admin/products/new">
-            <Button className="bg-gradient-to-r from-highlight to-highlight hover:from-highlight hover:to-highlight/35 shadow-md">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-          </Link>
-        </div>
-      </div>
+    <div className="mx-auto max-w-6xl">
+      <AdminPageHeader
+        title="Products"
+        description="Add, edit and feature products."
+        actions={
+          <Button asChild>
+            <Link to="/admin/products/new">
+              <Plus aria-hidden="true" />
+              Add product
+            </Link>
+          </Button>
+        }
+      />
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="space-y-5">
+      {/* Toolbar: search on its own row on phones, then Scan / Filters / view */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search by name, category, SKU or barcode..."
+            type="search"
+            aria-label="Search products"
+            placeholder="Search by name, category, SKU or barcode"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-10 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500"
+            className="pl-10 pr-12 [&::-webkit-search-cancel-button]:hidden"
           />
           {searchQuery && (
-            <button
+            <IconButton
+              label="Clear search"
+              size="sm"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              aria-label="Clear search"
+              className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground"
             >
-              <X className="h-4 w-4" />
-            </button>
+              <X />
+            </IconButton>
           )}
         </div>
-        <Button
-          variant="outline"
-          className="border-gray-300 text-gray-700 hover:bg-gray-50"
-          onClick={() => setScannerOpen(true)}
-          title="Scan a barcode to find its product"
-        >
-          <ScanLine className="h-4 w-4 mr-2" />
-          Scan
-        </Button>
-        <Button
-          variant="outline"
-          className="border-gray-300 text-gray-700 hover:bg-gray-50 relative"
-          onClick={() => setShowFilters((v) => !v)}
-        >
-          <Filter className="h-4 w-4 mr-2" />
-          Filters
-          {activeFilterCount > 0 && (
-            <span className="ml-2 inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-highlight text-white text-[11px] font-semibold">
-              {activeFilterCount}
-            </span>
-          )}
-        </Button>
-        <div className="flex border border-gray-300 rounded-md overflow-hidden">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`p-2 ${viewMode === 'grid' ? 'bg-highlight text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+        <div className="grid grid-cols-[1fr_1fr_auto] gap-2 sm:flex sm:gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-11"
+            onClick={() => setScannerOpen(true)}
+            title="Scan a barcode to find its product"
           >
-            <LayoutGrid className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('table')}
-            className={`p-2 ${viewMode === 'table' ? 'bg-highlight text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            <ScanLine aria-hidden="true" />
+            Scan
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-11"
+            aria-expanded={showFilters}
+            onClick={() => setShowFilters((v) => !v)}
           >
-            <List className="h-4 w-4" />
-          </button>
+            <Filter aria-hidden="true" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-chip bg-primary px-1.5 text-[11px] font-semibold tabular-nums text-primary-foreground">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={(v) => v && setViewMode(v as 'grid' | 'table')}
+            aria-label="Product view"
+            className="h-11"
+          >
+            <ToggleGroupItem value="grid" aria-label="Grid view" size="sm" className="w-9 px-0">
+              <LayoutGrid aria-hidden="true" className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="table" aria-label="List view" size="sm" className="w-9 px-0">
+              <List aria-hidden="true" className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
       </div>
 
-      {/*
-        Always visible, unlike the Filters panel below it. The status filter
-        used to live only inside that collapsed panel, so there was no obvious
-        way to find the products that were hidden - or to see how many had sold
-        out or were still waiting for photos.
-      */}
       {/*
         The warning that matters most: sold-out pieces are hidden from shoppers
         by the order that sold their last unit. The admin push notification only
         reaches a browser that allowed notifications, so the page says it too.
       */}
       {statusCounts.soldOut > 0 && statusFilter !== 'soldOut' && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
-          <p className="text-sm text-orange-800">
-            <span className="font-semibold">
-              {statusCounts.soldOut} product{statusCounts.soldOut === 1 ? ' is' : 's are'} out of stock
-            </span>{' '}
-            and hidden from the store. Add stock to put {statusCounts.soldOut === 1 ? 'it' : 'them'} back on sale.
-          </p>
-          <button
-            type="button"
-            onClick={() => setStatusFilter('soldOut')}
-            className="rounded-full bg-orange-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-orange-700"
-          >
-            Review sold-out items
-          </button>
-        </div>
+        <Notice
+          tone="warning"
+          action={
+            <Button variant="outline" size="sm" onClick={() => setStatusFilter('soldOut')}>
+              Review sold out
+            </Button>
+          }
+        >
+          <span className="font-semibold">
+            {statusCounts.soldOut} product{statusCounts.soldOut === 1 ? ' is' : 's are'} out of stock
+          </span>{' '}
+          and hidden from the store. Add stock to put {statusCounts.soldOut === 1 ? 'it' : 'them'} back on sale.
+        </Notice>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      {/*
+        Always visible, unlike the Filters panel below it, so hidden, sold-out
+        and photo-less products are one tap away.
+      */}
+      <ToggleGroup
+        type="single"
+        value={statusFilter}
+        onValueChange={(v) => v && setStatusFilter(v as StatusFilter)}
+        aria-label="Filter by status"
+        className="max-w-full justify-start overflow-x-auto [scrollbar-width:none]"
+      >
         {STATUS_TABS.map((tab) => {
-          const on = statusFilter === tab.value;
           const count = statusCounts[tab.value] ?? 0;
           const warn = (tab.value === 'soldOut' || tab.value === 'noImages') && count > 0;
           return (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => setStatusFilter(tab.value)}
-              className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                on
-                  ? 'border-highlight bg-highlight text-white'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-              }`}
-            >
+            <ToggleGroupItem key={tab.value} value={tab.value} size="sm" className="shrink-0 gap-1.5">
               {tab.label}
               <span
-                className={`rounded-full px-1.5 text-[11px] font-semibold ${
-                  on ? 'bg-white/25 text-white' : warn ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
+                className={`rounded-chip px-1.5 text-[11px] font-semibold tabular-nums ${
+                  warn ? 'bg-status-warning-bg text-status-warning-fg' : 'bg-foreground/[0.06] text-foreground/80'
                 }`}
               >
                 {count}
               </span>
-            </button>
+            </ToggleGroupItem>
           );
         })}
-      </div>
+      </ToggleGroup>
 
       {showFilters && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 rounded-card border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <label className="text-xs font-medium text-gray-600">Category</label>
+            <Label htmlFor="filter-category" className="text-xs font-medium text-foreground/80">Category</Label>
             <Select
               value={categoryFilter}
               onValueChange={(v) => {
@@ -522,10 +530,10 @@ const Products = () => {
                 setSubSubcategoryFilter('all');
               }}
             >
-              <SelectTrigger className="mt-1.5 bg-white border-gray-300 text-gray-900">
+              <SelectTrigger id="filter-category" className="mt-1.5">
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
-              <SelectContent className="bg-white">
+              <SelectContent>
                 <SelectItem value="all">
                   <FilterOption label="All categories" count={searchPool.length} />
                 </SelectItem>
@@ -539,7 +547,7 @@ const Products = () => {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-600">Subcategory</label>
+            <Label htmlFor="filter-subcategory" className="text-xs font-medium text-foreground/80">Subcategory</Label>
             <Select
               value={subcategoryFilter}
               onValueChange={(v) => {
@@ -548,10 +556,10 @@ const Products = () => {
               }}
               disabled={categoryFilter === 'all' || subcategoryOptions.length === 0}
             >
-              <SelectTrigger className="mt-1.5 bg-white border-gray-300 text-gray-900">
+              <SelectTrigger id="filter-subcategory" className="mt-1.5">
                 <SelectValue placeholder="All subcategories" />
               </SelectTrigger>
-              <SelectContent className="bg-white">
+              <SelectContent>
                 <SelectItem value="all">
                   <FilterOption label="All subcategories" count={inCategory.length} />
                 </SelectItem>
@@ -565,16 +573,16 @@ const Products = () => {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-600">Sub-subcategory</label>
+            <Label htmlFor="filter-subsub" className="text-xs font-medium text-foreground/80">Sub-subcategory</Label>
             <Select
               value={subSubcategoryFilter}
               onValueChange={setSubSubcategoryFilter}
               disabled={subcategoryFilter === 'all' || subSubcategoryOptions.length === 0}
             >
-              <SelectTrigger className="mt-1.5 bg-white border-gray-300 text-gray-900">
+              <SelectTrigger id="filter-subsub" className="mt-1.5">
                 <SelectValue placeholder="All sub-subcategories" />
               </SelectTrigger>
-              <SelectContent className="bg-white">
+              <SelectContent>
                 <SelectItem value="all">
                   <FilterOption label="All sub-subcategories" count={inSubcategory.length} />
                 </SelectItem>
@@ -586,22 +594,22 @@ const Products = () => {
               </SelectContent>
             </Select>
             {subcategoryFilter !== 'all' && subSubcategoryOptions.length === 0 && (
-              <p className="mt-1 text-[11px] text-gray-400">
+              <p className="mt-1 text-xs text-muted-foreground">
                 This subcategory has no sub-subcategories.
               </p>
             )}
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-600">Status</label>
+            <Label htmlFor="filter-status" className="text-xs font-medium text-foreground/80">Status</Label>
             <Select
               value={statusFilter}
               onValueChange={(v) => setStatusFilter(v as StatusFilter)}
             >
-              <SelectTrigger className="mt-1.5 bg-white border-gray-300 text-gray-900">
+              <SelectTrigger id="filter-status" className="mt-1.5">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-white">
+              <SelectContent>
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="active">Live only</SelectItem>
                 <SelectItem value="inactive">Hidden only</SelectItem>
@@ -611,203 +619,211 @@ const Products = () => {
             </Select>
           </div>
 
-          <div className="sm:col-span-2 lg:col-span-4 flex items-center justify-between">
-            <p className="text-xs text-gray-500">
-              {filteredProducts.length} of {products.length} products
+          <div className="flex items-center justify-between sm:col-span-2 lg:col-span-4">
+            <p className="text-xs tabular-nums text-muted-foreground">
+              {filteredProducts.length} of {plural(products.length, 'product')}
             </p>
             {activeFilterCount > 0 && (
-              <button
-                onClick={clearFilters}
-                className="text-xs font-medium text-highlight hover:underline"
-              >
+              <Button variant="link" size="sm" onClick={clearFilters}>
                 Clear filters
-              </button>
+              </Button>
             )}
           </div>
         </div>
       )}
 
-      {/* Products View */}
+      {/* Products view */}
       {loading ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-          <div className="animate-spin h-8 w-8 border-2 border-highlight border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-gray-600 mt-4">Loading products...</p>
-        </div>
-      ) : filteredProducts.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-          <p className="text-gray-600 mb-6">
-            {searchQuery
-              ? 'Try adjusting your search query'
-              : 'Get started by adding your first product'}
-          </p>
-          {!searchQuery && (
-            <Link to="/admin/products/new">
-              <Button className="bg-highlight hover:bg-highlight">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Product
-              </Button>
-            </Link>
-          )}
-        </div>
-      ) : viewMode === 'grid' ? (
-        /* Grid View */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.map((product) => (
-            <div
-              key={product.id}
-              className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group"
-              onClick={() => navigate(`/admin/products/${product.id}`)}
-            >
-              <div className="relative aspect-square bg-gray-50">
-                <SmartImage
-                  src={product.media?.thumbnail || '/placeholder.png'}
-                  alt={product.name}
-                  className="w-full h-full object-cover" preset="tile" />
-                <span
-                  className={`absolute top-2 right-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge(product).className}`}
-                >
-                  {statusBadge(product).label}
-                </span>
-                <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="bg-white/80 hover:bg-white h-8 w-8 p-0 rounded-full shadow">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="bg-white border-gray-200">
-                      <DropdownMenuItem asChild>
-                        <Link to={`/admin/products/${product.id}`} className="text-gray-700 cursor-pointer">
-                          <Edit className="h-4 w-4 mr-2" /> Edit
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-gray-700 cursor-pointer" onClick={() => handleToggleVisibility(product)}>
-                        {product.flags?.isActive ? <><EyeOff className="h-4 w-4 mr-2" /> Hide</> : <><Eye className="h-4 w-4 mr-2" /> Show</>}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600 cursor-pointer" onClick={() => handleDeleteClick(product)}>
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-              <div className="p-4">
-                <h3 className="text-sm font-medium text-gray-900 truncate">{product.name}</h3>
-                <p className="text-xs text-gray-500 mt-1">{product.category}</p>
-                <div className="flex items-center justify-between mt-2">
-                  <div>
-                    <span className="text-highlight font-semibold">₹{product.price}</span>
-                    {product.originalPrice && product.originalPrice > product.price && (
-                      <span className="text-gray-400 text-xs line-through ml-1">₹{product.originalPrice}</span>
-                    )}
-                  </div>
-                  <span className={`text-xs ${(product.inventory?.stock || 0) > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    Stock: {product.inventory?.stock || 0}
-                  </span>
-                </div>
+        <div aria-busy="true" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <span className="sr-only">Loading products</span>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="overflow-hidden rounded-card border border-border bg-card">
+              <Skeleton className="aspect-square w-full rounded-none" />
+              <div className="space-y-2 p-4">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/3" />
               </div>
             </div>
           ))}
         </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="rounded-card border border-border bg-card px-4 py-12">
+          <EmptyState
+            icon={Package}
+            title="No products found"
+            description={searchQuery ? 'Try a different name, SKU or barcode.' : 'Add your first product to start selling.'}
+            action={!searchQuery ? { label: 'Add product', to: '/admin/products/new' } : undefined}
+          />
+        </div>
+      ) : viewMode === 'grid' ? (
+        /* Grid view */
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredProducts.map((product) => {
+            const status = statusBadge(product);
+            const stock = product.inventory?.stock || 0;
+            return (
+              <div
+                key={product.id}
+                className="group relative overflow-hidden rounded-card border border-border bg-card transition-[box-shadow,border-color] duration-hover ease-out hover:border-foreground/20 hover:shadow-md has-[a:focus-visible]:outline has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ring"
+              >
+                <div className="relative aspect-square bg-muted">
+                  <SmartImage
+                    src={product.media?.thumbnail || '/placeholder.png'}
+                    alt=""
+                    className="h-full w-full object-cover" preset="tile" />
+                  <StatusBadge
+                    tone={status.tone}
+                    label={status.label}
+                    icon={status.icon}
+                    className="absolute right-2 top-2 max-w-[calc(100%-3.5rem)] truncate"
+                  />
+                  <div className="absolute left-1.5 top-1.5 z-raised opacity-100 transition-opacity duration-hover lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 lg:has-[[data-state=open]]:opacity-100">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <IconButton
+                          label={`Actions for ${product.name}`}
+                          onFocus={(e) => { confirmReturnRef.current = e.currentTarget; }}
+                          size="sm"
+                          variant="solid"
+                          className="bg-card/90 text-foreground shadow-sm focus-visible:opacity-100"
+                        >
+                          <MoreVertical />
+                        </IconButton>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem asChild>
+                          <Link to={`/admin/products/${product.id}`} className="cursor-pointer">
+                            <Edit aria-hidden="true" className="mr-2 h-4 w-4" /> Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => handleToggleVisibility(product)}>
+                          {product.flags?.isActive ? <><EyeOff aria-hidden="true" className="mr-2 h-4 w-4" /> Hide</> : <><Eye aria-hidden="true" className="mr-2 h-4 w-4" /> Show</>}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer text-status-danger-fg focus:text-status-danger-fg" onClick={() => handleDeleteClick(product)}>
+                          <Trash2 aria-hidden="true" className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+                <div className="p-3 sm:p-4">
+                  <h2 className="truncate text-sm font-medium text-foreground" title={product.name}>
+                    <Link
+                      to={`/admin/products/${product.id}`}
+                      className="outline-none after:absolute after:inset-0 after:content-['']"
+                    >
+                      {product.name}
+                    </Link>
+                  </h2>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">{product.category}</p>
+                  <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+                    <p className="tabular-nums">
+                      <span className="font-semibold text-foreground">{formatINR(product.price)}</span>
+                      {product.originalPrice && product.originalPrice > product.price && (
+                        <span className="ml-1.5 text-xs text-muted-foreground line-through">{formatINR(product.originalPrice)}</span>
+                      )}
+                    </p>
+                    <span className={`text-xs tabular-nums ${stock > 0 ? 'text-muted-foreground' : 'font-medium text-status-danger-fg'}`}>
+                      {stock > 0 ? `${stock} in stock` : 'Out of stock'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
-        /* Table View */
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        /* Table view */
+        <div className="overflow-hidden rounded-card border border-border bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
                 <tr>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-700">Product</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-700">Category</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-700">Price</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-700">Stock</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-700">Status</th>
-                  <th className="text-right px-6 py-4 text-sm font-medium text-gray-700">Actions</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground sm:px-6">Product</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground sm:px-6">Category</th>
+                  <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground sm:px-6">Price</th>
+                  <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground sm:px-6">Stock</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground sm:px-6">Status</th>
+                  <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground sm:px-6"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/admin/products/${product.id}`)}>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <SmartImage src={product.media?.thumbnail || '/placeholder.png'} alt={product.name} className="w-12 h-12 rounded-lg object-cover bg-gray-100" preset="tile" />
-                        <div>
-                          <p className="text-gray-900 font-medium">{product.name}</p>
-                          <p className="text-gray-500 text-sm">SKU: {product.inventory?.sku || 'N/A'}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4"><span className="text-gray-700">{product.category}</span></td>
-                    <td className="px-6 py-4">
-                      <span className="text-highlight font-medium">₹{product.price}</span>
-                      {product.originalPrice && product.originalPrice > product.price && (
-                        <span className="text-gray-500 text-sm line-through ml-2">₹{product.originalPrice}</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`${(product.inventory?.stock || 0) > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {product.inventory?.stock || 0}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge(product).className}`}>
-                        {statusBadge(product).label}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white border-gray-200">
-                          <DropdownMenuItem asChild>
-                            <Link to={`/admin/products/${product.id}`} className="text-gray-700 hover:text-gray-900 cursor-pointer">
-                              <Edit className="h-4 w-4 mr-2" /> Edit
+              <tbody className="divide-y divide-border">
+                {filteredProducts.map((product) => {
+                  const status = statusBadge(product);
+                  const stock = product.inventory?.stock || 0;
+                  return (
+                    <tr key={product.id} className="cursor-pointer transition-colors duration-hover hover:bg-muted/60" onClick={() => navigate(`/admin/products/${product.id}`)}>
+                      <td className="px-4 py-3 sm:px-6">
+                        <div className="flex items-center gap-3">
+                          <SmartImage src={product.media?.thumbnail || '/placeholder.png'} alt="" className="h-12 w-12 shrink-0 rounded-control bg-muted object-cover" preset="tile" />
+                          <div className="min-w-0">
+                            <Link
+                              to={`/admin/products/${product.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-medium text-foreground hover:text-primary focus-inset"
+                            >
+                              {product.name}
                             </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-gray-700 hover:text-gray-900 cursor-pointer" onClick={() => handleToggleVisibility(product)}>
-                            {product.flags?.isActive ? <><EyeOff className="h-4 w-4 mr-2" /> Hide</> : <><Eye className="h-4 w-4 mr-2" /> Show</>}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600 hover:text-red-700 cursor-pointer" onClick={() => handleDeleteClick(product)}>
-                            <Trash2 className="h-4 w-4 mr-2" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                ))}
+                            <p className="text-xs text-muted-foreground">SKU: {product.inventory?.sku || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-foreground/80 sm:px-6">{product.category}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums sm:px-6">
+                        <span className="font-medium text-foreground">{formatINR(product.price)}</span>
+                        {product.originalPrice && product.originalPrice > product.price && (
+                          <span className="ml-2 text-xs text-muted-foreground line-through">{formatINR(product.originalPrice)}</span>
+                        )}
+                      </td>
+                      <td className={`px-4 py-3 text-right tabular-nums sm:px-6 ${stock > 0 ? 'text-foreground/80' : 'font-medium text-status-danger-fg'}`}>
+                        {stock}
+                      </td>
+                      <td className="px-4 py-3 sm:px-6">
+                        <StatusBadge tone={status.tone} label={status.label} icon={status.icon} />
+                      </td>
+                      <td className="px-4 py-3 text-right sm:px-6" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <IconButton label={`Actions for ${product.name}`}
+                          onFocus={(e) => { confirmReturnRef.current = e.currentTarget; }} size="sm">
+                              <MoreVertical />
+                            </IconButton>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link to={`/admin/products/${product.id}`} className="cursor-pointer">
+                                <Edit aria-hidden="true" className="mr-2 h-4 w-4" /> Edit
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer" onClick={() => handleToggleVisibility(product)}>
+                              {product.flags?.isActive ? <><EyeOff aria-hidden="true" className="mr-2 h-4 w-4" /> Hide</> : <><Eye aria-hidden="true" className="mr-2 h-4 w-4" /> Show</>}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer text-status-danger-fg focus:text-status-danger-fg" onClick={() => handleDeleteClick(product)}>
+                              <Trash2 aria-hidden="true" className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
+      </div>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="bg-white border-gray-200">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900">Delete Product</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600">
-              Are you sure you want to delete "{productToDelete?.name}"? This action cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-gray-100 text-gray-900 hover:bg-gray-200 border-0">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        returnFocusRef={confirmReturnRef}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title={`Delete ${productToDelete?.name ?? 'this product'}?`}
+        description="It is removed from the store and from the admin. This cannot be undone."
+        confirmLabel="Delete product"
+        tone="danger"
+        onConfirm={handleDeleteConfirm}
+      />
 
       <BarcodeScannerDialog
         open={scannerOpen}
