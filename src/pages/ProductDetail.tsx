@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect, useRef, type ReactNode } from "react";
+import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Heart, Minus, Plus, ChevronRight, ShoppingBag, Truck, Shield, RotateCcw, Check, Loader2, X, ChevronLeft, ArrowLeft, Share2, PenLine, CheckCircle, Image as ImageIcon, ThumbsUp, ThumbsDown } from "lucide-react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Star, Minus, Plus, ChevronRight, ShoppingBag, Truck, Shield, RotateCcw, Check, X, ChevronLeft, ArrowLeft, Share2, PenLine, ThumbsUp, ThumbsDown, Play, Mail, Link2, PackageSearch, ArrowRight } from "lucide-react";
 import { getProduct, type Product as FirebaseProduct } from "@/services/productService";
 import { getActiveProductsCached, useCatalogRevision } from "@/services/productCache";
 import { UIProductDetail, adaptFirebaseToUIDetail, adaptFirebaseArrayToUI } from "@/lib/productAdapter";
@@ -25,6 +26,26 @@ import { Video, Maximize2 } from "lucide-react";
 import ProductOfferTag from "@/components/offers/ProductOfferTag";
 import { SmartImage } from "@/components/ui/smart-image";
 import { cldUrl } from "@/lib/cloudinaryUrl";
+import { IconButton } from "@/components/ui/icon-button";
+import { WishlistToggle } from "@/components/WishlistToggle";
+import { EmptyState } from "@/components/EmptyState";
+import { Notice } from "@/components/ui/notice";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { formatDate, formatINR, plural } from "@/lib/format";
+import { DUR, EASE_IN_OUT, EASE_OUT, tap } from "@/lib/motion";
+import { SITE_URL } from "@/lib/siteUrl";
+import { cn } from "@/lib/utils";
+
+/** "Personal Care" -> "personal-care", the slug the category pages use. */
+const categorySlug = (name: string) =>
+  name.toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+/** Hover zoom only where there is a real pointer; a tap on a phone opens the viewer instead. */
+const canHoverZoom = () =>
+  typeof window !== "undefined" && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
 /**
  * Can this product be bought right now?
@@ -88,24 +109,22 @@ const ProductDetail = () => {
    * in the same order every render. The media count comes from a ref, which is
    * a plain assignment and so may be written after those returns.
    */
+  // Escape, focus trap and scroll lock come from the Radix dialog the viewer
+  // is built on; only arrow-key paging is ours.
   useEffect(() => {
     if (!showImagePopup) return;
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowImagePopup(false);
-      else if (e.key === 'ArrowRight') {
+      if (e.key === 'ArrowRight') {
         setSelectedImage((i) => Math.min(i + 1, Math.max(0, mediaCountRef.current - 1)));
       } else if (e.key === 'ArrowLeft') {
         setSelectedImage((i) => Math.max(i - 1, 0));
       }
     };
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previousOverflow;
     };
   }, [showImagePopup]);
 
@@ -128,9 +147,21 @@ const ProductDetail = () => {
   const [userReview, setUserReview] = useState<Review | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const [helpfulVotes, setHelpfulVotes] = useState<Record<string, { up: number; down: number; voted: 'up' | 'down' | null }>>({});
   // Review image lightbox
   const [reviewLightbox, setReviewLightbox] = useState<{ images: string[]; index: number } | null>(null);
+
+  // The share sheet, photo viewer and review lightbox are opened from state,
+  // not a Radix Trigger, so they remember what had focus and hand it back.
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const rememberFocus = () => {
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  };
+  const restoreFocus = (event: Event) => {
+    event.preventDefault();
+    returnFocusRef.current?.focus({ preventScroll: true });
+  };
 
   const handleHelpfulVote = async (reviewId: string, type: 'up' | 'down') => {
     // Check localStorage to prevent re-voting after page refresh
@@ -329,8 +360,8 @@ const ProductDetail = () => {
     } catch (error) {
       console.error('Error adding to cart:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add item to cart. Please try again.",
+        title: "Could not add to cart",
+        description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
     }
@@ -372,7 +403,8 @@ const ProductDetail = () => {
     const productUrl = window.location.href;
     const productTitle = product.title;
     const productImage = product.image.startsWith('http') ? product.image : `${window.location.origin}${product.image}`;
-    const shareText = `Check out ${productTitle} at Ishaputra Botanicals! ₹${product.price.toLocaleString("en-IN")}`;
+    const shareText = `${productTitle} from Ishaputra Botanicals, ${formatINR(product.price)}`;
+    const openWindow = (url: string) => window.open(url, '_blank', 'noopener,noreferrer');
 
     // Helper function to share with image via native share API
     const shareWithImage = async (text: string) => {
@@ -405,48 +437,48 @@ const ProductDetail = () => {
         // Try native share with image first (mobile), fallback to URL
         const shared = await shareWithImage(shareText);
         if (!shared) {
-          window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + '\n' + productUrl)}`, '_blank');
+          openWindow(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + '\n' + productUrl)}`);
         }
         break;
       }
       case 'facebook': {
         const shared = await shareWithImage(shareText);
         if (!shared) {
-          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}&quote=${encodeURIComponent(shareText)}`, '_blank');
+          openWindow(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}&quote=${encodeURIComponent(shareText)}`);
         }
         break;
       }
       case 'twitter': {
         const shared = await shareWithImage(shareText);
         if (!shared) {
-          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(productUrl)}`, '_blank');
+          openWindow(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(productUrl)}`);
         }
         break;
       }
       case 'telegram': {
         const shared = await shareWithImage(shareText);
         if (!shared) {
-          window.open(`https://t.me/share/url?url=${encodeURIComponent(productUrl)}&text=${encodeURIComponent(shareText)}`, '_blank');
+          openWindow(`https://t.me/share/url?url=${encodeURIComponent(productUrl)}&text=${encodeURIComponent(shareText)}`);
         }
         break;
       }
       case 'pinterest':
-        window.open(`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(productUrl)}&media=${encodeURIComponent(productImage)}&description=${encodeURIComponent(shareText)}`, '_blank');
+        openWindow(`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(productUrl)}&media=${encodeURIComponent(productImage)}&description=${encodeURIComponent(shareText)}`);
         break;
       case 'email': {
         const shared = await shareWithImage(shareText);
         if (!shared) {
           const emailBody = `${shareText}\n\nProduct Link: ${productUrl}`;
-          window.open(`mailto:?subject=${encodeURIComponent(productTitle + ' - Ishaputra Botanicals')}&body=${encodeURIComponent(emailBody)}`, '_blank');
+          openWindow(`mailto:?subject=${encodeURIComponent(productTitle + ' from Ishaputra Botanicals')}&body=${encodeURIComponent(emailBody)}`);
         }
         break;
       }
       case 'copy':
         try {
           await navigator.clipboard.writeText(productUrl);
-          toast({ title: "Link copied!", description: "Product link copied to clipboard." });
+          toast({ title: "Link copied" });
         } catch {
-          toast({ title: "Error", description: "Failed to copy link.", variant: "destructive" });
+          toast({ title: "Could not copy the link", description: "Please copy it from the address bar.", variant: "destructive" });
         }
         break;
       case 'native':
@@ -538,13 +570,70 @@ const ProductDetail = () => {
     }
   };
 
-  // Show loading state
+  // Search and link-preview tags. Called before the loading and not-found
+  // returns so the hook order never changes.
+  const metaDescription = product?.description
+    ? product.description.length > 160
+      ? `${product.description.slice(0, 157).trimEnd()}…`
+      : product.description
+    : undefined;
+  usePageMeta({
+    title: notFound ? "Product not found" : product?.title,
+    description: notFound ? undefined : metaDescription,
+    canonicalPath: productId ? `/product/${productId}` : undefined,
+    image: product?.image,
+    noindex: notFound,
+    jsonLd:
+      product && !notFound
+        ? {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: product.title,
+            image: (product.images && product.images.length > 0 ? product.images : [product.image]).filter(Boolean),
+            ...(product.description ? { description: product.description } : {}),
+            sku: product.id,
+            brand: { "@type": "Brand", name: "Ishaputra Botanicals" },
+            ...(product.category ? { category: product.category } : {}),
+            offers: {
+              "@type": "Offer",
+              url: `${SITE_URL}/product/${product.id}`,
+              priceCurrency: "INR",
+              price: product.price,
+              availability: isUnavailable(product) ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+            },
+          }
+        : null,
+  });
+
+  // Show loading state: the page's own shape inside the normal header and footer.
   if (loading) {
     return (
-      <div className="min-h-screen w-full">
-        <main className="container-custom py-20 flex items-center justify-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      <div className="tx-paper min-h-screen w-full overflow-x-clip">
+        <Header />
+        <main id="main" tabIndex={-1} aria-busy="true" className="container-custom py-6 md:py-10">
+          <span className="sr-only">Loading product</span>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-14">
+            <Skeleton className="mx-auto aspect-square w-full max-w-lg !rounded-panel" />
+            <div className="flex flex-col gap-4">
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-9 w-4/5 lg:h-11" />
+              <Skeleton className="h-8 w-40" />
+              <Skeleton className="h-3 w-44" />
+              <div className="mt-2 flex flex-col gap-2">
+                <Skeleton className="h-3.5 w-full" />
+                <Skeleton className="h-3.5 w-11/12" />
+                <Skeleton className="h-3.5 w-2/3" />
+              </div>
+              <Skeleton className="mt-2 h-32 w-full !rounded-panel" />
+              <div className="mt-2 hidden gap-4 md:flex">
+                <Skeleton className="h-12 w-32" />
+                <Skeleton className="h-12 flex-1" />
+                <Skeleton className="h-12 flex-1" />
+              </div>
+            </div>
+          </div>
         </main>
+        <Footer />
       </div>
     );
   }
@@ -552,23 +641,21 @@ const ProductDetail = () => {
   // Product not found
   if (notFound || !product) {
     return (
-      <div className="min-h-screen w-full">
-        <main className="container-custom py-20 text-center">
-          <h1 className="text-2xl font-semibold mb-4">Product Not Found</h1>
-          <p className="text-muted-foreground mb-6">The product you're looking for doesn't exist or has been removed.</p>
-          <button
-            onClick={() => navigate("/products")}
-            className="btn-copper"
-          >
-            Back to Shop
-          </button>
+      <div className="tx-paper min-h-screen w-full overflow-x-clip flex flex-col">
+        <Header />
+        <main id="main" tabIndex={-1} className="container-custom flex flex-1 items-center justify-center py-16 sm:py-24">
+          <EmptyState
+            as="h1"
+            icon={PackageSearch}
+            title="This product isn't available"
+            description="It may have been removed or renamed."
+            action={{ label: "Back to shop", to: "/products" }}
+          />
         </main>
+        <Footer />
       </div>
     );
   }
-
-  // Generate SKU
-  const sku = `ishaputra-${product.category.toLowerCase().replace(/[^a-z]/g, "-")}-${product.id}`;
 
   // Product images for gallery - use all images from product, fallback to main image if no images array
   const productImages = product.images && product.images.length > 0 ? product.images : [product.image];
@@ -589,6 +676,29 @@ const ProductDetail = () => {
   ];
   mediaCountRef.current = allMedia.length;
 
+  const saved = isInWishlist(product.id);
+  const reviewCount = reviewStats.totalReviews > 0 ? reviewStats.totalReviews : (product.reviews || 0);
+  const shownReviews = showAllReviews ? reviews : reviews.slice(0, 5);
+  const headingFont = { fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" };
+
+  /** One share target: a monochrome round tile that turns copper on hover. */
+  const shareTile = (key: string, label: string, glyph: ReactNode) => (
+    <button
+      type="button"
+      key={key}
+      onClick={() => handleShare(key)}
+      className="group flex flex-col items-center gap-1.5 rounded-card p-2 transition-[background-color,transform] duration-press ease-out hover:bg-muted/60 active:scale-[0.97]"
+    >
+      <span className="grid size-11 place-items-center rounded-full border border-foreground/12 bg-card text-foreground transition-[border-color,color] duration-hover ease-out group-hover:border-primary group-hover:text-primary [&_svg]:size-5">
+        {glyph}
+      </span>
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+    </button>
+  );
+
+  const brandGlyph = (d: string) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={d} /></svg>
+  );
 
   return (
     <div className="tx-paper min-h-screen w-full overflow-x-clip">
@@ -597,7 +707,7 @@ const ProductDetail = () => {
         <Header />
         <CategoryIconNav />
       </div>
-      <main>
+      <main id="main" tabIndex={-1}>
         {/* Mobile Header and Search */}
         <div className="lg:hidden">
           <MobileHeader />
@@ -605,38 +715,57 @@ const ProductDetail = () => {
         </div>
 
         {/* Breadcrumb */}
-        <section className="hidden lg:block border-b border-foreground/[0.08] py-3">
+        <nav aria-label="Breadcrumb" className="hidden lg:block border-b border-foreground/[0.08] py-3">
           <div className="container-custom">
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              <a href="/" className="hover:text-primary transition-colors">Home</a>
-              <ChevronRight className="w-3.5 h-3.5 text-primary/60" />
-              <span className="text-foreground">
-                {product.title.length > 30 ? product.title.slice(0, 30) + '...' : product.title}
-              </span>
-            </div>
+            <ol className="flex min-w-0 items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <li>
+                <Link to="/" className="transition-colors duration-hover ease-out hover:text-primary">Home</Link>
+              </li>
+              {product.category && (
+                <>
+                  <li aria-hidden="true"><ChevronRight className="size-3.5 text-primary/60" /></li>
+                  <li className="shrink-0">
+                    <Link
+                      to={`/category/${categorySlug(product.category)}`}
+                      className="transition-colors duration-hover ease-out hover:text-primary"
+                    >
+                      {product.category.replace(/-/g, " ")}
+                    </Link>
+                  </li>
+                </>
+              )}
+              <li aria-hidden="true"><ChevronRight className="size-3.5 text-primary/60" /></li>
+              <li className="min-w-0">
+                <span aria-current="page" title={product.title} className="block max-w-[40ch] truncate text-foreground">
+                  {product.title}
+                </span>
+              </li>
+            </ol>
           </div>
-        </section>
+        </nav>
 
         {/* Product Details Section */}
         <section className="py-4 md:py-8">
           <div className="container-custom">
             {/* Back button */}
             <button
+              type="button"
               onClick={() => navigate(-1)}
-              className="mb-4 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground hover:text-primary transition-colors"
+              className="-ml-1 mb-3 inline-flex min-h-11 items-center gap-1.5 rounded-control px-1 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground transition-colors duration-hover ease-out hover:text-primary"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft aria-hidden="true" className="size-4" />
               <span>Back</span>
             </button>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14">
-              {/* Product Images & Videos */}
+              {/* Product Images & Videos: stays in view on desktop while the details scroll */}
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: DUR.modal, ease: EASE_OUT }}
+                className="lg:sticky lg:top-[var(--sticky-top)] lg:self-start"
               >
                 {/* Main Media */}
-                <div 
+                <div
                   className="group relative tile-img !rounded-[var(--radius-panel)] border border-foreground/[0.08] shadow-[var(--shadow-panel)] overflow-hidden aspect-square max-w-lg mx-auto mb-4 cursor-pointer md:cursor-zoom-in"
                   onClick={() => {
                     if (didSwipeRef.current) { didSwipeRef.current = false; return; }
@@ -644,12 +773,13 @@ const ProductDetail = () => {
                     // way to look closely was the hover magnifier, which shows
                     // a fraction of the piece at a time and vanishes the moment
                     // the pointer leaves.
+                    rememberFocus();
                     setShowImagePopup(true);
                   }}
                   onTouchStart={onTouchStart}
                   onTouchMove={onTouchMove}
                   onTouchEnd={onTouchEnd}
-                  onMouseEnter={() => allMedia[selectedImage]?.type !== 'video' && setIsZooming(true)}
+                  onMouseEnter={() => allMedia[selectedImage]?.type !== 'video' && canHoverZoom() && setIsZooming(true)}
                   onMouseLeave={() => setIsZooming(false)}
                   onMouseMove={(e) => {
                     if (allMedia[selectedImage]?.type === 'video') return;
@@ -666,18 +796,19 @@ const ProductDetail = () => {
                     where tapping the image already opens it.
                   */}
                   {allMedia[selectedImage]?.type !== 'video' && (
-                    <button
-                      type="button"
+                    <IconButton
+                      label="View image full screen"
+                      variant="onPhoto"
+                      size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
+                        rememberFocus();
                         setShowImagePopup(true);
                       }}
-                      className="absolute right-3 bottom-3 z-20 hidden h-9 w-9 place-items-center rounded-full bg-charcoal/70 text-white opacity-0 backdrop-blur-sm transition-opacity hover:bg-charcoal/90 group-hover:opacity-100 focus-visible:opacity-100 md:grid"
-                      aria-label="View image full screen"
-                      title="View full screen"
+                      className="absolute bottom-3 right-3 z-raised hidden opacity-0 transition-[opacity,background-color,transform] group-hover:opacity-100 focus-visible:opacity-100 md:inline-flex"
                     >
-                      <Maximize2 className="h-4 w-4" />
-                    </button>
+                      <Maximize2 aria-hidden="true" />
+                    </IconButton>
                   )}
 
                   {/* Live-drag + slide animation wrapper */}
@@ -685,7 +816,7 @@ const ProductDetail = () => {
                     className="absolute inset-0"
                     style={{
                       transform: `translateX(${dragX}px)`,
-                      transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                      transition: isDragging ? 'none' : 'transform 200ms cubic-bezier(0.23, 1, 0.32, 1)',
                     }}
                   >
                     <AnimatePresence custom={swipeDir} mode="popLayout" initial={false}>
@@ -696,14 +827,14 @@ const ProductDetail = () => {
                         initial="enter"
                         animate="center"
                         exit="exit"
-                        transition={{ type: 'tween', ease: [0.25, 0.46, 0.45, 0.94], duration: 0.28 }}
+                        transition={{ type: 'tween', ease: EASE_IN_OUT, duration: 0.28 }}
                         className="absolute inset-0"
                       >
                         {allMedia[selectedImage]?.type === 'video' ? (
                           <>
                             <iframe
                               src={allMedia[selectedImage].src}
-                              title="Product video"
+                              title={`${product.title} video`}
                               className="w-full h-full"
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                               allowFullScreen
@@ -735,7 +866,7 @@ const ProductDetail = () => {
                             <SmartImage
                               src={allMedia[selectedImage]?.src || product.image}
                               alt={product.alt}
-                              className="w-full h-full object-cover transition-transform duration-200 ease-out hidden md:block"
+                              className="w-full h-full object-cover transition-transform duration-dropdown ease-out hidden md:block"
                               preset="detail"
                               priority
                               style={{
@@ -756,42 +887,34 @@ const ProductDetail = () => {
                       </motion.div>
                     </AnimatePresence>
                   </div>
-                  {/* Subtle gold ring on hover (desktop) */}
-                  <div className="hidden md:block absolute inset-0 ring-1 ring-inset ring-primary/0 group-hover:ring-primary/30 rounded-[var(--radius-panel)] transition-all pointer-events-none" />
+                  {/* Copper hairline on hover (pointer devices) */}
+                  <div aria-hidden="true" className="hidden md:block absolute inset-0 ring-1 ring-inset ring-primary/0 group-hover:ring-primary/30 rounded-[var(--radius-panel)] transition-shadow duration-hover ease-out pointer-events-none" />
                   {allMedia.length > 1 && (
-                    <span className="tag-dark absolute bottom-3 left-3 z-10 tabular-nums pointer-events-none">
-                      {String(selectedImage + 1).padStart(2, "0")} / {String(allMedia.length).padStart(2, "0")}
+                    <span className="sr-only" aria-live="polite">
+                      Image {selectedImage + 1} of {allMedia.length}
                     </span>
                   )}
-                  
-                  {/* Wishlist & Share Icons */}
-                  <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (product) toggleWishlist(product.id, product.title);
-                      }}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all border backdrop-blur-sm ${
-                        product && isInWishlist(product.id)
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-card/90 text-foreground border-foreground/10 hover:border-primary/50 hover:text-primary"
-                      }`}
-                    >
-                      <Heart
-                        className="w-5 h-5"
-                        fill={product && isInWishlist(product.id) ? "currentColor" : "none"}
-                      />
-                    </button>
 
-                    <button
+                  {/* Wishlist & Share */}
+                  <div className="absolute top-3 right-3 z-raised flex flex-col gap-2">
+                    <WishlistToggle
+                      name={product.title}
+                      saved={saved}
+                      onToggle={() => toggleWishlist(product.id, product.title)}
+                      className={cn(saved && "border-primary/40")}
+                    />
+                    <IconButton
+                      label="Share"
+                      variant="solid"
+                      aria-haspopup="dialog"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setShowShareMenu(!showShareMenu);
+                        rememberFocus();
+                        setShowShareMenu(true);
                       }}
-                      className="w-10 h-10 rounded-full bg-card/90 backdrop-blur-sm text-foreground border border-foreground/10 hover:border-primary/50 hover:text-primary flex items-center justify-center transition-all"
                     >
-                      <Share2 className="w-5 h-5" />
-                    </button>
+                      <Share2 aria-hidden="true" />
+                    </IconButton>
                   </div>
                 </div>
 
@@ -800,9 +923,12 @@ const ProductDetail = () => {
                   <div className="grid grid-cols-4 gap-2 max-w-lg mx-auto">
                     {allMedia.map((item, index) => (
                       <button
+                        type="button"
                         key={index}
                         onClick={() => navigateMedia(index)}
-                        className={`tile-img aspect-square !rounded-[8px] overflow-hidden border transition-all relative ${
+                        aria-label={`Show ${item.type === 'video' ? 'video' : 'image'} ${index + 1} of ${allMedia.length}`}
+                        aria-current={selectedImage === index ? "true" : undefined}
+                        className={`tile-img aspect-square !rounded-[8px] overflow-hidden border relative transition-[border-color,box-shadow] duration-hover ease-out ${
                           selectedImage === index
                             ? "border-primary shadow-[inset_0_0_0_1px_hsl(var(--primary))]"
                             : "border-foreground/10 hover:border-primary/50"
@@ -810,16 +936,16 @@ const ProductDetail = () => {
                       >
                         <SmartImage
                           src={item.thumb}
-                          alt={`${product.title} ${item.type === 'video' ? 'video' : 'view'} ${index + 1}`}
+                          alt=""
                           className="w-full h-full object-contain p-1"
                           preset="tile"
                         />
                         {item.type === 'video' && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                            <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                              <div className="w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-l-[8px] border-l-white ml-0.5" />
-                            </div>
-                          </div>
+                          <span aria-hidden="true" className="absolute inset-0 grid place-items-center bg-charcoal/20">
+                            <span className="grid size-7 place-items-center rounded-full bg-primary text-primary-foreground">
+                              <Play className="ml-0.5 size-3.5 fill-current" />
+                            </span>
+                          </span>
                         )}
                       </button>
                     ))}
@@ -829,9 +955,9 @@ const ProductDetail = () => {
 
               {/* Product Info */}
               <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: DUR.modal, ease: EASE_OUT, delay: 0.04 }}
                 className="flex flex-col"
                 style={{ fontFamily: "var(--font-body)" }}
               >
@@ -840,8 +966,8 @@ const ProductDetail = () => {
                   <span>{product.category.replace(/-/g, " ")}</span>
                 </p>
                 <h1
-                  className="text-2xl md:text-3xl lg:text-[2.6rem] font-semibold leading-[1.08] text-foreground mb-4"
-                  style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
+                  className="text-2xl md:text-3xl lg:text-[2.6rem] font-semibold leading-[1.08] text-foreground mb-4 [text-wrap:balance]"
+                  style={headingFont}
                 >
                   {product.title}
                 </h1>
@@ -862,12 +988,13 @@ const ProductDetail = () => {
                     return (
                       <div className="flex items-center gap-3 flex-wrap">
                         <span className="price-now text-3xl lg:text-4xl">
-                          ₹{livePriceDisplay.toLocaleString("en-IN")}
+                          {formatINR(livePriceDisplay)}
                         </span>
                         {liveMRP && liveMRP > product.price && (
                           <>
                             <span className="price-was text-lg md:text-xl">
-                              ₹{liveMRP.toLocaleString("en-IN")}
+                              <span className="sr-only">Was </span>
+                              {formatINR(liveMRP)}
                             </span>
                             {liveDiscount && liveDiscount > 0 && (
                               <span className="chip-off !text-[11px] !px-2.5 !py-0.5">
@@ -899,13 +1026,16 @@ const ProductDetail = () => {
 
                 {/* Description */}
                 <div className="mb-4 mt-4">
-                  <p className={`text-sm md:text-[15px] text-foreground/75 leading-relaxed ${
+                  <p id="product-description" className={`text-sm md:text-[15px] text-foreground/75 leading-relaxed [text-wrap:pretty] ${
                     !showFullDescription ? 'line-clamp-3' : ''
                   }`}>
                     {product.description || 'Details for this product are coming soon.'}
                   </p>
                   {(product.description || '').length > 100 && (
                     <button
+                      type="button"
+                      aria-expanded={showFullDescription}
+                      aria-controls="product-description"
                       onClick={() => setShowFullDescription(!showFullDescription)}
                       className="link-arrow mt-2.5"
                     >
@@ -934,59 +1064,68 @@ const ProductDetail = () => {
                 {/* Quantity & Actions - Hidden on mobile, shown on desktop */}
                 <div className="hidden md:flex flex-wrap items-center gap-4 mb-6">
                   {/* Quantity Selector - pointless for a piece that cannot be bought */}
-                  <div className={`${isUnavailable(product) ? 'hidden' : 'flex'} items-center border border-foreground/15 rounded-[6px] overflow-hidden bg-card/60`}>
+                  <div
+                    role="group"
+                    aria-label="Quantity"
+                    className={`${isUnavailable(product) ? 'hidden' : 'flex'} items-center border border-foreground/15 rounded-control overflow-hidden bg-card/60`}
+                  >
                     <button
+                      type="button"
                       onClick={decrementQuantity}
-                      className="w-12 h-12 flex items-center justify-center hover:text-primary transition-colors"
+                      disabled={quantity <= 1}
+                      className="focus-inset w-12 h-12 flex items-center justify-center transition-colors duration-hover ease-out hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                       aria-label="Decrease quantity"
                     >
-                      <Minus className="w-4 h-4" />
+                      <Minus aria-hidden="true" className="w-4 h-4" />
                     </button>
-                    <span className="w-10 text-center font-bold tabular-nums">{quantity}</span>
+                    <span aria-live="polite" className="w-10 text-center font-bold tabular-nums">{quantity}</span>
                     <button
+                      type="button"
                       onClick={incrementQuantity}
-                      className="w-12 h-12 flex items-center justify-center hover:text-primary transition-colors"
+                      className="focus-inset w-12 h-12 flex items-center justify-center transition-colors duration-hover ease-out hover:text-primary"
                       aria-label="Increase quantity"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus aria-hidden="true" className="w-4 h-4" />
                     </button>
                   </div>
 
                   {isUnavailable(product) ? (
-                    <div className="flex-1 min-w-[160px] rounded-[6px] border border-foreground/15 bg-foreground/[0.04] text-foreground/70 px-6 py-3.5 text-center text-sm font-semibold">
+                    <div className="flex-1 min-w-[160px] rounded-control border border-foreground/15 bg-foreground/[0.04] text-foreground/70 px-6 py-3.5 text-center text-sm font-semibold">
                       Sold out · Ask us about similar products below
                     </div>
                   ) : (<>
                   {/* Add to Cart Button */}
                   <motion.button
+                    type="button"
                     onClick={handleAddToCart}
-                    whileTap={{ scale: 0.95 }}
-                    className={`flex-1 min-w-[160px] px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.16em] rounded-[6px] transition-all flex items-center justify-center gap-2 border ${
+                    whileTap={tap}
+                    className={`flex-1 min-w-[160px] h-12 px-6 text-[11px] font-bold uppercase tracking-[0.16em] rounded-control transition-[background-color,border-color,color] duration-hover ease-out flex items-center justify-center gap-2 border ${
                       addedToCart
-                        ? "bg-emerald-700 text-white border-emerald-700"
+                        ? "bg-primary/10 text-primary border-primary"
                         : "bg-card/60 text-foreground border-foreground/20 hover:border-primary hover:text-primary"
                     }`}
                   >
                     {addedToCart ? (
                       <>
-                        <Check className="w-5 h-5" />
-                        Added to Cart
+                        <Check aria-hidden="true" className="size-5" />
+                        Added to cart
                       </>
                     ) : (
                       <>
-                        <ShoppingBag className="w-5 h-5" />
-                        Add to Cart
+                        <ShoppingBag aria-hidden="true" className="size-5" />
+                        Add to cart
                       </>
                     )}
                   </motion.button>
 
                   {/* Buy Now Button */}
                   <motion.button
+                    type="button"
                     onClick={handleBuyNow}
-                    whileTap={{ scale: 0.95 }}
-                    className="btn-copper flex-1 min-w-[160px] !py-4"
+                    whileTap={tap}
+                    className="btn-copper flex-1 min-w-[160px] h-12"
                   >
-                    Buy Now
+                    Buy now
                   </motion.button>
                   </>)}
                 </div>
@@ -995,6 +1134,8 @@ const ProductDetail = () => {
                     Labels shorten on narrow screens so both stay on one line. */}
                 <div className="mt-2 flex items-stretch gap-2 sm:gap-3">
                   <motion.button
+                    type="button"
+                    aria-haspopup="dialog"
                     onClick={() => {
                       if (!user) {
                         navigate('/login', { state: { from: location } });
@@ -1002,203 +1143,150 @@ const ProductDetail = () => {
                       }
                       setShowVideoCallModal(true);
                     }}
-                    whileTap={{ scale: 0.97 }}
-                    className="flex-1 min-w-0 px-3 sm:px-5 py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.14em] rounded-[6px] border border-foreground/15 text-foreground hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap"
+                    whileTap={tap}
+                    className="flex-1 min-w-0 min-h-11 px-3 sm:px-5 py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.14em] rounded-control border border-foreground/15 text-foreground transition-[border-color,color] duration-hover ease-out hover:border-primary hover:text-primary flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap"
                   >
-                    <Video className="w-4 h-4 shrink-0" />
-                    <span className="hidden sm:inline">Video Consultation</span>
+                    <Video aria-hidden="true" className="w-4 h-4 shrink-0" />
+                    <span className="hidden sm:inline">Video consultation</span>
                     <span className="sm:hidden">Consult</span>
                   </motion.button>
 
                   <WhatsAppEnquiryButton product={product} className="flex-1 min-w-0" />
                 </div>
 
-                {/* Share Popup */}
-                <AnimatePresence>
-                  {showShareMenu && (
-                    <>
-                      <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/50 z-40" 
-                        onClick={() => setShowShareMenu(false)} 
-                      />
-                      <motion.div
-                        initial={{ y: "100%" }}
-                        animate={{ y: 0 }}
-                        exit={{ y: "100%" }}
-                        transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="tx-sheet fixed bottom-0 left-0 right-0 z-50 rounded-t-[var(--radius-panel)] shadow-2xl p-6 max-w-screen-sm mx-auto"
-                      >
-                        <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
-                        <p className="eyebrow-no mb-5"><span>Share this product</span></p>
-                        <div className="grid grid-cols-4 gap-4">
-                              {/* WhatsApp */}
-                              <button onClick={() => handleShare('whatsapp')} className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-muted transition-colors">
-                                <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
-                                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                                </div>
-                                <span className="text-[10px] text-muted-foreground">WhatsApp</span>
-                              </button>
-
-                              {/* Facebook */}
-                              <button onClick={() => handleShare('facebook')} className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-muted transition-colors">
-                                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
-                                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                                </div>
-                                <span className="text-[10px] text-muted-foreground">Facebook</span>
-                              </button>
-
-                              {/* Twitter/X */}
-                              <button onClick={() => handleShare('twitter')} className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-muted transition-colors">
-                                <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center">
-                                  <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                                </div>
-                                <span className="text-[10px] text-muted-foreground">X</span>
-                              </button>
-
-                              {/* Telegram */}
-                              <button onClick={() => handleShare('telegram')} className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-muted transition-colors">
-                                <div className="w-10 h-10 rounded-full bg-sky-500 flex items-center justify-center">
-                                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-                                </div>
-                                <span className="text-[10px] text-muted-foreground">Telegram</span>
-                              </button>
-
-                              {/* Pinterest */}
-                              <button onClick={() => handleShare('pinterest')} className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-muted transition-colors">
-                                <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center">
-                                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12.017 24c6.624 0 11.99-5.367 11.99-11.988C24.007 5.367 18.641.001 12.017.001z"/></svg>
-                                </div>
-                                <span className="text-[10px] text-muted-foreground">Pinterest</span>
-                              </button>
-
-                              {/* Email */}
-                              <button onClick={() => handleShare('email')} className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-muted transition-colors">
-                                <div className="w-10 h-10 rounded-full bg-gray-600 dark:bg-gray-500 flex items-center justify-center">
-                                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                                </div>
-                                <span className="text-[10px] text-muted-foreground">Email</span>
-                              </button>
-
-                              {/* Copy Link */}
-                              <button onClick={() => handleShare('copy')} className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-muted transition-colors">
-                                <div className="w-10 h-10 rounded-full bg-gray-800 dark:bg-gray-600 flex items-center justify-center">
-                                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                                </div>
-                                <span className="text-[10px] text-muted-foreground">Copy Link</span>
-                              </button>
-
-                              {/* Native Share (mobile) */}
-                              {typeof navigator !== 'undefined' && navigator.share && (
-                                <button onClick={() => handleShare('native')} className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-muted transition-colors">
-                                  <div className="w-10 h-10 rounded-full bg-highlight flex items-center justify-center">
-                                    <Share2 className="w-5 h-5 text-white" />
-                                  </div>
-                                  <span className="text-[10px] text-muted-foreground">More</span>
-                                </button>
-                            )}
-                          </div>
-                        </motion.div>
-                      </>
-                    )}
-                  </AnimatePresence>
+                {/* Share sheet */}
+                <Sheet open={showShareMenu} onOpenChange={setShowShareMenu}>
+                  <SheetContent side="bottom" className="tx-sheet mx-auto max-w-screen-sm" onCloseAutoFocus={restoreFocus}>
+                    <SheetHeader className="mb-4">
+                      <SheetTitle>Share this product</SheetTitle>
+                      <SheetDescription className="truncate">{product.title}</SheetDescription>
+                    </SheetHeader>
+                    <div className="grid grid-cols-4 gap-2 sm:gap-4">
+                      {shareTile('whatsapp', 'WhatsApp', brandGlyph("M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"))}
+                      {shareTile('facebook', 'Facebook', brandGlyph("M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"))}
+                      {shareTile('twitter', 'X', brandGlyph("M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"))}
+                      {shareTile('telegram', 'Telegram', brandGlyph("M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"))}
+                      {shareTile('pinterest', 'Pinterest', brandGlyph("M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12.017 24c6.624 0 11.99-5.367 11.99-11.988C24.007 5.367 18.641.001 12.017.001z"))}
+                      {shareTile('email', 'Email', <Mail aria-hidden="true" />)}
+                      {shareTile('copy', 'Copy link', <Link2 aria-hidden="true" />)}
+                      {/* Native share (phones) */}
+                      {typeof navigator !== 'undefined' && !!navigator.share && shareTile('native', 'More', <Share2 aria-hidden="true" />)}
+                    </div>
+                  </SheetContent>
+                </Sheet>
 
                 {/* Features */}
-                <div className="grid grid-cols-3 gap-2 md:gap-4 mt-4 md:mt-5 mb-6 md:mb-8">
-                  <div className="flex flex-col md:flex-row items-center gap-1.5 md:gap-3 p-2.5 md:p-3.5 border border-foreground/[0.08] bg-card/60 rounded-[var(--radius-card)] text-center md:text-left">
-                    <Truck className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
-                    <span className="text-[9px] md:text-[11px] font-bold uppercase tracking-[0.1em] leading-tight text-foreground/80">Delivery Across India</span>
-                  </div>
-                  <div className="flex flex-col md:flex-row items-center gap-1.5 md:gap-3 p-2.5 md:p-3.5 border border-foreground/[0.08] bg-card/60 rounded-[var(--radius-card)] text-center md:text-left">
-                    <Shield className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
-                    <span className="text-[9px] md:text-[11px] font-bold uppercase tracking-[0.1em] leading-tight text-foreground/80">Secure Checkout</span>
-                  </div>
-                  <div className="flex flex-col md:flex-row items-center gap-1.5 md:gap-3 p-2.5 md:p-3.5 border border-foreground/[0.08] bg-card/60 rounded-[var(--radius-card)] text-center md:text-left">
-                    <RotateCcw className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
-                    <span className="text-[9px] md:text-[11px] font-bold uppercase tracking-[0.1em] leading-tight text-foreground/80">7-Day Returns</span>
-                  </div>
-                </div>
+                <ul className="grid grid-cols-3 gap-2 md:gap-4 mt-4 md:mt-5 mb-6 md:mb-8">
+                  {[
+                    { icon: Truck, label: "Ships across India" },
+                    { icon: Shield, label: "Secure checkout" },
+                    { icon: RotateCcw, label: "7-day returns" },
+                  ].map(({ icon: Icon, label }) => (
+                    <li
+                      key={label}
+                      className="flex flex-col md:flex-row items-center gap-1.5 md:gap-3 p-3 md:p-3.5 border border-foreground/[0.08] bg-card/60 rounded-card text-center md:text-left"
+                    >
+                      <Icon aria-hidden="true" className="size-5 text-primary flex-shrink-0" />
+                      <span className="text-[10.5px] md:text-[11px] font-bold uppercase tracking-[0.08em] leading-tight text-foreground/80 [text-wrap:balance]">
+                        {label}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
 
                 {/* Divider */}
                 <div className="border-t border-foreground/[0.08] my-5" />
 
                 {/* Customer Reviews */}
-                <div className="mb-6" id="reviews">
+                <section className="mb-6 scroll-mt-28" id="reviews" aria-labelledby="reviews-heading">
                   {/* Header */}
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-lg md:text-2xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
-                      Customer Reviews ({reviewStats.totalReviews > 0 ? reviewStats.totalReviews : (product.reviews || 0)})
-                    </h3>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 id="reviews-heading" className="text-lg md:text-2xl font-semibold text-foreground" style={headingFont}>
+                      Customer reviews
+                      {reviewCount > 0 && (
+                        <span className="ml-1.5 font-normal tabular-nums text-muted-foreground">({reviewCount})</span>
+                      )}
+                    </h2>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-0.5">
-                    Reviews have been published* with verified customer's consent.
-                  </p>
-                  <p className="text-xs text-muted-foreground/70 mb-4">*T&C Applied</p>
 
                   {/* Write a Review Button / Already Reviewed state */}
                   {canWriteReview && (
                     <button
-                      onClick={() => navigate('/write-review', {
+                      type="button"
+                      onClick={() => navigate(`/write-review?productId=${encodeURIComponent(product.id)}`, {
                         state: {
                           productId: product.id,
                           productName: product.title,
                           productImage: product.image,
                         }
                       })}
-                      className="btn-line w-full mb-4 text-foreground hover:border-primary hover:text-primary"
+                      className="btn-line w-full mb-4 text-foreground transition-[border-color,color,transform] duration-press ease-out hover:border-primary hover:text-primary active:scale-[0.97]"
                     >
-                      <PenLine size={16} />
-                      Write a Review
+                      <PenLine aria-hidden="true" className="size-4" />
+                      Write a review
                     </button>
                   )}
                   {userReview?.status === 'pending' && (
-                    <div className="w-full py-2 border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700/40 rounded-full flex items-center justify-center gap-2 mb-4 text-sm text-emerald-700 dark:text-emerald-300 font-medium">
-                      <CheckCircle size={16} />
-                      You've reviewed this product — pending admin approval
-                    </div>
+                    <Notice tone="neutral" compact className="mb-4">
+                      Thanks. Your review is waiting for approval.
+                    </Notice>
                   )}
                   {userReview?.status === 'rejected' && (
-                    <div className="w-full py-2 border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-700/40 rounded-full flex items-center justify-center gap-2 mb-4 text-sm text-red-600 dark:text-red-400 font-medium">
-                      Your previous review was not approved — you may submit a new one
-                    </div>
+                    <Notice tone="warning" compact className="mb-4">
+                      Your last review wasn't approved. You can write a new one.
+                    </Notice>
                   )}
 
                   {/* Individual Reviews */}
-                  {reviews.length > 0 ? (
-                    <div className="space-y-3">
-                      {reviews.slice(0, 5).map((review) => {
+                  {reviewsLoading && reviews.length === 0 ? (
+                    <div aria-busy="true" className="space-y-3">
+                      <span className="sr-only">Loading reviews</span>
+                      {[0, 1].map((i) => (
+                        <div key={i} className="rounded-card border border-foreground/[0.08] bg-card/70 p-4">
+                          <Skeleton className="mb-3 h-4 w-24" />
+                          <Skeleton className="mb-2 h-3.5 w-full" />
+                          <Skeleton className="h-3.5 w-2/3" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : reviews.length > 0 ? (
+                    <>
+                    <ul className="space-y-3">
+                      {shownReviews.map((review) => {
                         const isExpanded = expandedReviews.has(review.id);
-                        const dateStr = review.createdAt?.toDate
-                          ? review.createdAt.toDate().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-                          : '';
+                        const dateStr = formatDate(review.createdAt);
                         const isLong = review.reviewText.length > 150;
                         const votes = helpfulVotes[review.id] || { up: 0, down: 0, voted: null };
+                        const textId = `review-text-${review.id}`;
                         return (
-                          <div key={review.id} className="rounded-[var(--radius-card)] border border-foreground/[0.08] bg-card/70 py-4 px-4">
-                            {/* Rating pill + date */}
+                          <li key={review.id} className="rounded-card border border-foreground/[0.08] bg-card/70 py-4 px-4">
+                            {/* Rating chip + date */}
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="bg-charcoal text-highlight-soft text-xs font-bold px-2 py-0.5 rounded-[4px] flex items-center gap-0.5 tabular-nums">
-                                {review.rating}★
+                              <span className="inline-flex h-6 items-center gap-1 rounded-chip bg-primary/10 px-2 text-xs font-bold tabular-nums text-primary">
+                                <Star aria-hidden="true" className="size-3 fill-current" />
+                                {review.rating}
+                                <span className="sr-only"> out of 5 stars</span>
                               </span>
-                              <span className="text-xs text-muted-foreground">{dateStr}</span>
+                              {dateStr && <span className="text-xs text-muted-foreground">{dateStr}</span>}
                             </div>
 
                             {/* Review text */}
-                            <p className={`text-sm text-foreground/80 mb-1 ${!isExpanded && isLong ? 'line-clamp-3' : ''}`}>
+                            <p id={textId} className={`text-sm text-foreground/80 mb-1 [text-wrap:pretty] ${!isExpanded && isLong ? 'line-clamp-3' : ''}`}>
                               {review.reviewText}
                             </p>
                             {isLong && (
                               <button
+                                type="button"
+                                aria-expanded={isExpanded}
+                                aria-controls={textId}
                                 onClick={() => setExpandedReviews(prev => {
                                   const next = new Set(prev);
                                   isExpanded ? next.delete(review.id) : next.add(review.id);
                                   return next;
                                 })}
-                                className="text-xs font-semibold text-primary mb-2"
+                                className="mb-2 min-h-8 text-xs font-semibold text-primary hover:underline underline-offset-2"
                               >
-                                {isExpanded ? 'read less' : '...read more'}
+                                {isExpanded ? 'Read less' : 'Read more'}
                               </button>
                             )}
 
@@ -1209,54 +1297,76 @@ const ProductDetail = () => {
                                   <button
                                     key={i}
                                     type="button"
-                                    onClick={() => setReviewLightbox({ images: review.images, index: i })}
-                                    className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    aria-haspopup="dialog"
+                                    aria-label={`Open photo ${i + 1} from ${review.userName}'s review`}
+                                    onClick={() => { rememberFocus(); setReviewLightbox({ images: review.images, index: i }); }}
+                                    className="size-14 shrink-0 overflow-hidden rounded-control transition-transform duration-press ease-out active:scale-[0.97]"
                                   >
-                                    <SmartImage src={img} alt={`Review ${i + 1}`} className="w-full h-full object-cover" preset="tile" />
+                                    <SmartImage src={img} alt="" className="w-full h-full object-cover" preset="tile" />
                                   </button>
                                 ))}
                               </div>
                             )}
 
                             {/* Footer: username + helpful */}
-                            <div className="flex items-center justify-between mt-2">
-                              <span className="text-xs font-medium text-foreground/75 flex items-center gap-1">
-                                <Check size={11} className="text-primary" />{review.userName}
+                            <div className="flex items-center justify-between gap-3 mt-2">
+                              <span className="flex min-w-0 items-center gap-1 text-xs font-medium text-foreground/75">
+                                <Check aria-hidden="true" className="size-3 shrink-0 text-primary" />
+                                <span className="truncate">{review.userName}</span>
                               </span>
-                              <span className="text-xs text-muted-foreground flex items-center gap-3">
-                                Helpful?
+                              <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                                <span className="mr-1">Helpful?</span>
                                 <button
+                                  type="button"
                                   onClick={() => handleHelpfulVote(review.id, 'up')}
                                   disabled={!!votes.voted}
-                                  className={`flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded-md border ${
+                                  aria-pressed={votes.voted === 'up'}
+                                  aria-label={`Yes, helpful (${votes.up})`}
+                                  className={`relative flex h-8 items-center gap-1 rounded-control border px-2 tabular-nums transition-colors duration-hover ease-out after:absolute after:-inset-1 after:content-[''] disabled:cursor-default ${
                                     votes.voted === 'up'
                                       ? 'border-primary/50 text-primary'
-                                      : 'border-transparent hover:text-foreground'
+                                      : 'border-transparent enabled:hover:text-foreground'
                                   }`}
                                 >
-                                  <ThumbsUp size={13} strokeWidth={1.8} /> {votes.up}
+                                  <ThumbsUp aria-hidden="true" className="size-3.5" /> {votes.up}
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => handleHelpfulVote(review.id, 'down')}
                                   disabled={!!votes.voted}
-                                  className={`flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded-md border ${
+                                  aria-pressed={votes.voted === 'down'}
+                                  aria-label={`No, not helpful (${votes.down})`}
+                                  className={`relative flex h-8 items-center gap-1 rounded-control border px-2 tabular-nums transition-colors duration-hover ease-out after:absolute after:-inset-1 after:content-[''] disabled:cursor-default ${
                                     votes.voted === 'down'
-                                      ? 'border-red-400 text-red-500'
-                                      : 'border-transparent hover:text-foreground'
+                                      ? 'border-foreground/30 text-foreground'
+                                      : 'border-transparent enabled:hover:text-foreground'
                                   }`}
                                 >
-                                  <ThumbsDown size={13} strokeWidth={1.8} /> {votes.down}
+                                  <ThumbsDown aria-hidden="true" className="size-3.5" /> {votes.down}
                                 </button>
                               </span>
                             </div>
-                          </div>
+                          </li>
                         );
                       })}
-                    </div>
+                    </ul>
+                    {reviews.length > 5 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllReviews((v) => !v)}
+                        aria-expanded={showAllReviews}
+                        className="link-arrow mt-4"
+                      >
+                        {showAllReviews ? 'Show fewer reviews' : `Show all ${plural(reviews.length, 'review')}`}
+                      </button>
+                    )}
+                    </>
                   ) : (
-                    <p className="text-sm text-muted-foreground mt-4">No reviews yet. Be the first to review!</p>
+                    <p className="text-sm text-muted-foreground [text-wrap:pretty]">
+                      No reviews yet. Reviews come from customers after their order is delivered.
+                    </p>
                   )}
-                </div>
+                </section>
 
               </motion.div>
             </div>
@@ -1264,25 +1374,25 @@ const ProductDetail = () => {
         </section>
 
         {/* Related Products */}
-        <section className="tx-sheet py-10 md:py-16 border-t border-foreground/[0.08]">
+        <section aria-labelledby="related-heading" className="tx-sheet py-10 md:py-16 border-t border-foreground/[0.08]">
           <div className="container-custom">
-            <p className="eyebrow-no mb-3"><span>More to explore</span></p>
             <h2
-              className="text-2xl md:text-4xl font-semibold text-left mb-6 md:mb-10"
-              style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
+              id="related-heading"
+              className="text-2xl md:text-4xl font-semibold text-left mb-6 md:mb-10 [text-wrap:balance]"
+              style={headingFont}
             >
-              You May Also Like
+              You may also like
             </h2>
             {/* Mobile: Horizontal Scroll */}
-            <div className="md:hidden flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
+            <div className="md:hidden flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide snap-x">
               {relatedProducts.map((relatedProduct, idx) => (
-                <div key={relatedProduct.id} className="flex-shrink-0 w-40">
+                <div key={relatedProduct.id} className="w-40 flex-shrink-0 snap-start">
                   <ProductCard product={relatedProduct} index={idx} />
                 </div>
               ))}
             </div>
             {/* Desktop: Grid */}
-            <div className="hidden md:grid grid-cols-4 lg:grid-cols-5 gap-4">
+            <div className="hidden md:grid grid-cols-4 gap-4 lg:gap-5">
               {relatedProducts.map((relatedProduct, idx) => (
                 <ProductCard key={relatedProduct.id} product={relatedProduct} index={idx} />
               ))}
@@ -1293,36 +1403,40 @@ const ProductDetail = () => {
 
       {/* Fixed Bottom Bar for Mobile */}
       {!showShareMenu && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-foreground/[0.08] px-4 py-3 z-50">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-sticky border-t border-foreground/[0.08] bg-background/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
           {isUnavailable(product) ? (
-            <div className="rounded-[6px] border border-foreground/15 bg-foreground/[0.04] text-foreground/70 py-3.5 text-center text-sm font-semibold">
+            <div className="rounded-control border border-foreground/15 bg-foreground/[0.04] text-foreground/70 py-3.5 text-center text-sm font-semibold">
               Sold out
             </div>
           ) : (
           <div className="flex gap-3">
           <motion.button
+            type="button"
             onClick={handleAddToCart}
-            whileTap={{ scale: 0.95 }}
-            className="flex-1 py-3.5 text-[11px] font-bold uppercase tracking-[0.14em] rounded-[6px] border border-foreground/20 bg-card/60 text-foreground flex items-center justify-center gap-2"
+            whileTap={tap}
+            className={`flex-1 h-12 text-[11px] font-bold uppercase tracking-[0.14em] rounded-control border flex items-center justify-center gap-2 transition-[background-color,border-color,color] duration-hover ease-out ${
+              addedToCart ? "bg-primary/10 border-primary text-primary" : "border-foreground/20 bg-card/60 text-foreground"
+            }`}
           >
             {addedToCart ? (
               <>
-                <Check className="w-5 h-5" />
+                <Check aria-hidden="true" className="size-5" />
                 Added
               </>
             ) : (
               <>
-                <ShoppingBag className="w-4 h-4" />
+                <ShoppingBag aria-hidden="true" className="size-4" />
                 Add to cart
               </>
             )}
           </motion.button>
           <motion.button
+            type="button"
             onClick={handleBuyNow}
-            whileTap={{ scale: 0.95 }}
-            className="btn-copper flex-1 !px-3 !py-3.5"
+            whileTap={tap}
+            className="btn-copper flex-1 h-12 !px-3 tabular-nums"
           >
-            Buy at ₹{product?.price.toLocaleString("en-IN")}
+            Buy at {formatINR(product.price)}
           </motion.button>
         </div>
           )}
@@ -1338,149 +1452,169 @@ const ProductDetail = () => {
         productImage={product?.images?.[0]}
       />
 
-      {/* Full-screen image viewer (all screen sizes) */}
-      {showImagePopup && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black z-[100] flex flex-col"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 bg-black/80">
-            <span className="text-white text-sm">
-              {selectedImage + 1} / {allMedia.length}
-            </span>
-            <button
-              onClick={() => setShowImagePopup(false)}
-              className="text-white p-2"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-
-          {/* Image Container with Swipe */}
-          <div
-            className="flex-1 flex items-center justify-center relative"
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
+      {/* Full-screen image viewer (all screen sizes): a Radix dialog, so
+          Escape closes it, focus is trapped and returns to the photo. */}
+      <Dialog open={showImagePopup} onOpenChange={setShowImagePopup}>
+        <DialogPortal>
+          <DialogPrimitive.Content
+            aria-describedby={undefined}
+            onCloseAutoFocus={restoreFocus}
+            className="fixed inset-0 z-overlay flex flex-col bg-charcoal text-charcoal-foreground outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:duration-200 data-[state=closed]:duration-150 ease-out"
           >
-            {allMedia[selectedImage]?.type === 'video' ? (
-              <iframe
-                key={selectedImage}
-                src={allMedia[selectedImage].src}
-                title="Product video"
-                className="w-full h-full max-w-full max-h-full p-4"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            ) : (
-              <motion.img
-                key={selectedImage}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.2 }}
-                src={cldUrl(allMedia[selectedImage]?.src || product?.image, 'zoom')}
-                alt={product?.alt}
-                className="max-w-full max-h-full object-contain p-4"
-              />
-            )}
-
-            {/* Navigation Arrows */}
-            {allMedia.length > 1 && (
-              <>
-                {selectedImage > 0 && (
-                  <button
-                    onClick={() => setSelectedImage(selectedImage - 1)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/20 rounded-full p-2"
-                  >
-                    <ChevronLeft className="w-6 h-6 text-white" />
-                  </button>
-                )}
-                {selectedImage < allMedia.length - 1 && (
-                  <button
-                    onClick={() => setSelectedImage(selectedImage + 1)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/20 rounded-full p-2"
-                  >
-                    <ChevronRight className="w-6 h-6 text-white" />
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Thumbnail Dots */}
-          {allMedia.length > 1 && (
-            <div className="flex justify-center gap-2 p-4 bg-black/80">
-              {allMedia.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImage(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    selectedImage === index ? "bg-white w-4" : "bg-white/50"
-                  }`}
-                />
-              ))}
+            <DialogPrimitive.Title className="sr-only">{product.title}: photos</DialogPrimitive.Title>
+            {/* Header */}
+            <div className="flex items-center justify-between px-3 py-2 sm:px-4">
+              <span className="pl-1 text-sm tabular-nums text-charcoal-foreground/70" aria-live="polite">
+                {allMedia.length > 1 ? `${selectedImage + 1} / ${allMedia.length}` : ""}
+              </span>
+              <DialogPrimitive.Close asChild>
+                <IconButton label="Close" variant="onPhoto">
+                  <X aria-hidden="true" />
+                </IconButton>
+              </DialogPrimitive.Close>
             </div>
-          )}
-        </motion.div>
-      )}
+
+            {/* Image Container with Swipe */}
+            <div
+              className="relative flex min-h-0 flex-1 items-center justify-center"
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+            >
+              {allMedia[selectedImage]?.type === 'video' ? (
+                <iframe
+                  key={selectedImage}
+                  src={allMedia[selectedImage].src}
+                  title={`${product.title} video`}
+                  className="w-full h-full max-w-full max-h-full p-4"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <motion.img
+                  key={selectedImage}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2, ease: EASE_OUT }}
+                  src={cldUrl(allMedia[selectedImage]?.src || product?.image, 'zoom')}
+                  alt={product?.alt}
+                  className="max-w-full max-h-full object-contain p-4"
+                />
+              )}
+
+              {/* Navigation Arrows */}
+              {allMedia.length > 1 && (
+                <>
+                  {selectedImage > 0 && (
+                    <IconButton
+                      label="Previous image"
+                      variant="onPhoto"
+                      onClick={() => setSelectedImage(selectedImage - 1)}
+                      className="absolute left-2 top-1/2 -translate-y-1/2"
+                    >
+                      <ChevronLeft aria-hidden="true" />
+                    </IconButton>
+                  )}
+                  {selectedImage < allMedia.length - 1 && (
+                    <IconButton
+                      label="Next image"
+                      variant="onPhoto"
+                      onClick={() => setSelectedImage(selectedImage + 1)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2"
+                    >
+                      <ChevronRight aria-hidden="true" />
+                    </IconButton>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Dots */}
+            {allMedia.length > 1 && (
+              <div className="flex justify-center gap-0.5 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+                {allMedia.map((_, index) => (
+                  <button
+                    type="button"
+                    key={index}
+                    onClick={() => setSelectedImage(index)}
+                    aria-label={`Show image ${index + 1}`}
+                    aria-current={selectedImage === index ? "true" : undefined}
+                    className="grid h-8 min-w-8 place-items-center p-2"
+                  >
+                    <span
+                      className={`block h-2 rounded-full transition-[width,background-color] duration-dropdown ease-out ${
+                        selectedImage === index ? "w-4 bg-charcoal-foreground" : "w-2 bg-charcoal-foreground/45"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </DialogPrimitive.Content>
+        </DialogPortal>
+      </Dialog>
 
       {/* Footer */}
       <Footer />
 
       {/* Bottom padding for mobile to account for fixed bar */}
-      <div className="md:hidden h-20"></div>
+      <div aria-hidden="true" className="md:hidden h-[calc(5rem+env(safe-area-inset-bottom))]"></div>
       <MobileBottomNav />
 
-      {/* Review Image Lightbox */}
-      {reviewLightbox && (
-        <div
-          className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center"
-          onClick={() => setReviewLightbox(null)}
-        >
-          {/* Close */}
-          <button
-            className="absolute top-4 right-4 text-white p-2 hover:bg-white/10 rounded-full"
-            onClick={() => setReviewLightbox(null)}
+      {/* Review photo lightbox */}
+      <Dialog open={!!reviewLightbox} onOpenChange={(next) => { if (!next) setReviewLightbox(null); }}>
+        <DialogPortal>
+          <DialogOverlay className="bg-charcoal/90" />
+          <DialogPrimitive.Content
+            aria-describedby={undefined}
+            onCloseAutoFocus={restoreFocus}
+            onClick={(e) => { if (e.target === e.currentTarget) setReviewLightbox(null); }}
+            className="fixed inset-0 z-overlay flex items-center justify-center outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:duration-200 data-[state=closed]:duration-150 ease-out"
           >
-            <X className="w-6 h-6" />
-          </button>
-          {/* Prev */}
-          {reviewLightbox.index > 0 && (
-            <button
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-white p-2 hover:bg-white/10 rounded-full"
-              onClick={(e) => { e.stopPropagation(); setReviewLightbox(prev => prev && prev.index > 0 ? { ...prev, index: prev.index - 1 } : prev); }}
-            >
-              <ChevronLeft className="w-8 h-8" />
-            </button>
-          )}
-          {/* Image */}
-          <SmartImage
-            src={reviewLightbox.images[reviewLightbox.index]}
-            alt="Review image"
-            className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg"
-            preset="zoom"
-            onClick={(e) => e.stopPropagation()}
-          />
-          {/* Next */}
-          {reviewLightbox.index < reviewLightbox.images.length - 1 && (
-            <button
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-white p-2 hover:bg-white/10 rounded-full"
-              onClick={(e) => { e.stopPropagation(); setReviewLightbox(prev => prev && prev.index < prev.images.length - 1 ? { ...prev, index: prev.index + 1 } : prev); }}
-            >
-              <ChevronRight className="w-8 h-8" />
-            </button>
-          )}
-          {/* Counter */}
-          {reviewLightbox.images.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/50 px-3 py-1 rounded-full">
-              {reviewLightbox.index + 1} / {reviewLightbox.images.length}
-            </div>
-          )}
-        </div>
-      )}
+            <DialogPrimitive.Title className="sr-only">Review photo</DialogPrimitive.Title>
+            {reviewLightbox && (
+              <>
+                <DialogPrimitive.Close asChild>
+                  <IconButton label="Close" variant="onPhoto" className="absolute right-3 top-3">
+                    <X aria-hidden="true" />
+                  </IconButton>
+                </DialogPrimitive.Close>
+                {reviewLightbox.index > 0 && (
+                  <IconButton
+                    label="Previous photo"
+                    variant="onPhoto"
+                    className="absolute left-3 top-1/2 -translate-y-1/2"
+                    onClick={() => setReviewLightbox(prev => prev && prev.index > 0 ? { ...prev, index: prev.index - 1 } : prev)}
+                  >
+                    <ChevronLeft aria-hidden="true" />
+                  </IconButton>
+                )}
+                <SmartImage
+                  src={reviewLightbox.images[reviewLightbox.index]}
+                  alt={`Review photo ${reviewLightbox.index + 1} of ${reviewLightbox.images.length}`}
+                  className="max-h-[85vh] max-w-[90vw] rounded-card object-contain"
+                  preset="zoom"
+                />
+                {reviewLightbox.index < reviewLightbox.images.length - 1 && (
+                  <IconButton
+                    label="Next photo"
+                    variant="onPhoto"
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                    onClick={() => setReviewLightbox(prev => prev && prev.index < prev.images.length - 1 ? { ...prev, index: prev.index + 1 } : prev)}
+                  >
+                    <ChevronRight aria-hidden="true" />
+                  </IconButton>
+                )}
+                {reviewLightbox.images.length > 1 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-chip bg-charcoal/70 px-3 py-1 text-sm tabular-nums text-charcoal-foreground">
+                    {reviewLightbox.index + 1} / {reviewLightbox.images.length}
+                  </div>
+                )}
+              </>
+            )}
+          </DialogPrimitive.Content>
+        </DialogPortal>
+      </Dialog>
     </div>
   );
 };

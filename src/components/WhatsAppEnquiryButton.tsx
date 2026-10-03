@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { DEFAULT_SUPPORT, getCustomerSupportSettings } from "@/services/siteSettingsService";
+import { formatINR } from "@/lib/format";
 
 /**
  * "Enquire on WhatsApp" for a product.
@@ -36,7 +37,7 @@ const buildEnquiryUrl = (phone: string, product: EnquiryProduct, origin: string)
     "I'm interested in this product. Could you please share more details?",
     "",
     `*${product.title}*`,
-    `Price: ₹${product.price.toLocaleString("en-IN")}`,
+    `Price: ${formatINR(product.price)}`,
     "",
     // Last, on its own line: WhatsApp builds the preview card from this link.
     pageUrl,
@@ -79,11 +80,12 @@ const WhatsAppEnquiryButton = ({ product, className = "" }: Props) => {
       target="_blank"
       rel="noopener noreferrer"
       whileTap={{ scale: 0.97 }}
-      className={`px-3 sm:px-5 py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.14em] rounded-[6px] border border-[#25D366]/70 text-[#128C7E] dark:text-[#25D366] hover:bg-[#25D366]/10 transition-all flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap ${className}`}
+      aria-label={`Enquire on WhatsApp about ${product.title}`}
+      className={`flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-control border border-foreground/15 px-3 py-3 text-[10px] font-bold uppercase tracking-[0.14em] text-foreground transition-[border-color,color] duration-hover ease-out hover:border-primary hover:text-primary sm:gap-2 sm:px-5 sm:text-[11px] ${className}`}
     >
-      <WhatsAppIcon className="w-4 h-4 shrink-0" />
-      <span className="hidden sm:inline">Enquire on WhatsApp</span>
-      <span className="sm:hidden">WhatsApp</span>
+      <WhatsAppIcon className="size-4 shrink-0" />
+      <span aria-hidden="true" className="hidden sm:inline">Enquire on WhatsApp</span>
+      <span aria-hidden="true" className="sm:hidden">WhatsApp</span>
     </motion.a>
   );
 };

@@ -1,11 +1,31 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Mic, ArrowLeft, X, Clock, TrendingUp, ShoppingBag } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Search, Mic, ArrowLeft, X, Clock, TrendingUp, ShoppingBag, SearchX } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { getActiveProductsCached, useCatalogRevision } from "@/services/productCache";
 import { UIProduct, adaptFirebaseToUI } from "@/lib/productAdapter";
 import { SmartImage } from "@/components/ui/smart-image";
+import { IconButton } from "@/components/ui/icon-button";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { formatINR } from "@/lib/format";
+import { EASE_OUT } from "@/lib/motion";
+import { cn } from "@/lib/utils";
 import { BRAND } from '@/config/brand';
+
+type SearchableProduct = UIProduct & { searchText: string };
+
+/**
+ * Every word must appear in the name, category or subcategory, in any order
+ * ("hair oil" finds "Bhringraj Hair Strength Oil"). One-letter words only
+ * match the start of a word. Same rule as the results page.
+ */
+const matchesQuery = (searchText: string, query: string) => {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return false;
+  const hayWords = searchText.split(/[^a-z0-9]+/);
+  return words.every((w) => (w.length === 1 ? hayWords.some((hw) => hw.startsWith(w)) : searchText.includes(w)));
+};
 
 // Speech Recognition types
 interface SpeechRecognitionEvent extends Event {
@@ -76,8 +96,10 @@ const MobileSearch = () => {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [allProducts, setAllProducts] = useState<UIProduct[]>([]);
-  const [suggestions, setSuggestions] = useState<UIProduct[]>([]);
+  const [allProducts, setAllProducts] = useState<SearchableProduct[]>([]);
+  const [suggestions, setSuggestions] = useState<SearchableProduct[]>([]);
+
+  usePageMeta({ title: "Search", noindex: true });
   const [searchHistory, setSearchHistory] = useState<string[]>(getSearchHistory());
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -85,7 +107,7 @@ const MobileSearch = () => {
   const hasSpokenRef = useRef(false);
 
   // Popular/trending searches (static list for now)
-  const trendingSearches = ["Shilajit", "Ashwagandha", "Hair Oil", "Beard Oil", "Face Wash", "Herbal Tea"];
+  const trendingSearches = ["Shilajit", "Ashwagandha", "Hair oil", "Beard oil", "Face wash", "Herbal tea"];
 
   // Focus input on mount
   useEffect(() => {
@@ -97,7 +119,17 @@ const MobileSearch = () => {
     const loadProducts = async () => {
       try {
         const products = await getActiveProductsCached();
-        const uiProducts = products.map((p) => adaptFirebaseToUI(p as any));
+        const uiProducts = products.map((p) => {
+          const ui = adaptFirebaseToUI(p as any);
+          const raw = p as any;
+          return {
+            ...ui,
+            searchText: [ui.title, ui.category, raw.subcategory, raw.subSubcategory]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase(),
+          };
+        });
         setAllProducts(uiProducts);
       } catch (error) {
         console.error("Error loading products:", error);
@@ -169,7 +201,7 @@ const MobileSearch = () => {
 
   const toggleVoiceSearch = useCallback(() => {
     if (!recognitionRef.current) {
-      alert("Speech recognition is not supported in your browser.");
+      toast("Voice search isn't supported in this browser");
       return;
     }
     if (isListening) {
@@ -195,14 +227,7 @@ const MobileSearch = () => {
       return;
     }
     const filtered = allProducts
-      .filter((product) => {
-        const title = product.title.toLowerCase();
-        const category = product.category?.toLowerCase() || "";
-        if (q.length === 1) {
-          return title.split(/\s+/).some((w) => w.startsWith(q)) || category.split(/\s+/).some((w) => w.startsWith(q));
-        }
-        return title.includes(q) || category.includes(q);
-      })
+      .filter((product) => matchesQuery(product.searchText, q))
       .slice(0, 8);
     setSuggestions(filtered);
   }, [searchQuery, allProducts]);
@@ -232,45 +257,67 @@ const MobileSearch = () => {
     setSearchHistory(updated);
   };
 
+  const trimmedQuery = searchQuery.trim();
+
   return (
-    <div className="min-h-screen tx-paper lg:hidden">
+    <div className="min-h-screen tx-paper">
       {/* Search Bar Header */}
-      <div className="sticky top-0 z-50 bg-card shadow-sm dark:shadow-black/40 border-b border-transparent px-3 py-2.5 flex items-center gap-2">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-1 rounded-full hover:bg-foreground/[0.06] transition-colors">
-          <ArrowLeft className="w-5 h-5 text-foreground/80" />
-        </button>
-        <div
-          className={`flex-1 flex items-center bg-foreground/[0.03] rounded-lg border ${isListening ? "border-red-500 ring-2 ring-red-200 dark:ring-red-900/50" : "border-foreground/[0.08]"} overflow-hidden`}
-        >
-          <Search className="ml-3 w-4 h-4 text-muted-foreground/70 flex-shrink-0" />
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder={isListening ? "Listening..." : "Search any Product.."}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSearch(searchQuery);
+      <div className="sticky top-0 z-header border-b border-foreground/[0.08] bg-card">
+        <div className="mx-auto flex max-w-2xl items-center gap-1.5 px-2 py-2 sm:px-4">
+          <IconButton label="Go back" onClick={() => navigate(-1)}>
+            <ArrowLeft aria-hidden="true" />
+          </IconButton>
+          <form
+            role="search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSearch(searchQuery);
             }}
-            className="flex-1 px-3 py-2.5 text-sm bg-transparent text-foreground focus:outline-none placeholder-gray-400 dark:placeholder-zinc-500"
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="p-2">
-              <X className="w-4 h-4 text-muted-foreground/70" />
-            </button>
-          )}
-          <button
-            onClick={toggleVoiceSearch}
-            className={`p-2 mr-1 rounded-md transition-colors ${isListening ? "bg-red-500" : "hover:bg-foreground/10"}`}
-          >
-            {isListening ? (
-              <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }}>
-                <Mic className="w-4 h-4 text-white" />
-              </motion.div>
-            ) : (
-              <Mic className="w-4 h-4 text-muted-foreground/70" />
+            className={cn(
+              "flex h-11 min-w-0 flex-1 items-center rounded-control border bg-background transition-[border-color,box-shadow] duration-hover ease-out",
+              isListening
+                ? "border-primary ring-2 ring-primary/20"
+                : "border-input focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30",
             )}
-          </button>
+          >
+            <Search aria-hidden="true" className="ml-3 size-4 shrink-0 text-muted-foreground" />
+            <input
+              ref={inputRef}
+              type="search"
+              enterKeyHint="search"
+              autoComplete="off"
+              aria-label="Search products"
+              placeholder={isListening ? "Listening" : "Try shilajit or hair oil"}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-full min-w-0 flex-1 bg-transparent px-3 text-base text-foreground outline-none placeholder:text-muted-foreground md:text-sm [&::-webkit-search-cancel-button]:appearance-none"
+            />
+            {searchQuery && (
+              <IconButton
+                label="Clear search"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  inputRef.current?.focus();
+                }}
+                className="text-muted-foreground"
+              >
+                <X aria-hidden="true" />
+              </IconButton>
+            )}
+            <IconButton
+              label={isListening ? "Stop voice search" : "Search by voice"}
+              aria-pressed={isListening}
+              size="sm"
+              onClick={toggleVoiceSearch}
+              className={cn(
+                "mr-1",
+                isListening ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground" : "text-muted-foreground",
+              )}
+            >
+              <Mic aria-hidden="true" />
+            </IconButton>
+          </form>
         </div>
       </div>
 
@@ -278,163 +325,201 @@ const MobileSearch = () => {
       <AnimatePresence>
         {isListening && (
           <motion.div
-            initial={{ opacity: 0, y: -5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
-            className="flex items-center justify-center gap-2 py-3 bg-red-50 dark:bg-red-950/30 border-b border-red-200 dark:border-red-900/50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.15 } }}
+            transition={{ duration: 0.2, ease: EASE_OUT }}
+            role="status"
+            className="flex items-center justify-center gap-2 border-b border-primary/20 bg-primary/10 py-3"
           >
-            <div className="flex gap-1">
+            <div aria-hidden="true" className="flex h-5 items-center gap-1">
               {[0, 0.1, 0.2, 0.3].map((delay, i) => (
                 <motion.div
                   key={i}
                   animate={{ scaleY: [1, i % 2 === 0 ? 1.5 : 2, 1] }}
                   transition={{ repeat: Infinity, duration: 0.5, delay }}
-                  className="w-1 h-4 bg-red-500 rounded-full"
+                  className="h-3 w-1 rounded-full bg-primary"
                 />
               ))}
             </div>
-            <span className="text-xs text-red-600 dark:text-red-400 font-medium">Speak now...</span>
+            <span className="text-xs font-semibold text-primary">Listening</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="px-4 py-3">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-2xl px-4 py-4 sm:px-6">
+        <h1 className="sr-only">Search</h1>
+
         {/* Product Suggestions (when typing) */}
-        {searchQuery.trim() && suggestions.length > 0 && (
-          <div className="mb-4">
-            <p className="text-xs text-muted-foreground/70 uppercase tracking-wider font-medium mb-3">Suggestions</p>
-            <div className="space-y-1">
+        {trimmedQuery && suggestions.length > 0 && (
+          <section aria-labelledby="search-suggestions" className="mb-4">
+            <h2 id="search-suggestions" className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              Suggestions
+            </h2>
+            <ul className="space-y-0.5">
               {suggestions.map((product) => (
-                <button
-                  key={product.id}
-                  onClick={() => handleProductClick(product)}
-                  className="flex items-center gap-3 w-full p-2.5 rounded-[10px] hover:bg-foreground/[0.04] active:bg-gray-100 dark:active:bg-zinc-800 transition-colors"
-                >
-                  <div className="w-11 h-11 flex-shrink-0 bg-foreground/[0.06] rounded-lg overflow-hidden">
-                    {product.image ? (
-                      <SmartImage src={product.image} alt={product.title} className="w-full h-full object-cover" preset="card" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ShoppingBag className="w-5 h-5 text-muted-foreground/70" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-medium text-foreground truncate">{product.title}</p>
-                    <p className="text-xs text-muted-foreground">{product.category}</p>
-                  </div>
-                  <p className="text-sm font-semibold text-primary flex-shrink-0">₹{product.price.toLocaleString()}</p>
-                </button>
+                <li key={product.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleProductClick(product)}
+                    className="flex w-full items-center gap-3 rounded-card p-2 text-left transition-[background-color] duration-hover ease-out hover:bg-muted/60 active:bg-muted"
+                  >
+                    <div className="tile-img size-11 shrink-0 overflow-hidden !rounded-control">
+                      {product.image ? (
+                        <SmartImage src={product.image} alt="" className="h-full w-full object-cover" preset="thumb" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <ShoppingBag aria-hidden="true" className="size-5 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{product.title}</p>
+                      <p className="truncate text-xs text-muted-foreground">{product.category}</p>
+                    </div>
+                    <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatINR(product.price)}</p>
+                  </button>
+                </li>
               ))}
-            </div>
+            </ul>
             {/* Search for keyword button */}
             <button
+              type="button"
               onClick={() => handleSearch(searchQuery)}
-              className="w-full mt-3 py-2.5 text-sm text-primary font-medium rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors flex items-center justify-center gap-2"
+              className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-control border border-primary/30 bg-primary/5 px-4 text-sm font-medium text-primary transition-[background-color,transform] duration-press ease-out hover:bg-primary/10 active:scale-[0.97]"
             >
-              <Search className="w-4 h-4" />
-              Search for "{searchQuery}"
+              <Search aria-hidden="true" className="size-4 shrink-0" />
+              <span className="truncate">See all results for “{trimmedQuery}”</span>
             </button>
-          </div>
+          </section>
         )}
 
         {/* No results */}
-        {searchQuery.trim() && suggestions.length === 0 && allProducts.length > 0 && (
-          <div className="text-center py-10">
-            <ShoppingBag className="w-12 h-12 text-gray-300 dark:text-zinc-700 mx-auto mb-3" />
-            <p className="text-muted-foreground text-sm">No products found for "{searchQuery}"</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">Try searching with different keywords</p>
+        {trimmedQuery && suggestions.length === 0 && allProducts.length > 0 && (
+          <div role="status" className="flex flex-col items-center py-12 text-center">
+            <div className="tx-slate mb-4 grid size-12 place-items-center rounded-card">
+              <SearchX aria-hidden="true" className="size-5 text-highlight-soft" />
+            </div>
+            <p className="font-heading text-base font-semibold text-foreground [text-wrap:balance]">
+              Nothing matches “{trimmedQuery}”
+            </p>
+            <p className="mt-1 max-w-xs text-sm text-muted-foreground [text-wrap:pretty]">
+              Check the spelling or try a broader word such as oil, serum or churna.
+            </p>
           </div>
         )}
 
         {/* When input is empty: show history + trending */}
-        {!searchQuery.trim() && (
+        {!trimmedQuery && (
           <>
             {/* Search History */}
             {searchHistory.length > 0 && (
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs text-muted-foreground/70 uppercase tracking-wider font-medium">Recent Searches</p>
-                  <button onClick={clearHistory} className="text-xs text-red-500 dark:text-red-400 font-medium">
-                    Clear All
+              <section aria-labelledby="recent-searches" className="mb-6">
+                <div className="mb-1 flex items-center justify-between">
+                  <h2 id="recent-searches" className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    Recent searches
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={clearHistory}
+                    className="-mr-2 h-9 rounded-control px-2 text-xs font-medium text-muted-foreground transition-colors duration-hover ease-out hover:text-foreground"
+                  >
+                    Clear
                   </button>
                 </div>
-                <div className="space-y-0.5">
+                <ul className="space-y-0.5">
                   {searchHistory.map((term) => (
-                    <div key={term} className="flex items-center gap-3 group">
+                    <li key={term} className="flex items-center gap-1">
                       <button
+                        type="button"
                         onClick={() => handleSearch(term)}
-                        className="flex-1 flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-foreground/[0.04] text-left transition-colors"
+                        className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-card px-2 text-left transition-[background-color] duration-hover ease-out hover:bg-muted/60"
                       >
-                        <Clock className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" />
-                        <span className="text-sm text-foreground/80 truncate">{term}</span>
+                        <Clock aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+                        <span className="truncate text-sm text-foreground">{term}</span>
                       </button>
-                      <button
+                      <IconButton
+                        label={`Remove ${term} from recent searches`}
+                        size="sm"
                         onClick={() => removeHistoryItem(term)}
-                        className="p-1.5 rounded-full hover:bg-foreground/[0.06] transition-colors"
+                        className="text-muted-foreground"
                       >
-                        <X className="w-4 h-4 text-muted-foreground/70" />
-                      </button>
-                    </div>
+                        <X aria-hidden="true" />
+                      </IconButton>
+                    </li>
                   ))}
-                </div>
-              </div>
+                </ul>
+              </section>
             )}
 
             {/* Trending Searches */}
-            <div className="mb-6">
-              <p className="text-xs text-muted-foreground/70 uppercase tracking-wider font-medium mb-3 flex items-center gap-1.5">
-                <TrendingUp className="w-3.5 h-3.5" /> Popular Searches
-              </p>
+            <section aria-labelledby="popular-searches" className="mb-7">
+              <h2
+                id="popular-searches"
+                className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground"
+              >
+                <TrendingUp aria-hidden="true" className="size-3.5" /> Popular searches
+              </h2>
               <div className="flex flex-wrap gap-2">
                 {trendingSearches.map((term) => (
                   <button
+                    type="button"
                     key={term}
                     onClick={() => handleSearch(term)}
-                    className="px-4 py-2 bg-foreground/[0.03] text-foreground/80 text-sm rounded-full border border-foreground/[0.08] hover:bg-primary/5 hover:border-primary/30 hover:text-primary dark:hover:bg-primary/10 transition-colors"
+                    className="h-9 rounded-control border border-foreground/15 bg-card px-3.5 text-sm text-foreground transition-[background-color,border-color,color,transform] duration-press ease-out hover:border-primary/40 hover:text-primary active:scale-[0.97]"
                   >
                     {term}
                   </button>
                 ))}
               </div>
-            </div>
+            </section>
 
-            {/* Popular Products */}
+            {/* A few products to start from */}
             {allProducts.length > 0 && (
-              <div>
-                <p className="text-xs text-muted-foreground/70 uppercase tracking-wider font-medium mb-3">Popular Products</p>
-                <div className="grid grid-cols-3 gap-2">
+              <section aria-labelledby="shop-the-range">
+                <h2 id="shop-the-range" className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Shop the range
+                </h2>
+                <ul className="grid grid-cols-3 gap-2 sm:gap-3">
                   {allProducts.slice(0, 6).map((product) => (
-                    <button
-                      key={product.id}
-                      onClick={() => {
-                        addToSearchHistory(product.title);
-                        setSearchHistory(getSearchHistory());
-                        navigate(`/product/${product.id}`);
-                      }}
-                      className="bg-foreground/[0.03] rounded-[10px] overflow-hidden border border-foreground/[0.06] hover:border-primary/30 transition-colors"
-                    >
-                      <div className="aspect-square bg-foreground/[0.06]">
-                        {product.image ? (
-                          <SmartImage src={product.image} alt={product.title} className="w-full h-full object-cover" preset="card" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <ShoppingBag className="w-6 h-6 text-gray-300 dark:text-zinc-700" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-2">
-                        <p className="text-[11px] text-foreground/80 font-medium truncate">{product.title}</p>
-                        <p className="text-[11px] text-primary font-semibold">₹{product.price.toLocaleString()}</p>
-                      </div>
-                    </button>
+                    <li key={product.id}>
+                      <Link
+                        to={`/product/${product.id}`}
+                        onClick={() => {
+                          addToSearchHistory(product.title);
+                          setSearchHistory(getSearchHistory());
+                        }}
+                        className="card-product group flex h-full flex-col overflow-hidden p-1"
+                      >
+                        <div className="tile-img aspect-square overflow-hidden">
+                          {product.image ? (
+                            <SmartImage
+                              src={product.image}
+                              alt=""
+                              className="h-full w-full object-cover transition-transform duration-reveal ease-out group-hover:scale-[1.03]"
+                              preset="card"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center">
+                              <ShoppingBag aria-hidden="true" className="size-6 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="px-1 pb-1 pt-2">
+                          <p title={product.title} className="line-clamp-2 min-h-[2.6em] text-[11px] font-medium leading-[1.3] text-foreground">
+                            {product.title}
+                          </p>
+                          <p className="mt-0.5 text-[11px] font-semibold tabular-nums text-primary">{formatINR(product.price)}</p>
+                        </div>
+                      </Link>
+                    </li>
                   ))}
-                </div>
-              </div>
+                </ul>
+              </section>
             )}
           </>
         )}
-      </div>
+      </main>
     </div>
   );
 };

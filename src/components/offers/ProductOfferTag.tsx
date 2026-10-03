@@ -8,6 +8,7 @@ import {
   type Coupon,
 } from '@/services/couponService';
 import { copyOfferCode, useBannerCoupons } from './useBannerCoupons';
+import { formatINR } from '@/lib/format';
 
 /**
  * The offer, told in this product's own money, right under its price.
@@ -27,7 +28,7 @@ interface Props {
   subcategory?: string;
 }
 
-const inr = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`;
+const inr = (n: number) => formatINR(Math.round(n));
 
 /** What this offer is worth on this piece; unmet minimums rank last. */
 const savingFor = (c: Coupon, price: number) =>
@@ -57,7 +58,7 @@ const ProductOfferTag = ({ price, category, subcategory }: Props) => {
   };
 
   return (
-    <div className="mt-4 space-y-2.5" aria-label="Offers on this product">
+    <div className="mt-4 space-y-2.5" role="group" aria-label="Offers on this product">
       {visible.map((c) => {
         const qualifies = price >= (c.minOrderValue || 0);
         const saving = qualifies ? computeCouponDiscount(c, price) : 0;
@@ -68,13 +69,13 @@ const ProductOfferTag = ({ price, category, subcategory }: Props) => {
         return (
           <div
             key={c.id}
-            className="product-offer relative flex items-center gap-3 rounded-xl border border-highlight/45 px-3.5 py-3 sm:gap-4 sm:px-4"
+            className="product-offer relative flex items-center gap-3 rounded-card border border-highlight/45 px-3.5 py-3 sm:gap-4 sm:px-4"
           >
             {/* The ticket's cut-outs, punched in the page's own background. */}
             <span aria-hidden className="absolute -left-[7px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border border-highlight/45 bg-background [clip-path:inset(0_0_0_50%)]" />
             <span aria-hidden className="absolute -right-[7px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border border-highlight/45 bg-background [clip-path:inset(0_50%_0_0)]" />
 
-            <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-primary text-highlight-soft shadow-[inset_0_0_0_1px_rgba(243,217,143,0.35)] dark:bg-primary-dark">
+            <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-primary text-highlight-soft shadow-[inset_0_0_0_1px_hsl(var(--highlight-soft)/0.35)] dark:bg-primary-dark">
               <BadgePercent className="h-[18px] w-[18px]" aria-hidden />
             </span>
 
@@ -99,7 +100,7 @@ const ProductOfferTag = ({ price, category, subcategory }: Props) => {
                   is the part people need, and it is the part that got cut. */}
               <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground sm:line-clamp-1">
                 {isCopied
-                  ? 'Copied - we will apply it for you at checkout'
+                  ? 'Copied. We will apply it for you at checkout.'
                   : `${qualifies ? `You save ${inr(saving)} · ` : ''}${terms || couponHeadline(c)}`}
               </p>
             </div>
@@ -107,7 +108,7 @@ const ProductOfferTag = ({ price, category, subcategory }: Props) => {
             <button
               type="button"
               onClick={() => onCopy(c.code)}
-              className="group relative inline-flex flex-shrink-0 items-center gap-1.5 overflow-hidden rounded-lg border border-dashed border-primary/60 bg-white/70 px-2 py-1.5 text-xs font-semibold tracking-[0.08em] text-primary sm:px-2.5 sm:tracking-[0.14em] transition-colors hover:bg-primary hover:text-charcoal-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:border-highlight-soft/60 dark:bg-transparent dark:text-highlight-soft dark:hover:bg-highlight-soft dark:hover:text-zinc-900"
+              className="group relative inline-flex min-h-9 flex-shrink-0 items-center gap-1.5 rounded-control border border-dashed border-primary/60 bg-card/70 px-2 py-1.5 text-xs font-semibold tracking-[0.08em] text-primary transition-[background-color,color,border-color,transform] duration-press ease-out after:absolute after:-inset-1 after:content-[''] hover:bg-primary hover:text-primary-foreground active:scale-[0.97] sm:px-2.5 sm:tracking-[0.14em] dark:border-highlight-soft/60 dark:bg-transparent dark:text-highlight-soft dark:hover:bg-highlight-soft dark:hover:text-charcoal"
               aria-label={isCopied ? `Code ${c.code} copied` : `Copy code ${c.code}`}
             >
               {isCopied ? (
