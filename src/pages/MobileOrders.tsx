@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { subscribeToUserOrders, Order } from '@/services/orderService';
 import Header from '@/components/Header';
@@ -8,24 +8,22 @@ import MobileSearchBar from '@/components/MobileSearchBar';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import CategoryIconNav from '@/components/CategoryIconNav';
 import Footer from '@/components/Footer';
-import {
-  Loader2,
-  Package,
-  ArrowLeft,
-  Truck,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  MapPin,
-  RotateCcw as ReturnIcon,
-} from 'lucide-react';
-import { SmartImage } from "@/components/ui/smart-image";
+import EmptyState from '@/components/EmptyState';
+import { ListSkeleton } from '@/components/skeletons';
+import { IconButton } from '@/components/ui/icon-button';
+import { OrderStatusBadge } from '@/components/ui/status-badge';
+import { SmartImage } from '@/components/ui/smart-image';
+import { formatDateTime, formatINR, plural } from '@/lib/format';
+import { cn } from '@/lib/utils';
+import { ArrowLeft, ArrowRight, ExternalLink, Package } from 'lucide-react';
+
+/** Statuses that count as "in progress" for the Current tab and the header count. */
+const ACTIVE_STATUSES = ['pending', 'processing', 'packed', 'shipped', 'assigned', 'outForDelivery', 'picked'];
 
 const MobileOrders = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user, userProfile } = useAuth();
-  const [selectedOrderTab, setSelectedOrderTab] = useState('current');
+  const { user } = useAuth();
+  const [selectedOrderTab, setSelectedOrderTab] = useState<'current' | 'all'>('current');
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
 
@@ -33,20 +31,11 @@ const MobileOrders = () => {
   useEffect(() => {
     if (!user) return;
 
-    console.log('Setting up order subscription for user:', user.uid);
     setOrdersLoading(true);
-    
+
     const unsubscribe = subscribeToUserOrders(
       user.uid,
       (fetchedOrders) => {
-        console.log('📦 [MobileOrders] Real-time update received!');
-        console.log('📦 [MobileOrders] Number of orders:', fetchedOrders.length);
-        console.log('📦 [MobileOrders] Order details:', fetchedOrders.map(o => ({
-          id: o.id,
-          status: o.status,
-          trackingId: o.trackingId,
-          lastUpdated: o.lastUpdated
-        })));
         setOrders(fetchedOrders);
         setOrdersLoading(false);
       },
@@ -56,107 +45,22 @@ const MobileOrders = () => {
       }
     );
 
-    return () => {
-      console.log('Cleaning up order subscription');
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [user]);
 
   // Filter orders based on tab
+  const activeCount = orders.filter((o) => ACTIVE_STATUSES.includes(o.status)).length;
   const filteredOrders = selectedOrderTab === 'current'
-    ? orders.filter(order => ['pending', 'processing', 'packed', 'shipped', 'assigned', 'outForDelivery', 'picked'].includes(order.status))
+    ? orders.filter((order) => ACTIVE_STATUSES.includes(order.status))
     : orders;
 
-  // Format price
-  const formatPrice = (price: number) => {
-    return `₹${price.toLocaleString('en-IN')}`;
-  };
+  const tabs: Array<{ key: 'current' | 'all'; label: string }> = [
+    { key: 'current', label: 'Current' },
+    { key: 'all', label: 'All orders' },
+  ];
 
-  // Format date
-  const formatDate = (date: Date | { seconds: number; nanoseconds: number } | undefined) => {
-    if (!date) return 'N/A';
-    
-    let jsDate: Date;
-    if (date instanceof Date) {
-      jsDate = date;
-    } else if (typeof date === 'object' && 'seconds' in date) {
-      jsDate = new Date(date.seconds * 1000);
-    } else {
-      return 'Invalid Date';
-    }
-
-    return jsDate.toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
-
-  // Get status badge class - sophisticated palette
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-highlight/10 dark:bg-highlight/10 text-highlight dark:text-highlight border border-highlight/30 dark:border-highlight/20';
-      case 'processing': return 'bg-primary/5 dark:bg-blue-500/10 text-primary border border-primary/25 dark:border-blue-500/20';
-      case 'packed':
-      case 'shipped':
-      case 'assigned': return 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-500/20';
-      case 'outForDelivery':
-      case 'picked': return 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20';
-      case 'delivered': return 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20';
-      case 'cancelled': return 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20';
-      case 'returnRequested': return 'bg-highlight/10 dark:bg-highlight/10 text-highlight dark:text-highlight border border-highlight/30 dark:border-highlight/20';
-      case 'returnScheduled': return 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20';
-      case 'returned': return 'bg-foreground/[0.03] dark:bg-gray-500/10 text-foreground/80 dark:text-gray-400 border border-foreground/[0.08] dark:border-gray-500/20';
-      case 'refunded': return 'bg-green-50 dark:bg-green-500/10 text-green-700 border border-green-200 dark:border-green-500/20';
-      default: return 'bg-foreground/[0.03] dark:bg-gray-500/10 text-foreground/80 dark:text-gray-400 border border-foreground/[0.08] dark:border-gray-500/20';
-    }
-  };
-
-  // Get status icon
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending': return <Clock className="w-3.5 h-3.5" />;
-      case 'processing': return <Package className="w-3.5 h-3.5" />;
-      case 'packed':
-      case 'shipped':
-      case 'assigned': return <Truck className="w-3.5 h-3.5" />;
-      case 'outForDelivery':
-      case 'picked': return <MapPin className="w-3.5 h-3.5" />;
-      case 'delivered': return <CheckCircle2 className="w-3.5 h-3.5" />;
-      case 'cancelled': return <XCircle className="w-3.5 h-3.5" />;
-      case 'returnRequested': return <ReturnIcon className="w-3.5 h-3.5" />;
-      case 'returnScheduled': return <ReturnIcon className="w-3.5 h-3.5" />;
-      case 'returned': return <ReturnIcon className="w-3.5 h-3.5" />;
-      case 'refunded': return <CheckCircle2 className="w-3.5 h-3.5" />;
-      default: return <Package className="w-3.5 h-3.5" />;
-    }
-  };
-
-  // Get status label
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending': return 'Pending';
-      case 'processing': return 'Processing';
-      case 'packed':
-      case 'shipped':
-      case 'assigned': return 'Packed';
-      case 'outForDelivery':
-      case 'picked': return 'Out for Delivery';
-      case 'delivered': return 'Delivered';
-      case 'cancelled': return 'Cancelled';
-      case 'returnRequested': return 'Return Requested';
-      case 'returnScheduled': return 'Return Scheduled';
-      case 'returned': return 'Returned';
-      case 'refunded': return 'Refunded';
-      default: return status.charAt(0).toUpperCase() + status.slice(1);
-    }
-  };
-
-    return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,hsl(var(--highlight)/0.05)_0%,rgba(255,255,255,1)_20%),linear-gradient(135deg,hsl(var(--primary)/0.03)_0%,rgba(255,255,255,1)_55%)] pb-20 dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "var(--font-body)" }}>
+  return (
+    <div className="min-h-dvh tx-paper pb-20 lg:pb-0">
       {/* Desktop Header + Nav */}
       <div className="hidden lg:block">
         <Header />
@@ -167,229 +71,138 @@ const MobileOrders = () => {
         <MobileHeader />
         <MobileSearchBar />
       </div>
-      
-      {/* Page Header */}
-      <div className="mx-auto max-w-3xl px-4 pt-4">
-        <div className="rounded-[28px] border border-highlight/15 bg-white/88 px-4 py-4 shadow-[0_30px_80px_-60px_rgba(0,0,0,0.5)] backdrop-blur dark:border-highlight/20 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.88)]" style={{ fontFamily: "var(--font-body)" }}>
-          <div className="flex items-center">
-            <button
-              onClick={() => navigate('/account')}
-              className="-ml-2 rounded-full p-2 transition-colors hover:bg-foreground/[0.06]"
-            >
-              <ArrowLeft className="w-6 h-6 text-foreground" />
-            </button>
-            <div className="ml-3">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="h-px w-6 bg-highlight/50" />
-                <span className="text-[10px] uppercase tracking-[0.3em] text-primary font-medium">Orders</span>
-              </div>
-              <h1 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>My Orders</h1>
-              <p className="mt-0.5 text-xs text-muted-foreground">{orders.length} total orders · {orders.filter((o) => ['pending', 'processing', 'packed', 'shipped', 'assigned', 'outForDelivery', 'picked'].includes(o.status)).length} active</p>
+
+      <main id="main" tabIndex={-1} className="outline-none">
+        {/* Page Header */}
+        <div className="mx-auto max-w-3xl px-4 pt-4">
+          <div className="panel tx-sheet flex items-center gap-2 px-3 py-3 sm:px-4">
+            <IconButton label="Back" onClick={() => navigate('/account')}>
+              <ArrowLeft />
+            </IconButton>
+            <div className="min-w-0">
+              <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground">My orders</h1>
+              {!ordersLoading && (
+                <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+                  {plural(orders.length, 'order')} · {activeCount} active
+                </p>
+              )}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Order Tabs */}
-      <div className="mx-auto max-w-3xl px-4 pt-4" style={{ fontFamily: "var(--font-body)" }}>
-        <div className="flex gap-2 rounded-[var(--radius-card)] border border-highlight/12 bg-white/85 p-1 shadow-[0_20px_45px_-36px_rgba(0,0,0,0.45)] dark:border-highlight/18 dark:shadow-[0_20px_45px_-36px_rgba(0,0,0,0.88)]">
-          <button
-            onClick={() => setSelectedOrderTab('current')}
-            className={`flex-1 rounded-[10px] px-3 py-2.5 text-xs font-medium transition-colors ${
-              selectedOrderTab === 'current'
-                ? 'bg-cream text-primary shadow-sm dark:bg-highlight/6 dark:text-charcoal-foreground'
-                : 'text-muted-foreground'
-            }`}
-          >
-            Current
-          </button>
-          <button
-            onClick={() => setSelectedOrderTab('all')}
-            className={`flex-1 rounded-[10px] px-3 py-2.5 text-xs font-medium transition-colors ${
-              selectedOrderTab === 'all'
-                ? 'bg-cream text-primary shadow-sm dark:bg-highlight/6 dark:text-charcoal-foreground'
-                : 'text-muted-foreground'
-            }`}
-          >
-            All orders
-          </button>
+        {/* Order Tabs */}
+        <div className="mx-auto max-w-3xl px-4 pt-4">
+          <div className="flex gap-1 rounded-card bg-foreground/[0.04] p-1" role="group" aria-label="Show orders">
+            {tabs.map((tab) => {
+              const selected = selectedOrderTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setSelectedOrderTab(tab.key)}
+                  className={cn(
+                    'min-h-[44px] flex-1 rounded-control px-3 text-sm font-medium transition-[background-color,color,box-shadow,transform] duration-press ease-out active:scale-[0.97]',
+                    selected
+                      ? 'bg-card text-foreground shadow-sm ring-1 ring-foreground/[0.06]'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      {/* Orders List */}
-      <div className="mx-auto max-w-3xl p-4 space-y-4" style={{ fontFamily: "var(--font-body)" }}>
-        {ordersLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          </div>
-        ) : filteredOrders.length === 0 ? (
-          <div className="rounded-[28px] border border-highlight/12 bg-white/88 px-5 py-12 text-center shadow-[0_30px_80px_-60px_rgba(0,0,0,0.45)] dark:border-highlight/18 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.88)]">
-            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[linear-gradient(135deg,hsl(var(--highlight)/0.18)_0%,hsl(var(--primary)/0.08)_100%)]">
-              <Package className="w-8 h-8 text-primary" />
+        {/* Orders List */}
+        <div className="mx-auto max-w-3xl space-y-3 p-4">
+          {ordersLoading ? (
+            <ListSkeleton rows={3} thumb label="Loading your orders" />
+          ) : filteredOrders.length === 0 ? (
+            <div className="panel tx-sheet">
+              <EmptyState
+                icon={Package}
+                title={selectedOrderTab === 'current' ? 'Nothing in progress' : 'No orders yet'}
+                description={
+                  selectedOrderTab === 'current'
+                    ? 'Browse the range.'
+                    : 'Discover classical Ayurveda made for the modern man.'
+                }
+                action={{ label: 'Start shopping', to: '/products' }}
+              />
             </div>
-            <h3 className="mb-1 text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>No orders yet</h3>
-            <p className="mb-6 text-sm text-muted-foreground">
-              {selectedOrderTab === 'current' ? 'Your bag is waiting — explore the Ishaputra range!' : 'Discover classical Ayurveda made for the modern man'}
-            </p>
-            <button
-              onClick={() => navigate('/products')}
-              className="btn-copper"
-            >
-              Start shopping
-            </button>
-          </div>
-        ) : (
-          filteredOrders.map((order) => (
-            <div 
-              key={order.id} 
-              className="cursor-pointer rounded-[24px] border border-highlight/12 bg-white/92 p-3 backdrop-blur transition-all hover:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.85)]"
-              onClick={() => {
-                navigate(`/account/orders/${order.id}`);
-              }}
-            >
-              {/* Order Items Display */}
-              <div className="space-y-3">
-                {order.items.map((item, idx) => (
-                  <div key={idx} className="flex gap-3">
-                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-[10px] border border-highlight/10 bg-foreground/[0.03] dark:bg-zinc-800/70">
-                      <SmartImage src={item.image} alt={item.name} className="w-full h-full object-cover" preset="thumb" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="mb-1 text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>{item.name}</h4>
-                      <p className="text-xs text-muted-foreground">Price: {formatPrice(item.price)}</p>
-                      <p className="text-xs text-muted-foreground">Quantity: {item.quantity}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${getStatusBadgeClass(order.status)}`}>
-                          {getStatusIcon(order.status)}
-                          {getStatusLabel(order.status)}
-                        </span>
+          ) : (
+            filteredOrders.map((order) => (
+              <article
+                key={order.id}
+                className="panel tx-sheet relative p-4 transition-[border-color,box-shadow] duration-hover ease-out hover:border-primary/30 hover:shadow-[var(--shadow-card-hover)]"
+              >
+                {/* Order Items Display */}
+                <div className="space-y-4">
+                  {order.items.map((item, idx) => (
+                    <div key={idx} className="flex gap-3">
+                      <div className="tile-img size-16 shrink-0 overflow-hidden">
+                        <SmartImage src={item.image} alt="" className="h-full w-full object-cover" preset="thumb" />
                       </div>
-                      <span className="mt-1 block text-xs text-muted-foreground">{formatDate(order.createdAt)}</span>
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-sm font-semibold leading-snug text-foreground">{item.name}</h2>
+                        <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+                          {formatINR(item.price)} · Qty {item.quantity}
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <OrderStatusBadge status={order.status} order={order} />
+                          <span className="text-xs text-muted-foreground tabular-nums">{formatDateTime(order.createdAt)}</span>
+                        </div>
+                      </div>
                     </div>
+                  ))}
+                </div>
+
+                {/* OTP Display for Out for Delivery Orders */}
+                {order.status === 'outForDelivery' && order.delivery_otp && (
+                  <div className="mt-4 flex items-center justify-between gap-3 border-t border-foreground/[0.08] pt-3">
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">Delivery OTP</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">Share it with your delivery partner</p>
+                    </div>
+                    <p className="font-mono text-lg font-semibold tracking-[0.3em] text-foreground tabular-nums">{order.delivery_otp}</p>
                   </div>
-                ))}
-              </div>
+                )}
 
-              {/* OTP Display for Out for Delivery Orders */}
-              {order.status === 'outForDelivery' && order.delivery_otp && (
-                <div className="mt-3 pt-3 border-t border-highlight/12">
-                  <p className="text-xs font-semibold text-foreground">Delivery OTP</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Share this OTP with your delivery partner</p>
-                  <p className="mt-1 text-sm font-bold text-foreground">{order.delivery_otp}</p>
-                </div>
-              )}
+                {/* Refund receipt link */}
+                {order.status === 'refunded' && order.refundReceiptUrl && (
+                  <div className="mt-3 border-t border-foreground/[0.08] pt-1">
+                    <a
+                      href={order.refundReceiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="relative z-raised inline-flex min-h-[44px] items-center gap-1.5 text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                    >
+                      View refund receipt
+                      <ExternalLink aria-hidden="true" className="size-3.5" />
+                    </a>
+                  </div>
+                )}
 
-              {/* Refund receipt link */}
-              {order.status === 'refunded' && order.refundReceiptUrl && (
-                <div className="mt-3 pt-3 border-t border-highlight/12">
-                  <a
-                    href={order.refundReceiptUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition"
+                <div className="mt-4 flex items-center justify-between border-t border-foreground/[0.08] pt-3 text-xs">
+                  <span className="text-muted-foreground tabular-nums">ORD-{order.orderId}</span>
+                  {/* Stretched link: the whole card opens the order; Tab lands here once per card. */}
+                  <Link
+                    to={`/account/orders/${order.id}`}
+                    className="inline-flex min-h-[24px] items-center gap-1 font-semibold text-primary outline-none after:absolute after:inset-0 after:rounded-panel after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-offset-2 focus-visible:after:ring-offset-background"
                   >
-                    View Receipt
-                  </a>
+                    View details<span className="sr-only"> of order ORD-{order.orderId}</span>
+                    <ArrowRight aria-hidden="true" className="size-3.5" />
+                  </Link>
                 </div>
-              )}
-
-              <div className="mt-3 flex items-center justify-between border-t border-highlight/12 pt-3 text-xs text-muted-foreground">
-                <span>Order #{order.id.slice(-6).toUpperCase()}</span>
-                <span className="inline-flex items-center gap-1 font-medium text-primary">
-                  View details <ArrowLeft className="w-3 h-3 rotate-180" />
-                </span>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+              </article>
+            ))
+          )}
+        </div>
+      </main>
       <Footer />
       <MobileBottomNav />
-    </div>
-  );
-};
-
-// Order Status Stepper Component
-const OrderStatusStepper = ({ status }: { status: string }) => {
-  // Check if this is a return flow
-  const isReturnFlow = ['returnRequested', 'returnScheduled', 'returned'].includes(status);
-  
-  // Normal order steps
-  const orderSteps = [
-    { key: 'pending', label: 'Order\nPlaced' },
-    { key: 'processing', label: 'Processing' },
-    { key: 'packed', label: 'Packed' },
-    { key: 'outForDelivery', label: 'Out for\nDelivery' },
-    { key: 'delivered', label: 'Delivered' },
-  ];
-
-  // Return flow steps
-  const returnSteps = [
-    { key: 'returnRequested', label: 'Return\nRequested' },
-    { key: 'returnScheduled', label: 'Return\nScheduled' },
-    { key: 'returned', label: 'Picked Up' },
-  ];
-
-  const steps = isReturnFlow ? returnSteps : orderSteps;
-
-  const getStepIndex = (currentStatus: string) => {
-    const index = steps.findIndex(s => s.key === currentStatus);
-    return index >= 0 ? index : 0;
-  };
-
-  const currentIndex = getStepIndex(status);
-  const isCancelled = status === 'cancelled';
-
-  // For return flow, use emerald color scheme
-  const activeColor = isReturnFlow ? 'bg-emerald-500' : 'bg-primary';
-  const activeBorder = isReturnFlow ? 'border-emerald-500' : 'border-primary';
-  const activeText = isReturnFlow ? 'text-emerald-600' : 'text-primary';
-  const activeDot = isReturnFlow ? 'bg-emerald-500' : 'bg-primary';
-
-  return (
-    <div className="flex items-start justify-between relative" style={{ fontFamily: "var(--font-body)" }}>
-      {/* Progress Line Background */}
-      <div className="absolute top-4 left-6 right-6 h-0.5 bg-foreground/10 z-0" />
-      
-      {/* Progress Line Active */}
-      <div 
-        className={`absolute top-4 left-6 h-0.5 z-0 transition-all duration-500 ${isCancelled ? 'bg-red-500' : activeColor}`}
-        style={{ 
-          width: isCancelled ? '0%' : `calc(${(currentIndex / (steps.length - 1)) * 100}% - 12px)`,
-        }}
-      />
-      
-      {steps.map((step, index) => {
-        const isCompleted = !isCancelled && index <= currentIndex;
-        const isCurrent = !isCancelled && index === currentIndex;
-        
-        return (
-          <div key={step.key} className="flex flex-col items-center relative z-10" style={{ width: `${100 / steps.length}%`, fontFamily: "var(--font-body)" }}>
-            {/* Step Circle */}
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-              isCancelled 
-                ? 'bg-foreground/[0.06] border-foreground/15'
-                : isCompleted 
-                  ? `${activeColor} ${activeBorder}` 
-                  : 'bg-card border-foreground/15'
-            }`}>
-              {isCompleted ? (
-                <CheckCircle2 className="w-5 h-5 text-white" />
-              ) : (
-                <div className={`w-2 h-2 rounded-full ${isCurrent ? activeDot : 'bg-foreground/15'}`} />
-              )}
-            </div>
-            
-            {/* Step Label */}
-            <p className={`text-[10px] text-center mt-2 leading-tight whitespace-pre-line ${
-              isCompleted ? `${activeText} font-medium` : 'text-muted-foreground/70'
-            }`}>
-              {step.label}
-            </p>
-          </div>
-        );
-      })}
     </div>
   );
 };

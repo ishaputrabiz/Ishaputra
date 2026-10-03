@@ -1,12 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { Order, cancelOrder, subscribeToUserOrders } from '@/services/orderService';
+import { Order, cancelOrder, subscribeToOrder } from '@/services/orderService';
 import Header from '@/components/Header';
+import EmptyState from '@/components/EmptyState';
+import { PanelSkeleton } from '@/components/skeletons';
 import { getUserAddresses, Address } from '@/services/addressService';
+import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
+import { Notice } from '@/components/ui/notice';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
+import { Spinner } from '@/components/ui/spinner';
+import { STATUS_TONE_CLASSES } from '@/components/ui/status-badge';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { ArrowLeft, Ban, Loader2, ChevronRight, X, MapPin, Check } from 'lucide-react';
+import { ArrowLeft, Ban, MapPin, PackageSearch } from 'lucide-react';
+
+const CANCEL_REASONS = [
+  'Changed my mind',
+  'Ordered by mistake',
+  'Found a better price',
+  // 'Need to change delivery address', // Hidden for now - can be enabled in future
+  'Other reason',
+];
 
 const CancelOrderPage = () => {
   const navigate = useNavigate();
@@ -14,6 +32,9 @@ const CancelOrderPage = () => {
   const { user } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  // The order listener found nothing for this customer, or failed.
+  const [loadState, setLoadState] = useState<'ok' | 'missing' | 'error'>('ok');
+  const [reloadKey, setReloadKey] = useState(0);
   const [cancelReason, setCancelReason] = useState('');
   const [customReason, setCustomReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,14 +51,17 @@ const CancelOrderPage = () => {
     }
 
     setLoading(true);
+    setLoadState('ok');
 
-    const unsubscribe = subscribeToUserOrders(
-      user.uid,
-      (fetchedOrders) => {
-        const foundOrder = fetchedOrders.find(o => o.id === orderId);
-        if (!foundOrder) {
-          toast.error('Order not found');
-          navigate('/account/orders');
+    // Listen to this one order only. Someone else's order is refused by the
+    // rules or fails the owner check: both show the not-found state.
+    const unsubscribe = subscribeToOrder(
+      orderId,
+      (foundOrder) => {
+        if (!foundOrder || foundOrder.userId !== user.uid) {
+          setOrder(null);
+          setLoadState('missing');
+          setLoading(false);
           return;
         }
 
@@ -47,24 +71,25 @@ const CancelOrderPage = () => {
           foundOrder.status !== 'pending' &&
           foundOrder.status !== 'processing'
         ) {
-          toast.error('This order cannot be cancelled');
+          toast.error('This order can no longer be cancelled.');
           navigate(`/account/orders/${orderId}`);
           return;
         }
 
         setOrder(foundOrder);
+        setLoadState('ok');
         setLoading(false);
       },
       (error) => {
         console.error('Error loading order:', error);
-        toast.error('Failed to load order');
-        navigate('/account/orders');
+        setOrder(null);
+        setLoadState((error as { code?: string })?.code === 'permission-denied' ? 'missing' : 'error');
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [orderId, user, navigate]);
+  }, [orderId, user, navigate, reloadKey]);
 
   // Fetch user addresses
   useEffect(() => {
@@ -91,19 +116,19 @@ const CancelOrderPage = () => {
 
   const handleCancelOrder = async () => {
     if (!cancelReason || !order || !user) {
-      toast.error('Please select a cancellation reason');
+      toast.error('Choose a reason for cancelling.');
       return;
     }
 
     // Check if custom reason is required but not provided
     if (cancelReason === 'Other reason' && !customReason.trim()) {
-      toast.error('Please provide a reason for cancellation');
+      toast.error('Tell us your reason for cancelling.');
       return;
     }
 
     // Check if address is required but not selected
     if (cancelReason === 'Need to change delivery address' && !selectedNewAddress) {
-      toast.error('Please select a new delivery address');
+      toast.error('Choose a new delivery address.');
       return;
     }
 
@@ -118,99 +143,134 @@ const CancelOrderPage = () => {
     isCancellingRef.current = true;
     try {
       await cancelOrder(order.id, user.uid, finalReason);
-      toast.success('Order cancelled successfully');
+      toast.success('Order cancelled.');
       navigate(`/account/orders/${orderId}`);
     } catch (error: any) {
       console.error('Error cancelling order:', error);
-      toast.error(error.message || 'Failed to cancel order');
+      toast.error(error.message || 'Unable to cancel the order. Try again.');
       isCancellingRef.current = false;
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const shell = (content: React.ReactNode) => (
+    <div className="min-h-dvh tx-paper pb-28">
+      {/* Top Site Navigation */}
+      <Header />
+      <main id="main" tabIndex={-1} className="outline-none">
+        {content}
+      </main>
+    </div>
+  );
+
   if (loading) {
-    return (
-      <div className="min-h-screen tx-paper flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground/70" />
+    return shell(
+      <div className="mx-auto max-w-2xl space-y-4 px-4 py-6">
+        <PanelSkeleton lines={1} label="Loading your order" />
+        <PanelSkeleton lines={4} label="" />
       </div>
     );
   }
 
   if (!order) {
-    return null;
+    const failed = loadState === 'error';
+    return shell(
+      <div className="mx-auto max-w-2xl px-4 py-6">
+        <div className="panel tx-sheet">
+          <EmptyState
+            as="h1"
+            icon={PackageSearch}
+            title={failed ? 'Unable to load this order' : "We can't find this order"}
+            description={failed ? 'Check your connection and try again.' : 'It may belong to another account.'}
+            action={
+              failed
+                ? { label: 'Try again', onClick: () => setReloadKey((k) => k + 1) }
+                : { label: 'Back to my orders', to: '/account/orders' }
+            }
+            secondaryAction={failed ? { label: 'Back to my orders', to: '/account/orders' } : undefined}
+          />
+        </div>
+      </div>
+    );
   }
 
-  return (
-    <div className="min-h-screen tx-paper pb-20" style={{ fontFamily: "var(--font-body)" }}>
-      {/* Top Site Navigation */}
-      <Header />
-      
+  const submitDisabled =
+    !cancelReason ||
+    isSubmitting ||
+    (cancelReason === 'Other reason' && !customReason.trim()) ||
+    (cancelReason === 'Need to change delivery address' && !selectedNewAddress);
+
+  return shell(
+    <>
       {/* Page Header */}
-      <div className="bg-card sticky top-16 z-40 border-b border-foreground/[0.06]">
-        <div className="flex items-center gap-3 px-4 py-4">
-          <button
-            onClick={() => navigate(`/account/orders/${orderId}`)}
-            className="p-1 hover:bg-foreground/[0.06] rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6 text-foreground/80" />
-          </button>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center">
-              <Ban className="w-5 h-5 text-red-600" />
+      <div className="tx-sheet sticky top-16 z-sticky border-b border-foreground/[0.08]">
+        <div className="mx-auto flex max-w-2xl items-center gap-2 px-3 py-3 sm:px-4">
+          <IconButton label="Back" onClick={() => navigate(`/account/orders/${orderId}`)}>
+            <ArrowLeft />
+          </IconButton>
+          <div className="flex min-w-0 items-center gap-3">
+            <div
+              aria-hidden="true"
+              className={cn('flex size-10 shrink-0 items-center justify-center rounded-full border', STATUS_TONE_CLASSES.danger)}
+            >
+              <Ban className="size-5" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-foreground">Cancel Order</h1>
-              <p className="text-xs text-muted-foreground">Order #{order.orderId}</p>
+            <div className="min-w-0">
+              <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground">Cancel order</h1>
+              <p className="text-xs text-muted-foreground tabular-nums">ORD-{order.orderId}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="px-4 py-6">
+      <div className="mx-auto max-w-2xl px-4 py-6">
         {/* Cancellation Reason Section */}
-        <div className="mb-6">
-          <h2 className="text-base font-bold text-foreground mb-2">
-            Reason for Cancellation
+        <section aria-labelledby="cancel-reason-heading" className="panel tx-sheet p-4 sm:p-6">
+          <h2 id="cancel-reason-heading" className="font-heading text-[15px] font-semibold tracking-tight text-foreground">
+            Reason for cancellation
           </h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Please select a reason for cancelling this order:
+          <p className="mt-1 text-sm text-muted-foreground">
+            Choose the reason that fits best.
           </p>
 
-          <div className="space-y-2">
-            {[
-              'Changed my mind',
-              'Ordered by mistake',
-              'Found a better price',
-              // 'Need to change delivery address', // Hidden for now - can be enabled in future
-              'Other reason'
-            ].map((reason) => (
-              <button
-                key={reason}
-                onClick={() => handleReasonClick(reason)}
-                className="w-full flex items-center justify-between py-3 transition-all"
-              >
-                <span className={`text-sm font-medium transition-colors ${
-                  cancelReason === reason ? 'text-red-600' : 'text-foreground/80'
-                }`}>
-                  {reason}
-                </span>
-                <ChevronRight className={`w-5 h-5 transition-colors ${
-                  cancelReason === reason ? 'text-red-600' : 'text-muted-foreground/70'
-                }`} />
-              </button>
-            ))}
-          </div>
+          <RadioGroup
+            value={cancelReason}
+            onValueChange={handleReasonClick}
+            aria-labelledby="cancel-reason-heading"
+            className="mt-3 gap-0"
+          >
+            {CANCEL_REASONS.map((reason, i) => {
+              const id = `cancel-reason-${i}`;
+              const selected = cancelReason === reason;
+              return (
+                <label
+                  key={reason}
+                  htmlFor={id}
+                  className="flex min-h-[52px] cursor-pointer items-center justify-between gap-4 border-b border-foreground/[0.08] last:border-b-0"
+                >
+                  <span className={cn('text-sm transition-colors duration-hover', selected ? 'font-semibold text-foreground' : 'text-foreground/80')}>
+                    {reason}
+                  </span>
+                  <RadioGroupItem id={id} value={reason} />
+                </label>
+              );
+            })}
+          </RadioGroup>
 
           {/* Custom Reason Input */}
           {cancelReason === 'Other reason' && (
             <div className="mt-4">
-              <textarea
+              <label htmlFor="cancel-other-reason" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Your reason
+              </label>
+              <Textarea
+                id="cancel-other-reason"
                 value={customReason}
                 onChange={(e) => setCustomReason(e.target.value)}
-                placeholder="Please specify your reason..."
-                className="w-full px-4 py-3 border border-foreground/15 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-sm"
+                placeholder="Tell us why you are cancelling"
+                className="resize-none"
                 rows={4}
               />
             </div>
@@ -218,175 +278,120 @@ const CancelOrderPage = () => {
 
           {/* Selected Address Display */}
           {cancelReason === 'Need to change delivery address' && selectedNewAddress && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-[10px]">
-              <div className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-green-900 mb-1">
-                    New delivery address selected
-                  </p>
-                  <p className="text-xs text-green-700">
-                    {selectedNewAddress.fullName} - {selectedNewAddress.address}, {selectedNewAddress.city}, {selectedNewAddress.pinCode}
-                  </p>
-                </div>
-              </div>
-            </div>
+            <Notice tone="success" role="note" title="New delivery address selected" className="mt-4">
+              <span className="text-muted-foreground">
+                {selectedNewAddress.fullName}, {selectedNewAddress.address}, {selectedNewAddress.city}, {selectedNewAddress.pinCode}
+              </span>
+            </Notice>
           )}
-        </div>
+        </section>
       </div>
 
       {/* Fixed Bottom Button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-foreground/[0.06] p-4">
-        <button
-          onClick={handleCancelOrder}
-          disabled={
-            !cancelReason || 
-            isSubmitting || 
-            (cancelReason === 'Other reason' && !customReason.trim()) ||
-            (cancelReason === 'Need to change delivery address' && !selectedNewAddress)
-          }
-          className={`w-full py-3.5 rounded-full font-semibold text-sm transition-all border-2 ${
-            !cancelReason || 
-            isSubmitting || 
-            (cancelReason === 'Other reason' && !customReason.trim()) ||
-            (cancelReason === 'Need to change delivery address' && !selectedNewAddress)
-              ? 'bg-foreground/[0.06] text-muted-foreground/70 border-foreground/[0.08] cursor-not-allowed'
-              : 'bg-transparent text-red-600 border-red-600 hover:bg-red-50 active:scale-95'
-          }`}
-        >
-          {isSubmitting ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Cancelling Order...
-            </span>
-          ) : (
-            'Cancel Order'
-          )}
-        </button>
+      <div className="tx-sheet fixed inset-x-0 bottom-0 z-sticky border-t border-foreground/[0.08] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto max-w-[40rem]">
+          <button
+            type="button"
+            onClick={handleCancelOrder}
+            disabled={submitDisabled}
+            className={cn(
+              'inline-flex h-12 w-full items-center justify-center gap-2 rounded-control text-sm font-semibold transition-[transform,background-color,color] duration-press ease-out',
+              submitDisabled
+                ? 'cursor-not-allowed bg-foreground/[0.06] text-muted-foreground'
+                : 'bg-destructive text-destructive-foreground hover:bg-destructive/90 active:scale-[0.97]',
+            )}
+          >
+            {isSubmitting && <Spinner />}
+            {isSubmitting ? 'Cancelling order' : 'Cancel order'}
+          </button>
+        </div>
       </div>
 
-      {/* Address Selector Modal */}
-      <AnimatePresence>
-        {showAddressModal && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowAddressModal(false)}
-              className="fixed inset-0 bg-black/50 z-[60]"
-            />
-            
-            {/* Address List Modal */}
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-[70] bg-card rounded-t-[var(--radius-panel)] max-h-[85vh] overflow-hidden"
-              style={{ fontFamily: "var(--font-body)" }}
-            >
-              <div className="p-4 border-b border-foreground/[0.08]">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-foreground">
-                    Select New Delivery Address
-                  </h3>
-                  <button
-                    onClick={() => setShowAddressModal(false)}
-                    className="p-1.5 hover:bg-foreground/[0.06] rounded-full transition-colors"
-                  >
-                    <X className="w-5 h-5 text-muted-foreground" />
-                  </button>
-                </div>
+      {/* Address Selector Sheet */}
+      <Sheet open={showAddressModal} onOpenChange={setShowAddressModal}>
+        <SheetContent side="bottom" className="tx-sheet mx-auto flex max-h-[85dvh] max-w-xl flex-col gap-0 overflow-hidden p-0">
+          <div className="border-b border-foreground/[0.08] p-4 pr-14">
+            <SheetTitle>Choose a new delivery address</SheetTitle>
+            <SheetDescription className="sr-only">Pick one of your saved addresses.</SheetDescription>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4">
+            {addresses.length === 0 ? (
+              <div className="py-8 text-center">
+                <MapPin aria-hidden="true" className="mx-auto mb-3 size-10 text-muted-foreground" />
+                <p className="text-sm text-foreground">No saved addresses yet</p>
+                <p className="mt-1 text-xs text-muted-foreground">Add an address from your profile.</p>
               </div>
-              
-              <div className="overflow-y-auto max-h-[calc(85vh-150px)] p-4">
-                {addresses.length === 0 ? (
-                  <div className="py-8 text-center">
-                    <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">No saved addresses found</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">
-                      Please add an address from your profile
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {addresses.map((address) => (
-                      <label
-                        key={address.id}
-                        className={`block p-4 rounded-[10px] border-2 cursor-pointer transition-all ${
-                          selectedNewAddress?.id === address.id
-                            ? 'border-red-500 bg-red-50'
-                            : 'border-foreground/[0.08] bg-card hover:border-foreground/25'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          {/* Radio Button */}
-                          <input
-                            type="radio"
-                            name="selectedAddress"
-                            checked={selectedNewAddress?.id === address.id}
-                            onChange={() => setSelectedNewAddress(address)}
-                            className="mt-1 w-4 h-4 text-red-600 border-foreground/15 focus:ring-red-500"
-                          />
-                          
-                          {/* Address Details */}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-bold text-foreground uppercase text-sm">
-                                {address.fullName}
+            ) : (
+              <RadioGroup
+                value={selectedNewAddress?.id ?? ''}
+                onValueChange={(id) => setSelectedNewAddress(addresses.find((a) => a.id === id) ?? null)}
+                className="gap-3"
+              >
+                {addresses.map((address) => {
+                  const selected = selectedNewAddress?.id === address.id;
+                  return (
+                    <label
+                      key={address.id}
+                      htmlFor={`address-${address.id}`}
+                      className={cn(
+                        'block cursor-pointer rounded-card border p-4 transition-[border-color,background-color] duration-hover ease-out',
+                        selected ? 'border-primary bg-primary/[0.06]' : 'border-foreground/[0.1] bg-card hover:border-foreground/25',
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <RadioGroupItem id={`address-${address.id}`} value={address.id} className="mt-0.5" />
+                        <div className="flex-1">
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className="text-sm font-semibold text-foreground">{address.fullName}</span>
+                            {address.isDefault && (
+                              <span className="rounded-chip bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground/70">
+                                Default
                               </span>
-                              {address.isDefault && (
-                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase">
-                                  Default
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground mb-1">{address.phoneNumber}</p>
-                            <p className="text-xs text-foreground/80 leading-relaxed">
-                              {address.address}
-                              {address.locality && `, ${address.locality}`}, {address.city}, {address.state} - {address.pinCode}
-                            </p>
+                            )}
                           </div>
+                          <p className="mb-1 text-xs text-muted-foreground tabular-nums">{address.phoneNumber}</p>
+                          <p className="text-xs leading-relaxed text-foreground/80">
+                            {address.address}
+                            {address.locality && `, ${address.locality}`}, {address.city}, {address.state} {address.pinCode}
+                          </p>
                         </div>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-              
-              {/* Footer Buttons */}
-              <div className="p-4 border-t border-foreground/[0.08] flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddressModal(false);
-                    setSelectedNewAddress(null);
-                  }}
-                  className="flex-1 h-11 text-sm font-semibold border-2 border-foreground/15 rounded-lg bg-card text-foreground/80 hover:bg-foreground/[0.04] transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedNewAddress) {
-                      toast.success('Address selected. Returning to order details.');
-                      navigate(`/account/orders/${orderId}`);
-                    }
-                  }}
-                  disabled={!selectedNewAddress}
-                  className="flex-1 h-11 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Select Address
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </RadioGroup>
+            )}
+          </div>
+
+          {/* Footer Buttons */}
+          <div className="flex gap-3 border-t border-foreground/[0.08] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setShowAddressModal(false);
+                setSelectedNewAddress(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={!selectedNewAddress}
+              onClick={() => {
+                if (selectedNewAddress) {
+                  toast.success('Address selected. Returning to your order.');
+                  navigate(`/account/orders/${orderId}`);
+                }
+              }}
+            >
+              Select address
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 };
 
