@@ -1,7 +1,8 @@
 import { Switch } from '@/components/ui/switch';
 import type { RewardBalances, RewardSettings } from '@/lib/rewards';
+import { formatINR, formatNumber } from '@/lib/format';
 
-const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+const inr = (n: number) => formatINR(n);
 
 const Row = ({
   title,
@@ -16,10 +17,10 @@ const Row = ({
   onChange: (v: boolean) => void;
   disabled?: boolean;
 }) => (
-  <label className={`flex items-center justify-between gap-4 py-3 ${disabled ? 'opacity-60' : 'cursor-pointer'}`}>
+  <label className={`flex min-h-11 items-center justify-between gap-4 py-3 ${disabled ? 'opacity-60' : 'cursor-pointer'}`}>
     <span className="min-w-0">
-      <span className="block text-sm font-semibold text-foreground">{title}</span>
-      <span className="block text-xs text-muted-foreground">{detail}</span>
+      <span className="block text-sm font-semibold text-foreground tabular-nums">{title}</span>
+      <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground tabular-nums">{detail}</span>
     </span>
     <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} />
   </label>
@@ -60,21 +61,19 @@ export const RewardsRedeemCard = ({
 
   return (
     <div
-      className={`tx-sheet rounded-[var(--radius-card)] border border-foreground/[0.08] shadow-[var(--shadow-panel)] px-4 py-2 ${className}`}
+      className={`tx-sheet rounded-card border border-foreground/[0.08] shadow-panel px-4 py-2 ${className}`}
     >
-      <p className="eyebrow-no pt-2 pb-1">
-        <span>Your rewards</span>
-      </p>
-      <div className="divide-y divide-foreground/[0.07]">
+      <h2 className="pt-2 pb-1 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Your rewards</h2>
+      <div className="divide-y divide-foreground/[0.08]">
         {(points > 0 || pending > 0) && (
           <Row
-            title={points > 0 ? `Use ${points.toLocaleString('en-IN')} points` : 'Points on the way'}
+            title={points > 0 ? `Use ${formatNumber(points)} points` : 'Points on the way'}
             detail={
               points > 0
                 ? usePoints && pointsApplied > 0
-                  ? `${pointsApplied.toLocaleString('en-IN')} points save ${inr(pointsValue)} (up to ${settings.maxPointsPercent}% of products)`
-                  : `Worth ${inr(points * settings.pointValue)} · up to ${settings.maxPointsPercent}% of products`
-                : `${pending.toLocaleString('en-IN')} points unlock after the ${settings.unlockDays}-day return window`
+                  ? `${formatNumber(pointsApplied)} points save ${inr(pointsValue)}. Covers up to ${settings.maxPointsPercent}% of the product total.`
+                  : `Worth ${inr(points * settings.pointValue)}. Covers up to ${settings.maxPointsPercent}% of the product total.`
+                : `${formatNumber(pending)} points unlock after the ${settings.unlockDays}-day return window`
             }
             checked={usePoints && points > 0}
             onChange={onUsePoints}
@@ -111,14 +110,14 @@ export const RewardsBillLines = ({
   <>
     {pointsApplied > 0 && (
       <div className={className}>
-        <span className="text-primary">Points ({pointsApplied.toLocaleString('en-IN')})</span>
-        <span className="text-primary font-medium">− {inr(pointsValue)}</span>
+        <span className="text-primary">Points ({formatNumber(pointsApplied)})</span>
+        <span className="text-primary font-medium tabular-nums">−{inr(pointsValue)}</span>
       </div>
     )}
     {cashbackApplied > 0 && (
       <div className={className}>
         <span className="text-primary">Wallet cashback</span>
-        <span className="text-primary font-medium">− {inr(cashbackApplied)}</span>
+        <span className="text-primary font-medium tabular-nums">−{inr(cashbackApplied)}</span>
       </div>
     )}
   </>
