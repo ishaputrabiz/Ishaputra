@@ -114,11 +114,11 @@ const PurchaseSummary: React.FC = () => {
           
           // Count only delivered orders for total spent
           if (status === 'delivered') {
-            totalSpent += order.totalAmount || 0;
+            totalSpent += Number(order.total) || 0;
             deliveredCount++;
           } else if (status === 'cancelled') {
             cancelledCount++;
-          } else if (['pending', 'processing', 'packed', 'shipped', 'assigned', 'outForDelivery', 'picked', 'confirmed'].includes(status || '')) {
+          } else if (['pending', 'processing', 'packed', 'shipped', 'assigned', 'outfordelivery', 'picked', 'confirmed'].includes(status || '')) {
             pendingCount++;
           }
         });

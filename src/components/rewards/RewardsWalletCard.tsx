@@ -75,7 +75,7 @@ const reservedNote = (points: number, cashback: number, payments: number) => {
 
 /** Loyalty points + wallet cashback on /wallet: balances and history. */
 export const RewardsWalletCard = ({ uid }: { uid: string }) => {
-  const { entries, balances, reserved, settings, loading } = useRewards(uid);
+  const { entries, balances, reserved, settings, loading, error } = useRewards(uid);
   const [showAll, setShowAll] = useState(false);
   const now = Date.now();
   const points = Math.floor(balances.points.available);
@@ -117,23 +117,33 @@ export const RewardsWalletCard = ({ uid }: { uid: string }) => {
         <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Points & cashback</h3>
       </div>
 
+      {error ? (
+        <p role="status" className="flex items-start gap-2 rounded-[var(--radius-card)] border border-dashed border-foreground/[0.14] px-3 py-3 text-xs leading-relaxed text-muted-foreground">
+          <Clock className="mt-0.5 w-3.5 h-3.5 flex-shrink-0 text-primary" aria-hidden="true" />
+          We couldn't load your points and cashback just now. Your balance is safe. Please refresh the page in a moment.
+        </p>
+      ) : (
       <div className="mb-6">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3" aria-busy={loading}>
           {tiles.map((t) => (
             <div
               key={t.label}
               className="rounded-[var(--radius-card)] border border-foreground/[0.08] bg-card/60 p-3 text-center"
             >
               <t.icon className="w-4 h-4 mx-auto mb-1.5 text-primary" />
-              <p className="text-xl font-semibold text-foreground tabular-nums" style={HEADING}>
-                {t.value}
-              </p>
+              {loading ? (
+                <span className="block h-7 w-12 mx-auto rounded-md bg-foreground/[0.07] animate-pulse motion-reduce:animate-none" aria-label="Loading" />
+              ) : (
+                <p className="text-xl font-semibold text-foreground tabular-nums" style={HEADING}>
+                  {t.value}
+                </p>
+              )}
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{t.label}</p>
               <p className="mt-0.5 text-[10px] leading-tight text-muted-foreground/80">{t.sub}</p>
             </div>
           ))}
         </div>
-        {onHold && (
+        {!loading && onHold && (
           <p className="mt-3 flex items-start gap-2 rounded-[var(--radius-card)] border border-dashed border-foreground/[0.14] px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
             <Clock className="mt-0.5 w-3.5 h-3.5 flex-shrink-0 text-primary" aria-hidden="true" />
             <span>
@@ -142,8 +152,9 @@ export const RewardsWalletCard = ({ uid }: { uid: string }) => {
           </p>
         )}
       </div>
+      )}
 
-      {loading ? null : entries.length === 0 ? (
+      {loading || error ? null : entries.length === 0 ? (
         <p className="text-xs text-muted-foreground leading-relaxed">
           {settings.enabled
             ? `Earn ${settings.pointsPer100} point${settings.pointsPer100 === 1 ? '' : 's'} for every ₹100 you spend, once your order is delivered. Points unlock after the ${settings.unlockDays}-day return window and can cover up to ${settings.maxPointsPercent}% of your products at checkout.`

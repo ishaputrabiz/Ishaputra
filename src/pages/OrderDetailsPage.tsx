@@ -679,7 +679,7 @@ const OrderDetailsPage = () => {
       {/* Content */}
       <div className="mx-auto max-w-4xl space-y-3 px-4 pb-24 pt-4">
         {/* Tracking ID Banner */}
-        <div className="rounded-[24px] border border-highlight/12 bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,hsl(var(--highlight)/0.10)_100%)] px-4 py-3 shadow-[0_20px_45px_-38px_rgba(0,0,0,0.45)] dark:border-highlight/18 dark:bg-[linear-gradient(135deg,rgba(37,99,235,0.14)_0%,rgba(146,64,14,0.12)_100%)]">
+        <div className="rounded-[var(--radius-panel)] border border-primary/15 bg-[linear-gradient(135deg,hsl(var(--primary)/0.07)_0%,hsl(var(--highlight)/0.10)_100%)] px-4 py-3 dark:border-primary/20">
           <p className="text-sm text-primary dark:text-blue-200">
             Order can be tracked by <span className="font-semibold">ORD-{order.orderId}</span>
             {order.trackingId && (
@@ -689,7 +689,7 @@ const OrderDetailsPage = () => {
         </div>
 
         {/* Product Card */}
-        <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="panel tx-sheet px-4 py-4">
           <div className="flex gap-4">
             <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-[10px] border border-highlight/10 bg-foreground/[0.03] dark:bg-zinc-800/70">
               <SmartImage 
@@ -711,7 +711,7 @@ const OrderDetailsPage = () => {
 
         {/* Order Status Timeline (hidden for returned / refunded orders) */}
         {order.status !== 'returned' && order.status !== 'refunded' && (
-          <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-5 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+          <div className="panel tx-sheet px-4 py-5">
             <OrderStatusStepper status={order.status} isReturnPickedState={order.status === 'picked' && !!(order as any).returnScheduledAt} />
           </div>
         )}
@@ -741,7 +741,7 @@ const OrderDetailsPage = () => {
         )}
 
         {/* Current Status Card */}
-        <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="panel tx-sheet px-4 py-4">
           <div className="flex gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
               order.status === 'delivered' ? 'bg-emerald-100' :
@@ -797,7 +797,7 @@ const OrderDetailsPage = () => {
               </p>
               <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground/70">
                 <Clock className="w-3 h-3" />
-                {formatDate(order.updatedAt || order.createdAt)}
+                {formatDate((order.status === 'delivered' && order.deliveredAt) || order.updatedAt || order.createdAt)}
               </p>
             </div>
           </div>
@@ -900,12 +900,12 @@ const OrderDetailsPage = () => {
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="flex gap-3 panel tx-sheet px-4 py-4">
           {/* Cancel Button - Only for pending/processing orders */}
           {(order.status === 'pending' || order.status === 'processing') && (
             <button
               onClick={() => navigate(`/account/orders/${orderId}/cancel`)}
-              className="flex-1 py-2.5 px-4 bg-red-50 border border-red-200 rounded-lg text-sm font-medium text-red-700 flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+              className="flex-1 py-2.5 px-4 bg-destructive/[0.06] border border-destructive/25 rounded-lg text-sm font-medium text-destructive flex items-center justify-center gap-2 hover:bg-destructive/10 active:scale-[0.98] transition-[background-color,transform] duration-150"
             >
               <Ban className="w-4 h-4" />
               Cancel Order
@@ -928,7 +928,7 @@ const OrderDetailsPage = () => {
           {canReturnOrder(order) && (
             <button
               onClick={() => setShowReturnModal(true)}
-              className="flex-1 py-2.5 px-4 bg-emerald-50 border border-emerald-200 rounded-lg text-sm font-medium text-emerald-700 flex items-center justify-center gap-2 hover:bg-emerald-100 transition-colors"
+              className="flex-1 py-2.5 px-4 bg-card border border-foreground/[0.14] rounded-lg text-sm font-medium text-foreground flex items-center justify-center gap-2 hover:bg-foreground/[0.04] active:scale-[0.98] transition-[background-color,transform] duration-150"
             >
               <ReturnIcon className="w-4 h-4" />
               Return Items
@@ -938,14 +938,14 @@ const OrderDetailsPage = () => {
           {/* Chat Button - Always show */}
           <button 
             onClick={focusOrderChat}
-            className="flex-1 py-2.5 px-4 bg-primary/5 border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+            className="flex-1 py-2.5 px-4 bg-primary/5 border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-primary/10 active:scale-[0.98] transition-[background-color,transform] duration-150"
           >
             <MessageCircle className="w-4 h-4" />
             Open order chat
           </button>
         </div>
 
-        <div ref={conversationSectionRef} className="rounded-[24px] border border-highlight/12 bg-white/92 p-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div ref={conversationSectionRef} className="panel tx-sheet p-4">
           <button
             onClick={() => setConversationOpen(!conversationOpen)}
             className="flex w-full items-start justify-between gap-3 text-left"
@@ -1044,7 +1044,7 @@ const OrderDetailsPage = () => {
 
         {/* Track Package Button */}
         {order.trackingUrl && (
-          <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-3 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+          <div className="panel tx-sheet px-4 py-3">
             <a
               href={order.trackingUrl}
               target="_blank"
@@ -1059,7 +1059,7 @@ const OrderDetailsPage = () => {
         )}
 
         {/* Delivery Details Section */}
-        <div className="overflow-hidden rounded-[24px] border border-highlight/12 bg-white/92 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="overflow-hidden panel tx-sheet">
           <h3 className="border-b border-highlight/10 px-4 py-3 text-base font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>Delivery details</h3>
           
           {/* Delivery Address */}
@@ -1093,7 +1093,7 @@ const OrderDetailsPage = () => {
 
         {/* Rate Delivery Boy - Only for delivered orders with a delivery boy assigned */}
         {order.status === 'delivered' && order.deliveryBoyId && (
-          <div className="bg-white/92 rounded-[24px] border border-highlight/12 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur overflow-hidden">
+          <div className="panel tx-sheet overflow-hidden">
             <h3 className="px-4 py-3 text-base font-semibold text-foreground border-b border-highlight/10" style={{ fontFamily: "var(--font-body)" }}>Rate your delivery</h3>
             <div className="px-4 py-4">
               {hasRated ? (
@@ -1139,7 +1139,7 @@ const OrderDetailsPage = () => {
 
         {/* Write a Review - for all delivered orders */}
         {order.status === 'delivered' && (
-          <div className="bg-white/92 rounded-[24px] border border-highlight/12 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur overflow-hidden">
+          <div className="panel tx-sheet overflow-hidden">
             <h3 className="px-4 py-3 text-base font-semibold text-foreground border-b border-highlight/10" style={{ fontFamily: "var(--font-body)" }}>Rate the product</h3>
             <div className="px-4 py-4">
               {checkingReview ? (
@@ -1179,7 +1179,8 @@ const OrderDetailsPage = () => {
           </div>
         )}
 
-        {/* Price Details Section */}        <div className="bg-card mt-2 border-t border-b border-foreground/[0.06]">
+        {/* Price Details Section */}
+        <div className="panel tx-sheet overflow-hidden">
           <h3 className="px-4 py-3 text-base font-semibold text-foreground border-b border-foreground/[0.06]" style={{ fontFamily: "var(--font-body)" }}>Price details</h3>
           
           <div className="px-4 py-3 space-y-3">
@@ -1216,8 +1217,9 @@ const OrderDetailsPage = () => {
           </div>
         </div>
 
-        {/* Share Order Details */}
-        <div className="bg-card mt-2 px-4 py-3 border-t border-foreground/[0.06]">
+        {/* Share order details + invoice */}
+        <div className="panel tx-sheet overflow-hidden divide-y divide-foreground/[0.06]">
+        <div className="px-4 py-2">
           <button 
             onClick={() => setShowShareMenu(true)}
             className="w-full flex items-center justify-between text-sm text-foreground/80 font-medium py-2"
@@ -1230,8 +1232,7 @@ const OrderDetailsPage = () => {
           </button>
         </div>
 
-        {/* Download Invoice */}
-        <div className="bg-card px-4 py-3 border-b border-foreground/[0.06]">
+        <div className="px-4 py-2">
           <button 
             onClick={() => downloadInvoice()}
             disabled={isDownloadingInvoice}
@@ -1250,6 +1251,7 @@ const OrderDetailsPage = () => {
               <ChevronRight className="w-4 h-4 text-muted-foreground/70" />
             )}
           </button>
+        </div>
         </div>
 
       </div>

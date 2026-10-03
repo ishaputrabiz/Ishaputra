@@ -19,6 +19,8 @@ export function useRewards(uid?: string | null) {
   const [entries, setEntries] = useState<RewardEntry[]>([]);
   const [settings, setSettings] = useState<RewardSettings>(DEFAULT_REWARD_SETTINGS);
   const [loading, setLoading] = useState(true);
+  /** The ledger could not be read: balances show 0, which must not be presented as the customer's real balance. */
+  const [error, setError] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => subscribeRewardSettings(setSettings), []);
@@ -27,14 +29,24 @@ export function useRewards(uid?: string | null) {
     if (!uid) {
       setEntries([]);
       setLoading(false);
+      setError(false);
       return;
     }
     setLoading(true);
-    return subscribeRewardLedger(uid, (next) => {
-      setEntries(next);
-      setNow(Date.now());
-      setLoading(false);
-    });
+    setError(false);
+    let failed = false;
+    return subscribeRewardLedger(
+      uid,
+      (next) => {
+        setEntries(next);
+        setNow(Date.now());
+        setError(failed);
+        setLoading(false);
+      },
+      () => {
+        failed = true;
+      },
+    );
   }, [uid]);
 
   // Earned points unlock by date, so re-evaluate every minute as well.
@@ -66,5 +78,5 @@ export function useRewards(uid?: string | null) {
     }
     return out;
   }, [entries]);
-  return { entries, balances, reserved, settings, loading };
+  return { entries, balances, reserved, settings, loading, error };
 }
