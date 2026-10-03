@@ -1,11 +1,41 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, ShieldX } from 'lucide-react';
+import { ShieldX } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface AdminRouteProps {
   children: React.ReactNode;
 }
+
+/** The admin shell's shape (sidebar rail + top bar) while access is checked. */
+const AdminShellSkeleton = () => (
+  <div aria-busy="true" className="min-h-screen bg-background">
+    <span className="sr-only" role="status">Checking admin access</span>
+    <div aria-hidden="true" className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
+      <div className="flex h-16 items-center border-b border-sidebar-border px-6">
+        <Skeleton className="h-6 w-28" />
+      </div>
+      <div className="flex flex-col gap-1 px-3 py-4">
+        {Array.from({ length: 10 }).map((_, i) => (
+          <Skeleton key={i} className="h-9 w-full" />
+        ))}
+      </div>
+    </div>
+    <div aria-hidden="true" className="lg:ml-64">
+      <div className="flex h-16 items-center justify-between gap-3 border-b border-sidebar-border bg-sidebar px-4 lg:px-6">
+        <Skeleton className="size-9 lg:hidden" />
+        <Skeleton className="hidden h-10 w-full max-w-md md:block" />
+        <Skeleton className="size-8 rounded-full" />
+      </div>
+      <div className="flex flex-col gap-4 p-4 lg:p-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-72 max-w-full" />
+      </div>
+    </div>
+  </div>
+);
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const { user, userProfile, loading, isAdmin } = useAuth();
@@ -13,14 +43,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 
   // Show loading state while checking auth
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-highlight mx-auto" />
-          <p className="mt-4 text-gray-400">Verifying admin access...</p>
-        </div>
-      </div>
-    );
+    return <AdminShellSkeleton />;
   }
 
   // Redirect to admin login if not authenticated
@@ -31,32 +54,30 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   // Show access denied if user is not admin
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="bg-red-500/10 rounded-full p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-            <ShieldX className="h-12 w-12 text-red-500" />
+      <main className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
+        <div className="panel mx-auto w-full max-w-md bg-card p-8 text-center">
+          <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full bg-status-danger-bg text-status-danger-fg">
+            <ShieldX aria-hidden="true" className="size-7" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-4">Access Denied</h1>
-          <p className="text-gray-400 mb-6">
-            You do not have permission to access the admin panel. 
-            This area is restricted to administrators only.
+          <h1
+            className="mb-3 text-2xl font-semibold tracking-tight"
+            style={{ fontFamily: 'var(--font-heading)', fontStretch: 'var(--font-heading-stretch)' }}
+          >
+            Access denied
+          </h1>
+          <p className="mb-6 text-sm text-muted-foreground [text-wrap:pretty]">
+            You do not have permission to open the admin panel. This area is for administrators only.
           </p>
-          <div className="space-y-3">
-            <a
-              href="/"
-              className="block w-full bg-highlight hover:bg-highlight text-white font-medium py-3 px-6 rounded-lg transition-colors"
-            >
-              Go to Homepage
-            </a>
-            <button
-              onClick={() => window.history.back()}
-              className="block w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-6 rounded-lg transition-colors"
-            >
-              Go Back
-            </button>
+          <div className="flex flex-col gap-3">
+            <Button asChild className="w-full">
+              <a href="/">Go to homepage</a>
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => window.history.back()}>
+              Go back
+            </Button>
           </div>
         </div>
-      </div>
+      </main>
     );
   }
 

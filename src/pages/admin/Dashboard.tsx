@@ -1,16 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Package,
+  PackageMinus,
   ShoppingCart,
-  DollarSign,
+  ShoppingBag,
+  IndianRupee,
   Plus,
-  Clock,
   Coins,
   Save,
-  Loader2,
+  ImagePlus,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getAllProducts, Product } from '@/services/productService';
@@ -19,24 +20,31 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { toast } from 'sonner';
 import { SmartImage } from "@/components/ui/smart-image";
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Spinner } from '@/components/ui/spinner';
+import { ListSkeleton, StatCardsSkeleton } from '@/components/skeletons';
+import { getProductStatus } from '@/lib/orderStatus';
+import { formatINR, formatNumber } from '@/lib/format';
+import { SILVER_PRICING_ENABLED } from '@/config/features';
+import { cn } from '@/lib/utils';
 
 interface StatCard {
   title: string;
   value: string;
   subtitle: string;
-  change?: string;
-  changeType?: 'up' | 'down';
   icon: React.ElementType;
-  color: string;
-  iconBgColor: string;
-  link?: string;
+  /** Tints the value when it needs attention (low stock above zero). */
+  valueClassName?: string;
+  link: string;
 }
+
+const HEADING_FONT = { fontFamily: 'var(--font-heading)', fontStretch: 'var(--font-heading-stretch)' } as const;
 
 const Dashboard = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   // Silver rate state
   const [silverInput, setSilverInput] = useState<string>('');
@@ -62,8 +70,9 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
-  // Subscribe to live silver rate
+  // Subscribe to the live silver rate, only while silver pricing is switched on.
   useEffect(() => {
+    if (!SILVER_PRICING_ENABLED) return;
     const unsub = onSnapshot(doc(db, 'siteSettings', 'silverRate'), (snap) => {
       if (snap.exists()) {
         const d = snap.data();
@@ -86,7 +95,7 @@ const Dashboard = () => {
         { manualOverride: true, manualPricePerGramInr: val, updatedAt: new Date().toISOString() },
         { merge: true },
       );
-      toast.success('Silver rate updated ✓');
+      toast.success('Silver rate updated');
     } catch {
       toast.error('Failed to save silver rate');
     } finally {
@@ -106,39 +115,32 @@ const Dashboard = () => {
 
   const stats: StatCard[] = [
     {
-      title: 'Total Revenue',
-      value: `₹${totalRevenue.toLocaleString('en-IN')}`,
+      title: 'Total revenue',
+      value: formatINR(totalRevenue),
       subtitle: 'From delivered orders',
-      icon: DollarSign,
-      color: 'text-green-600',
-      iconBgColor: 'bg-green-50',
+      icon: IndianRupee,
       link: '/admin/orders',
     },
     {
-      title: 'Total Orders',
-      value: orders.length.toString(),
+      title: 'Total orders',
+      value: formatNumber(orders.length),
       subtitle: `${pendingOrders} pending`,
-      icon: ShoppingCart,
-      color: 'text-blue-600',
-      iconBgColor: 'bg-blue-50',
+      icon: ShoppingBag,
       link: '/admin/orders',
     },
     {
       title: 'Products',
-      value: products.length.toString(),
+      value: formatNumber(products.length),
       subtitle: `${outOfStockProducts} out of stock`,
       icon: Package,
-      color: 'text-purple-600',
-      iconBgColor: 'bg-purple-50',
       link: '/admin/products',
     },
     {
-      title: 'Low Stock Items',
-      value: lowStockProducts.toString(),
+      title: 'Low stock items',
+      value: formatNumber(lowStockProducts),
       subtitle: 'Needs attention',
-      icon: Clock,
-      color: 'text-orange-600',
-      iconBgColor: 'bg-orange-50',
+      icon: PackageMinus,
+      valueClassName: lowStockProducts > 0 ? 'text-status-warning-fg' : undefined,
       link: '/admin/products',
     },
   ];
@@ -146,195 +148,161 @@ const Dashboard = () => {
   const recentProducts = products.slice(0, 5);
 
   return (
-    <div className="space-y-5">
-      {/* Premium Page Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-highlight/12 bg-gradient-to-br from-highlight/10 via-white to-primary/5 p-5 shadow-sm">
-        <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-highlight/8 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-highlight/28 to-transparent" />
-        <div className="relative flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-serif font-semibold text-gray-900" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Dashboard</h1>
-            <p className="text-gray-600 text-sm mt-1">Welcome back — here's what's happening at <span className="text-highlight font-medium">Ishaputra Botanicals</span> today.</p>
-          </div>
-          <Link to="/admin/products/new">
-            <Button className="bg-gradient-to-r from-highlight to-highlight hover:from-highlight hover:to-highlight/35 shadow-md">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-          </Link>
-        </div>
-      </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+      <AdminPageHeader
+        title="Dashboard"
+        description="Welcome back. Here is today at Ishaputra Botanicals."
+        className="pb-1"
+        actions={
+          <Button asChild>
+            <Link to="/admin/products/new">
+              <Plus aria-hidden="true" />
+              Add product
+            </Link>
+          </Button>
+        }
+      />
 
-      {/* Silver Rate Quick Card */}
-      <Card className="border-highlight/18 bg-gradient-to-r from-highlight/8 to-yellow-50/40">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <div className="bg-highlight/15 p-2 rounded-lg shrink-0">
-                <Coins className="h-4 w-4 text-highlight" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-highlight uppercase tracking-wider">Silver Rate (Live)</p>
-                {silverSaved !== null && (
-                  <p className="text-xs text-gray-500">
-                    Current: <span className="font-semibold text-highlight">₹{silverSaved}/g</span>
-                    <span className="ml-2 text-gray-400">→ 10g: ₹{(silverSaved * 10).toLocaleString('en-IN')} · 1kg: ₹{(silverSaved * 1000).toLocaleString('en-IN')}</span>
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">₹</span>
-                <Input
-                  type="number"
-                  min={1}
-                  value={silverInput}
-                  onChange={(e) => setSilverInput(e.target.value)}
-                  className="pl-6 w-28 h-8 text-sm border-highlight/30 focus:border-highlight/70"
-                  placeholder="price/g"
-                />
-              </div>
-              <Button
-                size="sm"
-                disabled={!silverChanged || silverSaving}
-                onClick={handleSilverSave}
-                className="h-8 bg-highlight hover:bg-highlight text-white shrink-0"
-              >
-                {silverSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                <span className="ml-1.5 hidden sm:inline">{silverSaving ? 'Saving…' : 'Save Rate'}</span>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
-          <Card 
-            key={index} 
-            className="group relative overflow-hidden bg-white border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
-            onClick={() => stat.link && navigate(stat.link)}
-          >
-            <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-highlight/70 to-highlight scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top" />
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-gray-600 text-xs font-medium uppercase tracking-wider">{stat.title}</h3>
-                <div className={`${stat.iconBgColor} p-2 rounded-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
+      {/* Silver rate quick card: silver pricing feature only */}
+      {SILVER_PRICING_ENABLED && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-muted text-foreground/70">
+                  <Coins aria-hidden="true" className="size-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground">Silver rate (live)</p>
+                  {silverSaved !== null && (
+                    <p className="text-xs tabular-nums text-muted-foreground">
+                      Current: <span className="font-semibold text-foreground">{formatINR(silverSaved)}/g</span>
+                      <span className="ml-2">10g: {formatINR(silverSaved * 10)} · 1kg: {formatINR(silverSaved * 1000)}</span>
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="space-y-0.5">
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                <p className="text-gray-500 text-xs">{stat.subtitle}</p>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <span aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">₹</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    aria-label="Silver price per gram"
+                    value={silverInput}
+                    onChange={(e) => setSilverInput(e.target.value)}
+                    className="h-9 w-28 pl-6 text-sm"
+                    placeholder="price/g"
+                  />
+                </div>
+                <Button size="sm" disabled={!silverChanged || silverSaving} onClick={handleSilverSave} className="shrink-0">
+                  {silverSaving ? <Spinner /> : <Save aria-hidden="true" />}
+                  <span className="hidden sm:inline">{silverSaving ? 'Saving' : 'Save rate'}</span>
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Recent Products */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="bg-white border-gray-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-gray-900 text-base">Recent Products</CardTitle>
-            <Link to="/admin/products">
-              <Button variant="ghost" size="sm" className="text-highlight hover:text-highlight-soft">
-                View All
-              </Button>
-            </Link>
+      {/* Stats grid */}
+      {loading ? (
+        <StatCardsSkeleton label="Loading stats" />
+      ) : (
+        <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+          {stats.map((stat) => (
+            <li key={stat.title}>
+              <Link
+                to={stat.link}
+                className="group block h-full rounded-card border border-foreground/[0.08] bg-card p-3 text-card-foreground shadow-sm transition-[box-shadow,transform,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-foreground/[0.14] hover:shadow-panel motion-reduce:hover:translate-y-0 sm:p-4"
+              >
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <p className="text-xs font-medium text-muted-foreground">{stat.title}</p>
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-control bg-muted text-foreground/70">
+                    <stat.icon aria-hidden="true" className="size-4" />
+                  </span>
+                </div>
+                <p className={cn('text-2xl font-semibold tabular-nums text-foreground', stat.valueClassName)} style={HEADING_FONT}>
+                  {stat.value}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{stat.subtitle}</p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Recent products and quick actions */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="flex h-16 flex-row items-center justify-between gap-2 space-y-0 px-5 py-0 sm:px-6">
+            <h2 className="text-base font-semibold text-foreground">Recent products</h2>
+            <Button asChild variant="ghost" size="sm" className="-mr-2 text-primary hover:text-primary">
+              <Link to="/admin/products">View all</Link>
+            </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-5 sm:px-6">
             {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="animate-pulse flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
-                    <div className="flex-1">
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ListSkeleton rows={3} thumb label="Loading products" className="rounded-none border-0 bg-transparent shadow-none [background-image:none] [&>div]:px-0" />
             ) : recentProducts.length > 0 ? (
-              <div className="space-y-3">
-                {recentProducts.map((product) => (
-                  <div key={product.id} className="flex items-center gap-3">
-                    <SmartImage
-                      src={product.media?.thumbnail || '/placeholder.png'}
-                      alt={product.name}
-                      className="w-10 h-10 rounded-lg object-cover bg-gray-100" preset="tile" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-gray-900 text-sm font-medium truncate">{product.name}</p>
-                      <p className="text-gray-500 text-xs">{product.category}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-highlight text-sm font-medium">₹{product.price}</p>
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                          product.flags?.isActive
-                            ? 'bg-green-50 text-green-600'
-                            : 'bg-red-50 text-red-600'
-                        }`}
-                      >
-                        {product.flags?.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ul className="divide-y divide-foreground/[0.08]">
+                {recentProducts.map((product) => {
+                  const status = getProductStatus({ isActive: product.flags?.isActive });
+                  return (
+                    <li key={product.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                      <SmartImage
+                        src={product.media?.thumbnail || '/placeholder.png'}
+                        alt=""
+                        className="size-10 shrink-0 rounded-control bg-muted object-cover"
+                        preset="tile"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">{product.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{product.category}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <p className="text-sm font-medium tabular-nums text-foreground">{formatINR(product.price)}</p>
+                        <StatusBadge tone={status.tone} label={status.label} icon={status.icon} className="h-5 px-1.5 text-[11px]" />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             ) : (
-              <div className="text-center py-8">
-                <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">No products yet</p>
-                <Link to="/admin/products/new">
-                  <Button className="mt-4 bg-highlight hover:bg-highlight" size="sm">
-                    Add First Product
-                  </Button>
-                </Link>
+              <div className="py-8 text-center">
+                <Package aria-hidden="true" className="mx-auto mb-4 size-12 text-muted-foreground/70" />
+                <p className="text-foreground/80">No products yet</p>
+                <Button asChild size="sm" className="mt-4">
+                  <Link to="/admin/products/new">Add first product</Link>
+                </Button>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <Card className="bg-white border-gray-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-gray-900 text-base">Quick Actions</CardTitle>
+        <Card>
+          <CardHeader className="flex h-16 flex-row items-center space-y-0 px-5 py-0 sm:px-6">
+            <h2 className="text-base font-semibold text-foreground">Quick actions</h2>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <Link to="/admin/products/new" className="block">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Add New Product
-              </Button>
-            </Link>
-            <Link to="/admin/orders" className="block">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-              >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                View Orders
-              </Button>
-            </Link>
-            <Link to="/admin/media" className="block">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Upload Media
-              </Button>
-            </Link>
+          <CardContent className="flex flex-col gap-2 px-5 sm:px-6">
+            <Button asChild variant="outline" size="sm" className="h-10 w-full justify-start">
+              <Link to="/admin/products/new">
+                <Package aria-hidden="true" />
+                Add new product
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="h-10 w-full justify-start">
+              <Link to="/admin/orders">
+                <ShoppingCart aria-hidden="true" />
+                View orders
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="h-10 w-full justify-start">
+              <Link to="/admin/media">
+                <ImagePlus aria-hidden="true" />
+                Upload media
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>

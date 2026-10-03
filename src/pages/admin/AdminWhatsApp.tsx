@@ -26,16 +26,23 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   MessageCircle,
   Send,
-  Loader2,
   Eye,
   EyeOff,
   Clock,
-  AlertTriangle,
   User as UserIcon,
   ArrowLeft,
   MoreVertical,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
+import { Notice } from '@/components/ui/notice';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { formatDateTime } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 interface Thread {
   id: string;
@@ -77,7 +84,7 @@ const maskPhone = (p: string) => {
 
 const formatTime = (ts?: Timestamp) => {
   if (!ts?.toDate) return '';
-  return ts.toDate().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' });
+  return formatDateTime(ts);
 };
 
 const millisLeft = (ts?: Timestamp) => {
@@ -189,75 +196,86 @@ const AdminWhatsApp = () => {
   const windowOpen = remainingMs > 0;
 
   return (
-    <div className="h-[calc(100vh-138px)] min-h-[560px] overflow-hidden border border-[#d1d7db] bg-[#efeae2] shadow-sm md:rounded-[3px] md:bg-[#111b21]">
+    <div className="h-[calc(100vh-138px)] min-h-[560px] overflow-hidden rounded-card border border-border bg-card shadow-sm">
+      <h1 className="sr-only">WhatsApp inbox</h1>
       <div className="grid h-full grid-cols-1 md:grid-cols-[360px_1fr]">
       {/* Threads list */}
-      <aside className={`${activeThread ? 'hidden md:flex' : 'flex'} bg-white flex-col overflow-hidden md:border-r md:border-[#d1d7db]`}>
-        <header className="h-[59px] px-4 bg-[#f0f2f5] border-b border-[#d1d7db] flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-[#00a884] grid place-items-center">
-            <MessageCircle className="h-5 w-5 text-white" />
+      <div className={`${activeThread ? 'hidden md:flex' : 'flex'} flex-col overflow-hidden bg-card md:border-r md:border-border`}>
+        <div className="flex h-[59px] shrink-0 items-center gap-3 border-b border-border bg-muted px-4">
+          <div aria-hidden="true" className="grid size-10 place-items-center rounded-full bg-card text-foreground">
+            <MessageCircle className="size-5" />
           </div>
-          <span className="font-semibold text-[#111b21] text-base">WhatsApp</span>
-          <span className="ml-auto text-xs text-[#667781]">{threads.length}</span>
-        </header>
+          <h2 className="text-base font-semibold text-foreground">WhatsApp</h2>
+          <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+            <span className="sr-only">Conversations: </span>{threads.length}
+          </span>
+        </div>
         {loadingThreads ? (
-          <div className="flex-1 grid place-items-center text-xs text-gray-500 gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading…
+          <div aria-busy="true" className="flex-1 divide-y divide-border">
+            <span className="sr-only" role="status">Loading conversations</span>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-start gap-3 px-3 py-3">
+                <Skeleton className="size-12 shrink-0 rounded-full" />
+                <div className="flex flex-1 flex-col gap-2 pt-1">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-3 w-full" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : threads.length === 0 ? (
-          <div className="flex-1 grid place-items-center text-xs text-gray-500 px-6 text-center">
+          <div className="grid flex-1 place-items-center px-6 text-center text-sm text-muted-foreground">
             No WhatsApp conversations yet. Inbound messages will appear here once Meta
             forwards them through the webhook.
           </div>
         ) : (
-          <ul className="flex-1 overflow-auto divide-y divide-[#e9edef] bg-white">
+          <ul aria-label="Conversations" className="flex-1 divide-y divide-border overflow-auto bg-card">
             {threads.map((t) => {
               const unread = (t.unreadCount || 0) > 0;
               const ms = millisLeft(t.replyWindowClosesAt);
               const open = ms > 0;
+              const isActive = activeId === t.id;
               return (
                 <li key={t.id}>
                   <button
+                    type="button"
                     onClick={() => setActiveId(t.id)}
-                    className={`w-full text-left px-3 py-3 text-xs hover:bg-[#f5f6f6] transition-colors ${
-                      activeId === t.id ? 'bg-[#f0f2f5]' : ''
-                    }`}
+                    aria-current={isActive ? 'true' : undefined}
+                    className={cn(
+                      'focus-inset w-full px-3 py-3 text-left text-xs transition-colors duration-hover hover:bg-muted/60',
+                      isActive && 'bg-muted shadow-[inset_2px_0_0_hsl(var(--primary))]',
+                    )}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="h-12 w-12 flex-none rounded-full bg-[#dfe5e7] grid place-items-center">
-                        <UserIcon className="h-5 w-5 text-[#667781]" />
+                      <div aria-hidden="true" className="grid size-12 flex-none place-items-center rounded-full bg-muted">
+                        <UserIcon className="size-5 text-muted-foreground" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-[#111b21] text-[15px] truncate">
+                          <span className="truncate text-[15px] font-medium text-foreground">
                             {t.contactName || maskPhone(t.phone)}
                           </span>
-                          <span className={`text-[11px] ${unread ? 'text-[#00a884]' : 'text-[#667781]'}`}>
+                          <span className={cn('shrink-0 text-[11px] tabular-nums', unread ? 'font-semibold text-primary' : 'text-muted-foreground')}>
                             {formatTime(t.updatedAt)}
                           </span>
                         </div>
                         <div className="mt-1 flex items-center gap-2">
-                          <p className="min-w-0 flex-1 text-[13px] text-[#667781] truncate">
+                          <p className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">
                             {t.lastDirection === 'outbound' ? 'You: ' : ''}
                             {t.lastMessage || 'No messages yet'}
                           </p>
                           {unread && (
-                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#00a884] px-1.5 text-[11px] font-medium text-white">
-                              {t.unreadCount}
+                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold tabular-nums text-primary-foreground">
+                              <span className="sr-only">Unread: </span>{t.unreadCount}
                             </span>
                           )}
                         </div>
-                      <span
-                        className={`mt-2 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full ${
-                          open
-                            ? 'bg-[#d9fdd3] text-[#128c7e]'
-                            : 'bg-[#fff3cd] text-highlight'
-                        }`}
-                      >
-                        <Clock className="h-2.5 w-2.5" />
-                        {open ? formatCountdown(ms) : 'template-only'}
-                      </span>
+                        <StatusBadge
+                          tone={open ? 'success' : 'warning'}
+                          icon={Clock}
+                          label={open ? formatCountdown(ms) : 'Template only'}
+                          className="mt-2 h-5 px-1.5 text-[11px]"
+                        />
                       </div>
                     </div>
                   </button>
@@ -266,67 +284,62 @@ const AdminWhatsApp = () => {
             })}
           </ul>
         )}
-      </aside>
+      </div>
 
       {/* Thread detail */}
-      <section className={`${activeThread ? 'flex' : 'hidden md:flex'} min-w-0 flex-col overflow-hidden bg-[#efeae2]`}>
+      <section
+        aria-label={activeThread ? `Conversation with ${activeThread.contactName || 'customer'}` : 'Conversation'}
+        className={`${activeThread ? 'flex' : 'hidden md:flex'} min-w-0 flex-col overflow-hidden bg-background`}
+      >
         {!activeThread ? (
-          <div className="flex-1 grid place-items-center text-sm text-gray-500">
+          <div className="grid flex-1 place-items-center text-sm text-muted-foreground">
             Select a conversation to view messages.
           </div>
         ) : (
           <>
-            <header className="h-[59px] px-3 md:px-4 bg-[#f0f2f5] border-b border-[#d1d7db] flex items-center gap-3">
-              <button onClick={() => setActiveId(null)} className="md:hidden p-1 text-[#54656f]" aria-label="Back to chats">
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <div className="h-10 w-10 rounded-full bg-[#dfe5e7] grid place-items-center">
-                <UserIcon className="h-5 w-5 text-[#667781]" />
+            <div className="flex h-[59px] shrink-0 items-center gap-3 border-b border-border bg-muted px-2 md:px-4">
+              <IconButton label="Back to chats" onClick={() => setActiveId(null)} className="md:hidden">
+                <ArrowLeft />
+              </IconButton>
+              <div aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-card">
+                <UserIcon className="size-5 text-muted-foreground" />
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[15px] font-medium text-[#111b21]">
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-[15px] font-medium text-foreground">
                   {activeThread.contactName || 'Unknown'}
-                </div>
-                <div className="text-xs text-[#667781] flex items-center gap-2">
-                  <span className="font-mono">
+                </h2>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="font-mono tabular-nums">
                     {reveal[activeThread.id]
                       ? activeThread.phone
                       : maskPhone(activeThread.phone)}
                   </span>
-                  <button
+                  <IconButton
+                    label={reveal[activeThread.id] ? 'Hide phone number' : 'Show phone number'}
+                    aria-pressed={!!reveal[activeThread.id]}
+                    size="sm"
                     onClick={() =>
                       setReveal((r) => ({ ...r, [activeThread.id]: !r[activeThread.id] }))
                     }
-                    className="text-[#008069] hover:underline inline-flex items-center gap-0.5"
-                    title="Toggle phone visibility"
+                    className="size-7 [&_svg]:size-3.5"
                   >
-                    {reveal[activeThread.id] ? (
-                      <EyeOff className="h-3 w-3" />
-                    ) : (
-                      <Eye className="h-3 w-3" />
-                    )}
-                  </button>
+                    {reveal[activeThread.id] ? <EyeOff /> : <Eye />}
+                  </IconButton>
                 </div>
               </div>
-              <span
+              <StatusBadge
                 key={tick /* force re-render on tick */}
-                className={`hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full ${
-                  windowOpen
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-highlight/15 text-highlight'
-                }`}
-              >
-                <Clock className="h-3 w-3" />
-                {windowOpen
-                  ? `Free-form ${formatCountdown(remainingMs)}`
-                  : 'Free-form window closed'}
-              </span>
-              <MoreVertical className="h-5 w-5 text-[#54656f]" />
-            </header>
+                tone={windowOpen ? 'success' : 'warning'}
+                icon={Clock}
+                label={windowOpen ? `Free-form ${formatCountdown(remainingMs)}` : 'Free-form window closed'}
+                className="hidden sm:inline-flex"
+              />
+              <MoreVertical aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
+            </div>
 
-            <div className="flex-1 overflow-auto px-3 py-4 md:px-10 md:py-6 bg-[#efeae2] bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.36)_0_1px,transparent_1px),radial-gradient(circle_at_80%_40%,rgba(17,27,33,0.08)_0_1px,transparent_1px)] [background-size:24px_24px]">
+            <div className="tx-paper flex-1 overflow-auto px-3 py-4 md:px-10 md:py-6">
               {messages.length === 0 ? (
-                <div className="text-center text-xs text-gray-500 py-12">
+                <div className="py-12 text-center text-sm text-muted-foreground">
                   No messages in this thread yet.
                 </div>
               ) : (
@@ -339,19 +352,21 @@ const AdminWhatsApp = () => {
                       }`}
                     >
                       <div
-                        className={`max-w-[86%] md:max-w-[72%] rounded-lg px-3 py-2 text-sm shadow-sm ${
+                        className={cn(
+                          'max-w-[86%] rounded-card px-3 py-2 text-sm text-foreground shadow-sm md:max-w-[72%]',
                           m.direction === 'outbound'
-                            ? 'bg-[#d9fdd3] text-[#111b21] rounded-tr-none'
-                            : 'bg-white text-[#111b21] rounded-tl-none'
-                        }`}
+                            ? 'rounded-tr-chip border border-primary/20 bg-primary/10'
+                            : 'rounded-tl-chip border border-foreground/[0.06] bg-card',
+                        )}
                       >
+                        <span className="sr-only">{m.direction === 'outbound' ? 'You: ' : 'Customer: '}</span>
                         {m.type === 'template' && m.template ? (
                           <>
-                            <div className="text-[10px] uppercase tracking-wide opacity-75 mb-1">
+                            <div className="mb-1 text-[11px] font-medium text-muted-foreground">
                               Template · {m.template.name}
                             </div>
                             {m.template.params && m.template.params.length > 0 && (
-                              <ol className="text-xs list-decimal pl-4 opacity-90">
+                              <ol className="list-decimal pl-4 text-xs text-foreground/80">
                                 {m.template.params.map((p, i) => (
                                   <li key={i}>{p}</li>
                                 ))}
@@ -359,9 +374,9 @@ const AdminWhatsApp = () => {
                             )}
                           </>
                         ) : (
-                          <p className="whitespace-pre-wrap">{m.text || '—'}</p>
+                          <p className="whitespace-pre-wrap">{m.text || 'No text'}</p>
                         )}
-                        <div className="text-[10px] mt-1 text-[#667781]">
+                        <div className="mt-1 text-[11px] tabular-nums text-muted-foreground">
                           {formatTime(m.createdAt)}
                           {m.actorEmail ? ` · ${m.actorEmail}` : ''}
                         </div>
@@ -486,41 +501,39 @@ const ReplyComposer = ({
     }
   };
 
+  const fieldClass =
+    'w-full rounded-control border border-input bg-card px-3 text-base text-foreground placeholder:text-muted-foreground transition-[border-color,box-shadow] duration-hover ease-out focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:text-sm';
+
   return (
-    <div className="border-t border-[#d1d7db] px-3 py-2 bg-[#f0f2f5] space-y-2">
+    <div className="shrink-0 space-y-2 border-t border-border bg-muted px-3 py-2">
       <div className="flex items-center gap-2">
-        <div className="ml-auto inline-flex rounded-full border border-[#d1d7db] bg-white overflow-hidden text-[11px]">
-          <button
+        <ToggleGroup
+          type="single"
+          value={mode}
+          onValueChange={(v) => v && setMode(v as 'text' | 'template')}
+          aria-label="Reply type"
+          className="ml-auto bg-card"
+        >
+          <ToggleGroupItem
+            value="text"
+            size="sm"
             disabled={!windowOpen}
-            onClick={() => setMode('text')}
-            className={`px-2 py-1 ${
-              mode === 'text'
-                ? 'bg-[#008069] text-white'
-                : 'bg-white text-[#54656f] disabled:opacity-50'
-            }`}
-            title={!windowOpen ? 'Free-form window closed' : ''}
+            title={!windowOpen ? 'Free-form window closed' : undefined}
+            className="h-8 px-3 text-xs data-[state=on]:bg-muted"
           >
             Text
-          </button>
-          <button
-            onClick={() => setMode('template')}
-            className={`px-2 py-1 ${
-              mode === 'template' ? 'bg-[#008069] text-white' : 'bg-white text-[#54656f]'
-            }`}
-          >
+          </ToggleGroupItem>
+          <ToggleGroupItem value="template" size="sm" className="h-8 px-3 text-xs data-[state=on]:bg-muted">
             Template
-          </button>
-        </div>
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       {!windowOpen && (
-        <div className="text-[11px] text-highlight bg-highlight/10 border border-highlight/30 rounded px-2 py-1 flex items-start gap-1">
-          <AlertTriangle className="h-3 w-3 mt-0.5" />
-          <span>
-            Free-form window closed. Meta requires an approved template until the customer
-            messages again.
-          </span>
-        </div>
+        <Notice tone="warning" compact className="text-xs">
+          Free-form window closed. Meta requires an approved template until the customer
+          messages again.
+        </Notice>
       )}
 
       {mode === 'text' ? (
@@ -530,17 +543,19 @@ const ReplyComposer = ({
           onChange={(e) => setText(e.target.value)}
           rows={2}
           maxLength={1000}
-          placeholder="Type your reply…"
-          className="w-full px-4 py-2.5 border-0 rounded-lg text-sm resize-none focus:outline-none bg-white text-[#111b21] placeholder:text-[#667781]"
+          aria-label="Reply"
+          placeholder="Type your reply"
+          className={cn(fieldClass, 'resize-none py-2.5')}
         />
       ) : (
         <div className="space-y-2">
           <select
             value={tplId}
             onChange={(e) => setTplId(e.target.value)}
-            className="w-full px-3 py-2 border border-[#d1d7db] rounded-lg text-sm bg-white"
+            aria-label="Template"
+            className={cn(fieldClass, 'h-10')}
           >
-            <option value="">Pick a template…</option>
+            <option value="">Pick a template</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name} · {t.language} · {t.category}
@@ -556,26 +571,19 @@ const ReplyComposer = ({
                 next[idx] = e.target.value;
                 setTplParams(next);
               }}
+              aria-label={label || `Parameter ${idx + 1}`}
               placeholder={`{{${idx + 1}}} ${label}`}
-              className="w-full px-3 py-1.5 border border-[#d1d7db] rounded-lg text-xs bg-white"
+              className={cn(fieldClass, 'h-9 text-sm')}
             />
           ))}
         </div>
       )}
 
       <div className="flex justify-end">
-        <button
-          onClick={handleSend}
-          disabled={sending}
-          className="inline-flex items-center gap-1.5 bg-[#008069] hover:bg-[#017561] disabled:bg-gray-300 text-white text-sm font-medium px-4 py-2 rounded-full"
-        >
-          {sending ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Send className="h-3.5 w-3.5" />
-          )}
+        <Button size="sm" onClick={handleSend} disabled={sending}>
+          {sending ? <Spinner /> : <Send aria-hidden="true" />}
           Send
-        </button>
+        </Button>
       </div>
     </div>
   );

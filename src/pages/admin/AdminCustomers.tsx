@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
-  Search, Users as UsersIcon, Mail, Calendar, Package,
-  ShoppingBag, TrendingUp, X, LayoutGrid, List, Trash2,
-  RotateCcw, AlertTriangle, Phone,
-  ChevronRight, Clock, UserX,
+  Search, Users as UsersIcon, Mail, ShoppingBag, TrendingUp, X, LayoutGrid, List, Trash2,
+  RotateCcw, Phone, Clock, UserX,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,18 +11,20 @@ import {
   deleteDoc, serverTimestamp, deleteField,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
+import { getAllOrders, type Order } from '@/services/orderService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { Checkbox } from '@/components/ui/checkbox';
+import { IconButton } from '@/components/ui/icon-button';
+import { Notice } from '@/components/ui/notice';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { ListSkeleton, StatCardsSkeleton } from '@/components/skeletons';
+import { EmptyState } from '@/components/EmptyState';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { formatDate as fmtDate, formatINR, formatNumber, plural } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 interface CustomerOrder {
   id: string;
@@ -49,25 +49,9 @@ interface Customer {
   trashedAt?: any;
 }
 
-const statusColors: Record<string, string> = {
-  pending: 'bg-highlight/10 text-highlight border border-highlight/30',
-  processing: 'bg-orange-50 text-orange-700 border border-orange-200',
-  shipped: 'bg-blue-50 text-blue-700 border border-blue-200',
-  outForDelivery: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
-  delivered: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-  cancelled: 'bg-red-50 text-red-700 border border-red-200',
-  returnRequested: 'bg-highlight/10 text-highlight border border-highlight/30',
-  returned: 'bg-gray-50 text-gray-700 border border-gray-200',
-};
+const formatDate = (timestamp: any) => (timestamp ? fmtDate(timestamp) || 'N/A' : 'N/A');
 
-const formatDate = (timestamp: any) => {
-  if (!timestamp) return 'N/A';
-  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp.seconds * 1000);
-  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-};
-
-const formatPrice = (price: number) =>
-  `₹${price.toLocaleString('en-IN', { minimumFractionDigits: 0 })}`;
+const formatPrice = (price: number) => formatINR(price);
 
 const getDaysRemaining = (trashedAt: any): number => {
   if (!trashedAt) return 30;
@@ -76,8 +60,12 @@ const getDaysRemaining = (trashedAt: any): number => {
   return Math.max(0, 30 - daysIn);
 };
 
+const displayName = (c: Customer) => c.name || c.username;
+const initial = (c: Customer) => (c.name || c.username || 'U').charAt(0).toUpperCase();
+
+const HEADING_FONT = { fontFamily: 'var(--font-heading)', fontStretch: 'var(--font-heading-stretch)' } as const;
+
 const AdminCustomers: React.FC = () => {
-  const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,39 +84,51 @@ const AdminCustomers: React.FC = () => {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const usersSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'user')));
-      const usersData: Customer[] = usersSnap.docs.map((d) => ({
-        uid: d.id,
-        email: d.data().email || '',
-        username: d.data().username || d.data().name || 'Unknown',
-        name: d.data().name || d.data().username || '',
-        phone: d.data().phone || '',
-        role: d.data().role,
-        createdAt: d.data().createdAt,
-        status: d.data().status || 'active',
-        trashedAt: d.data().trashedAt || null,
-        orders: [],
-        totalSpent: 0,
-      }));
-      const withOrders = await Promise.all(
-        usersData.map(async (customer) => {
-          try {
-            const ordersSnap = await getDocs(collection(db, 'users', customer.uid, 'orders'));
-            const orders: CustomerOrder[] = ordersSnap.docs.map((oDoc) => ({
-              id: oDoc.id,
-              orderNumber: oDoc.data().orderNumber,
-              status: oDoc.data().status || 'pending',
-              total: oDoc.data().total || 0,
-              items: oDoc.data().items || [],
-              createdAt: oDoc.data().createdAt,
-            }));
-            const totalSpent = orders.filter(o => o.status === 'delivered').reduce((s, o) => s + o.total, 0);
-            return { ...customer, orders, totalSpent };
-          } catch { return customer; }
-        })
-      );
-      withOrders.sort((a, b) => b.orders.length - a.orders.length);
-      setCustomers(withOrders);
+      // Orders live in the top-level 'orders' collection (users/<uid>/orders is
+      // never written), so read them once, as the dashboard does, and group by
+      // customer. A failed order read leaves the customers listed with 0 orders.
+      const [usersSnap, allOrders] = await Promise.all([
+        getDocs(query(collection(db, 'users'), where('role', '==', 'user'))),
+        getAllOrders().catch((error) => {
+          console.error('Error fetching orders for customers:', error);
+          return [] as Order[];
+        }),
+      ]);
+      const ordersByUser = new Map<string, CustomerOrder[]>();
+      for (const o of allOrders) {
+        if (!o.userId) continue;
+        const entry: CustomerOrder = {
+          id: o.id,
+          orderNumber: o.orderId,
+          status: o.status || 'pending',
+          total: o.total || 0,
+          items: o.items || [],
+          createdAt: o.createdAt,
+        };
+        const existing = ordersByUser.get(o.userId);
+        if (existing) existing.push(entry);
+        else ordersByUser.set(o.userId, [entry]);
+      }
+      const usersData: Customer[] = usersSnap.docs.map((d) => {
+        const orders = ordersByUser.get(d.id) || [];
+        // Same rule as before: spend counts delivered orders only.
+        const totalSpent = orders.filter(o => o.status === 'delivered').reduce((s, o) => s + o.total, 0);
+        return {
+          uid: d.id,
+          email: d.data().email || '',
+          username: d.data().username || d.data().name || 'Unknown',
+          name: d.data().name || d.data().username || '',
+          phone: d.data().phone || '',
+          role: d.data().role,
+          createdAt: d.data().createdAt,
+          status: d.data().status || 'active',
+          trashedAt: d.data().trashedAt || null,
+          orders,
+          totalSpent,
+        };
+      });
+      usersData.sort((a, b) => b.orders.length - a.orders.length);
+      setCustomers(usersData);
     } catch (error) {
       console.error('Error fetching customers:', error);
       toast.error('Failed to load customers');
@@ -233,122 +233,140 @@ const AdminCustomers: React.FC = () => {
 
   const isTrash = activeTab === 'trash';
   const totalRevenue = active.reduce((s, c) => s + c.totalSpent, 0);
+  const isPermanent = deleteConfirm?.type === 'permanent' || deleteConfirm?.type === 'batch-permanent';
 
-  const CheckIcon = ({ checked }: { checked: boolean }) => (
-    <span className={`inline-flex w-5 h-5 rounded border-2 items-center justify-center flex-shrink-0 transition-colors ${checked ? 'bg-highlight border-highlight' : 'border-gray-300'}`}>
-      {checked && <span className="text-white text-xs font-bold leading-none">✓</span>}
-    </span>
+  const stats = [
+    { label: 'Total customers', value: formatNumber(active.length), icon: UsersIcon },
+    { label: 'Total orders', value: formatNumber(active.reduce((s, c) => s + c.orders.length, 0)), icon: ShoppingBag },
+    { label: 'Total revenue', value: formatPrice(totalRevenue), icon: TrendingUp },
+  ];
+
+  const trashLeft = (daysLeft: number, short = false) => (
+    <StatusBadge
+      tone={daysLeft <= 7 ? 'danger' : 'warning'}
+      icon={Clock}
+      label={daysLeft > 0 ? (short ? `${daysLeft}d left` : `${plural(daysLeft, 'day')} left`) : 'Expires today'}
+    />
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
-        <p className="text-gray-600 mt-1">Manage registered customers and their data</p>
-      </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <AdminPageHeader
+        title="Customers"
+        description="Manage registered customers and their data."
+        className="pb-0"
+      />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-highlight/10 flex items-center justify-center">
-            <UsersIcon className="h-6 w-6 text-highlight" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Total Customers</p>
-            <p className="text-2xl font-bold text-gray-900">{active.length}</p>
-          </div>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
-            <ShoppingBag className="h-6 w-6 text-blue-600" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Total Orders</p>
-            <p className="text-2xl font-bold text-gray-900">{active.reduce((s, c) => s + c.orders.length, 0)}</p>
-          </div>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center">
-            <TrendingUp className="h-6 w-6 text-emerald-600" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Total Revenue</p>
-            <p className="text-2xl font-bold text-gray-900">{formatPrice(totalRevenue)}</p>
-          </div>
-        </div>
-      </div>
+      {loading ? (
+        <StatCardsSkeleton count={3} label="" className="lg:grid-cols-3" />
+      ) : (
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
+          {stats.map((s, i) => (
+            <li
+              key={s.label}
+              className={cn(
+                'flex items-center gap-3 rounded-card border border-foreground/[0.08] bg-card p-3 text-card-foreground shadow-sm sm:gap-4 sm:p-4',
+                i === 2 && 'col-span-2 sm:col-span-1',
+              )}
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-control bg-muted text-foreground/70">
+                <s.icon aria-hidden="true" className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
+                <p className="truncate text-2xl font-semibold tabular-nums text-foreground" style={HEADING_FONT}>{s.value}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
-      {/* Tabs + Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex bg-gray-100 rounded-lg p-1 gap-1 flex-shrink-0">
-          <button
-            onClick={() => { setActiveTab('customers'); setSelectedIds(new Set()); }}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'customers' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <UsersIcon className="h-4 w-4 inline mr-1.5" />
+      {/* Tabs + controls */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <ToggleGroup
+          type="single"
+          value={activeTab}
+          onValueChange={(v) => {
+            if (!v) return;
+            setActiveTab(v as 'customers' | 'trash');
+            setSelectedIds(new Set());
+          }}
+          aria-label="Show"
+          className="shrink-0 self-start"
+        >
+          <ToggleGroupItem value="customers" size="sm" className="gap-1.5 px-3">
+            <UsersIcon aria-hidden="true" className="size-4" />
             Customers
-            <span className="ml-1.5 text-xs bg-highlight/15 text-highlight rounded-full px-1.5 py-0.5">{active.length}</span>
-          </button>
-          <button
-            onClick={() => { setActiveTab('trash'); setSelectedIds(new Set()); }}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'trash' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <Trash2 className="h-4 w-4 inline mr-1.5" />
+            <span className="rounded-chip bg-muted px-1.5 text-xs tabular-nums text-foreground/80">{active.length}</span>
+          </ToggleGroupItem>
+          <ToggleGroupItem value="trash" size="sm" className="gap-1.5 px-3">
+            <Trash2 aria-hidden="true" className="size-4" />
             Trash
             {trashed.length > 0 && (
-              <span className="ml-1.5 text-xs bg-red-100 text-red-600 rounded-full px-1.5 py-0.5">{trashed.length}</span>
+              <span className="rounded-chip bg-status-danger-bg px-1.5 text-xs tabular-nums text-status-danger-fg">{trashed.length}</span>
             )}
-          </button>
-        </div>
+          </ToggleGroupItem>
+        </ToggleGroup>
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input placeholder="Search by name, email or phone..." value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)} className="pl-10 bg-white border-gray-200" />
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            aria-label="Search customers"
+            placeholder="Search by name, email or phone"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
-        <div className="flex bg-gray-100 rounded-lg p-1 gap-1 flex-shrink-0">
-          <button onClick={() => setViewMode('grid')}
-            className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
-            <LayoutGrid className="h-4 w-4" />
-          </button>
-          <button onClick={() => setViewMode('list')}
-            className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>
-            <List className="h-4 w-4" />
-          </button>
-        </div>
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={(v) => v && setViewMode(v as 'grid' | 'list')}
+          aria-label="Customer view"
+          className="shrink-0 self-end sm:self-auto"
+        >
+          <ToggleGroupItem value="grid" aria-label="Grid view" size="sm" className="size-9 px-0">
+            <LayoutGrid aria-hidden="true" className="size-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="list" aria-label="List view" size="sm" className="size-9 px-0">
+            <List aria-hidden="true" className="size-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
-      {/* Bulk Action Bar */}
+      {/* Bulk action bar */}
       <AnimatePresence>
         {selectedIds.size > 0 && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            className="bg-highlight/10 border border-highlight/30 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">
-            <span className="text-sm font-medium text-highlight">{selectedIds.size} selected</span>
-            <div className="flex items-center gap-2 ml-auto">
-              <Button variant="ghost" size="sm" onClick={toggleSelectAll}
-                className="text-highlight hover:bg-highlight/15 text-xs">
-                {selectedIds.size === list.length ? 'Deselect All' : 'Select All'}
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0.18 } }}
+            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+            className="flex flex-wrap items-center gap-3 rounded-card border border-primary/25 bg-primary/10 px-4 py-3"
+          >
+            <span role="status" className="text-sm font-medium tabular-nums text-foreground">{selectedIds.size} selected</span>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={toggleSelectAll}>
+                {selectedIds.size === list.length ? 'Deselect all' : 'Select all'}
               </Button>
               {isTrash ? (
                 <>
-                  <Button size="sm" onClick={batchRestore} disabled={submitting}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs">
-                    <RotateCcw className="h-3.5 w-3.5 mr-1" />Restore All
+                  <Button variant="outline" size="sm" onClick={batchRestore} disabled={submitting}>
+                    <RotateCcw aria-hidden="true" />Restore all
                   </Button>
-                  <Button size="sm" onClick={() => setDeleteConfirm({ type: 'batch-permanent' })}
-                    className="bg-red-600 hover:bg-red-700 text-white text-xs">
-                    <Trash2 className="h-3.5 w-3.5 mr-1" />Delete All
+                  <Button variant="destructive" size="sm" onClick={() => setDeleteConfirm({ type: 'batch-permanent' })}>
+                    <Trash2 aria-hidden="true" />Delete all
                   </Button>
                 </>
               ) : (
-                <Button size="sm" onClick={() => setDeleteConfirm({ type: 'batch-soft' })}
-                  className="bg-red-600 hover:bg-red-700 text-white text-xs">
-                  <Trash2 className="h-3.5 w-3.5 mr-1" />Move to Trash
+                <Button variant="destructive" size="sm" onClick={() => setDeleteConfirm({ type: 'batch-soft' })}>
+                  <Trash2 aria-hidden="true" />Move to trash
                 </Button>
               )}
-              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} className="text-gray-500">
-                <X className="h-4 w-4" />
-              </Button>
+              <IconButton label="Clear selection" size="sm" onClick={() => setSelectedIds(new Set())}>
+                <X />
+              </IconButton>
             </div>
           </motion.div>
         )}
@@ -356,255 +374,236 @@ const AdminCustomers: React.FC = () => {
 
       {/* Trash notice */}
       {isTrash && trashed.length > 0 && (
-        <div className="flex items-start gap-2.5 bg-highlight/10 border border-highlight/30 rounded-xl px-4 py-3 text-sm text-highlight">
-          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-          <span>Customers in trash are permanently deleted after 30 days. Restore to prevent data loss.</span>
-        </div>
+        <Notice tone="warning">
+          Customers in trash are permanently deleted after 30 days. Restore to prevent data loss.
+        </Notice>
       )}
 
       {/* Content */}
       {loading ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <div className="animate-spin h-8 w-8 border-2 border-highlight border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-gray-500">Loading customers...</p>
-        </div>
+        <ListSkeleton rows={4} thumb label="Loading customers" />
       ) : list.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          {isTrash ? <UserX className="h-14 w-14 text-gray-200 mx-auto mb-4" /> : <UsersIcon className="h-14 w-14 text-gray-200 mx-auto mb-4" />}
-          <p className="text-gray-500">{isTrash ? 'Trash is empty' : 'No customers found'}</p>
+        <div className="rounded-card border border-foreground/[0.08] bg-card">
+          <EmptyState
+            icon={isTrash ? UserX : UsersIcon}
+            title={isTrash ? 'Trash is empty' : 'No customers found'}
+            description={isTrash ? 'Customers you move to trash appear here for 30 days.' : searchQuery ? 'Try another name, email or phone.' : undefined}
+            as="h2"
+          />
         </div>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {list.map(customer => {
             const sel = selectedIds.has(customer.uid);
             const daysLeft = isTrash ? getDaysRemaining(customer.trashedAt) : 30;
             return (
-              <motion.div key={customer.uid} layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                className={`bg-white border rounded-xl overflow-hidden transition-all group relative ${sel ? 'border-highlight/70 ring-2 ring-highlight/20' : 'border-gray-200 hover:border-highlight/45 hover:shadow-sm'}`}>
-                <button className="absolute top-3 left-3 z-10" onClick={e => { e.stopPropagation(); toggleSelect(customer.uid); }}>
-                  <CheckIcon checked={sel} />
-                </button>
-                <div className="p-5 pt-4 cursor-pointer" onClick={() => navigate(`/admin/customers/${customer.uid}`)}>
-                  <div className="flex flex-col items-center text-center mt-4">
-                    <div className="w-14 h-14 rounded-full bg-highlight/15 flex items-center justify-center mb-3">
-                      <span className="text-highlight font-bold text-xl">{(customer.name || customer.username || 'U').charAt(0).toUpperCase()}</span>
-                    </div>
-                    <p className="font-semibold text-gray-900 truncate w-full">{customer.name || customer.username}</p>
-                    <p className="text-xs text-gray-500 truncate w-full mt-0.5">{customer.email}</p>
-                    {customer.phone && <p className="text-xs text-gray-400 mt-0.5">{customer.phone}</p>}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 mt-4 text-center">
-                    <div className="bg-gray-50 rounded-lg py-2">
-                      <p className="text-sm font-bold text-gray-900">{customer.orders.length}</p>
-                      <p className="text-xs text-gray-500">Orders</p>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg py-2">
-                      <p className="text-sm font-bold text-gray-900 truncate">{formatPrice(customer.totalSpent)}</p>
-                      <p className="text-xs text-gray-500">Spent</p>
-                    </div>
-                  </div>
-                  {isTrash && (
-                    <div className={`mt-3 flex items-center justify-center gap-1 text-xs rounded-lg py-1.5 ${daysLeft <= 7 ? 'bg-red-50 text-red-600' : 'bg-highlight/10 text-highlight'}`}>
-                      <Clock className="h-3 w-3" />{daysLeft > 0 ? `${daysLeft} days left` : 'Expires today'}
-                    </div>
-                  )}
+              <li
+                key={customer.uid}
+                className={cn(
+                  'group relative flex flex-col overflow-hidden rounded-card border bg-card text-card-foreground shadow-sm transition-[box-shadow,border-color] duration-hover ease-out',
+                  'has-[a[data-card-link]:focus-visible]:outline has-[a[data-card-link]:focus-visible]:outline-2 has-[a[data-card-link]:focus-visible]:outline-offset-2 has-[a[data-card-link]:focus-visible]:outline-ring',
+                  sel ? 'border-primary/60 ring-2 ring-primary/20' : 'border-foreground/[0.08] hover:border-primary/40 hover:shadow-panel',
+                )}
+              >
+                <div className="absolute left-2 top-2 z-raised flex size-11 items-center justify-center">
+                  <Checkbox
+                    checked={sel}
+                    onCheckedChange={() => toggleSelect(customer.uid)}
+                    aria-label={`Select ${displayName(customer)}`}
+                  />
                 </div>
-                <div className="border-t border-gray-100 px-4 py-2.5 flex items-center justify-end gap-2">
+                <div className="p-5 pt-4">
+                  <div className="mt-4 flex flex-col items-center text-center">
+                    <div aria-hidden="true" className="mb-3 flex size-14 items-center justify-center rounded-full bg-muted">
+                      <span className="text-xl font-semibold text-foreground">{initial(customer)}</span>
+                    </div>
+                    <Link
+                      to={`/admin/customers/${customer.uid}`}
+                      data-card-link
+                      className="w-full truncate font-semibold text-foreground outline-none after:absolute after:inset-0 after:content-['']"
+                    >
+                      {displayName(customer)}
+                    </Link>
+                    <p className="mt-0.5 w-full truncate text-xs text-muted-foreground">{customer.email}</p>
+                    {customer.phone && <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">{customer.phone}</p>}
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-center">
+                    <div className="rounded-control bg-muted py-2">
+                      <p className="text-sm font-semibold tabular-nums text-foreground">{customer.orders.length}</p>
+                      <p className="text-xs text-muted-foreground">Orders</p>
+                    </div>
+                    <div className="rounded-control bg-muted py-2">
+                      <p className="truncate text-sm font-semibold tabular-nums text-foreground">{formatPrice(customer.totalSpent)}</p>
+                      <p className="text-xs text-muted-foreground">Spent</p>
+                    </div>
+                  </div>
+                  {isTrash && <div className="mt-3 flex justify-center">{trashLeft(daysLeft)}</div>}
+                </div>
+                <div className="mt-auto flex items-center justify-end gap-2 border-t border-foreground/[0.08] px-3 py-2">
                   {isTrash ? (
                     <>
-                      <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); restore(customer); }} disabled={submitting}
-                        className="text-emerald-600 hover:bg-emerald-50 text-xs"><RotateCcw className="h-3.5 w-3.5 mr-1" />Restore</Button>
-                      <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); setDeleteConfirm({ type: 'permanent', customer }); }}
-                        className="text-red-600 hover:bg-red-50 text-xs"><Trash2 className="h-3.5 w-3.5 mr-1" />Delete</Button>
+                      <Button variant="ghost" size="sm" onClick={() => restore(customer)} disabled={submitting} className="relative z-raised">
+                        <RotateCcw aria-hidden="true" />Restore
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteConfirm({ type: 'permanent', customer })}
+                        className="relative z-raised text-status-danger-fg hover:bg-status-danger-bg hover:text-status-danger-fg"
+                      >
+                        <Trash2 aria-hidden="true" />Delete
+                      </Button>
                     </>
                   ) : (
-                    <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); setDeleteConfirm({ type: 'soft', customer }); }}
-                      className="text-red-500 hover:bg-red-50 text-xs"><Trash2 className="h-3.5 w-3.5 mr-1" />Trash</Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteConfirm({ type: 'soft', customer })}
+                      className="relative z-raised text-muted-foreground hover:bg-status-danger-bg hover:text-status-danger-fg"
+                    >
+                      <Trash2 aria-hidden="true" />Trash
+                    </Button>
                   )}
                 </div>
-              </motion.div>
+              </li>
             );
           })}
-        </div>
+        </ul>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="flex items-center gap-4 px-5 py-3 bg-gray-50 border-b border-gray-200">
-            <button onClick={toggleSelectAll}><CheckIcon checked={selectedIds.size === list.length && list.length > 0} /></button>
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Customer</span>
-            <div className="hidden sm:flex items-center gap-6 ml-auto mr-16 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <span>Orders</span><span>Spent</span><span>{isTrash ? 'Days Left' : 'Joined'}</span>
+        <div className="overflow-hidden rounded-card border border-foreground/[0.08] bg-card text-card-foreground">
+          <div className="flex items-center gap-4 border-b border-foreground/[0.08] bg-muted/50 px-5 py-2">
+            <div className="flex size-6 items-center justify-center">
+              <Checkbox
+                checked={selectedIds.size === list.length && list.length > 0}
+                onCheckedChange={toggleSelectAll}
+                aria-label="Select all customers"
+              />
+            </div>
+            <span className="text-xs font-medium text-muted-foreground">Customer</span>
+            <div aria-hidden="true" className="ml-auto mr-[5.5rem] hidden items-center gap-6 text-xs font-medium text-muted-foreground sm:flex">
+              <span className="w-14 text-center">Orders</span>
+              <span className="w-20 text-center">Spent</span>
+              <span className="w-24 text-center">{isTrash ? 'Days left' : 'Joined'}</span>
             </div>
           </div>
-          {list.map(customer => {
-            const sel = selectedIds.has(customer.uid);
-            const daysLeft = isTrash ? getDaysRemaining(customer.trashedAt) : 30;
-            return (
-              <div key={customer.uid}
-                className={`flex items-center gap-4 px-5 py-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors group ${sel ? 'bg-highlight/5' : ''}`}>
-                <button onClick={() => toggleSelect(customer.uid)} className="flex-shrink-0"><CheckIcon checked={sel} /></button>
-                <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/admin/customers/${customer.uid}`)}>
-                  <div className="w-10 h-10 rounded-full bg-highlight/15 flex items-center justify-center flex-shrink-0">
-                    <span className="text-highlight font-semibold text-sm">{(customer.name || customer.username || 'U').charAt(0).toUpperCase()}</span>
+          <ul>
+            {list.map(customer => {
+              const sel = selectedIds.has(customer.uid);
+              const daysLeft = isTrash ? getDaysRemaining(customer.trashedAt) : 30;
+              return (
+                <li
+                  key={customer.uid}
+                  className={cn(
+                    'relative flex items-center gap-4 border-b border-foreground/[0.06] px-5 py-3 transition-colors duration-hover last:border-0 hover:bg-muted/60',
+                    sel && 'bg-primary/[0.06]',
+                  )}
+                >
+                  <div className="relative z-raised flex size-6 shrink-0 items-center justify-center">
+                    <Checkbox
+                      checked={sel}
+                      onCheckedChange={() => toggleSelect(customer.uid)}
+                      aria-label={`Select ${displayName(customer)}`}
+                    />
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{customer.name || customer.username}</p>
-                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                      <span className="flex items-center gap-1 text-xs text-gray-500"><Mail className="h-3 w-3" />{customer.email}</span>
-                      {customer.phone && <span className="flex items-center gap-1 text-xs text-gray-400"><Phone className="h-3 w-3" />{customer.phone}</span>}
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                      <span className="text-sm font-semibold text-foreground">{initial(customer)}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <Link
+                        to={`/admin/customers/${customer.uid}`}
+                        className="block truncate font-medium text-foreground focus-inset after:absolute after:inset-0 after:content-[''] hover:text-primary"
+                      >
+                        {displayName(customer)}
+                      </Link>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-3">
+                        <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                          <Mail aria-hidden="true" className="size-3 shrink-0" /><span className="truncate">{customer.email}</span>
+                        </span>
+                        {customer.phone && (
+                          <span className="flex items-center gap-1 text-xs tabular-nums text-muted-foreground">
+                            <Phone aria-hidden="true" className="size-3" />{customer.phone}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="hidden sm:flex items-center gap-6 flex-shrink-0">
-                  <div className="text-center"><p className="text-sm font-semibold text-gray-900">{customer.orders.length}</p><p className="text-xs text-gray-500">Orders</p></div>
-                  <div className="text-center"><p className="text-sm font-semibold text-gray-900">{formatPrice(customer.totalSpent)}</p><p className="text-xs text-gray-500">Spent</p></div>
-                  {isTrash ? (
-                    <div className={`text-xs font-medium px-2 py-1 rounded-lg ${daysLeft <= 7 ? 'bg-red-50 text-red-600' : 'bg-highlight/10 text-highlight'}`}>
-                      <Clock className="h-3 w-3 inline mr-1" />{daysLeft > 0 ? `${daysLeft}d` : 'Today'}
+                  <div className="hidden shrink-0 items-center gap-6 sm:flex">
+                    <div className="w-14 text-center">
+                      <p className="text-sm font-semibold tabular-nums text-foreground">{customer.orders.length}</p>
+                      <p className="sr-only">Orders</p>
                     </div>
-                  ) : (
-                    <div className="text-center"><p className="text-xs text-gray-500">Joined</p><p className="text-xs font-medium text-gray-700">{formatDate(customer.createdAt)}</p></div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {isTrash ? (
-                    <>
-                      <Button variant="ghost" size="sm" onClick={() => restore(customer)} disabled={submitting} className="text-emerald-600 hover:bg-emerald-50"><RotateCcw className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm({ type: 'permanent', customer })} className="text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
-                    </>
-                  ) : (
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm({ type: 'soft', customer })} className="text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                    <div className="w-20 text-center">
+                      <p className="text-sm font-semibold tabular-nums text-foreground">{formatPrice(customer.totalSpent)}</p>
+                      <p className="sr-only">Spent</p>
+                    </div>
+                    <div className="flex w-24 justify-center">
+                      {isTrash ? (
+                        trashLeft(daysLeft, true)
+                      ) : (
+                        <p className="text-xs tabular-nums text-foreground/80">
+                          <span className="sr-only">Joined </span>{formatDate(customer.createdAt)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="relative z-raised flex shrink-0 items-center gap-1">
+                    {isTrash ? (
+                      <>
+                        <IconButton label={`Restore ${displayName(customer)}`} size="sm" onClick={() => restore(customer)} disabled={submitting}>
+                          <RotateCcw />
+                        </IconButton>
+                        <IconButton
+                          label={`Delete ${displayName(customer)} permanently`}
+                          size="sm"
+                          onClick={() => setDeleteConfirm({ type: 'permanent', customer })}
+                          className="text-status-danger-fg hover:bg-status-danger-bg hover:text-status-danger-fg"
+                        >
+                          <Trash2 />
+                        </IconButton>
+                      </>
+                    ) : (
+                      <IconButton
+                        label={`Move ${displayName(customer)} to trash`}
+                        size="sm"
+                        onClick={() => setDeleteConfirm({ type: 'soft', customer })}
+                        className="text-muted-foreground hover:bg-status-danger-bg hover:text-status-danger-fg"
+                      >
+                        <Trash2 />
+                      </IconButton>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 
-      {/* Customer Profile Drawer */}
-      <AnimatePresence>
-        {selectedProfile && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 z-40" onClick={() => setSelectedProfile(null)} />
-            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 h-full w-full sm:w-[480px] bg-white shadow-2xl z-50 flex flex-col overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-                <h2 className="text-lg font-semibold text-gray-900">Customer Profile</h2>
-                <button onClick={() => setSelectedProfile(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <X className="h-5 w-5 text-gray-500" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-highlight/15 flex items-center justify-center">
-                    <span className="text-highlight font-bold text-2xl">{(selectedProfile.name || selectedProfile.username || 'U').charAt(0).toUpperCase()}</span>
-                  </div>
-                  <div>
-                    <p className="text-xl font-semibold text-gray-900">{selectedProfile.name || selectedProfile.username}</p>
-                    <p className="flex items-center gap-1.5 text-sm text-gray-500 mt-1"><Mail className="h-3.5 w-3.5" />{selectedProfile.email}</p>
-                    {selectedProfile.phone && <p className="flex items-center gap-1.5 text-sm text-gray-500 mt-0.5"><Phone className="h-3.5 w-3.5" />{selectedProfile.phone}</p>}
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-blue-50 rounded-xl p-3 text-center">
-                    <Package className="h-4 w-4 text-blue-600 mx-auto mb-1" />
-                    <p className="text-sm font-bold text-blue-900">{selectedProfile.orders.length}</p>
-                    <p className="text-xs text-blue-600">Orders</p>
-                  </div>
-                  <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                    <TrendingUp className="h-4 w-4 text-emerald-600 mx-auto mb-1" />
-                    <p className="text-sm font-bold text-emerald-900">{formatPrice(selectedProfile.totalSpent)}</p>
-                    <p className="text-xs text-emerald-600">Spent</p>
-                  </div>
-                  <div className="bg-highlight/10 rounded-xl p-3 text-center">
-                    <Calendar className="h-4 w-4 text-highlight mx-auto mb-1" />
-                    <p className="text-xs font-bold text-highlight">{formatDate(selectedProfile.createdAt)}</p>
-                    <p className="text-xs text-highlight">Joined</p>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Order History ({selectedProfile.orders.length})</h3>
-                  {selectedProfile.orders.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
-                      <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">No orders yet</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {selectedProfile.orders.map(order => (
-                        <div key={order.id} className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center flex-shrink-0">
-                            <Package className="h-4 w-4 text-gray-500" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-medium text-highlight">#{order.orderNumber || order.id.slice(0, 8).toUpperCase()}</span>
-                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColors[order.status] || 'bg-gray-100 text-gray-600'}`}>
-                                {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace(/([A-Z])/g, ' $1')}
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-0.5">{order.items.length} item{order.items.length !== 1 ? 's' : ''} · {formatDate(order.createdAt)}</p>
-                          </div>
-                          <span className="text-sm font-semibold text-gray-900 flex-shrink-0">{formatPrice(order.total)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-              {selectedProfile.status !== 'trashed' && (
-                <div className="border-t border-gray-200 px-6 py-4 flex-shrink-0">
-                  <Button variant="outline" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                    onClick={() => setDeleteConfirm({ type: 'soft', customer: selectedProfile })}>
-                    <Trash2 className="h-4 w-4 mr-2" />Move to Trash
-                  </Button>
-                </div>
-              )}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Confirm Dialog */}
-      <AlertDialog open={deleteConfirm !== null} onOpenChange={open => { if (!open) setDeleteConfirm(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {deleteConfirm?.type === 'permanent' || deleteConfirm?.type === 'batch-permanent' ? 'Permanently Delete?' : 'Move to Trash?'}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteConfirm?.type === 'permanent' && deleteConfirm.customer && (
-                <>Permanently delete <strong>{deleteConfirm.customer.name || deleteConfirm.customer.username}</strong>? This cannot be undone.</>
-              )}
-              {deleteConfirm?.type === 'soft' && deleteConfirm.customer && (
-                <>Move <strong>{deleteConfirm.customer.name || deleteConfirm.customer.username}</strong> to trash? Restorable within 30 days.</>
-              )}
-              {deleteConfirm?.type === 'batch-permanent' && (
-                <>Permanently delete <strong>{selectedIds.size} customers</strong>? This cannot be undone.</>
-              )}
-              {deleteConfirm?.type === 'batch-soft' && (
-                <>Move <strong>{selectedIds.size} customers</strong> to trash? Restorable within 30 days.</>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={submitting}
-              className={deleteConfirm?.type === 'permanent' || deleteConfirm?.type === 'batch-permanent' ? 'bg-red-600 hover:bg-red-700' : 'bg-highlight hover:bg-highlight'}
-              onClick={() => {
-                if (deleteConfirm?.type === 'soft' && deleteConfirm.customer) softDelete(deleteConfirm.customer);
-                else if (deleteConfirm?.type === 'permanent' && deleteConfirm.customer) permDelete(deleteConfirm.customer);
-                else if (deleteConfirm?.type === 'batch-soft') batchSoftDelete();
-                else if (deleteConfirm?.type === 'batch-permanent') batchPermDelete();
-              }}>
-              {submitting ? 'Processing...' : (deleteConfirm?.type === 'permanent' || deleteConfirm?.type === 'batch-permanent' ? 'Delete Permanently' : 'Move to Trash')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Confirm dialog (the profile drawer was never opened from this page, so it is gone) */}
+      <ConfirmDialog
+        open={deleteConfirm !== null}
+        onOpenChange={open => { if (!open) setDeleteConfirm(null); }}
+        title={
+          deleteConfirm?.type === 'permanent' && deleteConfirm.customer
+            ? `Permanently delete ${displayName(deleteConfirm.customer)}?`
+            : deleteConfirm?.type === 'soft' && deleteConfirm.customer
+              ? `Move ${displayName(deleteConfirm.customer)} to trash?`
+              : deleteConfirm?.type === 'batch-permanent'
+                ? `Permanently delete ${plural(selectedIds.size, 'customer')}?`
+                : `Move ${plural(selectedIds.size, 'customer')} to trash?`
+        }
+        description={isPermanent ? 'This cannot be undone.' : 'You can restore them from Trash within 30 days.'}
+        confirmLabel={isPermanent ? 'Delete permanently' : 'Move to trash'}
+        tone={isPermanent ? 'danger' : 'default'}
+        onConfirm={() => {
+          if (deleteConfirm?.type === 'soft' && deleteConfirm.customer) return softDelete(deleteConfirm.customer);
+          if (deleteConfirm?.type === 'permanent' && deleteConfirm.customer) return permDelete(deleteConfirm.customer);
+          if (deleteConfirm?.type === 'batch-soft') return batchSoftDelete();
+          if (deleteConfirm?.type === 'batch-permanent') return batchPermDelete();
+          return undefined;
+        }}
+      />
     </div>
   );
 };
