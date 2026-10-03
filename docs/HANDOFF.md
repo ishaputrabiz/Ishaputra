@@ -11,7 +11,14 @@ Last updated: 2026-10-03.
 
 ## State
 
-- **Branch:** `step-2b-rewards`. Not merged into `main`, and never pushed (local commits only).
+- **2026-10-03 (later): step 1 done.** `step-2b-rewards` is merged into `main` (`46aba50`, local only, never pushed).
+  - Review result B is closed (owner chose rule + admin warning, `24194ef`). The 7-day rule is deployed to `ishaputrabotanicals`. `hardening-check` PASS, including the new late / undated / in-window return cases.
+  - The `CLIENT.md` "Rewards (Task 8)" notes are written (`16964f8`).
+  - **The UI pass is on branch `ui-world-class`** (from `main`). Tooling: `docs/handoff/ui-shots.mjs` (screenshots) and `docs/handoff/ui-fixtures.mjs` (demo orders in every status + a temporary admin; `remove` deletes them).
+  - `docs/handoff/ui-profiles.mjs` makes logged-in browser profiles for `playwright-cli` (owner asked for it): `playwright-cli -s=<name> open --profile=<dir>/<name> <url>`; no password on any command line.
+  - **Live test data is present until the UI pass ends:** 13 `ui-fx-*` orders for the preview shopper and a temporary admin (`docs/handoff/admin.local`). Remove with `node docs/handoff/ui-fixtures.mjs remove`.
+  - The full-site audit (8 auditors + 1 synthesis) is a workflow; the first run was cut off when a session ended, and it was relaunched. If it is lost again: restart the dev server on 5182, recreate profiles, relaunch the audit.
+- **Before that, branch `step-2b-rewards`:**
   - `102bef7` Rewards hardening. `9469bea` reservation timeout. `7128f23` rewards display fixes.
   - `d2573f4` (2026-10-03) Fixes found in the display screenshots:
     - Wallet "Total spent" was always ₹0: it summed `order.totalAmount`, a field no order has. It now uses `order.total`, so membership tiers finally move.
