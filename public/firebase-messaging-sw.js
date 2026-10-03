@@ -25,9 +25,6 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.messagin
   // visible: in that case the page-level `onMessage` handler (AuthContext) will
   // create the notification, so the service worker should stay silent.
   messaging.onBackgroundMessage((payload) => {
-    // eslint-disable-next-line no-console
-    console.log('[firebase-messaging-sw.js] Background message:', payload);
-
     return clients
       .matchAll({ type: 'window', includeUncontrolled: true })
       .then((windowClients) => {

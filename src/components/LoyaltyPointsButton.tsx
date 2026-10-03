@@ -1,5 +1,7 @@
 import { Award } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { IconButton } from "@/components/ui/icon-button";
+import { cn } from "@/lib/utils";
 
 interface LoyaltyPointsButtonProps {
   /** Icon size in px - the desktop header uses 20, the mobile header 22. */
@@ -15,19 +17,21 @@ interface LoyaltyPointsButtonProps {
  */
 const LoyaltyPointsButton = ({ size = 20 }: LoyaltyPointsButtonProps) => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const active = pathname.startsWith("/wallet");
+  // The mobile header (22px icons) sits on touch screens: no tooltip, 44px target.
+  const mobile = size > 20;
+
   return (
-    <button
+    <IconButton
+      label="Rewards"
+      tooltip={!mobile}
       onClick={() => navigate("/wallet")}
-      className="p-2 hover:bg-muted rounded-full transition-all duration-200 group"
-      aria-label="Loyalty points and rewards"
-      title="Loyalty points"
+      aria-current={active ? "page" : undefined}
+      className={cn("hover:text-primary", mobile && "size-11 [@media(pointer:fine)]:size-11 [&_svg]:size-[22px]", active && "text-primary")}
     >
-      <Award
-        style={{ width: size, height: size }}
-        className="text-foreground/80 group-hover:text-primary transition-colors"
-        strokeWidth={1.5}
-      />
-    </button>
+      <Award aria-hidden="true" />
+    </IconButton>
   );
 };
 
