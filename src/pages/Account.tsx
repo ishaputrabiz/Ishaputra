@@ -60,6 +60,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { SmartImage } from "@/components/ui/smart-image";
+import { isWithinReturnWindow } from '@/lib/returnWindow';
 
 /**
  * Loyalty points and wallet cashback that paid part of an order, as summary
@@ -1181,14 +1182,9 @@ const AccountPage = () => {
 
   // Check if order can be returned (within 7 days of delivery)
   const canReturnOrder = (order: Order): boolean => {
-    if (order.status !== 'delivered' || !order.deliveredAt) return false;
+    if (order.status !== 'delivered') return false;
     if ((order as any).returnCancelled) return false;
-    
-    const deliveredDate = order.deliveredAt.toDate();
-    const now = new Date();
-    const hoursSinceDelivery = (now.getTime() - deliveredDate.getTime()) / (1000 * 60 * 60);
-    
-    return hoursSinceDelivery <= 168; // Within 7 days (168 hours)
+    return isWithinReturnWindow(order.deliveredAt);
   };
 
   // Handle cancel order

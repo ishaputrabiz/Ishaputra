@@ -31,6 +31,7 @@ import {
 import { toast } from 'sonner';
 import { reconcileOrderRewards, type ReconcileResult } from '@/services/rewardsService';
 import { cartKey } from '@/lib/rewards';
+import { RETURN_WINDOW_DAYS, returnRequestTiming, returnWindowEnd } from '@/lib/returnWindow';
 import { subscribeToDeliveryBoys, DeliveryBoy } from '@/services/deliveryBoyService';
 import { DELIVERY_PARTNERS_ENABLED } from '@/config/features';
 import {
@@ -696,6 +697,10 @@ const AdminOrderDetails = () => {
   const returnMeta = order as OrderReturnMeta;
   const returnOtp = returnMeta.return_otp;
   const returnStoreOtp = returnMeta.return_store_otp;
+  // The rules only let customers ask inside the window; anything else (an
+  // older request, or one entered by hand) is flagged before it is approved.
+  const returnTiming = returnRequestTiming(order.deliveredAt, order.returnRequestedAt);
+  const returnWindowClosed = returnWindowEnd(order.deliveredAt);
 
   // ── Payment check: this order against the server's record of its payment ──
   const rzpId = order.razorpayOrderId || '';
@@ -1211,6 +1216,19 @@ const AdminOrderDetails = () => {
           <p className="mt-2 text-xs text-gray-500">
             Changes save automatically. Status can only move forward.
           </p>
+          {normalizedStatus === 'returnRequested' && returnTiming !== 'in-window' && (
+            <p
+              role="alert"
+              className="mt-3 flex items-start gap-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-medium text-red-800 dark:border-red-500/50 dark:bg-red-500/10 dark:text-red-200"
+            >
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 break-words">
+                {returnTiming === 'late' && returnWindowClosed
+                  ? `Requested after the ${RETURN_WINDOW_DAYS}-day return window, which closed on ${formatDay(returnWindowClosed.getTime())}. Points earned on this order may already be spent; approving voids them.`
+                  : `No delivery or request time is recorded, so the ${RETURN_WINDOW_DAYS}-day return window can't be checked. Confirm the delivery date before approving.`}
+              </span>
+            </p>
+          )}
           {normalizedStatus === 'returnRequested' && (
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <Button

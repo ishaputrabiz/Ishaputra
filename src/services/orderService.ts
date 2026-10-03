@@ -17,6 +17,7 @@ import {
   setDoc,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
+import { RETURN_WINDOW_DAYS, isWithinReturnWindow } from '@/lib/returnWindow';
 import {
   sendOrderPlacedTemplate,
   sendAdminNewOrderTemplate,
@@ -2081,15 +2082,13 @@ export const requestReturn = async (
       throw new Error('Only delivered orders can be returned');
     }
 
-    // Check if delivered within 7 days (168 hours)
-    if (orderData.deliveredAt) {
-      const deliveredDate = orderData.deliveredAt.toDate();
-      const now = new Date();
-      const hoursSinceDelivery = (now.getTime() - deliveredDate.getTime()) / (1000 * 60 * 60);
-
-      if (hoursSinceDelivery > 168) {
-        throw new Error('Return window has expired. Returns are only accepted within 7 days of delivery.');
-      }
+    // Within 7 days of delivery; the security rules refuse anything later, and
+    // an order with no delivery time.
+    if (!orderData.deliveredAt) {
+      throw new Error('We could not find the delivery date for this order. Please contact us to arrange a return.');
+    }
+    if (!isWithinReturnWindow(orderData.deliveredAt)) {
+      throw new Error(`Return window has expired. Returns are only accepted within ${RETURN_WINDOW_DAYS} days of delivery.`);
     }
 
     const timestamp = Timestamp.now();

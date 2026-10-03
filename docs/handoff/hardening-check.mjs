@@ -255,7 +255,9 @@ try {
   // 6. Lifecycle through reconcile, with the customer's own updates over REST.
   const orderB = db.collection('orders').doc(rzpB);
   const rec = async (id = rzpB) => reconcileRewards(db, id, (await db.collection('orders').doc(id).get()).data());
-  await orderB.update({ status: 'delivered', total: 10_000_000, taxAmount: -999_000, deliveredAt: admin.firestore.Timestamp.fromMillis(0) });
+  // Delivered 6 days ago: still inside the return window (the return request below
+  // needs that), and far enough back that an unlock counted from it would show.
+  await orderB.update({ status: 'delivered', total: 10_000_000, taxAmount: -999_000, deliveredAt: admin.firestore.Timestamp.fromMillis(Date.now() - 6 * 86_400_000) });
   const r6 = await rec();
   const earn = (await ledger.doc(`earn_${rzpB}`).get()).data();
   const expectPoints = pointsForBase(Math.min(expectBase, r5.json.amount / 100), settings);
@@ -328,6 +330,25 @@ try {
   const r9 = await releaseHolds(db, uid);
   assert.ok(r9.released.includes(rzpD), JSON.stringify(r9));
   step('expired hold released by the sweep');
+
+  // 8. Returns close 7 days after delivery and need a delivery time (review result B):
+  //    points unlock after the window, so a late return could void points already spent.
+  const deliveredOrder = async (id, daysAgo) => {
+    const deliveredAt = daysAgo === null ? {} : { deliveredAt: admin.firestore.Timestamp.fromMillis(Date.now() - daysAgo * 86_400_000) };
+    await db.collection('orders').doc(id).set({ ...ORDER(id), status: 'delivered', ...deliveredAt });
+    created.orders.add(id);
+  };
+  const askReturn = (id) => restPatch(`orders/${id}`, {
+    status: 'returnRequested', returnReason: 'Hardening check', returnRequestedAt: new Date(), updatedAt: new Date(),
+  });
+  const ret = `hc-return-${Date.now()}`;
+  await deliveredOrder(`${ret}-late`, 8);
+  await deliveredOrder(`${ret}-undated`, null);
+  await deliveredOrder(`${ret}-ok`, 1);
+  assert.equal(await askReturn(`${ret}-late`), 403, 'a return asked 8 days after delivery is refused');
+  assert.equal(await askReturn(`${ret}-undated`), 403, 'a return without a delivery time is refused');
+  assert.equal(await askReturn(`${ret}-ok`), 200, 'a return inside the window is accepted');
+  step('returns: refused after 7 days or without a delivery time, accepted inside the window');
 
   const bad = await call(verifyPayment, { razorpay_order_id: rzpB, razorpay_payment_id: 'pay_x', razorpay_signature: 'deadbeef' });
   assert.equal(bad.status, 400, 'bad signature rejected');

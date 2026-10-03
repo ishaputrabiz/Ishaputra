@@ -44,6 +44,7 @@ import {
 import { SmartImage } from "@/components/ui/smart-image";
 import { BRAND } from "@/config/brand";
 import { SITE_HOST } from "@/lib/siteUrl";
+import { isWithinReturnWindow } from "@/lib/returnWindow";
 
 /**
  * Loyalty points and wallet cashback that paid part of an order, as price rows
@@ -371,32 +372,9 @@ const OrderDetailsPage = () => {
   const canReturnOrder = (order: Order) => {
     if (order.status !== 'delivered') return false;
     if ((order as any).returnCancelled) return false;
-    
-    if (!order.deliveredAt) {
-      return true;
-    }
-
-    try {
-      let deliveredDate: Date;
-      
-      if (order.deliveredAt instanceof Date) {
-        deliveredDate = order.deliveredAt;
-      } else if (typeof order.deliveredAt === 'object' && 'toDate' in order.deliveredAt) {
-        deliveredDate = (order.deliveredAt as any).toDate();
-      } else if (typeof order.deliveredAt === 'object' && 'seconds' in order.deliveredAt) {
-        deliveredDate = new Date((order.deliveredAt as any).seconds * 1000);
-      } else if (typeof order.deliveredAt === 'string') {
-        deliveredDate = new Date(order.deliveredAt);
-      } else {
-        return true;
-      }
-      
-      const hoursSinceDelivery = (new Date().getTime() - deliveredDate.getTime()) / (1000 * 60 * 60);
-      return hoursSinceDelivery <= 168; // 7 days = 168 hours
-    } catch (error) {
-      console.error('Error checking return eligibility:', error);
-      return true;
-    }
+    // The security rules refuse a return without a delivery time, so the
+    // button never offers one they would reject.
+    return isWithinReturnWindow(order.deliveredAt);
   };
 
   // Handle return request

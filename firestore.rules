@@ -459,12 +459,18 @@ service cloud.firestore {
       // Helper: Check if customer is requesting a return for a delivered order.
       // The fields list keeps a return request from also rewriting the
       // customer, the payment or the delivery date; a cancelled return cannot
-      // be requested again.
+      // be requested again. Returns close 7 days after delivery, the same
+      // window as src/lib/returnWindow.ts (earned points unlock after it), and
+      // an order with no delivery time is refused; the shop can still record a
+      // return for it from the admin panel.
       function isValidReturnRequest() {
         let currentStatus = resource.data.status;
         let newStatus = request.resource.data.status;
+        let deliveredAt = resource.data.get('deliveredAt', null);
         return currentStatus == 'delivered' && newStatus == 'returnRequested'
           && resource.data.get('returnCancelled', false) != true
+          && deliveredAt is timestamp
+          && request.time < deliveredAt + duration.value(7, 'd')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status', 'returnReason', 'returnRequestedAt', 'returnStatus',
             'updatedAt', 'lastUpdated', 'statusHistory'
