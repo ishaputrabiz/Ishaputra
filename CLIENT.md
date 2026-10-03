@@ -51,6 +51,30 @@
     - Gift cards and the admin AI prompt tool → kept; rewrite the AI prompts for Ishaputra's products.
 - Build after Step 2: Scratch & Win, Dealer Membership, Loyalty Card (TODO(client): a digital tier card on `/wallet`, or a separate card?). Business rules are open questions below.
 
+## Rewards (Task 8)
+Loyalty points and wallet cashback, built in Step 2B and merged into `main` on 2026-10-03. The rules are in `src/lib/rewards.ts`; `docs/HANDOFF.md` explains how they work.
+
+- **Vercel needs `FIREBASE_ADMIN_SDK_BASE64`.** The payment functions use it to record payments and rewards. Without it, every paid order is saved as "payment pending, needs review", and the shop has to confirm each one by hand.
+- **The `payments` collection.**
+    - `payments/<Razorpay order id>` is the server's record of a payment: who paid, the amount, and the points and cashback spent.
+    - Only `api/verify-payment.ts` writes it, with the Admin SDK. Customers can read their own records; admins can read all of them.
+    - A customer can save an order as paid only when this record exists in their name.
+- **Reservations and holds.**
+    - At checkout, the server reserves the points and cashback the customer chose. After the payment, they are spent for good.
+    - If the customer closes the payment window, the reservation is released at once (the server asks Razorpay first).
+    - A checkout that is never paid is released after 30 minutes. The release runs the next time that customer's rewards load, for example on `/wallet` or at checkout.
+    - If a payment arrives after its reservation was released, the points are spent again and the order is flagged for review ("rewards late").
+- **"Check payment & rewards" (admin order page).** It asks Razorpay about the payment, records it if it went through, and brings the order's points and cashback in line with its status. Press it before packing any order marked "payment not confirmed" or "needs manual review".
+- **Return window (review result B, decided 2026-10-03).** The owner chose both fixes:
+    - The security rules refuse a customer's return request more than 7 days after delivery, or when the order has no delivery time. This is deployed to `ishaputrabotanicals`, and `docs/handoff/hardening-check.mjs` tests it.
+    - The admin order page shows a red notice above Approve / Reject when a return came after the window, or its timing can't be checked.
+    - The shop can still record a return by hand from the admin panel.
+- **Known limits.**
+    - A customer could still save an order whose items differ from the ones paid for. The admin payment check compares the cart and the amount with the payment record, and flags a mismatch.
+    - The real fix is to create orders on the server. That is a bigger change and is not started.
+    - Keep "Days until points unlock" (Admin > Commerce settings) at 7 or more. Points that unlock before the return window closes could be spent and then voided by a return.
+    - Review result C, low risk, no action: someone who learned another customer's Razorpay order id could create that order first and block it. These ids can't be guessed.
+
 ## Accounts
 - Firebase: project `ishaputrabotanicals`.
     - Web config, VAPID key and service account are in `.env`. The service-account JSON is in the project folder, git-ignored.
@@ -169,10 +193,11 @@
 - [x] Step 0 safe preview (2026-09-23): home, products and product pages show demo content on Ishaputra Firebase; only the YouTube section is hidden (no videos yet)
 - [ ] Step 1 new look: done 2026-09-27, waiting for client review
 - [x] Step 2 design (2026-09-29): Home, Products, Product detail, Checkout, Profile and the remaining pages; waiting for client review
-- [ ] Step 2B features   - [ ] Step 3 accounts   - [ ] Step 4 test and publish   - [ ] Step 5 client changes
+- [ ] Step 2B features: rewards (points and cashback) merged 2026-10-03; Scratch & Win, Dealer Membership and the loyalty card still to build
+- [ ] Step 3 accounts   - [ ] Step 4 test and publish   - [ ] Step 5 client changes
 
 ## Next step
-Client reviews the Step 2 design across the site (light and dark, mobile and desktop). Then Step 2B: Scratch & Win, Dealer Membership and the loyalty card, which needs the open loyalty and cashback answers below.
+The world-class UI/UX pass across the whole site (the owner's top priority, 2026-10-03): audit, then fix area by area with screenshots, keeping every layout. Then the rest of Step 2B, which needs the open loyalty and cashback answers below.
 
 ## Open questions
 - Real business details to replace the dummy ones in `src/config/brand.ts`: legal name, address, phone, WhatsApp, email, hours, GSTIN, domain, social links (blocking for launch, not for review)

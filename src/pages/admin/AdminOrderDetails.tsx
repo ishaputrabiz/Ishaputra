@@ -15,6 +15,9 @@ import {
   Clock,
   Receipt,
   ExternalLink,
+  Coins,
+  AlertTriangle,
+  ShieldAlert,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +29,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { reconcileOrderRewards, type ReconcileResult } from '@/services/rewardsService';
+import { cartKey } from '@/lib/rewards';
+import { RETURN_WINDOW_DAYS, returnRequestTiming, returnWindowEnd } from '@/lib/returnWindow';
 import { subscribeToDeliveryBoys, DeliveryBoy } from '@/services/deliveryBoyService';
 import { DELIVERY_PARTNERS_ENABLED } from '@/config/features';
 import {
@@ -50,7 +56,7 @@ import {
 import ImageUploader from '@/components/ImageUploader';
 import { db } from '@/config/firebase';
 import { uploadDocument, describeUploadError } from '@/services/mediaStorage';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { notifyOrder } from '@/services/pushNotificationService';
@@ -146,6 +152,146 @@ const formatDateTime = (value: TimestampLike) => {
   });
 };
 
+const millisOf = (value: TimestampLike): number => {
+  if (!value) return 0;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'object') {
+    if (typeof value.toDate === 'function') return value.toDate().getTime();
+    return typeof value.seconds === 'number' ? value.seconds * 1000 : 0;
+  }
+  const ms = new Date(value).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+};
+
+const formatDay = (ms: number) =>
+  new Date(ms).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+/** Rupees to the paisa: comparing a payment with the order must not round a difference away. */
+const formatAmount = (value: number) => {
+  const n = Number(value) || 0;
+  return `₹${n.toLocaleString('en-IN', {
+    minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
+
+const toNumber = (value: unknown) => Number(value) || 0;
+
+/** SHA-256 hex, as api/create-order.ts hashes the cart. Null where the browser cannot hash (no HTTPS). */
+const sha256Hex = async (text: string): Promise<string | null> => {
+  if (!globalThis.crypto?.subtle) return null;
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+};
+
+/**
+ * payments/<razorpay order id>: the server's record of an online payment,
+ * written by api/verify-payment.ts (or by the reconcile action once Razorpay
+ * says it is paid). Nothing in the browser can write it, so the order document
+ * is checked against it.
+ */
+interface PaymentRecord {
+  uid?: string;
+  razorpayPaymentId?: string;
+  amountPaise?: number;
+  points?: number;
+  pointsValue?: number;
+  cashback?: number;
+  cartHash?: string;
+}
+
+type PaymentLookup =
+  | { state: 'loading' }
+  | { state: 'missing' }
+  | { state: 'error'; message: string }
+  | { state: 'found'; record: PaymentRecord };
+
+/** Admins may read any payment record (firestore.rules). Never throws. */
+const readPaymentRecord = async (razorpayOrderId: string): Promise<PaymentLookup> => {
+  try {
+    const snap = await getDoc(doc(db, 'payments', razorpayOrderId));
+    return snap.exists() ? { state: 'found', record: snap.data() as PaymentRecord } : { state: 'missing' };
+  } catch (err: unknown) {
+    console.error('payment record read failed', err);
+    return { state: 'error', message: getErrorMessage(err, 'unknown error') };
+  }
+};
+
+/** Why the reconcile action left an order alone (see api/notify-order.ts), in plain words. */
+const RECONCILE_SKIPPED: Record<string, string> = {
+  no_customer: 'This order has no customer account, so there is nothing to check.',
+  not_paid_online: 'No Razorpay payment is linked to this order, so there is nothing to check.',
+  order_not_bound_to_payment:
+    'This order was placed before orders were tied to their payment, so it cannot be checked here. Check it in the Razorpay dashboard.',
+  payment_not_verified: 'Razorpay shows no completed payment for this order. Do not pack it until it is paid.',
+  payment_belongs_to_another_customer:
+    'This payment was made from a different customer account. Check it before packing.',
+};
+
+const EARN_STEPS: Record<string, string> = {
+  void: 'earned points voided',
+  restore: 'earned points restored',
+  hold: 'earned points put on hold',
+  release: 'earned points released',
+};
+
+/** Plain words for one id the reconcile action reports as changed (ids from api/notify-order.ts). */
+const describeRewardChange = (id: string, earnListed: boolean): string[] => {
+  const [key, step = ''] = id.split(':');
+  if (key === 'order') {
+    const fields = step.split(',');
+    const words: string[] = [];
+    if (fields.includes('paymentStatus')) words.push('payment confirmed');
+    if (fields.includes('needsManualReview')) words.push('flagged for review');
+    // The order's points fields follow the earn entry; only worth a mention on their own.
+    if (!earnListed && fields.some((f) => f.startsWith('points'))) words.push('points on the order corrected');
+    return words;
+  }
+  const what = key.endsWith('_cashback') ? 'cashback' : 'points';
+  if (key.startsWith('spend_')) return [step === 'late' ? `${what} spent again after release` : `${what} spend confirmed`];
+  if (key.startsWith('refund_')) return [step === 'void' ? `${what} refund taken back` : `${what} refunded`];
+  if (key.startsWith('earn_')) return [EARN_STEPS[step] || 'points earned'];
+  return [];
+};
+
+const summariseRewardChanges = (changed: string[]) => {
+  const earnListed = changed.some((id) => id.startsWith('earn_'));
+  const words = [...new Set(changed.flatMap((id) => describeRewardChange(id, earnListed)))];
+  return words.length ? words.join(', ') : `${changed.length} change${changed.length === 1 ? '' : 's'}`;
+};
+
+/**
+ * What to tell the admin after "Check payment & rewards". Reconcile keeps the
+ * reward ledger in line with the payment; it does not compare the order
+ * document with the payment, so "in line" is only said when that matches too.
+ */
+const describeReconcile = (
+  r: ReconcileResult,
+  orderMatchesPayment: boolean,
+): { tone: 'ok' | 'warn' | 'error'; text: string } => {
+  if (!r.ok) {
+    // The server's own message already says it could not check; do not repeat it.
+    const why = r.detail && !/^could not check/i.test(r.detail) ? `: ${r.detail}` : '. Try again in a minute.';
+    return { tone: 'error', text: `Could not check right now${why}` };
+  }
+  if (r.skipped) return { tone: 'warn', text: RECONCILE_SKIPPED[r.skipped] || `Not checked (${r.skipped}).` };
+  const changed = r.changed || [];
+  if (changed.length) return { tone: 'ok', text: `Updated: ${summariseRewardChanges(changed)}.` };
+  if (!orderMatchesPayment) {
+    return { tone: 'error', text: 'Rewards follow the payment, but this order does not match it: see the payment check above.' };
+  }
+  return { tone: 'ok', text: 'Payment and rewards are in line with this order.' };
+};
+
+const NOTE_TONE: Record<'ok' | 'warn' | 'error', string> = {
+  ok: 'text-emerald-700 dark:text-emerald-400',
+  warn: 'text-highlight',
+  error: 'text-red-600 dark:text-red-400',
+};
+
+const ENDED_STATUSES: Order['status'][] = ['cancelled', 'returned', 'refunded'];
+const RETURN_OPEN_STATUSES: Order['status'][] = ['returnRequested', 'returnScheduled', 'picked'];
+
 const AdminOrderDetails = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
@@ -180,6 +326,20 @@ const AdminOrderDetails = () => {
   const [chatDraft, setChatDraft] = useState('');
   const [sendingChat, setSendingChat] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // The server's record of the online payment, and this order's cart hashed the
+  // way the payment's was, so an order edited in the browser stands out.
+  const [paymentLookup, setPaymentLookup] = useState<{ rzp: string; result: PaymentLookup } | null>(null);
+  const [cartHash, setCartHash] = useState<{ key: string; hash: string | null } | null>(null);
+
+  // "Check payment & rewards": which button ran it, and what the server said.
+  const [reconcile, setReconcile] = useState<{
+    orderId: string;
+    from: 'payment' | 'rewards';
+    running: boolean;
+    result?: ReconcileResult;
+  } | null>(null);
+  const reconcileSeq = useRef(0);
 
   // Real-time subscription to the order document.
   useEffect(() => {
@@ -252,6 +412,42 @@ const AdminOrderDetails = () => {
     return () => unsub();
   }, [orderId]);
 
+  // Read payments/<razorpay order id>, and again when the server marks the
+  // order paid (the reconcile action records the payment as it does).
+  const razorpayOrderId = order?.razorpayOrderId || '';
+  const orderPaymentStatus = order?.paymentStatus;
+  useEffect(() => {
+    if (!razorpayOrderId) return;
+    let cancelled = false;
+    void readPaymentRecord(razorpayOrderId).then((result) => {
+      if (!cancelled) setPaymentLookup({ rzp: razorpayOrderId, result });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [razorpayOrderId, orderPaymentStatus]);
+
+  const rereadPayment = async () => {
+    if (!razorpayOrderId) return;
+    const rzp = razorpayOrderId;
+    setPaymentLookup({ rzp, result: { state: 'loading' } });
+    setPaymentLookup({ rzp, result: await readPaymentRecord(rzp) });
+  };
+
+  // The order's items in the form api/create-order.ts hashed into the payment.
+  const orderCartKey = useMemo(() => (order ? cartKey(order.items || []) : ''), [order]);
+  useEffect(() => {
+    let cancelled = false;
+    sha256Hex(orderCartKey)
+      .catch(() => null)
+      .then((hash) => {
+        if (!cancelled) setCartHash({ key: orderCartKey, hash });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orderCartKey]);
+
   const sendAdminChatMessage = async () => {
     if (!order || !user || !chatDraft.trim() || sendingChat) return;
     const text = chatDraft.trim();
@@ -294,8 +490,10 @@ const AdminOrderDetails = () => {
   }, [order]);
 
   const handleStatusChange = async (next: Order['status']) => {
-    if (!order || next === order.status) return;
-    if (!isValidStatusTransition(order.status, next)) {
+    if (!order || next === normalizedStatus) return;
+    // Checked from the status the dropdown shows, like its options: a legacy
+    // forward `picked` is Out for Delivery here, not a return pickup.
+    if (!isValidStatusTransition(normalizedStatus, next)) {
       toast.error('Status can only move forward in the workflow.');
       return;
     }
@@ -320,6 +518,23 @@ const AdminOrderDetails = () => {
     } finally {
       setSavingStatus(false);
     }
+  };
+
+  // Asks the server to confirm the payment with Razorpay and bring points and
+  // cashback in line with the order. Never throws; the result is shown as is.
+  const checkPaymentAndRewards = async (from: 'payment' | 'rewards') => {
+    if (!order || (reconcile?.running && reconcile.orderId === order.id)) return;
+    const id = order.id;
+    const rzp = order.razorpayOrderId || '';
+    const seq = ++reconcileSeq.current;
+    setReconcile({ orderId: id, from, running: true });
+    const result = await reconcileOrderRewards(id);
+    // The server may have just recorded the payment: read it again before
+    // answering, so the answer and the payment check agree.
+    const lookupNow = rzp ? await readPaymentRecord(rzp) : null;
+    if (seq !== reconcileSeq.current) return;
+    if (lookupNow) setPaymentLookup({ rzp, result: lookupNow });
+    setReconcile({ orderId: id, from, running: false, result });
   };
 
   const handleAssignReturnPartner = async (partnerId: string) => {
@@ -482,6 +697,116 @@ const AdminOrderDetails = () => {
   const returnMeta = order as OrderReturnMeta;
   const returnOtp = returnMeta.return_otp;
   const returnStoreOtp = returnMeta.return_store_otp;
+  // The rules only let customers ask inside the window; anything else (an
+  // older request, or one entered by hand) is flagged before it is approved.
+  const returnTiming = returnRequestTiming(order.deliveredAt, order.returnRequestedAt);
+  const returnWindowClosed = returnWindowEnd(order.deliveredAt);
+
+  // ── Payment check: this order against the server's record of its payment ──
+  const rzpId = order.razorpayOrderId || '';
+  const lookup: PaymentLookup | null = !rzpId
+    ? null
+    : paymentLookup?.rzp === rzpId
+      ? paymentLookup.result
+      : { state: 'loading' };
+  const record = lookup?.state === 'found' ? lookup.record : null;
+  const amountPaid = record ? toNumber(record.amountPaise) / 100 : 0;
+  // undefined while hashing; null when this browser cannot hash.
+  const orderHash = cartHash?.key === orderCartKey ? cartHash.hash : undefined;
+  const paymentIssues: string[] = [];
+  if (record) {
+    const total = toNumber(order.total);
+    // ₹1 of tolerance, counted in paise like api/create-order.ts does.
+    if (Math.abs(toNumber(record.amountPaise) - Math.round(total * 100)) > 100) {
+      paymentIssues.push(`Amount paid ${formatAmount(amountPaid)} but order total ${formatAmount(total)}`);
+    }
+    if (record.cartHash && orderHash && record.cartHash !== orderHash) {
+      paymentIssues.push('Items differ from what was paid for');
+    }
+    if (toNumber(record.points) !== toNumber(order.pointsUsed)) {
+      paymentIssues.push(
+        `Points used: ${toNumber(record.points)} on the payment but ${toNumber(order.pointsUsed)} on the order`,
+      );
+    }
+    if (order.pointsValue != null && Math.abs(toNumber(record.pointsValue) - toNumber(order.pointsValue)) > 0.01) {
+      paymentIssues.push(
+        `Points value: ${formatAmount(toNumber(record.pointsValue))} on the payment but ${formatAmount(toNumber(order.pointsValue))} on the order`,
+      );
+    }
+    if (toNumber(record.cashback) !== toNumber(order.cashbackUsed)) {
+      paymentIssues.push(
+        `Cashback used: ${formatAmount(toNumber(record.cashback))} on the payment but ${formatAmount(toNumber(order.cashbackUsed))} on the order`,
+      );
+    }
+    if ((record.uid || '') !== (order.userId || '')) {
+      paymentIssues.push("Paid from a different customer account than this order's");
+    }
+  }
+  const itemsUnchecked = !!record?.cartHash && orderHash === null;
+  let paymentCheck: 'none' | 'loading' | 'error' | 'verified' | 'mismatch' | 'missing' | 'legacy' | 'unlinked';
+  if (!rzpId) {
+    paymentCheck = isCod ? 'none' : 'unlinked';
+  } else if (lookup.state === 'found') {
+    // Wait for the item hash, so a mismatch never shows as verified first.
+    paymentCheck = record.cartHash && orderHash === undefined ? 'loading' : paymentIssues.length ? 'mismatch' : 'verified';
+  } else if (lookup.state === 'missing') {
+    // Orders saved before they were stored under their payment never got a record.
+    paymentCheck = order.id === rzpId ? 'missing' : 'legacy';
+  } else {
+    paymentCheck = lookup.state;
+  }
+  // The summary's payment line follows the server's record where it has one.
+  const paymentLabel =
+    paymentCheck === 'verified'
+      ? { text: 'Paid', className: 'text-emerald-600' }
+      : paymentCheck === 'mismatch'
+        ? { text: 'Order does not match payment', className: 'text-red-600 dark:text-red-400' }
+        : paymentCheck === 'missing'
+          ? { text: 'Not confirmed', className: 'text-highlight' }
+          : paymentCheck === 'unlinked'
+            ? { text: 'No payment linked', className: 'text-highlight' }
+            : {
+                text: isPaid ? (isCod ? 'COD collected' : 'Paid') : isCod ? 'COD pending' : 'Payment pending',
+                className: isPaid ? 'text-emerald-600' : 'text-highlight',
+              };
+
+  // ── Points earned, as the reconcile action last wrote them on the order ──
+  const earned = toNumber(order.pointsEarned);
+  const earnedLabel = `${earned} point${earned === 1 ? '' : 's'}`;
+  const unlockMs = millisOf(order.pointsUnlockAt);
+  const orderEnded = ENDED_STATUSES.includes(normalizedStatus);
+  let pointsText = 'Points are earned when the order is delivered';
+  if (earned > 0 && order.pointsEarnedState === 'held') {
+    pointsText = `${earnedLabel} on hold while the return is open`;
+  } else if (earned > 0 && order.pointsEarnedState === 'void') {
+    pointsText = `${earnedLabel} voided${orderEnded ? ` (order ${badge.label.toLowerCase()})` : ''}`;
+  } else if (earned > 0 && order.pointsEarnedState === 'active') {
+    pointsText = !unlockMs
+      ? `${earnedLabel} earned`
+      : unlockMs > Date.now()
+        ? `${earnedLabel} earned · unlocks on ${formatDay(unlockMs)}`
+        : `${earnedLabel} earned · available`;
+  } else if (earned > 0) {
+    pointsText = `${earnedLabel} earned on delivery`;
+  } else if (!rzpId) {
+    pointsText = 'No points: not paid online';
+  } else if (orderEnded) {
+    pointsText = 'No points earned on this order';
+  } else if (normalizedStatus === 'delivered' || RETURN_OPEN_STATUSES.includes(normalizedStatus)) {
+    pointsText = 'No points recorded for this order';
+  }
+
+  const reconcileRunning = !!reconcile?.running && reconcile.orderId === order.id;
+  /** The last "Check payment & rewards" answer, shown beside the button that asked. */
+  const reconcileNote = (from: 'payment' | 'rewards') => {
+    if (!reconcile || reconcile.orderId !== order.id || reconcile.from !== from || !reconcile.result) return null;
+    const note = describeReconcile(reconcile.result, paymentCheck !== 'mismatch');
+    return (
+      <p role="status" className={`w-full text-xs font-medium ${NOTE_TONE[note.tone]}`}>
+        {note.text}
+      </p>
+    );
+  };
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -502,6 +827,23 @@ const AdminOrderDetails = () => {
           {badge.label}
         </Badge>
       </div>
+
+      {/* Flagged for a human: a paid order that could not be completed
+           automatically, or a reward spend that may need a correction. */}
+      {order.needsManualReview && (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-2xl border-2 border-red-300 bg-red-50 p-4 text-red-800 shadow-sm dark:border-red-500/50 dark:bg-red-500/10 dark:text-red-200"
+        >
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-bold">Needs manual review</p>
+            <p className="mt-1 break-words text-sm">
+              {order.manualReviewReason || 'This order was flagged for a manual check.'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Top summary card */}
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -524,10 +866,9 @@ const AdminOrderDetails = () => {
               {order.paymentMethod || 'Online'}
             </p>
             {/* Cash on Delivery was retired, but historic orders still carry it -
-                so the label follows the order rather than assuming COD. */}
-            <p className={`text-xs font-medium ${isPaid ? 'text-emerald-600' : 'text-highlight'}`}>
-              {isPaid ? (isCod ? 'COD collected' : 'Paid') : isCod ? 'COD pending' : 'Payment pending'}
-            </p>
+                so the label follows the order rather than assuming COD. An
+                online payment's label follows the server's record (below). */}
+            <p className={`text-xs font-medium ${paymentLabel.className}`}>{paymentLabel.text}</p>
             {order.paymentCollectedAt && (
               <p className="mt-1 text-[11px] text-gray-500">
                 Collected {formatDateTime(order.paymentCollectedAt)}
@@ -542,6 +883,95 @@ const AdminOrderDetails = () => {
             </p>
           </div>
         </div>
+
+        {/* Payment check: the order against payments/<razorpay order id>, which
+             only the server writes. An order edited in the browser shows here. */}
+        {paymentCheck === 'loading' && (
+          <p className="mt-4 flex items-center gap-2 text-xs text-gray-500 dark:text-zinc-400">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Checking the payment record…
+          </p>
+        )}
+        {paymentCheck === 'verified' && (
+          <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
+            <ShieldCheck className="h-4 w-4 shrink-0" />
+            <span>Payment verified · {formatAmount(amountPaid)}</span>
+            {record.razorpayPaymentId && <span className="break-all font-mono">· {record.razorpayPaymentId}</span>}
+          </div>
+        )}
+        {paymentCheck === 'mismatch' && (
+          <div
+            role="alert"
+            className="mt-4 rounded-lg border-2 border-red-300 bg-red-50 px-3 py-3 text-red-800 dark:border-red-500/50 dark:bg-red-500/10 dark:text-red-200"
+          >
+            <p className="flex items-center gap-2 text-sm font-bold">
+              <ShieldAlert className="h-4 w-4 shrink-0" /> This order does not match its payment
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+              {paymentIssues.map((issue) => (
+                <li key={issue}>{issue}</li>
+              ))}
+            </ul>
+            <p className="mt-2 break-words text-xs">
+              Verified payment: {formatAmount(amountPaid)}
+              {record.razorpayPaymentId ? ` · ${record.razorpayPaymentId}` : ''}. The order may have been
+              edited: check it in Razorpay before packing.
+            </p>
+          </div>
+        )}
+        {paymentCheck === 'missing' && (
+          <div className="mt-4 rounded-lg border border-highlight/45 bg-highlight/10 px-3 py-2.5 text-xs text-highlight dark:border-highlight dark:bg-highlight/8 dark:text-charcoal-foreground">
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <AlertTriangle className="h-4 w-4 shrink-0" /> Payment not confirmed by the server
+            </p>
+            <p className="mt-1">
+              Press Check payment & rewards before packing. It asks Razorpay and records the payment if it went
+              through.
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={reconcileRunning}
+                onClick={() => checkPaymentAndRewards('payment')}
+              >
+                {reconcileRunning && reconcile?.from === 'payment' ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Check payment & rewards
+              </Button>
+              {reconcileNote('payment')}
+            </div>
+          </div>
+        )}
+        {paymentCheck === 'legacy' && (
+          <p className="mt-4 flex items-start gap-2 rounded-lg border border-highlight/45 bg-highlight/10 px-3 py-2 text-xs font-medium text-highlight dark:border-highlight dark:bg-highlight/8 dark:text-charcoal-foreground">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 break-words">
+              No server record of this payment: the order was placed before payments were recorded. Check{' '}
+              {order.razorpayPaymentId || 'it'} in the Razorpay dashboard.
+            </span>
+          </p>
+        )}
+        {paymentCheck === 'unlinked' && (
+          <p className="mt-4 flex items-start gap-2 rounded-lg border border-highlight/45 bg-highlight/10 px-3 py-2 text-xs font-medium text-highlight dark:border-highlight dark:bg-highlight/8 dark:text-charcoal-foreground">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>No Razorpay payment is linked to this order. Make sure it was paid before packing.</span>
+          </p>
+        )}
+        {paymentCheck === 'error' && lookup?.state === 'error' && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-medium text-red-600 dark:text-red-400">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 break-words">Could not read the payment record: {lookup.message}</span>
+            <Button variant="outline" size="sm" onClick={() => void rereadPayment()}>
+              Try again
+            </Button>
+          </div>
+        )}
+        {itemsUnchecked && (paymentCheck === 'verified' || paymentCheck === 'mismatch') && (
+          <p className="mt-2 text-xs text-gray-500 dark:text-zinc-400">
+            Items were not compared: this browser cannot hash them (it needs HTTPS).
+          </p>
+        )}
 
         {statusHint && (
           <div className="mt-4 rounded-lg bg-highlight/10 px-3 py-2 text-xs text-highlight dark:bg-highlight/10 dark:text-charcoal-foreground">
@@ -625,6 +1055,20 @@ const AdminOrderDetails = () => {
               <span>-{formatPrice(order.discount || order.couponDiscount || 0)}</span>
             </div>
           )}
+          {(order.pointsUsed || 0) > 0 && (
+            <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+              <span>Points ({order.pointsUsed})</span>
+              {/* pointsUsed is a count; pointsValue is what they were worth. Older
+                   orders lack it, and then 1 point was ₹1. */}
+              <span>-{formatPrice(order.pointsValue ?? order.pointsUsed ?? 0)}</span>
+            </div>
+          )}
+          {(order.cashbackUsed || 0) > 0 && (
+            <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+              <span>Wallet cashback</span>
+              <span>-{formatPrice(order.cashbackUsed || 0)}</span>
+            </div>
+          )}
           <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 text-base font-bold text-gray-900 dark:border-zinc-800 dark:text-zinc-100">
             <span>Total</span>
             <span className="text-highlight">{formatPrice(order.total || 0)}</span>
@@ -635,6 +1079,24 @@ const AdminOrderDetails = () => {
               {order.couponDescription ? ` — ${order.couponDescription}` : ''}
             </p>
           )}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-zinc-800">
+            <span className="inline-flex items-center gap-1.5">
+              <Coins className="h-3.5 w-3.5 shrink-0" />
+              {pointsText}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={reconcileRunning}
+              onClick={() => checkPaymentAndRewards('rewards')}
+            >
+              {reconcileRunning && reconcile?.from === 'rewards' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Check payment & rewards
+            </Button>
+            {reconcileNote('rewards')}
+          </div>
         </div>
       </div>
 
@@ -754,6 +1216,19 @@ const AdminOrderDetails = () => {
           <p className="mt-2 text-xs text-gray-500">
             Changes save automatically. Status can only move forward.
           </p>
+          {normalizedStatus === 'returnRequested' && returnTiming !== 'in-window' && (
+            <p
+              role="alert"
+              className="mt-3 flex items-start gap-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-medium text-red-800 dark:border-red-500/50 dark:bg-red-500/10 dark:text-red-200"
+            >
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 break-words">
+                {returnTiming === 'late' && returnWindowClosed
+                  ? `Requested after the ${RETURN_WINDOW_DAYS}-day return window, which closed on ${formatDay(returnWindowClosed.getTime())}. Points earned on this order may already be spent; approving voids them.`
+                  : `No delivery or request time is recorded, so the ${RETURN_WINDOW_DAYS}-day return window can't be checked. Confirm the delivery date before approving.`}
+              </span>
+            </p>
+          )}
           {normalizedStatus === 'returnRequested' && (
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <Button

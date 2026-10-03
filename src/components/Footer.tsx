@@ -286,14 +286,16 @@ const Footer = () => {
         {/* Map */}
         {settings.mapEmbedUrl && (
           <LazyMount
-            className="mt-12 rounded-[var(--radius-card)] overflow-hidden border border-white/10"
+            className="group mt-12 rounded-[var(--radius-card)] overflow-hidden border border-white/10"
             placeholder={<div className="h-[220px] w-full bg-white/5" />}
           >
             <iframe
               src={settings.mapEmbedUrl}
               width="100%"
               height="220"
-              style={{ border: 0, filter: "grayscale(40%) brightness(0.9)" }}
+              style={{ border: 0 }}
+              // Quiet monochrome inside the charcoal footer; full colour when the visitor reaches for it.
+              className="block [filter:grayscale(1)_contrast(1.05)_brightness(0.82)] opacity-90 transition-[filter,opacity] duration-500 ease-out group-hover:[filter:none] group-hover:opacity-100 group-focus-within:[filter:none] group-focus-within:opacity-100 motion-reduce:transition-none"
               allowFullScreen
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"

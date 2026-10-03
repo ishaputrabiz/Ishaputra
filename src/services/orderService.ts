@@ -17,6 +17,7 @@ import {
   setDoc,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
+import { RETURN_WINDOW_DAYS, isWithinReturnWindow } from '@/lib/returnWindow';
 import {
   sendOrderPlacedTemplate,
   sendAdminNewOrderTemplate,
@@ -35,6 +36,7 @@ import {
   normalizePhoneNumber,
 } from '@/services/whatsappService';
 import { notifyOrder } from '@/services/pushNotificationService';
+import { reconcileOrderRewards } from '@/services/rewardsService';
 import { incrementCouponUsage } from '@/services/couponService';
 import { requestCatalogRefresh } from '@/services/catalogPublisher';
 import { fetchLiveProductInfo } from '@/services/livePricing';
@@ -235,6 +237,21 @@ export interface Order {
   razorpayPaymentId?: string;
   razorpayOrderId?: string;
   razorpaySignature?: string;
+  // Rewards (display only - the reward ledger and payments/<razorpay order id>
+  // are the record; see src/lib/rewards.ts and api/notify-order.ts).
+  /** Loyalty points spent on this order (server-applied). */
+  pointsUsed?: number;
+  /** Rupee value of pointsUsed when the order was placed. */
+  pointsValue?: number;
+  /** Wallet cashback in rupees spent on this order (server-applied). */
+  cashbackUsed?: number;
+  /** Points earned when delivered (set by the reconcile action). */
+  pointsEarned?: number;
+  /** active: unlocks at pointsUnlockAt; held: a return is open; void: the order ended. */
+  pointsEarnedState?: 'active' | 'held' | 'void';
+  pointsUnlockAt?: Timestamp;
+  /** Set when the server confirmed a payment the order was saved without. */
+  paymentVerifiedAt?: Timestamp;
   shippingAddress: ShippingAddress;
   paymentMethod: string;
   // Canonical statuses. Legacy values 'shipped' | 'assigned' | 'picked' are kept in the
@@ -555,6 +572,24 @@ export const preflightCart = async (
   return { ok: blockers.length === 0 && repriced.length === 0, blockers, repriced, lines, liveSubtotal };
 };
 
+/** Thrown when this payment already has its order (a retry, or a double tap). */
+class OrderAlreadyExistsError extends Error {
+  constructor(readonly orderId: string) {
+    super('This payment already has an order');
+    this.name = 'OrderAlreadyExistsError';
+  }
+}
+
+/**
+ * Where an order is stored. One order per payment: an online order's id IS its
+ * Razorpay order id, which firestore.rules checks against the server's payment
+ * record, so a payment can never be turned into a second order.
+ */
+const orderDocRef = (orderData: Pick<OrderFormData, 'razorpayOrderId'>) =>
+  orderData.razorpayOrderId
+    ? doc(db, ORDERS_COLLECTION, orderData.razorpayOrderId)
+    : doc(collection(db, ORDERS_COLLECTION));
+
 /**
  * Record an order whose payment has already been captured but whose normal
  * creation failed.
@@ -569,8 +604,8 @@ const createPaidOrderFallback = async (
   reason: string,
 ): Promise<string> => {
   const now = Timestamp.now();
-  const docRef = doc(collection(db, ORDERS_COLLECTION));
-  await setDoc(docRef, {
+  const docRef = orderDocRef(orderData);
+  const flagged = {
     ...orderData,
     paymentStatus: 'paid',
     status: 'pending',
@@ -579,12 +614,29 @@ const createPaidOrderFallback = async (
     stockDecremented: false,
     needsManualReview: true,
     manualReviewReason: reason,
-  });
+  };
+  let paymentUnconfirmed = false;
+  try {
+    await setDoc(docRef, flagged);
+  } catch (error) {
+    if ((error as { code?: string })?.code !== 'permission-denied') throw error;
+    // The rules accept "paid" only against the server's record of the payment
+    // (payments/<razorpay order id>), which verify-payment could not write in
+    // time. Record the order as awaiting that check rather than lose it; the
+    // shop's "Check payment" (or the next status change) confirms it with
+    // Razorpay and marks it paid.
+    paymentUnconfirmed = true;
+    await setDoc(docRef, {
+      ...flagged,
+      paymentStatus: 'pending',
+      manualReviewReason: `Payment not confirmed by the server yet - check it before packing. ${reason}`,
+    });
+  }
 
   void notifyOrder({
     orderId: docRef.id,
     audience: 'admins',
-    title: 'Paid order needs review',
+    title: paymentUnconfirmed ? 'Order needs a payment check' : 'Paid order needs review',
     body: `Order ${shortOrderRef(docRef.id)} was paid but could not be completed automatically: ${reason}`,
     url: `/admin/orders/${docRef.id}`,
     data: { type: 'order-needs-review' },
@@ -606,8 +658,15 @@ export const createPaidOrder = async (
   try {
     return { id: await createOrder(orderData), needsReview: false };
   } catch (error) {
+    if (error instanceof OrderAlreadyExistsError) return { id: error.orderId, needsReview: false };
     const reason = error instanceof Error ? error.message : 'Order creation failed';
     console.error('[orderService] paid order fell back to manual review:', reason);
+    // The transaction may have committed even though this call failed (a
+    // dropped connection): never write the order twice.
+    if (orderData.razorpayOrderId) {
+      const existing = await getDoc(doc(db, ORDERS_COLLECTION, orderData.razorpayOrderId)).catch(() => null);
+      if (existing?.exists()) return { id: existing.id, needsReview: false };
+    }
     return { id: await createPaidOrderFallback(orderData, reason), needsReview: true, reason };
   }
 };
@@ -619,7 +678,7 @@ export const createOrder = async (orderData: OrderFormData): Promise<string> => 
   try {
     const now = Timestamp.now();
     const paymentStatus = isPrepaidPaymentMethod(orderData.paymentMethod) ? 'paid' : 'pending';
-    const docRef = doc(collection(db, ORDERS_COLLECTION));
+    const docRef = orderDocRef(orderData);
     const groupedItems = new Map<string, { productId: string; name: string; quantity: number }>();
     for (const item of orderData.items || []) {
       const existing = groupedItems.get(item.productId);
@@ -642,6 +701,11 @@ export const createOrder = async (orderData: OrderFormData): Promise<string> => 
       const transitions: Array<{ productId: string; productName: string; stockLeft: number }> = [];
       // Rebuilt on every attempt: Firestore may re-run this function.
       const soldOutNow: Array<{ productId: string; productName: string }> = [];
+
+      // A payment's order already written (a retry): stop before touching stock.
+      if (orderData.razorpayOrderId && (await transaction.get(docRef)).exists()) {
+        throw new OrderAlreadyExistsError(docRef.id);
+      }
 
       for (const item of groupedItems.values()) {
         const productRef = doc(db, 'products', item.productId);
@@ -1033,6 +1097,8 @@ export const updateOrderStatus = async (
     }
 
     await updateDoc(docRef, updateData);
+    // Points earned on delivery / refunded on cancel or return follow the status.
+    void reconcileOrderRewards(orderId);
 
     // Restore stock when order is cancelled or returned — only if it was
     // previously decremented (flag prevents double-restore for old orders).
@@ -1125,6 +1191,8 @@ export const updateOrderTracking = async (
     console.log('🔄 [Update] Update data:', updateData);
     await updateDoc(docRef, updateData);
     console.log('✅ [Update] Order tracking updated successfully');
+    // This form can set any status, so points and refunds must follow it too.
+    void reconcileOrderRewards(orderId);
 
     void dispatchStatusNotifications(orderId, trackingData.status, {
       phone: currentData?.shippingAddress?.mobile || currentData?.customerPhone,
@@ -1410,6 +1478,8 @@ export const updateDeliveryStatusByDeliveryBoy = async (
     }
 
     await updateDoc(docRef, updateData);
+    // Points earned on delivery / refunded on cancel or return follow the status.
+    void reconcileOrderRewards(orderId);
 
     // Best-effort customer notification (WhatsApp + push).
     const data = orderDoc.data() || {};
@@ -1495,6 +1565,8 @@ export const verifyDeliveryOTP = async (
         },
       ],
     });
+    // Points earned on delivery / refunded on cancel or return follow the status.
+    void reconcileOrderRewards(orderId);
 
     // Notify the customer that their order was delivered (push + WhatsApp).
     void dispatchStatusNotifications(orderId, 'delivered', {
@@ -1622,6 +1694,8 @@ export const assignReturnPickupPartner = async (
     }
 
     await updateDoc(docRef, updateData);
+    // Earned points stay frozen while the return is open.
+    void reconcileOrderRewards(orderId);
 
     // Notify customer + the assigned return-pickup partner.
     void dispatchStatusNotifications(orderId, 'returnScheduled', {
@@ -1714,6 +1788,7 @@ export const verifyReturnPickupOTP = async (
         },
       ],
     });
+    void reconcileOrderRewards(orderId);
     return { success: true, message: 'Return pickup confirmed!' };
   } catch (error) {
     console.error('Error verifying return pickup OTP:', error);
@@ -1768,6 +1843,8 @@ export const verifyReturnToStoreOTP = async (
         },
       ],
     });
+    // Points earned on delivery / refunded on cancel or return follow the status.
+    void reconcileOrderRewards(orderId);
     return { success: true, message: 'Return to store confirmed!' };
   } catch (error) {
     console.error('Error verifying return-to-store OTP:', error);
@@ -1954,6 +2031,8 @@ export const cancelOrder = async (
         },
       ],
     });
+    // Points earned on delivery / refunded on cancel or return follow the status.
+    void reconcileOrderRewards(orderId);
 
     // Put the units back. Only an admin-side cancellation did this before, so
     // a piece a customer cancelled stayed counted as sold - and now that
@@ -2003,15 +2082,13 @@ export const requestReturn = async (
       throw new Error('Only delivered orders can be returned');
     }
 
-    // Check if delivered within 7 days (168 hours)
-    if (orderData.deliveredAt) {
-      const deliveredDate = orderData.deliveredAt.toDate();
-      const now = new Date();
-      const hoursSinceDelivery = (now.getTime() - deliveredDate.getTime()) / (1000 * 60 * 60);
-
-      if (hoursSinceDelivery > 168) {
-        throw new Error('Return window has expired. Returns are only accepted within 7 days of delivery.');
-      }
+    // Within 7 days of delivery; the security rules refuse anything later, and
+    // an order with no delivery time.
+    if (!orderData.deliveredAt) {
+      throw new Error('We could not find the delivery date for this order. Please contact us to arrange a return.');
+    }
+    if (!isWithinReturnWindow(orderData.deliveredAt)) {
+      throw new Error(`Return window has expired. Returns are only accepted within ${RETURN_WINDOW_DAYS} days of delivery.`);
     }
 
     const timestamp = Timestamp.now();
@@ -2033,6 +2110,8 @@ export const requestReturn = async (
         },
       ],
     });
+    // Points earned on this order freeze until the return is settled.
+    void reconcileOrderRewards(orderId);
 
     // Notify admin via WhatsApp that a return was requested
     void (async () => {
@@ -2157,6 +2236,8 @@ export const rejectReturn = async (orderId: string): Promise<void> => {
         },
       ],
     });
+    // Points earned on delivery / refunded on cancel or return follow the status.
+    void reconcileOrderRewards(orderId);
 
     // Notify the customer that their return request was rejected.
     const notifyPhone = orderData.userPhone || orderData.shippingAddress?.mobile;
@@ -2211,6 +2292,8 @@ export const cancelReturn = async (orderId: string): Promise<void> => {
       { status: 'delivered', timestamp: now, note: 'Return cancelled by customer' },
     ],
   });
+  // Points earned on delivery / refunded on cancel or return follow the status.
+  void reconcileOrderRewards(orderId);
 };
 
 /**

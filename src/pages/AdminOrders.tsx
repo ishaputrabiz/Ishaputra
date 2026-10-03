@@ -37,10 +37,48 @@ import {
   assignOrderToDeliveryBoy,
   approveReturn,
   rejectReturn,
+  isValidStatusTransition,
+  normalizeOrderStatus,
 } from '@/services/orderService';
 import { subscribeToDeliveryBoys, DeliveryBoy } from '@/services/deliveryBoyService';
+import { DELIVERY_PARTNERS_ENABLED } from '@/config/features';
 import { toast } from 'sonner';
 import { SmartImage } from "@/components/ui/smart-image";
+
+/** The statuses the order page offers, in workflow order. */
+const STATUS_CHOICES: Array<{ value: Order['status']; label: string }> = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'processing', label: 'Processing' },
+  { value: 'packed', label: 'Packed' },
+  { value: 'outForDelivery', label: 'Out for Delivery' },
+  { value: 'delivered', label: 'Delivered' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'returnRequested', label: 'Return Requested' },
+  { value: 'returnScheduled', label: 'Return Scheduled' },
+  { value: 'picked', label: 'Return Picked Up' },
+  { value: 'returned', label: 'Returned' },
+  { value: 'refunded', label: 'Refunded' },
+  { value: 'deliveryFailed', label: 'Delivery Failed' },
+];
+
+/**
+ * An order's status as the order page reads it: legacy values become their
+ * canonical status, and `picked` stays itself only during a return (the item
+ * collected from the customer).
+ */
+const displayStatus = (order: Order): Order['status'] =>
+  order.status === 'picked' && (order as Order & { returnScheduledAt?: unknown }).returnScheduledAt
+    ? 'picked'
+    : normalizeOrderStatus(order.status);
+
+/** The current status plus the ones the workflow allows next, as on the order page. */
+const statusChoicesFor = (order: Order) => {
+  const current = displayStatus(order);
+  const choices = STATUS_CHOICES.filter(
+    (c) => c.value === current || isValidStatusTransition(current, c.value),
+  );
+  return choices.some((c) => c.value === current) ? choices : [{ value: current, label: String(current) }, ...choices];
+};
 
 const AdminOrders = () => {
   const navigate = useNavigate();
@@ -64,6 +102,7 @@ const AdminOrders = () => {
   const [selectedDeliveryBoyId, setSelectedDeliveryBoyId] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
 
   const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error ? error.message : fallback;
@@ -118,13 +157,33 @@ const AdminOrders = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
+  // The same checks as the order page: forward through the workflow only, so a
+  // cancelled order cannot be reopened and delivered from this list.
+  const handleStatusChange = async (order: Order, newStatus: Order['status']) => {
+    const current = displayStatus(order);
+    if (newStatus === current) return;
+    if (!isValidStatusTransition(current, newStatus)) {
+      toast.error('Status can only move forward in the workflow.');
+      return;
+    }
+    if (DELIVERY_PARTNERS_ENABLED && newStatus === 'outForDelivery' && !order.delivery_boy_id && !order.delivery_partner_id) {
+      toast.error('Assign a delivery partner first: open the order to do it.');
+      return;
+    }
+    if (DELIVERY_PARTNERS_ENABLED && newStatus === 'returnScheduled') {
+      toast.error('Open the order and assign a pickup partner to schedule the return.');
+      return;
+    }
+    setSavingStatusId(order.id);
     try {
-      await updateOrderStatus(orderId, newStatus);
-      toast.success(`Order status updated to ${newStatus}`);
+      await updateOrderStatus(order.id, newStatus);
+      const label = STATUS_CHOICES.find((c) => c.value === newStatus)?.label || newStatus;
+      toast.success(`Order status updated to ${label}`);
     } catch (error) {
       console.error('Error updating order status:', error);
       toast.error('Failed to update order status');
+    } finally {
+      setSavingStatusId(null);
     }
   };
 
@@ -321,8 +380,10 @@ const AdminOrders = () => {
       case 'assigned':
         return 'Packed';
       case 'outForDelivery':
-      case 'picked':
         return 'Out for Delivery';
+      case 'picked':
+        // Called with displayStatus, which keeps `picked` only during a return.
+        return 'Return Picked Up';
       case 'delivered':
         return 'Delivered';
       case 'cancelled':
@@ -335,6 +396,8 @@ const AdminOrders = () => {
         return 'Returned';
       case 'refunded':
         return 'Refunded';
+      case 'deliveryFailed':
+        return 'Delivery Failed';
       default:
         return status;
     }
@@ -455,12 +518,15 @@ const AdminOrders = () => {
                       human to reconcile stock before it is fulfilled.
                     */}
                     {order.needsManualReview && (
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-red-50 text-red-700 border border-red-200">
+                      <span
+                        title={order.manualReviewReason || undefined}
+                        className="text-xs font-semibold px-2.5 py-1 rounded-md bg-red-50 text-red-700 border border-red-200"
+                      >
                         NEEDS REVIEW
                       </span>
                     )}
                     <span className={`text-xs font-medium px-2.5 py-1 rounded-md ${getStatusBadgeClass(order.status)}`}>
-                      {getStatusLabel(order.status)}
+                      {getStatusLabel(displayStatus(order))}
                     </span>
                   </div>
                 </div>
@@ -543,7 +609,10 @@ const AdminOrders = () => {
                           ORD-{order.orderId}
                         </div>
                         {order.needsManualReview && (
-                          <div className="mt-1 inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">
+                          <div
+                            title={order.manualReviewReason || undefined}
+                            className="mt-1 inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200"
+                          >
                             NEEDS REVIEW
                           </div>
                         )}
@@ -560,21 +629,20 @@ const AdminOrders = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                        {/* Only the current status and the valid next ones; a
+                             finished order (cancelled, refunded) has nowhere to go. */}
                         <select
-                          value={order.status}
-                          onChange={(e) => handleStatusChange(order.id, e.target.value as Order['status'])}
-                          className={`text-sm font-medium px-4 py-1.5 rounded-md ${getStatusBadgeClass(order.status)} cursor-pointer`}
+                          value={displayStatus(order)}
+                          onChange={(e) => handleStatusChange(order, e.target.value as Order['status'])}
+                          disabled={savingStatusId === order.id || statusChoicesFor(order).length < 2}
+                          aria-label={`Status of order ${order.orderId}`}
+                          className={`text-sm font-medium px-4 py-1.5 rounded-md ${getStatusBadgeClass(order.status)} cursor-pointer disabled:cursor-default ${savingStatusId === order.id ? 'opacity-60' : ''}`}
                         >
-                          <option value="pending">Pending</option>
-                          <option value="processing">Processing</option>
-                          <option value="packed">Packed</option>
-                          <option value="outForDelivery">Out for Delivery</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
-                          <option value="returnRequested">Return Requested</option>
-                          <option value="returnScheduled">Return Scheduled</option>
-                          <option value="returned">Returned</option>
-                          <option value="refunded">Refunded</option>
+                          {statusChoicesFor(order).map((choice) => (
+                            <option key={choice.value} value={choice.value}>
+                              {choice.label}
+                            </option>
+                          ))}
                         </select>
                       </td>
                       <td className="px-6 py-4">

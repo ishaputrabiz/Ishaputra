@@ -39,10 +39,27 @@ import {
   Share2,
   MessageCircle,
   Star,
+  Coins,
 } from 'lucide-react';
 import { SmartImage } from "@/components/ui/smart-image";
 import { BRAND } from "@/config/brand";
 import { SITE_HOST } from "@/lib/siteUrl";
+import { isWithinReturnWindow } from "@/lib/returnWindow";
+
+/**
+ * Loyalty points and wallet cashback that paid part of an order, as price rows
+ * in rupees. order.total is what was charged after them, so listing them makes
+ * the summary add up. Orders saved before pointsValue existed used 1 point = ₹1.
+ */
+const rewardsPaidRows = (order: Order): Array<[string, number]> => {
+  const points = Math.max(0, Number(order.pointsUsed) || 0);
+  const pointsValue = typeof order.pointsValue === 'number' ? order.pointsValue : points;
+  const cashback = Number(order.cashbackUsed) || 0;
+  const rows: Array<[string, number]> = [];
+  if (pointsValue > 0) rows.push([`Points (${points.toLocaleString('en-IN')})`, pointsValue]);
+  if (cashback > 0) rows.push(['Wallet cashback', cashback]);
+  return rows;
+};
 
 // Order Status Stepper Component
 const OrderStatusStepper = ({ status, isReturnPickedState = false }: { status: string; isReturnPickedState?: boolean }) => {
@@ -334,36 +351,30 @@ const OrderDetailsPage = () => {
     }
   };
 
+  // One line about the points this order earned. The server credits them on
+  // delivery, freezes them while a return is open and voids them if the order
+  // ends (cancelled / returned / refunded).
+  const getPointsEarnedNote = (o: Order): string | null => {
+    const n = Math.floor(Number(o.pointsEarned) || 0);
+    if (n <= 0 || !o.pointsEarnedState) return null;
+    const pts = `${n.toLocaleString('en-IN')} ${n === 1 ? 'point' : 'points'}`;
+    if (o.pointsEarnedState === 'held') return `${pts} on hold while your return is open`;
+    if (o.pointsEarnedState === 'void') {
+      const why = ['cancelled', 'returned', 'refunded'].includes(o.status) ? ` because the order was ${o.status}` : '';
+      return `${pts} ${n === 1 ? 'was' : 'were'} not credited${why}`;
+    }
+    const unlockAt = typeof o.pointsUnlockAt?.toDate === 'function' ? o.pointsUnlockAt.toDate() : null;
+    if (unlockAt && unlockAt.getTime() > Date.now()) return `You earned ${pts} · usable from ${formatDate(unlockAt)}`;
+    return `${pts} added to your wallet`;
+  };
+
   // Check if order can be returned (within 7 days of delivery)
   const canReturnOrder = (order: Order) => {
     if (order.status !== 'delivered') return false;
     if ((order as any).returnCancelled) return false;
-    
-    if (!order.deliveredAt) {
-      return true;
-    }
-
-    try {
-      let deliveredDate: Date;
-      
-      if (order.deliveredAt instanceof Date) {
-        deliveredDate = order.deliveredAt;
-      } else if (typeof order.deliveredAt === 'object' && 'toDate' in order.deliveredAt) {
-        deliveredDate = (order.deliveredAt as any).toDate();
-      } else if (typeof order.deliveredAt === 'object' && 'seconds' in order.deliveredAt) {
-        deliveredDate = new Date((order.deliveredAt as any).seconds * 1000);
-      } else if (typeof order.deliveredAt === 'string') {
-        deliveredDate = new Date(order.deliveredAt);
-      } else {
-        return true;
-      }
-      
-      const hoursSinceDelivery = (new Date().getTime() - deliveredDate.getTime()) / (1000 * 60 * 60);
-      return hoursSinceDelivery <= 168; // 7 days = 168 hours
-    } catch (error) {
-      console.error('Error checking return eligibility:', error);
-      return true;
-    }
+    // The security rules refuse a return without a delivery time, so the
+    // button never offers one they would reject.
+    return isWithinReturnWindow(order.deliveredAt);
   };
 
   // Handle return request
@@ -600,6 +611,13 @@ const OrderDetailsPage = () => {
     return null;
   }
 
+  // Price details: points and cashback are listed so the lines add up to
+  // order.total (paid after them). GST inside GST-inclusive prices is already
+  // in the selling price, so it is not counted again as a fee.
+  const rewardsRows = rewardsPaidRows(order);
+  const totalFees = (order.deliveryCharge || 0) + (order.gstInclusive ? 0 : order.taxAmount || 0);
+  const pointsEarnedNote = getPointsEarnedNote(order);
+
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,hsl(var(--highlight)/0.05)_0%,rgba(255,255,255,1)_20%),linear-gradient(135deg,hsl(var(--primary)/0.03)_0%,rgba(255,255,255,1)_55%)] dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "var(--font-body)" }}>
       {/* Desktop Header + Nav */}
@@ -639,7 +657,7 @@ const OrderDetailsPage = () => {
       {/* Content */}
       <div className="mx-auto max-w-4xl space-y-3 px-4 pb-24 pt-4">
         {/* Tracking ID Banner */}
-        <div className="rounded-[24px] border border-highlight/12 bg-[linear-gradient(135deg,rgba(59,130,246,0.08)_0%,hsl(var(--highlight)/0.10)_100%)] px-4 py-3 shadow-[0_20px_45px_-38px_rgba(0,0,0,0.45)] dark:border-highlight/18 dark:bg-[linear-gradient(135deg,rgba(37,99,235,0.14)_0%,rgba(146,64,14,0.12)_100%)]">
+        <div className="rounded-[var(--radius-panel)] border border-primary/15 bg-[linear-gradient(135deg,hsl(var(--primary)/0.07)_0%,hsl(var(--highlight)/0.10)_100%)] px-4 py-3 dark:border-primary/20">
           <p className="text-sm text-primary dark:text-blue-200">
             Order can be tracked by <span className="font-semibold">ORD-{order.orderId}</span>
             {order.trackingId && (
@@ -649,7 +667,7 @@ const OrderDetailsPage = () => {
         </div>
 
         {/* Product Card */}
-        <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="panel tx-sheet px-4 py-4">
           <div className="flex gap-4">
             <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-[10px] border border-highlight/10 bg-foreground/[0.03] dark:bg-zinc-800/70">
               <SmartImage 
@@ -671,7 +689,7 @@ const OrderDetailsPage = () => {
 
         {/* Order Status Timeline (hidden for returned / refunded orders) */}
         {order.status !== 'returned' && order.status !== 'refunded' && (
-          <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-5 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+          <div className="panel tx-sheet px-4 py-5">
             <OrderStatusStepper status={order.status} isReturnPickedState={order.status === 'picked' && !!(order as any).returnScheduledAt} />
           </div>
         )}
@@ -701,7 +719,7 @@ const OrderDetailsPage = () => {
         )}
 
         {/* Current Status Card */}
-        <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="panel tx-sheet px-4 py-4">
           <div className="flex gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
               order.status === 'delivered' ? 'bg-emerald-100' :
@@ -757,7 +775,7 @@ const OrderDetailsPage = () => {
               </p>
               <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground/70">
                 <Clock className="w-3 h-3" />
-                {formatDate(order.updatedAt || order.createdAt)}
+                {formatDate((order.status === 'delivered' && order.deliveredAt) || order.updatedAt || order.createdAt)}
               </p>
             </div>
           </div>
@@ -860,12 +878,12 @@ const OrderDetailsPage = () => {
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="flex gap-3 panel tx-sheet px-4 py-4">
           {/* Cancel Button - Only for pending/processing orders */}
           {(order.status === 'pending' || order.status === 'processing') && (
             <button
               onClick={() => navigate(`/account/orders/${orderId}/cancel`)}
-              className="flex-1 py-2.5 px-4 bg-red-50 border border-red-200 rounded-lg text-sm font-medium text-red-700 flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+              className="flex-1 py-2.5 px-4 bg-destructive/[0.06] border border-destructive/25 rounded-lg text-sm font-medium text-destructive flex items-center justify-center gap-2 hover:bg-destructive/10 active:scale-[0.98] transition-[background-color,transform] duration-150"
             >
               <Ban className="w-4 h-4" />
               Cancel Order
@@ -888,7 +906,7 @@ const OrderDetailsPage = () => {
           {canReturnOrder(order) && (
             <button
               onClick={() => setShowReturnModal(true)}
-              className="flex-1 py-2.5 px-4 bg-emerald-50 border border-emerald-200 rounded-lg text-sm font-medium text-emerald-700 flex items-center justify-center gap-2 hover:bg-emerald-100 transition-colors"
+              className="flex-1 py-2.5 px-4 bg-card border border-foreground/[0.14] rounded-lg text-sm font-medium text-foreground flex items-center justify-center gap-2 hover:bg-foreground/[0.04] active:scale-[0.98] transition-[background-color,transform] duration-150"
             >
               <ReturnIcon className="w-4 h-4" />
               Return Items
@@ -898,14 +916,14 @@ const OrderDetailsPage = () => {
           {/* Chat Button - Always show */}
           <button 
             onClick={focusOrderChat}
-            className="flex-1 py-2.5 px-4 bg-primary/5 border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+            className="flex-1 py-2.5 px-4 bg-primary/5 border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-primary/10 active:scale-[0.98] transition-[background-color,transform] duration-150"
           >
             <MessageCircle className="w-4 h-4" />
             Open order chat
           </button>
         </div>
 
-        <div ref={conversationSectionRef} className="rounded-[24px] border border-highlight/12 bg-white/92 p-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div ref={conversationSectionRef} className="panel tx-sheet p-4">
           <button
             onClick={() => setConversationOpen(!conversationOpen)}
             className="flex w-full items-start justify-between gap-3 text-left"
@@ -1004,7 +1022,7 @@ const OrderDetailsPage = () => {
 
         {/* Track Package Button */}
         {order.trackingUrl && (
-          <div className="rounded-[24px] border border-highlight/12 bg-white/92 px-4 py-3 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+          <div className="panel tx-sheet px-4 py-3">
             <a
               href={order.trackingUrl}
               target="_blank"
@@ -1019,7 +1037,7 @@ const OrderDetailsPage = () => {
         )}
 
         {/* Delivery Details Section */}
-        <div className="overflow-hidden rounded-[24px] border border-highlight/12 bg-white/92 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-highlight/18 dark:shadow-[0_22px_55px_-40px_rgba(0,0,0,0.88)]">
+        <div className="overflow-hidden panel tx-sheet">
           <h3 className="border-b border-highlight/10 px-4 py-3 text-base font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>Delivery details</h3>
           
           {/* Delivery Address */}
@@ -1053,7 +1071,7 @@ const OrderDetailsPage = () => {
 
         {/* Rate Delivery Boy - Only for delivered orders with a delivery boy assigned */}
         {order.status === 'delivered' && order.deliveryBoyId && (
-          <div className="bg-white/92 rounded-[24px] border border-highlight/12 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur overflow-hidden">
+          <div className="panel tx-sheet overflow-hidden">
             <h3 className="px-4 py-3 text-base font-semibold text-foreground border-b border-highlight/10" style={{ fontFamily: "var(--font-body)" }}>Rate your delivery</h3>
             <div className="px-4 py-4">
               {hasRated ? (
@@ -1099,7 +1117,7 @@ const OrderDetailsPage = () => {
 
         {/* Write a Review - for all delivered orders */}
         {order.status === 'delivered' && (
-          <div className="bg-white/92 rounded-[24px] border border-highlight/12 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur overflow-hidden">
+          <div className="panel tx-sheet overflow-hidden">
             <h3 className="px-4 py-3 text-base font-semibold text-foreground border-b border-highlight/10" style={{ fontFamily: "var(--font-body)" }}>Rate the product</h3>
             <div className="px-4 py-4">
               {checkingReview ? (
@@ -1139,7 +1157,8 @@ const OrderDetailsPage = () => {
           </div>
         )}
 
-        {/* Price Details Section */}        <div className="bg-card mt-2 border-t border-b border-foreground/[0.06]">
+        {/* Price Details Section */}
+        <div className="panel tx-sheet overflow-hidden">
           <h3 className="px-4 py-3 text-base font-semibold text-foreground border-b border-foreground/[0.06]" style={{ fontFamily: "var(--font-body)" }}>Price details</h3>
           
           <div className="px-4 py-3 space-y-3">
@@ -1149,23 +1168,36 @@ const OrderDetailsPage = () => {
             </div>
             {order.discount > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-green-600">Discount</span>
-                <span className="text-green-600">-₹{order.discount.toLocaleString()}</span>
+                <span className="text-green-700 dark:text-green-500">Discount</span>
+                <span className="text-green-700 dark:text-green-500">-₹{order.discount.toLocaleString()}</span>
               </div>
             )}
+            {rewardsRows.map(([label, amount]) => (
+              <div key={label} className="flex justify-between text-sm">
+                <span className="text-green-700 dark:text-green-500">{label}</span>
+                <span className="text-green-700 dark:text-green-500">-₹{amount.toLocaleString()}</span>
+              </div>
+            ))}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total fees</span>
-              <span className="text-foreground">₹{(order.deliveryCharge + order.taxAmount).toLocaleString()}</span>
+              <span className="text-foreground">₹{totalFees.toLocaleString()}</span>
             </div>
             <div className="pt-3 border-t border-foreground/[0.08] flex justify-between">
               <span className="text-base font-semibold text-primary">Total amount</span>
               <span className="text-base font-bold text-foreground">₹{order.total.toLocaleString()}</span>
             </div>
+            {pointsEarnedNote && (
+              <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                <Coins className="mt-px h-3.5 w-3.5 flex-shrink-0 text-primary" aria-hidden="true" />
+                <span>{pointsEarnedNote}</span>
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Share Order Details */}
-        <div className="bg-card mt-2 px-4 py-3 border-t border-foreground/[0.06]">
+        {/* Share order details + invoice */}
+        <div className="panel tx-sheet overflow-hidden divide-y divide-foreground/[0.06]">
+        <div className="px-4 py-2">
           <button 
             onClick={() => setShowShareMenu(true)}
             className="w-full flex items-center justify-between text-sm text-foreground/80 font-medium py-2"
@@ -1178,8 +1210,7 @@ const OrderDetailsPage = () => {
           </button>
         </div>
 
-        {/* Download Invoice */}
-        <div className="bg-card px-4 py-3 border-b border-foreground/[0.06]">
+        <div className="px-4 py-2">
           <button 
             onClick={() => downloadInvoice()}
             disabled={isDownloadingInvoice}
@@ -1198,6 +1229,7 @@ const OrderDetailsPage = () => {
               <ChevronRight className="w-4 h-4 text-muted-foreground/70" />
             )}
           </button>
+        </div>
         </div>
 
       </div>
@@ -1276,9 +1308,15 @@ const OrderDetailsPage = () => {
                   <span style={{ fontSize: '12px', color: '#16a34a' }}>-₹{order.discount.toLocaleString('en-IN')}</span>
                 </div>
               )}
+              {rewardsRows.map(([label, amount]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#16a34a' }}>{label}</span>
+                  <span style={{ fontSize: '12px', color: '#16a34a' }}>-₹{amount.toLocaleString('en-IN')}</span>
+                </div>
+              ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                 <span style={{ fontSize: '12px', color: '#6b7280' }}>Total Fees</span>
-                <span style={{ fontSize: '12px', color: '#1f2937' }}>₹{(order.deliveryCharge + order.taxAmount).toLocaleString('en-IN')}</span>
+                <span style={{ fontSize: '12px', color: '#1f2937' }}>₹{totalFees.toLocaleString('en-IN')}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: '2px solid #f97316' }}>
                 <span style={{ fontSize: '14px', fontWeight: '700', color: '#f97316' }}>Total Amount</span>

@@ -17,6 +17,9 @@ import {
   Clock,
   Percent,
   IndianRupee,
+  Coins,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,6 +57,8 @@ import {
 } from '@/services/siteSettingsService';
 
 import { describeError } from '@/lib/errorMessage';
+import { getRewardSettings, saveRewardSettings } from '@/services/rewardsService';
+import { normaliseRewardSettings, type RewardSettings } from '@/lib/rewards';
 
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -799,6 +804,153 @@ const SupportTab = () => {
 };
 
 // ─── MAIN PAGE ───────────────────────────────────────────────────────────────
+// ─── REWARDS TAB ─────────────────────────────────────────────────────────────
+// Loyalty points + wallet cashback rules (src/lib/rewards.ts). Read by the
+// storefront and by api/create-order.ts + api/notify-order.ts.
+const RewardsTab = () => {
+  // Set only by a successful read. A failed one never falls back to the
+  // defaults: saving those would overwrite the shop's real settings.
+  const [s, setS] = useState<RewardSettings | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    setLoadError(null);
+    getRewardSettings()
+      .then((loaded) => {
+        if (live) setS(loaded);
+      })
+      .catch((err) => {
+        console.error(err);
+        if (live) setLoadError(describeError(err));
+      });
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
+
+  if (!s && !loadError) {
+    return (
+      <div className="py-12 grid place-items-center" role="status">
+        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
+        <span className="sr-only">Loading reward settings</span>
+      </div>
+    );
+  }
+
+  if (!s) {
+    return (
+      <Section
+        title="Loyalty points & cashback"
+        subtitle="Placeholder values until the client confirms its loyalty rules."
+        icon={Coins}
+      >
+        <div
+          role="alert"
+          className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/60 dark:bg-red-950/30 sm:flex-row sm:items-center sm:justify-between mb-5"
+        >
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-red-700 dark:text-red-400" />
+            <div>
+              <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                Could not load the reward settings
+              </p>
+              <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">{loadError}</p>
+              <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                Saving stays off until they load, so the current settings cannot be overwritten.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setAttempt((n) => n + 1)}
+            className="shrink-0 gap-1.5 self-start sm:self-auto"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Retry
+          </Button>
+        </div>
+        <Button disabled className="gap-2">
+          <Save className="w-4 h-4" />
+          Save
+        </Button>
+      </Section>
+    );
+  }
+
+  const field = (
+    key: 'pointsPer100' | 'pointValue' | 'unlockDays' | 'maxPointsPercent',
+    label: string,
+    hint: string,
+    step = 1,
+  ) => (
+    <div>
+      <Label className="text-sm">{label}</Label>
+      <Input
+        type="number"
+        step={step}
+        min={0}
+        value={s[key]}
+        onChange={(e) => setS({ ...s, [key]: Number(e.target.value) })}
+        className="mt-1"
+      />
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{hint}</p>
+    </div>
+  );
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      // What is written: out-of-range values are clamped, so show those afterwards.
+      const clean = normaliseRewardSettings(s);
+      await saveRewardSettings(clean);
+      const adjusted = (Object.keys(clean) as (keyof RewardSettings)[]).some((k) => clean[k] !== s[k]);
+      // Keep anything typed while the save was running.
+      setS((current) => (current === s ? clean : current));
+      toast.success(
+        'Reward settings saved',
+        adjusted ? { description: 'Values outside the allowed range were adjusted to fit.' } : undefined,
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error('Could not save reward settings', { description: describeError(err) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Section
+      title="Loyalty points & cashback"
+      subtitle="Placeholder values until the client confirms its loyalty rules."
+      icon={Coins}
+    >
+      <div className="flex items-center justify-between gap-4 mb-5">
+        <div>
+          <p className="text-sm font-medium text-gray-900 dark:text-white">Rewards on</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Off hides the checkout toggles and stops new points. Balances are kept.
+          </p>
+        </div>
+        <Switch checked={s.enabled} onCheckedChange={(v) => setS({ ...s, enabled: v })} />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+        {field('pointsPer100', 'Points per ₹100 spent', 'On products paid for, once the order is delivered.')}
+        {field('pointValue', 'Value of 1 point (₹)', 'What a point is worth at checkout.', 0.5)}
+        {field('unlockDays', 'Days until points unlock', 'Match the return window.')}
+        {field('maxPointsPercent', 'Max % of products payable with points', 'Wallet cashback has no cap.')}
+      </div>
+      <Button onClick={save} disabled={saving || !s} className="gap-2">
+        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+        Save
+      </Button>
+    </Section>
+  );
+};
+
 const AdminCommerceSettings = () => {
   return (
     <div className="admin-panel max-w-5xl mx-auto p-4 md:p-8">
@@ -807,7 +959,7 @@ const AdminCommerceSettings = () => {
           Commerce Settings
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Manage coupons, delivery, GST, and customer support — applied site-wide at checkout.
+          Manage delivery, GST, customer support and rewards — applied site-wide at checkout.
         </p>
       </div>
 
@@ -819,6 +971,9 @@ const AdminCommerceSettings = () => {
           <TabsTrigger value="support" className="gap-1.5">
             <HeadphonesIcon className="w-4 h-4" /> Support
           </TabsTrigger>
+          <TabsTrigger value="rewards" className="gap-1.5">
+            <Coins className="w-4 h-4" /> Rewards
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="delivery">
@@ -826,6 +981,9 @@ const AdminCommerceSettings = () => {
         </TabsContent>
         <TabsContent value="support">
           <SupportTab />
+        </TabsContent>
+        <TabsContent value="rewards">
+          <RewardsTab />
         </TabsContent>
       </Tabs>
     </div>

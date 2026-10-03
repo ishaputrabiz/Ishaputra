@@ -2,6 +2,9 @@
  * Vercel serverless function — order-scoped FCM push notifications.
  *
  * Endpoint:  POST /api/notify-order
+ *            (also { action: 'reconcile-rewards', orderId } - see reconcileRewards,
+ *             and { action: 'release-holds', razorpayOrderId? } - see releaseHolds;
+ *             they live here because the Hobby plan allows only 12 functions)
  * Auth:      Authorization: Bearer <Firebase ID token>
  * Body:
  *   {
@@ -41,6 +44,560 @@ function initAdmin() {
     throw new Error('FIREBASE_ADMIN_SDK_BASE64 is not valid base64-encoded JSON');
   }
   return admin.initializeApp({ credential: admin.credential.cert(svc) });
+}
+
+
+// ── Rewards reconcile (loyalty points + wallet cashback) ──────────────────────
+// The block below is a verbatim copy of src/lib/rewards.ts (api/ files import
+// nothing from src/). tests/rewards-parity.test.ts fails if it drifts.
+
+// >>> rewards-core
+type RewardCurrency = 'points' | 'cashback';
+type RewardKind = 'earn' | 'spend' | 'refund' | 'adjust';
+
+interface RewardSettings {
+  enabled: boolean;
+  /** Points earned per ₹100 paid for products. */
+  pointsPer100: number;
+  /** Rupee value of one point. */
+  pointValue: number;
+  /** Days after delivery before earned points can be spent (the return window). */
+  unlockDays: number;
+  /** Share of the product amount (after coupon) that points may cover, in percent. */
+  maxPointsPercent: number;
+}
+
+// TODO(client): placeholders until Ishaputra confirms its rules.
+const DEFAULT_REWARD_SETTINGS: RewardSettings = {
+  enabled: true,
+  pointsPer100: 1,
+  pointValue: 1,
+  unlockDays: 7,
+  maxPointsPercent: 20,
+};
+
+interface LedgerLike {
+  currency: RewardCurrency;
+  amount: number;
+  status: 'active' | 'void';
+  kind: RewardKind;
+  /** When earned points become spendable. Only earn entries wait; every other entry counts at once. */
+  unlockAtMs: number;
+  /** Earned points frozen while their order has a return open. */
+  held?: boolean;
+}
+
+interface RewardBalances {
+  points: { available: number; pending: number };
+  cashback: { available: number; pending: number };
+}
+
+function normaliseRewardSettings(raw: Partial<RewardSettings> | null | undefined): RewardSettings {
+  const num = (v: unknown, fallback: number, min: number, max: number) => {
+    const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+  };
+  const d = DEFAULT_REWARD_SETTINGS;
+  return {
+    enabled: raw?.enabled === undefined ? d.enabled : raw.enabled === true,
+    pointsPer100: num(raw?.pointsPer100, d.pointsPer100, 0, 100),
+    pointValue: num(raw?.pointValue, d.pointValue, 0, 100),
+    unlockDays: num(raw?.unlockDays, d.unlockDays, 0, 365),
+    maxPointsPercent: num(raw?.maxPointsPercent, d.maxPointsPercent, 0, 100),
+  };
+}
+
+/**
+ * Balances from ledger entries. Only earned points can be pending (until their
+ * unlock date, or while their order has a return open). Spends, refunds and
+ * adjustments count the moment they exist, so the browser and the server agree
+ * whatever their clocks say.
+ */
+function summariseRewards(entries: LedgerLike[], nowMs: number): RewardBalances {
+  const out: RewardBalances = {
+    points: { available: 0, pending: 0 },
+    cashback: { available: 0, pending: 0 },
+  };
+  for (const e of entries) {
+    if (e.status !== 'active') continue;
+    const bucket = out[e.currency];
+    if (!bucket) continue;
+    const amount = Number(e.amount) || 0;
+    const waiting = e.kind === 'earn' && amount > 0 && (e.held === true || e.unlockAtMs > nowMs);
+    if (waiting) bucket.pending += amount;
+    else bucket.available += amount;
+  }
+  return out;
+}
+
+interface RedemptionInput {
+  subtotal: number;
+  couponDiscount: number;
+  deliveryCharge: number;
+  gstOnTop: number;
+  balances: RewardBalances;
+  settings: RewardSettings;
+  usePoints: boolean;
+  useCashback: boolean;
+}
+
+interface Redemption {
+  points: number;
+  pointsValue: number;
+  cashback: number;
+  /** Left to pay; redemptions never take it below ₹1 (Razorpay's minimum). */
+  payable: number;
+}
+
+function computeRedemption(i: RedemptionInput): Redemption {
+  const s = i.settings;
+  const productsAfterCoupon = Math.max(0, i.subtotal - i.couponDiscount);
+  let payable = Math.max(0, productsAfterCoupon + i.deliveryCharge + i.gstOnTop);
+  let points = 0;
+  let pointsValue = 0;
+  let cashback = 0;
+  if (s.enabled && i.usePoints && s.pointValue > 0) {
+    const capRupees = Math.floor((productsAfterCoupon * s.maxPointsPercent) / 100);
+    const rupees = Math.max(0, Math.min(capRupees, Math.floor(payable - 1)));
+    const affordable = Math.floor(rupees / s.pointValue);
+    points = Math.max(0, Math.min(Math.floor(i.balances.points.available), affordable));
+    pointsValue = points * s.pointValue;
+    payable -= pointsValue;
+  }
+  if (s.enabled && i.useCashback) {
+    cashback = Math.max(0, Math.min(Math.floor(i.balances.cashback.available), Math.floor(payable - 1)));
+    payable -= cashback;
+  }
+  return { points, pointsValue, cashback, payable };
+}
+
+interface EarnBaseInput {
+  subtotal: number;
+  couponDiscount: number;
+  /** Rupee value of the points spent on the order. */
+  pointsValue: number;
+  cashback: number;
+  /** The shop's GST settings when the order was priced. */
+  gstEnabled: boolean;
+  gstInclusive: boolean;
+  gstRate: number;
+}
+
+/**
+ * Rupees paid for products, which is what points are earned on: after the
+ * coupon, points and cashback, without delivery, and without the GST that
+ * GST-inclusive prices carry. Two decimals. Worked out by api/create-order.ts
+ * and kept with the payment, so nothing the browser writes can change it.
+ */
+function earnBase(i: EarnBaseInput): number {
+  const paid = Math.max(0, i.subtotal - i.couponDiscount - i.pointsValue - i.cashback);
+  const rate = i.gstEnabled && i.gstInclusive && i.gstRate > 0 ? i.gstRate : 0;
+  return Math.floor(((paid * 100) / (100 + rate)) * 100 + 1e-6) / 100;
+}
+
+/** Points earned on a base from earnBase. */
+function pointsForBase(base: number, s: RewardSettings): number {
+  if (!s.enabled || !(base > 0)) return 0;
+  // Multiply before dividing, with a hair of tolerance: ₹820 at 15 per ₹100 is 123, not 122.
+  return Math.max(0, Math.floor((base * s.pointsPer100) / 100 + 1e-9));
+}
+
+/**
+ * A cart in a canonical form (productId:quantity, merged and sorted) so what
+ * was paid for can be compared with what was ordered. Stored as a SHA-256 hash.
+ */
+function cartKey(items: Array<{ productId?: string; quantity?: unknown }>): string {
+  const qty = new Map<string, number>();
+  for (const it of items || []) {
+    const id = String(it?.productId || '');
+    if (id) qty.set(id, (qty.get(id) || 0) + (Number(it?.quantity) || 0));
+  }
+  return [...qty.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([id, q]) => `${id}:${q}`)
+    .join('|');
+}
+// <<< rewards-core
+
+const CURRENCIES = ['points', 'cashback'] as const;
+const ENDED_STATUSES = ['cancelled', 'returned', 'refunded'];
+const DAY_MS = 86_400_000;
+const RAZORPAY_TIMEOUT_MS = 2500;
+/** Why the server voided a spend hold. verify-payment and reconcile undo only this kind. */
+const RELEASED = 'payment-not-completed';
+
+/** A return is open: earned points stay frozen until it is settled. */
+const isReturnOpen = (order: Record<string, any>) =>
+  order.status === 'returnRequested' ||
+  order.status === 'returnScheduled' ||
+  (order.status === 'picked' && !!order.returnScheduledAt);
+
+const isAlreadyExists = (err: any) => err?.code === 6 || /already exists/i.test(String(err?.message || ''));
+
+/** Create a ledger entry unless one with this id exists. Returns true when it wrote. */
+async function createOnce(ref: admin.firestore.DocumentReference, data: Record<string, unknown>): Promise<boolean> {
+  try {
+    await ref.create(data);
+    return true;
+  } catch (err) {
+    if (isAlreadyExists(err)) return false;
+    throw err;
+  }
+}
+
+const millis = (v: any): number => (typeof v?.toMillis === 'function' ? v.toMillis() : 0);
+const whole = (v: unknown) => Math.max(0, Math.floor(Number(v) || 0));
+const money = (v: unknown) => Math.max(0, Number(v) || 0);
+
+/** GET from the Razorpay API with a time limit. Throws when Razorpay cannot be asked. */
+async function razorpayGet<T>(path: string): Promise<T> {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!keyId || !keySecret) throw new Error('Razorpay keys are not configured');
+  const basic = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+  const resp = await fetch(`https://api.razorpay.com/v1/${path}`, {
+    headers: { Authorization: `Basic ${basic}` },
+    signal: AbortSignal.timeout(RAZORPAY_TIMEOUT_MS),
+  });
+  if (!resp.ok) throw new Error(`Razorpay lookup failed (HTTP ${resp.status})`);
+  return (await resp.json()) as T;
+}
+
+interface RazorpayOrder {
+  id: string;
+  status: string;
+  amount: number;
+  amount_paid: number;
+  notes?: Record<string, string>;
+}
+
+/**
+ * Where a Razorpay order's money stands:
+ *   paid     captured (or authorized, awaiting capture)
+ *   waiting  a payment was started and may still complete (e.g. a UPI request)
+ *   unpaid   nothing is on its way
+ */
+async function paymentState(rzpOrderId: string): Promise<{ state: 'paid' | 'waiting' | 'unpaid'; order: RazorpayOrder }> {
+  const order = await razorpayGet<RazorpayOrder>(`orders/${encodeURIComponent(rzpOrderId)}`);
+  if (order.status === 'paid' || Number(order.amount_paid) > 0) return { state: 'paid', order };
+  if (order.status === 'created') return { state: 'unpaid', order };
+  const { items = [] } = await razorpayGet<{ items?: Array<{ status: string }> }>(
+    `orders/${encodeURIComponent(rzpOrderId)}/payments`,
+  );
+  if (items.some((p) => p.status === 'captured' || p.status === 'authorized')) return { state: 'paid', order };
+  if (items.some((p) => p.status === 'created')) return { state: 'waiting', order };
+  return { state: 'unpaid', order };
+}
+
+interface PaymentRecord {
+  uid: string;
+  amountPaise: number;
+  base: number;
+  points: number;
+  pointsValue: number;
+  cashback: number;
+}
+
+/** payments/<rzp> from a paid Razorpay order's notes (what verify-payment writes). */
+async function writePaymentRecord(
+  db: admin.firestore.Firestore,
+  rzp: string,
+  order: RazorpayOrder,
+): Promise<PaymentRecord | null> {
+  const notes = order.notes || {};
+  if (!notes.rw_uid) return null;
+  const record = {
+    uid: String(notes.rw_uid),
+    razorpayOrderId: rzp,
+    amountPaise: whole(order.amount),
+    base: money(notes.rw_base),
+    points: whole(notes.rw_points),
+    pointsValue: money(notes.rw_pv),
+    cashback: whole(notes.rw_cashback),
+    cartHash: String(notes.rw_cart || ''),
+    status: 'verified',
+    verifiedAt: admin.firestore.Timestamp.now(),
+    source: 'reconcile',
+  };
+  await db.collection('payments').doc(rzp).set(record, { merge: true });
+  return record;
+}
+
+/**
+ * The server's record of a payment: payments/<rzp>, or Razorpay itself when
+ * verify-payment could not write it (the record is then written here). Null
+ * when the Razorpay order is not paid. Throws when Razorpay cannot be asked.
+ */
+async function loadPayment(db: admin.firestore.Firestore, rzp: string): Promise<PaymentRecord | null> {
+  const snap = await db.collection('payments').doc(rzp).get();
+  if (snap.exists) return snap.data() as PaymentRecord;
+  const { state, order } = await paymentState(rzp);
+  return state === 'paid' ? writePaymentRecord(db, rzp, order) : null;
+}
+
+const spendNote = (currency: RewardCurrency, amount: number) =>
+  currency === 'points' ? `Used ${amount} points on an order` : `Used ₹${amount} wallet cashback on an order`;
+
+/**
+ * Bring a customer's reward ledger in line with one order. Idempotent: entry
+ * ids are fixed per payment and each step moves an entry to the state the
+ * order calls for, so running it twice changes nothing.
+ *
+ * Trusts only server facts: the payment record (what was paid, by whom, which
+ * points/cashback it spent and the base points are earned on) and the order's
+ * status, which only the shop and its delivery partners can set. An order is
+ * considered only at orders/<razorpay order id> - one order per payment - so a
+ * copy of an order cannot earn or refund a second time.
+ *
+ *   spend   spend_<rzp>_<currency>  confirmed once the payment is verified
+ *   earn    earn_<rzp>              created on first delivery, unlocking
+ *                                   unlockDays later; frozen while a return is
+ *                                   open; void when the order ends; restored if
+ *                                   the shop reopens it
+ *   refund  refund_<rzp>_<currency> what the payment spent, while the order is
+ *                                   cancelled / returned / refunded; taken back
+ *                                   if it is reopened
+ */
+export async function reconcileRewards(
+  db: admin.firestore.Firestore,
+  orderId: string,
+  order: Record<string, any>,
+): Promise<{ changed: string[]; skipped?: string }> {
+  const uid = String(order.userId || '');
+  const rzp = String(order.razorpayOrderId || '');
+  if (!uid) return { changed: [], skipped: 'no_customer' };
+  if (!rzp) return { changed: [], skipped: 'not_paid_online' };
+  if (orderId !== rzp) return { changed: [], skipped: 'order_not_bound_to_payment' };
+
+  const payment = await loadPayment(db, rzp);
+  if (!payment) return { changed: [], skipped: 'payment_not_verified' };
+  if (payment.uid !== uid) return { changed: [], skipped: 'payment_belongs_to_another_customer' };
+
+  const settingsSnap = await db.collection('siteSettings').doc('rewards').get();
+  const settings = normaliseRewardSettings(
+    settingsSnap.exists ? (settingsSnap.data() as Partial<RewardSettings>) : null,
+  );
+  const ledger = db.collection('users').doc(uid).collection('rewardLedger');
+  const now = admin.firestore.Timestamp.now();
+  const status = String(order.status || '');
+  const ended = ENDED_STATUSES.includes(status);
+  const returnOpen = isReturnOpen(order);
+  const changed: string[] = [];
+  const orderUpdate: Record<string, unknown> = {};
+  // Flag the order once (rewardsLate) so the shop sees it, even if the flag is later cleared by hand.
+  const flagLate = () => {
+    if (order.rewardsLate === true) return;
+    orderUpdate.rewardsLate = true;
+    orderUpdate.needsManualReview = true;
+    orderUpdate.manualReviewReason =
+      'Points or cashback reserved for this payment were released before it completed, then spent again: the customer balance may be below zero.';
+  };
+
+  const spendRefs = { points: ledger.doc(`spend_${rzp}_points`), cashback: ledger.doc(`spend_${rzp}_cashback`) };
+  const refundRefs = { points: ledger.doc(`refund_${rzp}_points`), cashback: ledger.doc(`refund_${rzp}_cashback`) };
+  const earnRef = ledger.doc(`earn_${rzp}`);
+  const [spendP, spendC, refundP, refundC, earnSnap] = await Promise.all([
+    spendRefs.points.get(),
+    spendRefs.cashback.get(),
+    refundRefs.points.get(),
+    refundRefs.cashback.get(),
+    earnRef.get(),
+  ]);
+  const spendSnaps = { points: spendP, cashback: spendC };
+  const refundSnaps = { points: refundP, cashback: refundC };
+
+  // 1. Spends: the payment is verified, so what it reserved is final.
+  const spent: Record<RewardCurrency, number> = { points: 0, cashback: 0 };
+  for (const currency of CURRENCIES) {
+    const want = whole(currency === 'points' ? payment.points : payment.cashback);
+    const ref = spendRefs[currency];
+    const d = spendSnaps[currency].data();
+    if (!d) {
+      if (want <= 0) continue;
+      const wrote = await createOnce(ref, {
+        currency,
+        amount: -want,
+        kind: 'spend',
+        status: 'active',
+        hold: false,
+        unlockAt: now,
+        razorpayOrderId: rzp,
+        orderId,
+        note: spendNote(currency, want),
+        createdAt: now,
+        confirmedAt: now,
+        createdBy: 'server',
+      });
+      if (wrote) changed.push(ref.id);
+      spent[currency] = want;
+    } else if (d.status === 'active') {
+      if (d.hold === true) {
+        await ref.update({ hold: false, confirmedAt: now, orderId });
+        changed.push(`${ref.id}:confirm`);
+      }
+      // verify-payment already re-spent a released reservation (paid late).
+      if (d.late === true) flagLate();
+      spent[currency] = -Number(d.amount) || 0;
+    } else if (d.voidReason === RELEASED) {
+      // Released as abandoned, then paid after all: spend it after all.
+      await ref.update({ status: 'active', hold: false, late: true, confirmedAt: now, orderId });
+      changed.push(`${ref.id}:late`);
+      spent[currency] = -Number(d.amount) || 0;
+      flagLate();
+    }
+    // Voided by the shop: leave it.
+  }
+
+  // 2. Earned points.
+  const e = earnSnap.data();
+  let earn: { points: number; state: 'active' | 'held' | 'void'; unlockAt: admin.firestore.Timestamp } | null = e
+    ? {
+        points: Number(e.amount) || 0,
+        state: e.status === 'void' ? 'void' : e.held === true ? 'held' : 'active',
+        unlockAt: e.unlockAt,
+      }
+    : null;
+  const reachedCustomer = status === 'delivered' || returnOpen;
+  if (!e) {
+    if (reachedCustomer && settings.enabled) {
+      const base = Math.min(money(payment.base), money(payment.amountPaise) / 100);
+      const points = pointsForBase(base, settings);
+      if (points > 0) {
+        const unlockAt = admin.firestore.Timestamp.fromMillis(now.toMillis() + settings.unlockDays * DAY_MS);
+        const wrote = await createOnce(earnRef, {
+          currency: 'points',
+          amount: points,
+          kind: 'earn',
+          status: 'active',
+          held: returnOpen,
+          unlockAt,
+          orderId,
+          razorpayOrderId: rzp,
+          note: `Earned on order ${order.orderId || orderId}`,
+          createdAt: now,
+          createdBy: 'server',
+        });
+        if (wrote) {
+          changed.push(earnRef.id);
+          earn = { points, state: returnOpen ? 'held' : 'active', unlockAt };
+        }
+      }
+    }
+  } else if (ended) {
+    if (e.status === 'active') {
+      await earnRef.update({ status: 'void', voidedAt: now, voidedBy: 'server', voidReason: `order-${status}` });
+      changed.push(`${earnRef.id}:void`);
+      earn!.state = 'void';
+    }
+  } else if (e.status === 'void') {
+    if (e.voidedBy === 'server' && reachedCustomer) {
+      await earnRef.update({ status: 'active', held: returnOpen, restoredAt: now });
+      changed.push(`${earnRef.id}:restore`);
+      earn!.state = returnOpen ? 'held' : 'active';
+    }
+  } else {
+    // Spendable only while the order sits at delivered.
+    const held = status !== 'delivered';
+    if ((e.held === true) !== held) {
+      await earnRef.update({ held });
+      changed.push(`${earnRef.id}:${held ? 'hold' : 'release'}`);
+      earn!.state = held ? 'held' : 'active';
+    }
+  }
+
+  // 3. Refunds of what the payment spent.
+  for (const currency of CURRENCIES) {
+    const ref = refundRefs[currency];
+    const r = refundSnaps[currency].data();
+    const amount = spent[currency];
+    const label = order.orderId || orderId;
+    if (ended && amount > 0) {
+      if (!r) {
+        const wrote = await createOnce(ref, {
+          currency,
+          amount,
+          kind: 'refund',
+          status: 'active',
+          unlockAt: now,
+          orderId,
+          razorpayOrderId: rzp,
+          note:
+            currency === 'points'
+              ? `${amount} points returned: order ${label} ${status}`
+              : `₹${amount} cashback returned: order ${label} ${status}`,
+          createdAt: now,
+          createdBy: 'server',
+        });
+        if (wrote) changed.push(ref.id);
+      } else if (r.status === 'void' && r.voidedBy === 'server') {
+        await ref.update({ status: 'active', restoredAt: now });
+        changed.push(`${ref.id}:restore`);
+      }
+    } else if (!ended && r?.status === 'active' && r.createdBy === 'server') {
+      await ref.update({ status: 'void', voidedAt: now, voidedBy: 'server', voidReason: 'order-reopened' });
+      changed.push(`${ref.id}:void`);
+    }
+  }
+
+  // 4. What the order pages show. Written only when something differs.
+  if (order.paymentStatus === 'pending') {
+    orderUpdate.paymentStatus = 'paid';
+    orderUpdate.paymentVerifiedAt = now;
+  }
+  if (earn) {
+    if (order.pointsEarned !== earn.points) orderUpdate.pointsEarned = earn.points;
+    if (order.pointsEarnedState !== earn.state) orderUpdate.pointsEarnedState = earn.state;
+    if (millis(order.pointsUnlockAt) !== millis(earn.unlockAt)) orderUpdate.pointsUnlockAt = earn.unlockAt;
+  }
+  if (Object.keys(orderUpdate).length) {
+    await db.collection('orders').doc(orderId).update(orderUpdate);
+    changed.push(`order:${Object.keys(orderUpdate).join(',')}`);
+  }
+
+  return { changed };
+}
+
+/**
+ * Release points/cashback reserved by checkouts that were never paid: the
+ * customer closed the payment window (`razorpayOrderId` given), or the
+ * 30-minute hold ran out. Razorpay is asked first: a paid order's hold is
+ * confirmed instead, and one with a payment still on its way is kept.
+ */
+export async function releaseHolds(
+  db: admin.firestore.Firestore,
+  uid: string,
+  razorpayOrderId?: string,
+): Promise<{ released: string[]; confirmed: string[]; kept: string[] }> {
+  const out = { released: [] as string[], confirmed: [] as string[], kept: [] as string[] };
+  const snap = await db.collection('users').doc(uid).collection('rewardLedger').get();
+  const nowMs = Date.now();
+  const byOrder = new Map<string, admin.firestore.QueryDocumentSnapshot[]>();
+  for (const doc of snap.docs) {
+    const d = doc.data();
+    if (d.kind !== 'spend' || d.status !== 'active' || d.hold !== true) continue;
+    const rzp = String(d.razorpayOrderId || '');
+    if (!rzp) continue;
+    if (razorpayOrderId ? rzp !== razorpayOrderId : millis(d.holdUntil) > nowMs) continue;
+    byOrder.set(rzp, [...(byOrder.get(rzp) || []), doc]);
+  }
+  for (const [rzp, docs] of byOrder) {
+    const { state, order } = await paymentState(rzp);
+    const now = admin.firestore.Timestamp.now();
+    if (state === 'paid') {
+      const record = await db.collection('payments').doc(rzp).get();
+      if (!record.exists) await writePaymentRecord(db, rzp, order);
+      await Promise.all(docs.map((d) => d.ref.update({ hold: false, confirmedAt: now })));
+      out.confirmed.push(rzp);
+    } else if (state === 'waiting') {
+      out.kept.push(rzp);
+    } else {
+      await Promise.all(
+        docs.map((d) => d.ref.update({ status: 'void', voidedAt: now, voidedBy: 'server', voidReason: RELEASED })),
+      );
+      out.released.push(rzp);
+    }
+  }
+  return out;
 }
 
 function setCors(res: VercelResponse) {
@@ -89,7 +646,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!idToken) return res.status(401).json({ error: 'Missing Authorization bearer token' });
 
   const body = (req.body || {}) as {
+    /**
+     * 'reconcile-rewards': sync this order's payment and points/cashback instead of sending a push.
+     * 'release-holds': free points/cashback reserved by unpaid checkouts (no orderId needed).
+     */
+    action?: string;
     orderId?: string;
+    /** release-holds: only this checkout's hold (the customer closed the payment window). */
+    razorpayOrderId?: string;
+    /** release-holds, admins only: whose holds to release (default: the caller's). */
+    uid?: string;
     audience?: 'customer' | 'admins' | 'delivery';
     title?: string;
     body?: string;
@@ -102,11 +668,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const title = String(body.title || '').trim();
   const message = String(body.body || '').trim();
 
-  if (!orderId) return res.status(400).json({ error: 'orderId is required' });
-  if (!audience || !['customer', 'admins', 'delivery'].includes(audience)) {
-    return res.status(400).json({ error: 'audience must be customer|admins|delivery' });
+  const isReconcile = body.action === 'reconcile-rewards';
+  const isRelease = body.action === 'release-holds';
+  if (!orderId && !isRelease) return res.status(400).json({ error: 'orderId is required' });
+  if (!isReconcile && !isRelease) {
+    if (!audience || !['customer', 'admins', 'delivery'].includes(audience)) {
+      return res.status(400).json({ error: 'audience must be customer|admins|delivery' });
+    }
+    if (!title || !message) return res.status(400).json({ error: 'title and body are required' });
   }
-  if (!title || !message) return res.status(400).json({ error: 'title and body are required' });
 
   let app;
   try {
@@ -126,20 +696,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'Invalid ID token' });
   }
 
+  const callerProfileSnap = await db.collection('users').doc(callerUid).get();
+  const isAdmin = callerProfileSnap.data()?.role === 'admin';
+
+  if (isRelease) {
+    const uid = isAdmin && body.uid ? String(body.uid) : callerUid;
+    const rzp = body.razorpayOrderId ? String(body.razorpayOrderId) : undefined;
+    try {
+      return res.status(200).json({ ok: true, ...(await releaseHolds(db, uid, rzp)) });
+    } catch (err: any) {
+      // Holds stay in place until Razorpay can confirm the payment never happened.
+      return res.status(503).json({ error: 'Could not check the payment with Razorpay', detail: err?.message || String(err) });
+    }
+  }
+
   const orderSnap = await db.collection('orders').doc(orderId).get();
   if (!orderSnap.exists) return res.status(404).json({ error: 'Order not found' });
   const order = orderSnap.data() as Record<string, any>;
 
   // Authorise the caller against this order.
-  const callerProfileSnap = await db.collection('users').doc(callerUid).get();
-  const callerRole = callerProfileSnap.data()?.role;
-  const isAdmin = callerRole === 'admin';
   const isOwner = order.userId === callerUid;
   const isAssignedDelivery =
     order.delivery_partner_id === callerUid || order.delivery_boy_id === callerUid;
 
   if (!isAdmin && !isOwner && !isAssignedDelivery) {
     return res.status(403).json({ error: 'Not authorised for this order' });
+  }
+
+  if (isReconcile) {
+    try {
+      const result = await reconcileRewards(db, orderId, order);
+      return res.status(200).json({ ok: true, ...result });
+    } catch (err: any) {
+      // Usually Razorpay could not be asked whether the order was paid; nothing was guessed.
+      return res.status(503).json({ error: 'Could not check this payment right now', detail: err?.message || String(err) });
+    }
   }
 
   // Resolve recipient tokens.

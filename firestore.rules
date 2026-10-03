@@ -74,36 +74,46 @@ service cloud.firestore {
         allow write: if isAdmin();
       }
 
-      // --- WALLET (subcollection) ---
-      // Balance is READ-ONLY for clients. Only server/admin can modify.
-      // In production, replace client writes with Cloud Functions.
+      // --- LEGACY WALLET (unused) ---
+      // Admin-only writes: the old rules let a customer create and update their
+      // own balance, transactions and rewards.
       match /wallets/{walletId} {
         allow read: if isOwner(userId) || isAdmin();
-        // Allow create for wallet initialization
-        allow create: if isOwner(userId) || isAdmin();
-        // Users can update their own wallet (for client-side atomic transactions)
-        // In production: restrict to Cloud Functions only
-        allow update: if isOwner(userId) || isAdmin();
-        allow delete: if false; // NEVER delete wallets
+        allow create, update: if isAdmin();
+        allow delete: if false;
       }
-      
-      // --- TRANSACTIONS (append-only ledger) ---
       match /transactions/{txId} {
         allow read: if isOwner(userId) || isAdmin();
-        // Transactions can be created but NEVER edited or deleted
-        allow create: if isOwner(userId) || isAdmin();
-        allow update: if isAdmin(); // Only admin can update status (e.g., expire)
-        allow delete: if false; // Immutable transaction log
+        allow create, update: if isAdmin();
+        allow delete: if false;
       }
-      
-      // --- REWARDS ---
       match /rewards/{rewardId} {
         allow read: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId) || isAdmin();
-        allow update: if isOwner(userId) || isAdmin(); // For redemption
-        allow delete: if false; // Never delete reward entries
+        allow create, update: if isAdmin();
+        allow delete: if false;
       }
-      
+
+      // --- REWARD LEDGER (loyalty points + wallet cashback) ---
+      // Balance = sum of active entries (src/lib/rewards.ts). Customers only
+      // read. Admins add entries and may void one; the payment functions write
+      // through the Admin SDK. Entries are never otherwise edited or deleted.
+      match /rewardLedger/{entryId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isAdmin();
+        allow update: if isAdmin()
+          && resource.data.status == 'active'
+          && request.resource.data.status == 'void'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'voidedAt', 'voidedBy']);
+        allow delete: if false;
+      }
+
+      // --- REWARD STATE (server-only) ---
+      // The lock document api/create-order.ts writes in the same transaction as
+      // a points/cashback reservation, so two checkouts cannot spend one balance.
+      match /rewardState/{docId} {
+        allow read, write: if false;
+      }
+
       // --- PAYMENT METHODS (Razorpay ready) ---
       match /paymentMethods/{methodId} {
         allow read: if isOwner(userId) || isAdmin();
@@ -387,9 +397,47 @@ service cloud.firestore {
       function isValidOTPUpdate() {
         let newStatus = request.resource.data.status;
         // Only allow OTP to be cleared (set to null) when status becomes 'delivered'
-        return newStatus == 'delivered' ? 
+        return newStatus == 'delivered' ?
           (request.resource.data.delivery_otp == null && request.resource.data.otp_verified == true) :
           true;
+      }
+
+      // Helper: a delivery partner's status step touches only delivery fields,
+      // never the total, the customer or the payment.
+      function deliveryFieldsOnly() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'updatedAt', 'lastUpdated', 'statusHistory',
+          'pickedAt', 'outForDeliveryAt', 'deliveredAt',
+          'delivery_otp', 'otp_verified', 'otp_generated_at'
+        ]);
+      }
+
+      // Helper: a payment the server verified (api/verify-payment.ts writes
+      // payments/<razorpay order id>) and bound to this customer.
+      function isVerifiedPaymentForCaller() {
+        let payment = /databases/$(database)/documents/payments/$(orderId);
+        return exists(payment) && get(payment).data.uid == request.auth.uid;
+      }
+
+      // Helper: what a customer may create. One order per payment: an online
+      // order lives at orders/<razorpay order id>, and may say it is paid only
+      // when the server has a verified payment for that id in the customer's
+      // name. It starts as a new order; the fields the shop, the delivery
+      // partner and the server set later cannot be written up front.
+      function isValidOrderCreate() {
+        let d = request.resource.data;
+        return d.userId == request.auth.uid
+          && d.get('status', '') == 'pending'
+          && d.get('razorpayOrderId', orderId) == orderId
+          && (d.get('paymentStatus', 'pending') != 'paid' || isVerifiedPaymentForCaller())
+          && !d.keys().hasAny([
+            'deliveredAt', 'pickedAt', 'outForDeliveryAt', 'returnedAt',
+            'delivery_boy_id', 'delivery_boy_name', 'delivery_partner_id', 'delivery_partner_name', 'deliveryBoyId',
+            'delivery_otp', 'otp_verified', 'cancelledAt', 'cancelledBy',
+            'returnStatus', 'returnRequestedAt', 'returnApprovedAt', 'returnScheduledAt', 'returnCancelled',
+            'pointsEarned', 'pointsEarnedState', 'pointsUnlockAt', 'paymentVerifiedAt',
+            'refundReceiptUrl', 'paymentCollectedAt', 'paymentCollectedBy'
+          ]);
       }
       
       // Helper: Check if customer is cancelling their own order
@@ -408,11 +456,37 @@ service cloud.firestore {
                ]);
       }
       
-      // Helper: Check if customer is requesting a return for a delivered order
+      // Helper: Check if customer is requesting a return for a delivered order.
+      // The fields list keeps a return request from also rewriting the
+      // customer, the payment or the delivery date; a cancelled return cannot
+      // be requested again. Returns close 7 days after delivery, the same
+      // window as src/lib/returnWindow.ts (earned points unlock after it), and
+      // an order with no delivery time is refused; the shop can still record a
+      // return for it from the admin panel.
       function isValidReturnRequest() {
         let currentStatus = resource.data.status;
         let newStatus = request.resource.data.status;
-        return currentStatus == 'delivered' && newStatus == 'returnRequested';
+        let deliveredAt = resource.data.get('deliveredAt', null);
+        return currentStatus == 'delivered' && newStatus == 'returnRequested'
+          && resource.data.get('returnCancelled', false) != true
+          && deliveredAt is timestamp
+          && request.time < deliveredAt + duration.value(7, 'd')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'returnReason', 'returnRequestedAt', 'returnStatus',
+            'updatedAt', 'lastUpdated', 'statusHistory'
+          ]);
+      }
+
+      // Helper: the customer withdraws their own return request (once), which
+      // puts the order back to delivered.
+      function isValidReturnCancel() {
+        return resource.data.status == 'returnRequested'
+          && request.resource.data.status == 'delivered'
+          && request.resource.data.returnCancelled == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'returnCancelled', 'returnCancelledAt', 'return_otp', 'return_otp_verified',
+            'updatedAt', 'lastUpdated', 'statusHistory'
+          ]);
       }
 
       // Helper: Assigned delivery partner can mark COD payment as collected
@@ -439,20 +513,20 @@ service cloud.firestore {
       allow read: if isAuthenticated() && 
         (resource == null || isOrderOwner() || isAssignedDeliveryBoy() || isAdmin());
       
-      // CREATE: Only authenticated users can create their own orders
-      allow create: if isAuthenticated() && 
-        request.resource.data.userId == request.auth.uid;
-        
+      // CREATE: customers create their own new orders (see isValidOrderCreate)
+      allow create: if (isAuthenticated() && isValidOrderCreate()) || isAdmin();
+
       // UPDATE: Complex rules for different roles
       // - Admin can update anything
       // - Customers can cancel their own orders (pending/processing only)
-      // - Customers can request returns for delivered orders
+      // - Customers can request returns for delivered orders, and withdraw the request
       // - Delivery boys can only update their assigned orders with valid status transitions
-      allow update: if isAdmin() || 
+      allow update: if isAdmin() ||
         (isOrderOwner() && isValidCancellation()) ||
         (isOrderOwner() && isValidReturnRequest()) ||
+        (isOrderOwner() && isValidReturnCancel()) ||
         (isAssignedDeliveryBoy() && isValidCodPaymentCollectionUpdate()) ||
-        (isAssignedDeliveryBoy() && isValidStatusTransition() && isValidOTPUpdate());
+        (isAssignedDeliveryBoy() && isValidStatusTransition() && isValidOTPUpdate() && deliveryFieldsOnly());
       
       // DELETE: Only admin can delete orders
       allow delete: if isAdmin();
@@ -482,6 +556,17 @@ service cloud.firestore {
 
         allow update, delete: if isAdmin();
       }
+    }
+
+    // --- VERIFIED PAYMENTS (server-only) ---
+    // payments/<razorpay order id>, written with the Admin SDK by
+    // api/verify-payment.ts once Razorpay's signature checks out (or by the
+    // reconcile action after asking Razorpay): who paid, how much, the cart
+    // hash and the points/cashback spent. The orders create rule needs it to
+    // accept an order marked paid; the admin order page compares against it.
+    match /payments/{razorpayOrderId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
+      allow write: if false;
     }
 
     // --- USER FCM TOKENS (web push) ---

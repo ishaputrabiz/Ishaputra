@@ -4,9 +4,10 @@
  * Centralises PDF invoice generation for customer order downloads.
  * Consumes the pricing snapshot stored on each Order document
  * (subtotal, taxAmount, gstRate, gstInclusive, deliveryCharge, codCharge,
- * couponDiscount, total) so the generated invoice always reflects what the
- * customer actually paid — even if product prices, GST rates, or coupon
- * definitions change after the order was placed.
+ * couponDiscount, pointsUsed, pointsValue, cashbackUsed, total) so the
+ * generated invoice always reflects what the customer actually paid — even if
+ * product prices, GST rates, or coupon definitions change after the order was
+ * placed.
  */
 
 import jsPDF from 'jspdf';
@@ -43,8 +44,8 @@ const formatDate = (input: DateInput): string => {
   if (!input) return '';
   const d: Date = input instanceof Date
     ? input
-    : input?.seconds
-      ? new Date(input.seconds * 1000)
+    : typeof input === 'object'
+      ? new Date(input.seconds ? input.seconds * 1000 : NaN)
       : new Date(input);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString('en-IN', {
@@ -138,7 +139,11 @@ interface PricingBreakdown {
   deliveryCharge: number;
   codCharge: number;
   couponDiscount: number;
-  total: number;             // grand total payable
+  total: number;             // grand total: goods and charges, before points/cashback
+  pointsUsed: number;        // loyalty points spent (a count)
+  pointsValue: number;       // rupee value of those points
+  cashbackUsed: number;      // wallet cashback spent, in rupees
+  amountPaid: number;        // what the customer paid (order.total)
   isIntraState: boolean;
 }
 
@@ -148,15 +153,29 @@ const buildPricing = (order: Order): PricingBreakdown => {
   const deliveryCharge = order.deliveryCharge || 0;
   const codCharge = order.codCharge || 0;
   const couponDiscount = order.couponDiscount || 0;
-  const total = order.total;
+
+  // order.total is what was left to pay after loyalty points and wallet
+  // cashback. The invoice values the goods and charges as priced (Grand Total)
+  // and lists points and cashback under it as part of the payment. Orders saved
+  // before pointsValue existed used 1 point = Rs 1.
+  const pointsUsed = Math.max(0, Number(order.pointsUsed) || 0);
+  const pointsValue = Math.max(0, typeof order.pointsValue === 'number' ? order.pointsValue : pointsUsed);
+  const cashbackUsed = Math.max(0, Number(order.cashbackUsed) || 0);
+  const amountPaid = order.total;
+  const rewardsPaid = pointsValue + cashbackUsed;
+  // Rounded to paise so float noise never reaches the amount in words.
+  const total = rewardsPaid > 0 ? Math.round((amountPaid + rewardsPaid) * 100) / 100 : amountPaid;
 
   // The order document already stores taxAmount and subtotal as a snapshot —
   // trust them rather than recomputing, so the invoice always matches what
   // the customer paid even if pricing logic changes later.
   const subtotal = order.subtotal;
   const taxAmount = order.taxAmount || 0;
+  // GST-inclusive prices carry the tax inside the goods, so the taxable value
+  // comes from the goods after the coupon - never from the total, which points
+  // and cashback lower.
   const taxableValue = gstInclusive
-    ? Math.max(0, total - deliveryCharge - codCharge - taxAmount)
+    ? Math.max(0, subtotal - (order.couponDiscount || order.discount || 0) - taxAmount)
     : Math.max(0, subtotal - couponDiscount);
 
   const isIntraState =
@@ -173,6 +192,10 @@ const buildPricing = (order: Order): PricingBreakdown => {
     codCharge,
     couponDiscount,
     total,
+    pointsUsed,
+    pointsValue,
+    cashbackUsed,
+    amountPaid,
     isIntraState,
   };
 };
@@ -343,20 +366,50 @@ export const generateInvoicePDF = async (order: Order): Promise<void> => {
     }
   }
 
+  // Points and wallet cashback paid part of the Grand Total: listed under it,
+  // then the amount actually paid, so the invoice adds up to the payment.
+  const paidWithLines: Array<[string, string]> = [];
+  if (pricing.pointsValue > 0) {
+    const count = pricing.pointsUsed > 0 ? ` (${pricing.pointsUsed.toLocaleString('en-IN')})` : '';
+    paidWithLines.push([`Paid with points${count}`, `- ${formatINR(pricing.pointsValue)}`]);
+  }
+  if (pricing.cashbackUsed > 0) {
+    paidWithLines.push(['Paid with wallet cashback', `- ${formatINR(pricing.cashbackUsed)}`]);
+  }
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  const words = amountInWords(pricing.total);
+  const wordsLines = doc.splitTextToSize(words, pageWidth - margin * 2);
+
+  // Keep the totals, amount in words and signature together: start a new page
+  // when they would run into the footer.
+  const blockHeight =
+    totalsLines.length * 6 + 18 +
+    (paidWithLines.length ? paidWithLines.length * 6 + 18 : 0) +
+    5 + wordsLines.length * 4 + 8 + 25;
+  if (y + blockHeight > pageHeight - 20) {
+    doc.addPage();
+    y = margin;
+  }
+
   const totalsX = pageWidth - margin - 80;
   const totalsW = 80;
-  doc.setFontSize(9);
-  totalsLines.forEach(([label, value], idx) => {
-    const ry = y + idx * 6;
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(70, 70, 70);
-    doc.text(label, totalsX, ry);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(20, 20, 20);
-    doc.text(value, totalsX + totalsW, ry, { align: 'right' });
-  });
+  const drawTotalsRows = (lines: Array<[string, string]>) => {
+    doc.setFontSize(9);
+    lines.forEach(([label, value], idx) => {
+      const ry = y + idx * 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(70, 70, 70);
+      doc.text(label, totalsX, ry);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(20, 20, 20);
+      doc.text(value, totalsX + totalsW, ry, { align: 'right' });
+    });
+    y += lines.length * 6 + 2;
+  };
 
-  y += totalsLines.length * 6 + 2;
+  drawTotalsRows(totalsLines);
 
   // Grand total band
   doc.setFillColor(30, 30, 30);
@@ -368,17 +421,30 @@ export const generateInvoicePDF = async (order: Order): Promise<void> => {
   doc.text(formatINR(pricing.total), totalsX + totalsW, y + 6.5, { align: 'right' });
   y += 16;
 
+  // Amount paid band (only when points or cashback paid part of it)
+  if (paidWithLines.length) {
+    drawTotalsRows(paidWithLines);
+    doc.setDrawColor(220, 220, 220);
+    doc.setFillColor(250, 250, 250);
+    doc.rect(totalsX - 2, y, totalsW + 2, 10, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(20, 20, 20);
+    doc.text('Amount paid', totalsX, y + 6.5);
+    doc.text(formatINR(pricing.amountPaid), totalsX + totalsW, y + 6.5, { align: 'right' });
+    y += 16;
+  }
+
   // ---------------- Amount in words ---------------------------------------
+  // The words state the Grand Total; say so when an Amount paid line sits above.
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(20, 20, 20);
-  doc.text('Amount in Words:', margin, y);
+  doc.text(paidWithLines.length ? 'Grand Total in Words:' : 'Amount in Words:', margin, y);
   y += 5;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(60, 60, 60);
-  const words = amountInWords(pricing.total);
-  const wordsLines = doc.splitTextToSize(words, pageWidth - margin * 2);
   doc.text(wordsLines, margin, y);
   y += wordsLines.length * 4 + 8;
 

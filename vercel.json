@@ -1,6 +1,17 @@
 {
   "installCommand": "npm install",
   "buildCommand": "npm run build",
+  "functions": {
+    "api/create-order.ts": {
+      "maxDuration": 20
+    },
+    "api/verify-payment.ts": {
+      "maxDuration": 20
+    },
+    "api/notify-order.ts": {
+      "maxDuration": 20
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",

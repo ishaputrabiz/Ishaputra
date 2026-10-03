@@ -18,6 +18,7 @@ import {
   takeRememberedCouponCode,
   type Coupon,
 } from '@/services/couponService';
+import { computeRedemption, type RewardBalances, type RewardSettings } from '@/lib/rewards';
 import { getActiveProductsCached } from '@/services/productCache';
 
 export interface CheckoutPricing {
@@ -35,7 +36,16 @@ export interface CheckoutPricing {
   gstAddOnTop: boolean;
   discount: number;
   codCharge: number;
+  /** What is left to pay after coupon, points and cashback. */
   total: number;
+  /** The total before points/cashback (after the coupon). */
+  totalBeforeRewards: number;
+  /** Loyalty points spent on this order (0 unless opted in). */
+  pointsApplied: number;
+  /** Rupee value of pointsApplied. */
+  pointsValue: number;
+  /** Wallet cashback in rupees spent on this order (0 unless opted in). */
+  cashbackApplied: number;
   appliedCoupon: Coupon | null;
   couponError: string | null;
   /**
@@ -72,6 +82,17 @@ export interface CheckoutPricingOptions {
    * the remembered code would leave nothing for checkout to apply.
    */
   applyRememberedCode?: boolean;
+  /**
+   * Loyalty points / wallet cashback the customer opted to spend. Priced with
+   * the same rules api/create-order.ts applies, so the total shown is the
+   * amount charged.
+   */
+  rewards?: {
+    balances: RewardBalances;
+    settings: RewardSettings;
+    usePoints: boolean;
+    useCashback: boolean;
+  };
 }
 
 /**
@@ -88,7 +109,7 @@ export function useCheckoutPricing(
   paymentMethod: string,
   options: CheckoutPricingOptions = {}
 ): CheckoutPricing {
-  const { productIds, destinationState, cartCategories, userId, applyRememberedCode } = options;
+  const { productIds, destinationState, cartCategories, userId, applyRememberedCode, rewards } = options;
 
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [delivery, setDelivery] = useState<DeliverySettings>(DEFAULT_DELIVERY);
@@ -240,6 +261,10 @@ export function useCheckoutPricing(
         gstAddOnTop: false,
         codCharge: 0,
         total: 0,
+        totalBeforeRewards: 0,
+        pointsApplied: 0,
+        pointsValue: 0,
+        cashbackApplied: 0,
       };
     }
     const { charge: deliveryCharge, freeDelivery } = computeDeliveryCharge(
@@ -261,6 +286,19 @@ export function useCheckoutPricing(
     // the label but still added GST to the total.
     const { gstAmount, addOnTop } = computeGst(subtotal, gst);
     const total = subtotal + deliveryCharge + (addOnTop ? gstAmount : 0) - appliedDiscount;
+    const beforeRewards = Math.max(0, total);
+    const r = rewards
+      ? computeRedemption({
+          subtotal,
+          couponDiscount: appliedDiscount,
+          deliveryCharge,
+          gstOnTop: addOnTop ? gstAmount : 0,
+          balances: rewards.balances,
+          settings: rewards.settings,
+          usePoints: rewards.usePoints,
+          useCashback: rewards.useCashback,
+        })
+      : null;
     return {
       deliveryCharge,
       freeDelivery,
@@ -269,9 +307,25 @@ export function useCheckoutPricing(
       gstAmount,
       gstAddOnTop: addOnTop,
       codCharge: 0,
-      total: Math.max(0, total),
+      total: r ? r.payable : beforeRewards,
+      totalBeforeRewards: beforeRewards,
+      pointsApplied: r?.points ?? 0,
+      pointsValue: r?.pointsValue ?? 0,
+      cashbackApplied: r?.cashback ?? 0,
     };
-  }, [subtotal, isEmpty, delivery, gst, appliedDiscount, deliveryItems, destinationState]);
+  }, [
+    subtotal,
+    isEmpty,
+    delivery,
+    gst,
+    appliedDiscount,
+    deliveryItems,
+    destinationState,
+    rewards?.balances,
+    rewards?.settings,
+    rewards?.usePoints,
+    rewards?.useCashback,
+  ]);
 
   const applyCoupon = async (code: string) => {
     setCouponLoading(true);

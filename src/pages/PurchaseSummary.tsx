@@ -19,6 +19,7 @@ import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore
 import { db } from '@/config/firebase';
 import { SmartImage } from "@/components/ui/smart-image";
 import { BRAND } from '@/config/brand';
+import { RewardsWalletCard } from '@/components/rewards/RewardsWalletCard';
 
 const HEADING = { fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" };
 
@@ -113,11 +114,11 @@ const PurchaseSummary: React.FC = () => {
           
           // Count only delivered orders for total spent
           if (status === 'delivered') {
-            totalSpent += order.totalAmount || 0;
+            totalSpent += Number(order.total) || 0;
             deliveredCount++;
           } else if (status === 'cancelled') {
             cancelledCount++;
-          } else if (['pending', 'processing', 'packed', 'shipped', 'assigned', 'outForDelivery', 'picked', 'confirmed'].includes(status || '')) {
+          } else if (['pending', 'processing', 'packed', 'shipped', 'assigned', 'outfordelivery', 'picked', 'confirmed'].includes(status || '')) {
             pendingCount++;
           }
         });
@@ -362,6 +363,9 @@ const PurchaseSummary: React.FC = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* ─── POINTS & CASHBACK ──────────────────── */}
+        <RewardsWalletCard uid={user.uid} />
 
         {/* ─── TOTAL SPENT CARD ──────────────────── */}
         <motion.div

@@ -1,0 +1,195 @@
+confirmed 27 rejected 0
+
+#1 [critical] A customer-created order with status 'delivered' earns unlimited points that are spendable at once
+  file: api/notify-order.ts:266
+  what: 
+  scenario: A signed-in customer runs addDoc(collection(db,'orders'), {userId: <own uid>, status: 'delivered', total: 10000000, deliveredAt: Timestamp.fromMillis(0)}). The orders create rule (firestore.rules:446-447) checks only userId, so it accepts this. The customer then POSTs /api/notify-order with their own Bearer token and {action:'reconcile-rewards', orderId:<new id>}. The handler accepts the caller as the order owner (notify-order.ts:424-430). reconcileRewards takes order.status, order.total and order.deliveredAt as given (lines 225, 266-276) and creates earn_<id> = 100,000 points with unlockAt 19
+  fix: 
+  verdict: Each step holds. 1) firestore.rules:446-447: the orders create rule checks only request.resource.data.userId == auth.uid. Status, total and deliveredAt are not checked, so {userId, status:'delivered', total:1e7, deliveredAt:Timestamp(0)} is accepted. 2) api/notify-order.ts:389-396: the reconcile action needs only orderId. Lines 416-430 authorise the caller when order.userId === callerUid, and line
+
+#2 [critical] Refund ids use the Firestore order id but the amount comes from spend_<razorpayOrderId>, so one spend can be refunded any number of times
+  file: api/notify-order.ts:305
+  what: 
+  scenario: A customer with ₹500 wallet cashback checks out with 'Use wallet ₹500' and pays the rest. verify-payment writes spend_<R1>_cashback = -500, and the order is delivered and kept. The customer then repeats two steps: addDoc(orders, {userId: own uid, status: 'cancelled', razorpayOrderId: R1}), which the create rule allows, then POST /api/notify-order {action:'reconcile-rewards', orderId}. Each time, reconcileRewards reads the spend from spend_R1_* (lines 230-238), sees an ended status, and creates refund_<newDocId>_cashback = +500, unlocked now (lines 302-321). Simulated: three fake docs left ₹1,5
+  fix: 
+  verdict: notify-order.ts:230-238 reads the spend amounts from spend_<order.razorpayOrderId>_*, but 302-321 writes the refund as refund_<orderId>_<currency> (305), unlocked now. Nothing ties the spend to this order doc: verify-payment's spend entries (verify-payment.ts:78-88) carry no orderId, and reconcile never compares one. The create rule (firestore.rules:446-447) accepts {userId, status:'cancelled', ra
+
+#3 [high] Spent points and cashback are debited only if the browser calls verify-payment or the order doc carries the right razorpayOrderId
+  file: api/create-order.ts:553
+  what: 
+  scenario: A customer with ₹500 cashback calls /api/create-order with useCashback:true. They get Razorpay order R, charged ₹500 less, with notes rw_cashback=500. They pay R in Razorpay Checkout but block the POST to /api/verify-payment. They then write the order doc directly with razorpayPaymentId=<the real payment>, total=<reduced amount>, cashbackUsed 500 and paymentStatus 'paid'. The doc has either no razorpayOrderId or the id of a decoy Razorpay order made through create-order without rewards. No server path ever writes spend_R_cashback: verify-payment never ran, and reconcile, including the admin 'R
+  fix: 
+  verdict: Only two paths write spend entries. One is verify-payment.ts:47-93, which the browser calls from the Checkout handler (razorpayService.ts:204-216, 271-275). The other is reconcile, and only when order.razorpayOrderId names that Razorpay order (notify-order.ts:230-262). There is no webhook in api/. create-order.ts:539-554 lowers the charged amount and records the redemption only in the Razorpay not
+
+#4 [high] On real orders, the points earned and their unlock time come from customer-written fields; taxAmount and deliveryCharge may be negative, and a preset deliveredAt is kept
+  file: api/notify-order.ts:267
+  what: 
+  scenario: During a real ₹1,000 checkout, the customer adds taxAmount: -999000, gstInclusive: false and deliveredAt: Timestamp(2020-01-01) to the order doc that createOrder writes from the browser (orderService.ts:696-702; the create rule accepts any fields). The total stays ₹1,000 and matches the Razorpay payment. The admin pricing breakdown shows the GST line only when taxAmount > 0 (AdminOrderDetails.tsx:608), so the negative tax never appears. Because DELIVERY_PARTNERS_ENABLED is false, the admin marks the order Delivered through updateOrderStatus, which keeps an existing deliveredAt (orderService.ts
+  fix: 
+  verdict: The order doc is written from the browser (orderService.ts:696-702) and the create rule accepts any fields. reconcile computes points from order.total, deliveryCharge, taxAmount and gstInclusive (notify-order.ts:267; rewards.ts:123-125, where neither deduction is clamped) and the unlock from order.deliveredAt (269-276). updateOrderStatus keeps a preset deliveredAt (orderService.ts:1029-1032). DELI
+
+#5 [medium] The return-request rule allows any field to change, so a customer can avoid the earn void (by changing userId) or redirect a refund (by changing razorpayOrderId)
+  file: firestore.rules:415
+  what: 
+  scenario: Real order O is delivered to customer A, and earn_O (pending for 7 days) is in users/A/rewardLedger. A updates O directly: {status:'returnRequested', returnReason:'x', userId:'<uid of A's second account>'}. This is allowed because isValidReturnRequest checks only the from/to status, while isValidCancellation has a field list. When the admin completes the return (status 'returned'), reconcile reads order.userId and looks for earn_O and the spend entries in the other user's ledger (notify-order.ts:216-223, 291). A's pending earn is never voided and unlocks: A gets the money back and keeps the po
+  fix: 
+  verdict: isValidReturnRequest (firestore.rules:415-419) checks only delivered -> returnRequested. At line 456 it is paired with isOrderOwner (373-375), which reads the OLD resource.data.userId. There is no affectedKeys limit, unlike isValidCancellation (405-411), so the owner can rewrite userId or razorpayOrderId in the same write. reconcile takes the uid from order.userId (216, 223) and the spends from or
+
+#6 [medium] Points earned on an order are kept if its return finishes after the unlock date
+  file: api/notify-order.ts:297
+  what: 
+  scenario: An order is delivered on day 0, and earn_O = 100 points unlocks on day 7 (default unlockDays). The customer requests a return on day 5, inside the 7-day window. requestReturn (orderService.ts:2036-2051) does not call reconcile, and nothing holds the earn back, so the 100 points become available and spendable on day 7 while the return is still open. The admin completes the return on day 9, which triggers reconcile. The earn is voided only if unlockAt > now (lines 293-299), so it stays active. Simulated: delivered 9 days ago, status set to 'returned': reconcile returned changed: [] and 100 point
+  fix: 
+  verdict: notify-order.ts:293-299 voids the earn only if unlockAt > now when the ended-status reconcile runs. requestReturn (orderService.ts:1997-2070) does not call reconcile, and reconcile does nothing for returnRequested. Returns may be requested up to 168h after delivery (orderService.ts:2028), which equals the default unlockDays of 7. A request late in the window therefore almost always completes after
+
+#7 [low] If verify-payment writes only one of the two spend entries, reconcile never adds the other
+  file: api/notify-order.ts:239
+  what: 
+  scenario: A payment uses 100 points and ₹300 cashback. verify-payment creates spend_R_points, then the spend_R_cashback create fails with a temporary error; it writes the two entries one after the other (verify-payment.ts:74-92), so the response carries rewardsPending. Checkout's reconcile, and every one after it, sees p.exists and skips the notes lookup, because the repair runs only when BOTH entries are missing (line 239). The same happens if reconcile's own loop fails between its two createOnce calls. Simulated: after two reconciles the ledger held only the points spend, and ₹300 cashback was still a
+  fix: 
+  verdict: verify-payment.ts:74-92 writes the points entry and then the cashback entry, one after the other. Any error other than ALREADY_EXISTS on the second one is thrown and caught at 130-134, which returns rewardsPending. reconcile consults the notes only when BOTH entries are missing (notify-order.ts:239), so once spend_R_points exists, spend_R_cashback is never created. The same happens if reconcile's 
+
+#8 [low] Refund entries remain when a cancelled order is reopened and delivered
+  file: api/notify-order.ts:290
+  what: 
+  scenario: A customer pays for an order with ₹300 cashback and cancels it while pending, which creates refund_O_cashback = +300. The customer asks the shop to reinstate it. The admin uses the Orders list dropdown, which accepts any status change (AdminOrders.tsx:121-129 and 563-578 call updateOrderStatus with no transition check), and moves O to processing, then to delivered. reconcile only adds refunds for ended statuses and never takes them back (lines 289-323). The customer receives the order at the discounted price and also has the ₹300 back. Simulated: ₹300 cashback available, the refund entry still
+  fix: 
+  verdict: reconcile creates refunds only for ended statuses (notify-order.ts:290-323) and never voids them. The list page is src/pages/AdminOrders.tsx, not src/pages/admin/. Its handleStatusChange (121-129) calls updateOrderStatus with no isValidStatusTransition check, and its dropdown (563-578) offers every status, so cancelled -> processing -> delivered is possible. AdminOrderDetails does guard this at li
+
+#9 [critical] No balance reservation at create-order: parallel orders (or two tabs) each redeem the full balance, so a customer gets K× their points/cashback in discount and the ledger goes arbitrarily negative
+  file: api/create-order.ts:232
+  what: 
+  scenario: priceRewards (api/create-order.ts:232-251) only READS the ledger and settings, runs computeRedemption, and returns; it writes nothing. The balance is debited only later, at verify-payment (api/verify-payment.ts:78) / reconcile, with a spend entry keyed by the Razorpay order id. Nothing reserves the balance between pricing and payment, and create-order does not run in a transaction. Concrete exploit: a customer has ₹1000 wallet cashback (cashback has NO per-order cap per the spec; it only has to leave ₹1 payable). They open two tabs, each with a cart whose total is >= ₹1001, and fire POST /api/
+  fix: 
+  verdict: I tried to refute it and could not. Every precondition holds, and it works from the normal UI with two tabs (no devtools needed).
+
+(1) Nothing is written at pricing time. `priceRewards` (api/create-order.ts:215-252) reads `siteSettings/rewards` and the whole `rewardLedger` with plain `.get()` calls (lines 232-235) and returns `computeRedemption(...)` (line 251). It runs no transaction and writes n
+
+#10 [medium] reconcile only recreates missing spend entries when BOTH currencies are missing, so a half-written spend pair is never repaired and that redemption is never debited
+  file: api/notify-order.ts:239
+  what: 
+  scenario: In reconcileRewards the spend-recreation branch is gated on `if (!p.exists && !c.exists)` (api/notify-order.ts:239), i.e. it only fetches the Razorpay notes and recreates spend entries when NEITHER the points spend NOR the cashback spend exists. verify-payment's recordRewardSpend (api/verify-payment.ts:74-92) writes the two currencies sequentially: points first, then cashback. If an order redeems BOTH points and cashback and the points spend write succeeds but the cashback spend write then throws a non-already-exists error (transient Firestore error) or the function is interrupted (timeout/cra
+  fix: 
+  verdict: I confirmed it end to end with the real code. scratchpad/review-double-spend/f2.mts imports the real `api/verify-payment.ts` handler and the real exported `reconcileRewards` from `api/notify-order.ts`, and runs them against an in-memory Firestore mock with `fetch` stubbed.
+
+The code path:
+- `recordRewardSpend` creates points, then cashback, one after the other (api/verify-payment.ts:74-92). Any er
+
+#11 [critical] Out of my dimension, but critical: one spend can be refunded again for every order document the customer creates, because refunds are keyed by Firestore order id
+  file: api/notify-order.ts:305
+  what: 
+  scenario: 1) A customer has a real Razorpay order rzpX that spent ₹1,000 of cashback, so spend_rzpX_cashback = -1000 is in their ledger. 2) The orders create rule only checks userId == auth.uid, so they create orders/f1..fN directly with {userId: self, status: 'cancelled', razorpayOrderId: 'rzpX'}. 3) For each one they POST /api/notify-order {action:'reconcile-rewards', orderId: fk} with their own ID token, which passes the owner check. reconcileRewards (lines 230-238) finds spend_rzpX_cashback and sets spends.cashback = 1000. Because the status is ENDED, it then writes refund_<fk>_cashback = +1000 at l
+  fix: 
+  verdict: Every precondition holds. (1) firestore.rules:446-447: an order is created when `request.resource.data.userId == request.auth.uid`, and nothing else is checked. A customer can therefore create orders/fk = {userId: self, status: 'cancelled', razorpayOrderId: 'rzpX'}. (2) api/notify-order.ts:416-434: the reconcile action needs only `order.userId === callerUid`. No admin, status or payment check appl
+
+#12 [critical] Out of my dimension, but critical: pointsForOrder takes status, total, deliveredAt, taxAmount and gstInclusive from the order document the browser wrote
+  file: api/notify-order.ts:267
+  what: 
+  scenario: The orders create rule allows any fields. A customer creates orders/f = {userId: self, status: 'delivered', total: 10000000, deliveryCharge: 0, taxAmount: 0, deliveredAt: Timestamp(2020-01-01)} and calls reconcile-rewards. Step 2 writes earn_f = floor(10,000,000/100 × 1) = 100,000 points with unlockAt = 2020-01-08, so the points are available immediately and can cover 20% of every later order. A genuine order has the same weakness: the browser writes `total` (src/pages/Checkout.tsx:533/2265), which is its own figure and not Razorpay's amount, and writing gstInclusive: true skips the GST deduct
+  fix: 
+  verdict: The orders create rule (firestore.rules:446-447) accepts any fields: status, total, deliveryCharge, taxAmount, gstInclusive and deliveredAt (a client-SDK Timestamp). In reconcileRewards (api/notify-order.ts:265-287), `status === 'delivered'` comes from the doc, and pointsForOrder(order) at :267 uses the doc's total, deliveryCharge, taxAmount and gstInclusive (src/lib/rewards.ts:118-126). delivered
+
+#13 [high] Out of my dimension: redemption is priced against a balance that open Razorpay orders do not reduce, so one balance can be spent N times
+  file: api/create-order.ts:234
+  what: 
+  scenario: A customer has ₹1,000 cashback. They call /api/create-order N times with a ₹1,001 cart and useCashback:true. This works from several tabs, or with sequential direct POSTs; no race is needed. Each call reads the same ledger in priceRewards, because nothing is written until verify-payment, so each returns amount = 100 paise with notes rw_cashback = 1000. Paying all N ₹1 orders makes verify-payment (lines 74-92) write N spend entries of -1000 without checking the balance. The customer gets N × ₹1,001 of goods for ₹N, and the balance ends at -₹(N-1)×1,000. Points work the same way, up to 20% per o
+  fix: 
+  verdict: priceRewards (api/create-order.ts:232-251) sums the ledger as it stands. Nothing is written or reserved at create-order (:552-554 only puts notes on the Razorpay order). Sequential calls before any payment therefore all see the same balance. For a ₹1,001 cart, ₹1,000 cashback and default delivery (free above 999) with GST off, computeRedemption gives cashback 1000 and payable 1, i.e. 100 paise, wh
+
+#14 [medium] The browser's balance depends on the device clock and a 60 s tick, so its total and create-order's total diverge around every ledger change
+  file: src/lib/rewards.ts:71
+  what: 
+  scenario: summariseRewards time-gates every entry, including spend, refund and adjust entries that are meant to be available at once. Spends and refunds get unlockAt = server now (verify-payment.ts:83, notify-order.ts:250/312), and adjust entries get unlockAt = serverTimestamp(). useRewards evaluates them against a `now` taken from the device clock, refreshed only every 60 s (src/hooks/useRewards.ts:17,36), and not refreshed when entries change. A probe reproduced it with this ledger: +150 earned long ago, and a -100 spend written at server time T. A browser whose now is T-30 s (stale tick, or a phone 3
+  fix: 
+  verdict: The mechanism is real. summariseRewards (src/lib/rewards.ts:71) time-gates every entry. Spends and refunds carry unlockAt = function 'now' (api/verify-payment.ts:83, api/notify-order.ts:250, :312), and admin adjusts carry serverTimestamp() (src/services/rewardsService.ts:106). useRewards takes `now` once at mount (src/hooks/useRewards.ts:17) and refreshes it only on a 60 s interval (:35-38). The m
+
+#15 [low] The admin order breakdown shows the number of points as rupees, and the order never stores what the points were worth
+  file: src/pages/admin/AdminOrderDetails.tsx:633
+  what: 
+  scenario: The admin sets 'Value of 1 point (₹)' to 0.5, a value the input's step=0.5 offers. A customer redeems 400 points on a ₹1,000 order, which is ₹200 off, and pays ₹800. AdminOrderDetails shows Subtotal ₹1,000.00, Points (400) -₹400.00 (formatPrice(order.pointsUsed)), and Total ₹800.00, so the lines do not add up. The order stores only pointsUsed, which is a count, so once pointValue changes the rupee value cannot be recovered at all.
+  fix: 
+  verdict: src/pages/admin/AdminOrderDetails.tsx:632-633 renders `Points ({order.pointsUsed})` and `-{formatPrice(order.pointsUsed || 0)}`, so it formats a point count as rupees. The Rewards settings tab offers pointValue with step 0.5 (AdminCommerceSettings RewardsTab: field('pointValue', ..., 0.5)), and normalise allows 0-100. The probe with pointValue 0.5 on a ₹1,000 cart gives {points:400, pointsValue:20
+
+#16 [low] The customer's order page and the PDF tax invoice leave out points and cashback, so their lines don't add up to the total
+  file: src/services/invoiceService.ts:327
+  what: 
+  scenario: Take GST 3% on top, a ₹1,000 cart, ₹50 delivery and 200 points used, so ₹880 is paid and saved as order.total. OrderDetailsPage (lines 1145-1163) shows Selling price ₹1,000, Total fees ₹80 and Total amount ₹880, with no line for the reward. The invoice (buildPricing and the totals at lines 327-368) shows Item total ₹1,000, Delivery ₹50, IGST ₹30 and Grand Total ₹880. The branch added pointsUsed and cashbackUsed to the order for display but only renders them in AdminOrderDetails.
+  fix: 
+  verdict: pointsUsed and cashbackUsed are rendered only in AdminOrderDetails.tsx:630-640 (grep over src). The customer's OrderDetailsPage.tsx:1145-1163 shows Selling price (subtotal), Discount (order.discount), Total fees (deliveryCharge + taxAmount) and Total amount (order.total). There is no reward line, and order.total is the post-redemption figure (Checkout.tsx:533/2265 write pricing.total = r.payable).
+
+#17 [low] pointsForOrder awards points on the GST when prices include GST; the spec says 'excluding delivery and GST'
+  file: src/lib/rewards.ts:123
+  what: 
+  scenario: With 18% GST included in prices, a ₹11,800 cart holds ₹1,800 of GST. Delivery is free above ₹999. The order is {total: 11800, deliveryCharge: 0, taxAmount: 1800, gstInclusive: true} and pointsForOrder returns 118, because tax is forced to 0. The same purchase with GST added on top (₹10,000 + ₹1,800) returns 100. The spec's own formula, floor((total − deliveryCharge − taxAmount)/100 × pointsPer100), also gives 100, and invoiceService's taxable value for inclusive orders subtracts taxAmount too. The existing test (1049/50/30, inclusive) returns 9 under either rule, so it does not pin this behavi
+  fix: 
+  verdict: pointsForOrder (src/lib/rewards.ts:123) sets tax = 0 when gstInclusive. For inclusive mode, checkout stores taxAmount as the GST inside the price (siteSettingsService.ts:432-434: round(subtotal*rate/(100+rate)), 1800 for ₹11,800 at 18%) and total includes it. The probe gives inclusive {11800, 0, 1800} = 118 against 100 for GST on top and 100 under the spec formula. The existing test (1049/50/30, i
+
+#18 [low] Earned points come out 1 short because of floating-point error for some points-per-₹100 settings
+  file: src/lib/rewards.ts:125
+  what: 
+  scenario: Math.floor((base / 100) * pointsPer100) divides before multiplying. With pointsPer100 = 15 and base ₹820 it computes 122.99999999999999 and returns 122 instead of 123. With 25 and ₹116 it returns 28 instead of 29. With 100 and ₹29 it returns 28. A brute-force check over bases ₹0–50,000 found 34, 573, 1,145 and 2,292 under-awarded bases for pointsPer100 = 15, 25, 50 and 100. The admin can set any value from 0 to 100. The default of 1 is exact.
+  fix: 
+  verdict: src/lib/rewards.ts:125 computes Math.floor((base / 100) * s.pointsPer100). I brute-forced integer bases 0..50,000 against exact BigInt arithmetic (scratchpad/review-math/pure-probes.ts). There are no errors for pointsPer100 = 1, 2, 3, 5, 7, 10 or 20. Under-awards appear for 15 (34 bases, e.g. 820 gives 122 against 123, raw 122.99999999999999), 25 (573, e.g. 116 gives 28), 50 (1,145), 75 (724) and 
+
+#19 [medium] Reconcile never repairs a half-written spend: if only one of spend_<rzp>_points / spend_<rzp>_cashback exists, the missing one is never recorded
+  file: api/notify-order.ts:239
+  what: 
+  scenario: A customer pays using 100 points and ₹250 cashback, so the Razorpay notes say rw_points=100 and rw_cashback=250. verify-payment writes points first and cashback second (api/verify-payment.ts:74-91). Suppose the points create() succeeds and the cashback create() throws, for example a transient UNAVAILABLE or DEADLINE_EXCEEDED, or the invocation is cut off between the two sequential awaits. The response is then verified:true with rewardsPending:true. Checkout calls reconcile. p.exists is true, so the `if (!p.exists && !c.exists)` branch is skipped and the cashback spend is never created. Every l
+  fix: 
+  verdict: Confirmed from the code and by running the real reconcileRewards against an in-memory store. verify-payment.ts:74-91 creates spend_<rzp>_points and then spend_<rzp>_cashback in sequence, and rethrows any error that is not code 6 (line 90). handler:130-140 then answers verified:true with rewardsPending:true. Checkout.tsx:574/2306 calls reconcile. notify-order.ts:236-239 reads both docs, but repair 
+
+#20 [medium] verify-payment holds back the 'verified' answer for a captured payment while it waits on Razorpay and Admin SDK calls that have no time limit
+  file: api/verify-payment.ts:130
+  what: 
+  scenario: After the signature check, the handler awaits recordRewardSpend before it responds. That function makes a Razorpay GET with no timeout, on every payment (line 52), then imports firebase-admin cold, then makes up to two sequential Firestore create() calls (line 78). In the installed @google-cloud/firestore v7.11.6 client config, the Commit RPC retries RESOURCE_EXHAUSTED and UNAVAILABLE with backoff, with a 60 s per-call timeout. api/media.ts already caps an Admin SDK read at 2.5 s because 'the SDK retries a quota error for ~10s'. Example: a customer pays ₹850 using 200 points during a Firestore
+  fix: 
+  verdict: Confirmed in code; how often it happens depends on how slow outside services get. verify-payment.ts:130 awaits recordRewardSpend before res.status(200). recordRewardSpend makes a Razorpay GET with no AbortSignal on EVERY verified payment (line 52), even when no rewards were used. Node 22 undici defaults are a 10 s connect timeout and 300 s headers/body timeouts. When rw_ notes exist it then does a
+
+#21 [medium] Earned points unlock while a return is still in progress, so marking the order 'returned' no longer voids them
+  file: api/notify-order.ts:297
+  what: 
+  scenario: On returned or refunded, reconcile voids the earn entry only if unlockAt > now. requestReturn accepts a request up to 168 h after delivery (src/services/orderService.ts:2028), which is the same 7 days as the default unlockDays; the admin hint even says 'Match the return window'. After the request, the return still needs admin approval, scheduling, pickup and return to store before anyone sets 'returned'. Example: delivered Oct 1 10:00, so 20 points are earned and unlock Oct 8 10:00. The customer requests a return Oct 7 20:00, which is allowed. The return is approved Oct 8, picked up Oct 9 and 
+  fix: 
+  verdict: The mechanism is confirmed and reproduced. In verify.mts an order delivered 9 days ago is then set to 'returned'; earn_O3 (20 points) stays active and changed is []. unlockAt is deliveredAt + unlockDays (notify-order.ts:269-276), and the void happens only if unlockAt > now at the moment of the ended status (lines 293-299). requestReturn allows a request up to 168 h after deliveredAt (orderService.
+
+#22 [medium] useRewards compares new ledger entries against a clock up to 60 s old, so entries the server just wrote count as pending
+  file: src/hooks/useRewards.ts:40
+  what: 
+  scenario: balances = summariseRewards(entries, now), and `now` only advances on the 60 s interval (line 36), not when a snapshot arrives. Admin adjustments write unlockAt: serverTimestamp(); spends and refunds are written with unlockAt set to the server's current time. (a) The admin credits ₹500 cashback in RewardsAdminPanel. The optimistic snapshot (unlockAt null, so 0) shows ₹500. The acknowledged snapshot (unlockAt = server time, later than the stale now) then moves the ₹500 into cashback.pending, which the panel does not display. The 'Wallet cashback' tile drops back to ₹0 for up to a minute while t
+  fix: 
+  verdict: Confirmed and reproduced: stale-now.mts prints {available:0,pending:500} after the server acknowledges, and tab B payable 950 against server 1050. useRewards.ts:17/36 updates `now` only at mount and every 60 s, and line 40 memoises summariseRewards(entries, now) on that stale value. adminAdjustRewards writes unlockAt: serverTimestamp() (rewardsService.ts:106). The local snapshot returns null, whic
+
+#23 [medium] The invoice PDF and the customer order summaries leave out points and cashback, so their lines no longer add up to the total
+  file: src/services/invoiceService.ts:158
+  what: 
+  scenario: order.total is now the amount left to pay after points and cashback, but only AdminOrderDetails was updated to show pointsUsed and cashbackUsed. Example: items ₹1,000, delivery ₹50, 200 points used, so total ₹850. The invoice prints 'Item total ₹1,000 / Delivery Charges ₹50 / Grand Total ₹850'. OrderDetailsPage (src/pages/OrderDetailsPage.tsx:1142-1163) shows 'Selling price ₹1,000 / Total fees ₹50 / Total amount ₹850', and the Account payment summary (src/pages/Account.tsx:1519-1545) does the same. With GST-inclusive pricing, buildPricing sets taxableValue = total − delivery − cod − taxAmount.
+  fix: 
+  verdict: Confirmed. In Checkout.tsx, `total` (line 411) is set to pricing.total, which useCheckoutPricing now sets to r.payable, the amount after rewards. That value is stored as order.total (line 533). git grep shows pointsUsed and cashbackUsed are rendered only in AdminOrderDetails.tsx:630-641. The invoice (invoiceService.ts:327-367) prints Item total, coupon, taxable value, delivery and GST, then Grand 
+
+#24 [low] 'Recalculate rewards' says the order is in line when the Razorpay notes lookup actually failed
+  file: api/notify-order.ts:196
+  what: 
+  scenario: razorpayNotes returns null for any non-OK response (401, 429, 5xx) and when the keys are missing. At line 240-241, reconcile treats null as 'no rewards on this order', writes nothing and returns 200 {ok:true, changed:[]}. Example: an order shows 'Points (200) −₹200', but its spend entry is missing because verify-payment's write failed. The admin presses Recalculate during a Razorpay API hiccup. AdminOrderDetails then shows 'Rewards are in line with this order' (line 664). The customer keeps the 200 points until some later reconcile happens to succeed, and a delivered order may never get anothe
+  fix: 
+  verdict: Confirmed. razorpayNotes returns null when the keys are missing or the response is not OK (notify-order.ts:191, 196). reconcile treats null as 'no rewards' (line 241), writes nothing and returns {changed:[]}, and the handler answers 200 {ok:true} (line 435). rewardsService.ts:129 maps any 200 to {ok:true}, and AdminOrderDetails.tsx:663-664 then shows 'Rewards are in line with this order'. This nee
+
+#25 [low] Reconcile cannot undo refunds or voids when an admin moves an order back out of cancelled or returned
+  file: src/pages/AdminOrders.tsx:565
+  what: 
+  scenario: The status <select> in the AdminOrders table calls updateOrderStatus with any status, with no isValidStatusTransition check; AdminOrderDetails refuses the same move. Example: a customer cancels an order paid with ₹1,500 cashback, and reconcile writes refund_<order>_cashback for +₹1,500. The customer phones to restore the order, and the admin picks 'Processing' and later 'Delivered' in the list. Reconcile only creates entries (createOnce) and never voids the refund. A voided earn is never recreated either, because createOnce finds the existing document.
+  fix: 
+  verdict: Confirmed and reproduced. In verify.mts, cancelled → processing → delivered leaves refund_O7_points +100 and refund_O7_cashback +250 active and adds earn_O7. AdminOrders.tsx:121-129 and the list select at 563-577 call updateOrderStatus with any status, and updateOrderStatus (orderService.ts:982-1045) does not validate the transition; the rules let an admin write anything. AdminOrderDetails.tsx:300
+
+#26 [low] The admin order page shows the points deduction as a points count instead of rupees, and still says points were earned after they were voided
+  file: src/pages/admin/AdminOrderDetails.tsx:633
+  what: 
+  scenario: The deduction line renders -formatPrice(order.pointsUsed). The Rewards tab lets the admin set 'Value of 1 point (₹)' in steps of 0.5. With pointValue 0.5, an order that used 200 points shows '−₹200' even though ₹100 was taken off, and the bill no longer adds up to Total. Separately, pointsEarned is written once when the earn entry is created and never cleared. After a return voids the earn, the panel at line 655 still says '20 points earned on delivery'. The admin therefore cannot tell voided points from kept ones, and the spec leaves the kept-after-unlock case to manual adjustment.
+  fix: 
+  verdict: Confirmed. AdminOrderDetails.tsx:632-633 renders the points count as rupees with formatPrice(order.pointsUsed). pointsUsed comes from verifiedPayment.pointsApplied = r.points (Checkout.tsx:563, razorpayService.ts), which is a count, while the discount is points × pointValue (computeRedemption). The Rewards tab offers pointValue in 0.5 steps (AdminCommerceSettings field(..., 0.5)), and normaliseRew
+
+#27 [low] If the Rewards settings fail to load, the admin tab shows the defaults as if they were saved, and Save overwrites the real settings
+  file: src/pages/admin/AdminCommerceSettings.tsx:815
+  what: 
+  scenario: The tab loads with getRewardSettings().catch(() => setS(DEFAULT_REWARD_SETTINGS)). If the read fails, the form shows enabled/1/1/7/20 with no error. For example, getDoc throws 'client is offline' when the admin's connection drops and siteSettings/rewards is not cached; admin pages never subscribe to it. The admin changes 'Days until points unlock' and presses Save. saveRewardSettings then calls setDoc with the whole object, replacing the shop's real pointValue, pointsPer100 and maxPointsPercent with the defaults.
+  fix: 
+  verdict: Confirmed. AdminCommerceSettings.tsx:813-815 uses `.catch(() => setS(DEFAULT_REWARD_SETTINGS))`, which shows the defaults with no error. saveRewardSettings (rewardsService.ts:88-89) calls setDoc without merge, replacing the whole document. db is initializeFirestore with the default memory cache (src/config/firebase.ts:46), so getDoc throws when offline and the document is not cached. One small ina
