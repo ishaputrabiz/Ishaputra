@@ -39,7 +39,14 @@ Last updated: 2026-10-04 (home rows fixed; owner wants a visible redesign next).
 
 ## Next steps (in order)
 
-1. **Visible home page redesign (owner's priority).** Lift the "keep layouts exactly" rule for the home page; keep the brand (logo, copper/bronze, cream + dark themes) and the real data. Steps: merge `fix-row-autoscroll` into `main`, take before-screenshots (390 / 1440, light + dark), plan with `ui-ux-pro-max` + `high-end-visual-design` / `design-taste-frontend` (and `redesign-existing-projects`), build, take after-screenshots, show the owner before/after side by side. Then the other pages one at a time in the same style. No ultracode needed for the home page alone; effort High.
+1. **Visible, mobile-first redesign of the 5 key screens (owner's priority, 2026-10-04).**
+   - **Order:** Home, product list (`/products` and category pages), product detail, checkout, profile/account. The rest of the site comes after, in the same style.
+   - **Mobile first:** 99% of the store's users are on phones. Design and judge at 390 px first, then check 1440.
+   - **New layouts are allowed** (the "keep Sreerasthu's layouts" rule is lifted for these screens). Keep the brand (logo, copper/bronze, cream and dark themes), the real data, and all working behaviour (cart, rewards, checkout money logic untouched).
+   - **No questions to the owner:** use every relevant design skill (`ui-ux-pro-max` search, `high-end-visual-design`, `design-taste-frontend`, `redesign-existing-projects`, `storefront-best-practices`, Emil's motion skills + `motion`), decide, then show before/after phone screenshots.
+   - **First:** merge `fix-row-autoscroll` into `main`, then take before-screenshots of the 5 screens at 390 (light and dark).
+   - **Investigate:** the owner sent a phone screenshot: a blank cream page with only a copper `>>` button at the bottom left, on a dark bar cut off at the right edge. Find which screen and element this is (a possibly broken bottom bar or drawer handle) and fix it.
+   - **Ultracode recommended** (5 screens, multi-file, parallel work, a review pass). Effort High.
 2. **Scratch & Win, decided (owner said "just complete it", 2026-10-04).** Build after the redesign. Decisions so far:
    - Admin-configurable (`siteSettings.scratchWin`), shipped **off**, values marked as placeholders and listed in `CLIENT.md`.
    - One card per **delivered** online order at or above an admin minimum; created by `reconcileRewards` as `users/<uid>/scratchCards/<rzp>`.
@@ -157,7 +164,7 @@ Which next steps need ultracode:
 
 | Step | Ultracode? | Effort |
 |---|---|---|
-| 1. Home page redesign | No | High |
+| 1. Redesign of the 5 key screens (mobile first) | Yes | High |
 | 2. Scratch & Win | Yes, for the money logic review | Extra high |
 | 3. Small follow-ups | No | Medium |
 | 4. Dealer, Loyalty card | Yes, for the plan and the money logic review | Extra high |
