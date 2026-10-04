@@ -26,6 +26,7 @@ import { db } from '@/config/firebase';
 import { SmartImage } from "@/components/ui/smart-image";
 import { BRAND } from '@/config/brand';
 import { RewardsWalletCard } from '@/components/rewards/RewardsWalletCard';
+import { ScratchCardsPanel } from '@/components/scratch/ScratchCardsPanel';
 
 // Loyalty tiers: names and thresholds from the brand config, look from here
 // (metal tones on the charcoal card, copper for the top tier).
@@ -380,6 +381,9 @@ const PurchaseSummary: React.FC = () => {
           </div>
         </div>
       </motion.div>
+
+      {/* ─── SCRATCH CARDS (Scratch & Win) ──────── */}
+      <ScratchCardsPanel uid={user.uid} />
 
       {/* ─── POINTS & CASHBACK ──────────────────── */}
       <RewardsWalletCard uid={user.uid} />
