@@ -189,7 +189,13 @@ const CategoryProductCard = memo(function CategoryProductCard({
               {formatINR(displayOldPrice)}
             </span>
           )}
-          {displayDiscount && <span className="chip-off">{displayDiscount}% off</span>}
+          {/* Below sm the chip always takes its own line, so every card in a
+              row has the same price block (the 160px cards cannot fit all three). */}
+          {displayDiscount && (
+            <span className="basis-full sm:basis-auto">
+              <span className="chip-off">{displayDiscount}% off</span>
+            </span>
+          )}
         </p>
         <button
           type="button"
@@ -240,7 +246,7 @@ const CategoryPage = () => {
     'best-sellers': { flag: 'isBestSeller', label: 'Best sellers' },
     'new-arrivals': { flag: 'isNewArrival', label: 'New arrivals' },
     'trending': { flag: 'isTrendProduct', label: 'Trending now' },
-    'featured': { flag: 'isFeatured', label: 'Featured products' },
+    'featured': { flag: 'isFeatured', label: 'Editor’s picks' },
   };
   const tagMeta = activeTag ? TAG_MAP[activeTag] : undefined;
   /** Bare /products (no category, no tag): the whole catalogue. "Shop all" links land here. */
@@ -716,11 +722,11 @@ const CategoryPage = () => {
   };
 
   const handleCardToggleWishlist = (product: UIProduct, wishlisted: boolean) => {
+    // The hook shows the toast (with Undo on removal), so none here.
     if (wishlisted) {
-      removeFromWishlist(product.id);
+      removeFromWishlist(product.id, product.title);
     } else {
       addToWishlist(product.id, product.title);
-      toast({ title: "Added to wishlist" });
     }
   };
 
@@ -849,11 +855,13 @@ const CategoryPage = () => {
                   )}
                 </button>
               </SheetTrigger>
-              <SheetContent side="bottom" className="tx-sheet h-[75dvh]">
+              {/* Sized to its content (up to 85dvh, then the sheet scrolls), so a
+                  short list of filters does not leave a screen of empty paper. */}
+              <SheetContent side="bottom" className="tx-sheet h-auto max-h-[85dvh]">
                 <SheetHeader>
                   <SheetTitle>Filters</SheetTitle>
                 </SheetHeader>
-                <div className="mt-4 max-h-[calc(75dvh-80px)] overflow-y-auto pb-6">
+                <div className="mt-4 pb-2">
                   {renderFilterContent()}
                 </div>
               </SheetContent>

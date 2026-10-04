@@ -16,6 +16,7 @@ import { getCustomerSupportSettings } from '@/services/siteSettingsService';
 import { SmartImage } from "@/components/ui/smart-image";
 import { fadeUp } from '@/lib/motion';
 import { cn } from '@/lib/utils';
+import { BRAND } from '@/config/brand';
 
 interface VideoCallRequestModalProps {
   open: boolean;
@@ -326,7 +327,7 @@ const VideoCallRequestModal = ({
 
           {tab === 'instant' && (
             <Notice tone="neutral" icon={Clock} compact role="note">
-              We'll call you back as soon as we can during business hours, 10am to 7pm.
+              We'll call you back as soon as we can during business hours ({BRAND.hours}).
             </Notice>
           )}
 

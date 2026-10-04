@@ -186,7 +186,7 @@ const WriteReview = () => {
   return (
     <div className="min-h-screen tx-paper" style={{ fontFamily: "var(--font-body)" }}>
       {/* Header */}
-      <div className="sticky top-0 z-header border-b border-foreground/[0.08] bg-background/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-header border-b border-foreground/[0.08] bg-background/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-lg items-center gap-2 px-2 py-2 sm:px-4">
           <IconButton label="Go back" onClick={() => navigate(-1)}>
             <ArrowLeft aria-hidden="true" />
@@ -198,10 +198,10 @@ const WriteReview = () => {
             >
               Write a review
             </h1>
-            <p className="text-xs text-muted-foreground">Your feedback matters</p>
+            <p className="text-xs text-muted-foreground">Shown on the product page after a quick check</p>
           </div>
         </div>
-      </div>
+      </header>
 
       <main id="main" tabIndex={-1} className="mx-auto max-w-lg space-y-4 px-4 py-6 pb-44">
         {/* Product */}
@@ -258,7 +258,7 @@ const WriteReview = () => {
 
           <div className="flex h-8 items-center justify-center" aria-live="polite">
             <AnimatePresence mode="wait" initial={false}>
-              {activeRating > 0 && (
+              {activeRating > 0 ? (
                 <motion.span
                   key={activeRating}
                   initial={{ opacity: 0, scale: 0.96 }}
@@ -268,6 +268,17 @@ const WriteReview = () => {
                   className="inline-flex h-7 items-center rounded-chip border border-primary/30 bg-primary/10 px-3 text-sm font-medium text-primary"
                 >
                   {ratingLabels[activeRating]}
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="hint"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0, transition: { duration: 0.1 } }}
+                  transition={{ duration: 0.15, ease: EASE_OUT }}
+                  className="text-xs text-muted-foreground"
+                >
+                  Choose 1 to 5 stars
                 </motion.span>
               )}
             </AnimatePresence>
@@ -341,9 +352,14 @@ const WriteReview = () => {
         </motion.section>
       </main>
 
-      {/* Fixed bottom submit bar */}
-      <div className="fixed inset-x-0 bottom-0 z-sticky border-t border-foreground/[0.08] bg-background/95 px-4 pt-3 backdrop-blur-sm pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto max-w-lg">
+      {/* Fixed bottom submit bar: a named region so it sits in a landmark. The
+          padding is on the inner box so its edges line up with the panels. */}
+      <div
+        role="region"
+        aria-label="Submit your review"
+        className="fixed inset-x-0 bottom-0 z-sticky border-t border-foreground/[0.08] bg-background/95 pt-3 backdrop-blur-sm pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+      >
+        <div className="mx-auto max-w-lg px-4">
           <motion.button
             type="button"
             onClick={handleSubmit}

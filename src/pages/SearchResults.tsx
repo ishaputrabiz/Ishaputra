@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, type FormEvent } from "react";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ArrowLeft, ArrowUpDown, SearchX } from "lucide-react";
@@ -7,6 +7,7 @@ import { UIProduct, adaptFirebaseToUI } from "@/lib/productAdapter";
 import ProductCard from "@/components/ProductCard";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import CategoryIconNav from "@/components/CategoryIconNav";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import ProductPagination from "@/components/ProductPagination";
 import { IconButton } from "@/components/ui/icon-button";
@@ -166,12 +167,40 @@ const SearchResults = () => {
 
   const count = sortedProducts.length;
 
+  const refineInputRef = useRef<HTMLInputElement>(null);
+
+  /** md and up: run the new search on this page (a new URL starts at page 1). */
+  const submitRefine = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const next = (refineInputRef.current?.value ?? "").trim();
+    if (!next) {
+      refineInputRef.current?.focus();
+      return;
+    }
+    navigate(`/search-results?q=${encodeURIComponent(next)}`);
+  };
+
+  /** "Search again": the inline field from md up, the search screen on phones. */
+  const searchAgain = () => {
+    const input = refineInputRef.current;
+    if (input && input.offsetParent !== null) {
+      input.focus();
+      input.select();
+    } else {
+      navigate("/search");
+    }
+  };
+
   return (
     <div className="min-h-screen tx-paper flex flex-col">
       {/* The normal site header and footer from tablet width up (owner decision);
           phones keep the focused search bar below as their header. */}
       <div className="hidden md:block">
         <Header />
+        {/* Same desktop chrome as /products and the product page. */}
+        <div className="hidden lg:block">
+          <CategoryIconNav />
+        </div>
       </div>
 
       {/* Search bar: the page header on phones, a query row under the site header from md */}
@@ -180,17 +209,47 @@ const SearchResults = () => {
           <IconButton label="Go back" onClick={() => navigate(-1)}>
             <ArrowLeft aria-hidden="true" />
           </IconButton>
+          {/* Phones: opens the focused search screen (recent searches, suggestions). */}
           <button
             type="button"
             onClick={() => navigate("/search")}
             aria-label={query ? `Search: ${query}. Change search` : "Search products"}
-            className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-control border border-input bg-background px-3 text-left transition-[border-color] duration-hover ease-out hover:border-primary/50 md:max-w-xl"
+            className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-control border border-input bg-background px-3 text-left transition-[border-color] duration-hover ease-out hover:border-primary/50 md:hidden"
           >
             <Search aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
             <span className={cn("truncate text-sm", query ? "text-foreground" : "text-muted-foreground")}>
               {query || "Search shilajit, hair oil, face wash"}
             </span>
           </button>
+          {/* Tablet and desktop: refine the search in place, without leaving the
+              page's header and footer for the bare /search screen. */}
+          <form
+            role="search"
+            aria-label="Refine search"
+            onSubmit={submitRefine}
+            className="hidden h-11 min-w-0 flex-1 items-center gap-2 rounded-control border border-input bg-background px-3 transition-[border-color] duration-hover ease-out focus-within:border-primary hover:border-primary/50 md:flex md:max-w-xl"
+          >
+            <Search aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+            <label htmlFor="search-refine" className="sr-only">Search products</label>
+            <input
+              key={query}
+              ref={refineInputRef}
+              id="search-refine"
+              name="q"
+              type="search"
+              defaultValue={query}
+              placeholder="Search shilajit, hair oil, face wash"
+              autoComplete="off"
+              enterKeyHint="search"
+              className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
+            />
+            <button
+              type="submit"
+              className="-mr-1.5 h-8 shrink-0 rounded-control px-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary transition-[background-color,transform] duration-press ease-out hover:bg-primary/10 active:scale-[0.97]"
+            >
+              Search
+            </button>
+          </form>
           <IconButton
             label="Sort results"
             tooltip={false}
@@ -310,7 +369,7 @@ const SearchResults = () => {
               icon={SearchX}
               title={`Nothing matches “${query}”`}
               description="Check the spelling or try a broader word such as oil, serum or churna."
-              action={{ label: "Search again", to: "/search" }}
+              action={{ label: "Search again", onClick: searchAgain }}
               className="py-16 sm:py-20"
             />
           ) : (
@@ -318,7 +377,7 @@ const SearchResults = () => {
               icon={Search}
               title="What are you looking for?"
               description="Search by product, ingredient or concern."
-              action={{ label: "Search", to: "/search" }}
+              action={{ label: "Search", onClick: searchAgain }}
               className="py-16 sm:py-20"
             />
           )

@@ -480,9 +480,10 @@ const MobileSearch = () => {
                 <h2 id="shop-the-range" className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Shop the range
                 </h2>
-                <ul className="grid grid-cols-3 gap-2 sm:gap-3">
-                  {allProducts.slice(0, 6).map((product) => (
-                    <li key={product.id}>
+                {/* Two full rows at every width: 3 x 2 on phones, 4 x 2 from md. */}
+                <ul className="grid grid-cols-3 gap-2 sm:gap-3 md:grid-cols-4">
+                  {allProducts.slice(0, 8).map((product, index) => (
+                    <li key={product.id} className={cn(index >= 6 && "hidden md:block")}>
                       <Link
                         to={`/product/${product.id}`}
                         onClick={() => {
@@ -506,10 +507,10 @@ const MobileSearch = () => {
                           )}
                         </div>
                         <div className="px-1 pb-1 pt-2">
-                          <p title={product.title} className="line-clamp-2 min-h-[2.6em] text-[11px] font-medium leading-[1.3] text-foreground">
+                          <p title={product.title} className="line-clamp-2 min-h-[2.6em] text-[13px] font-semibold leading-[1.3] text-foreground transition-colors duration-hover ease-out group-hover:text-primary md:text-sm">
                             {product.title}
                           </p>
-                          <p className="mt-0.5 text-[11px] font-semibold tabular-nums text-primary">{formatINR(product.price)}</p>
+                          <p className="price-now mt-1 text-[15px]">{formatINR(product.price)}</p>
                         </div>
                       </Link>
                     </li>

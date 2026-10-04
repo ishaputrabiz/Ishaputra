@@ -93,6 +93,8 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [showImagePopup, setShowImagePopup] = useState(false);
+  /** The viewer's zoom URL that has finished loading (then the cached gallery image underneath is hidden). */
+  const [viewerZoomSrc, setViewerZoomSrc] = useState<string | null>(null);
 
   /** How many images/videos this product has, for arrow-key paging. */
   const mediaCountRef = useRef(0);
@@ -605,11 +607,27 @@ const ProductDetail = () => {
         : null,
   });
 
+  // The loading and not-found states use the same frame as the loaded page
+  // (desktop header + category row, phone header + search bar), so the chrome
+  // does not jump when loading finishes.
+  const pageChrome = (
+    <>
+      <div className="hidden lg:block">
+        <Header />
+        <CategoryIconNav />
+      </div>
+      <div className="lg:hidden">
+        <MobileHeader />
+        <MobileSearchBar />
+      </div>
+    </>
+  );
+
   // Show loading state: the page's own shape inside the normal header and footer.
   if (loading) {
     return (
       <div className="tx-paper min-h-screen w-full overflow-x-clip">
-        <Header />
+        {pageChrome}
         <main id="main" tabIndex={-1} aria-busy="true" className="container-custom py-6 md:py-10">
           <span className="sr-only">Loading product</span>
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-14">
@@ -642,7 +660,7 @@ const ProductDetail = () => {
   if (notFound || !product) {
     return (
       <div className="tx-paper min-h-screen w-full overflow-x-clip flex flex-col">
-        <Header />
+        {pageChrome}
         <main id="main" tabIndex={-1} className="container-custom flex flex-1 items-center justify-center py-16 sm:py-24">
           <EmptyState
             as="h1"
@@ -676,6 +694,8 @@ const ProductDetail = () => {
   ];
   mediaCountRef.current = allMedia.length;
 
+  /** The full-screen viewer's sharp image for the current photo. */
+  const zoomSrc = cldUrl(allMedia[selectedImage]?.src || product.image, 'zoom');
   const saved = isInWishlist(product.id);
   const reviewCount = reviewStats.totalReviews > 0 ? reviewStats.totalReviews : (product.reviews || 0);
   const shownReviews = showAllReviews ? reviews : reviews.slice(0, 5);
@@ -789,28 +809,6 @@ const ProductDetail = () => {
                     setZoomPos({ x, y });
                   }}
                 >
-                  {/*
-                    Nothing previously said the image could be opened, so on
-                    desktop the full view was undiscoverable. Fades in on hover
-                    beside the magnifier, and stays out of the way on phones,
-                    where tapping the image already opens it.
-                  */}
-                  {allMedia[selectedImage]?.type !== 'video' && (
-                    <IconButton
-                      label="View image full screen"
-                      variant="onPhoto"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        rememberFocus();
-                        setShowImagePopup(true);
-                      }}
-                      className="absolute bottom-3 right-3 z-raised hidden opacity-0 transition-[opacity,background-color,transform] group-hover:opacity-100 focus-visible:opacity-100 md:inline-flex"
-                    >
-                      <Maximize2 aria-hidden="true" />
-                    </IconButton>
-                  )}
-
                   {/* Live-drag + slide animation wrapper */}
                   <div
                     className="absolute inset-0"
@@ -916,6 +914,30 @@ const ProductDetail = () => {
                       <Share2 aria-hidden="true" />
                     </IconButton>
                   </div>
+
+                  {/*
+                    Nothing previously said the image could be opened, so on
+                    desktop the full view was undiscoverable. Fades in on hover
+                    beside the magnifier, and stays out of the way on phones,
+                    where tapping the image already opens it. It comes after the
+                    wishlist and share buttons in the DOM so Tab runs top to
+                    bottom (it sits bottom-right, absolutely positioned).
+                  */}
+                  {allMedia[selectedImage]?.type !== 'video' && (
+                    <IconButton
+                      label="View image full screen"
+                      variant="onPhoto"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        rememberFocus();
+                        setShowImagePopup(true);
+                      }}
+                      className="absolute bottom-3 right-3 z-raised hidden opacity-0 transition-[opacity,background-color,transform] group-hover:opacity-100 focus-visible:opacity-100 md:inline-flex"
+                    >
+                      <Maximize2 aria-hidden="true" />
+                    </IconButton>
+                  )}
                 </div>
 
                 {/* Thumbnail Gallery - images + videos */}
@@ -1220,7 +1242,7 @@ const ProductDetail = () => {
                           productImage: product.image,
                         }
                       })}
-                      className="btn-line w-full mb-4 text-foreground transition-[border-color,color,transform] duration-press ease-out hover:border-primary hover:text-primary active:scale-[0.97]"
+                      className="mb-4 flex h-11 w-full items-center justify-center gap-2 rounded-control border border-foreground/15 px-4 text-[11px] font-bold uppercase tracking-[0.14em] text-foreground transition-[border-color,color,transform] duration-press ease-out hover:border-primary hover:text-primary active:scale-[0.97]"
                     >
                       <PenLine aria-hidden="true" className="size-4" />
                       Write a review
@@ -1491,15 +1513,37 @@ const ProductDetail = () => {
                   allowFullScreen
                 />
               ) : (
-                <motion.img
+                <motion.div
                   key={selectedImage}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.2, ease: EASE_OUT }}
-                  src={cldUrl(allMedia[selectedImage]?.src || product?.image, 'zoom')}
-                  alt={product?.alt}
-                  className="max-w-full max-h-full object-contain p-4"
-                />
+                  className="absolute inset-0"
+                >
+                  {/* The gallery's own image (same src and srcset, so it comes
+                      from the browser cache) shows at once; the sharper zoom
+                      image fades in over it when it has loaded. */}
+                  <SmartImage
+                    src={allMedia[selectedImage]?.src || product.image}
+                    alt=""
+                    aria-hidden="true"
+                    preset="detail"
+                    priority
+                    className={cn(
+                      "absolute inset-0 h-full w-full object-contain p-4",
+                      viewerZoomSrc === zoomSrc && "invisible",
+                    )}
+                  />
+                  <img
+                    src={zoomSrc}
+                    alt={product.alt}
+                    onLoad={() => setViewerZoomSrc(zoomSrc)}
+                    className={cn(
+                      "absolute inset-0 h-full w-full object-contain p-4 transition-opacity duration-200 ease-out",
+                      viewerZoomSrc === zoomSrc ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                </motion.div>
               )}
 
               {/* Navigation Arrows */}

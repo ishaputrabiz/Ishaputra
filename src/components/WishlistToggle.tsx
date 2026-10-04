@@ -14,7 +14,8 @@ export interface WishlistToggleProps extends Omit<IconButtonProps, "label" | "on
 /**
  * The heart on product cards and the product page. Controlled: the parent owns
  * one useWishlist() (each instance syncs with Firestore, so never one per card)
- * and passes `saved` and `onToggle`.
+ * and passes `saved` and `onToggle`. The name stays "Save {name} to wishlist";
+ * `aria-pressed` carries the saved state.
  *
  *   const { isInWishlist, toggleWishlist } = useWishlist();
  *   <WishlistToggle name={p.title} saved={isInWishlist(p.id)} onToggle={() => toggleWishlist(p.id, p.title)} />
@@ -23,7 +24,10 @@ export const WishlistToggle = React.forwardRef<HTMLButtonElement, WishlistToggle
   ({ name, saved, onToggle, variant = "solid", className, ...props }, ref) => (
     <IconButton
       ref={ref}
-      label={saved ? `Remove ${name} from wishlist` : `Save ${name} to wishlist`}
+      // One constant name plus aria-pressed: screen readers announce
+      // "Save X to wishlist, toggle button, pressed" when saved, rather than a
+      // changing label that contradicts the pressed state.
+      label={`Save ${name} to wishlist`}
       aria-pressed={saved}
       variant={variant}
       className={cn(saved && "text-primary", className)}

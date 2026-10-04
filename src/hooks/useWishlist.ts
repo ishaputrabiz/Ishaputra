@@ -68,6 +68,14 @@ const sameWishlist = (a: string[], b: string[]) => {
   return true;
 };
 
+const showSignInToast = () => {
+  toast({
+    title: 'Sign in to save to your wishlist',
+    description: 'Your wishlist is kept with your account.',
+    variant: 'destructive',
+  });
+};
+
 export const useWishlist = () => {
   const { user } = useAuth();
   const [wishlist, setWishlist] = useState<string[]>([]);
@@ -79,7 +87,14 @@ export const useWishlist = () => {
 
   const storageKey = getWishlistStorageKey(user?.uid);
 
+  // The latest wishlist, updated synchronously on every change. Mutations read
+  // it (instead of the `wishlist` captured by the render that created them) so
+  // several calls in one tick, such as checkout's "Move all to wishlist", each
+  // build on the previous one instead of overwriting it with a stale copy.
+  const wishlistRef = useRef<string[]>([]);
+
   const setWishlistIfChanged = useCallback((next: string[]) => {
+    if (!sameWishlist(wishlistRef.current, next)) wishlistRef.current = next;
     setWishlist((prev) => (sameWishlist(prev, next) ? prev : next));
   }, []);
 
@@ -87,7 +102,15 @@ export const useWishlist = () => {
     setWishlistIfChanged(getWishlistFromStorage(storageKey));
   }, [storageKey, setWishlistIfChanged]);
 
-  const updateWishlistCache = useCallback((nextWishlist: string[], shouldBroadcast = true) => {
+  /**
+   * Write the wishlist to storage and state. Pass a function to derive the
+   * next list from the latest one (functional update), or an array to set it.
+   */
+  const updateWishlistCache = useCallback((
+    update: string[] | ((current: string[]) => string[]),
+    shouldBroadcast = true,
+  ) => {
+    const nextWishlist = typeof update === 'function' ? update(wishlistRef.current) : update;
     saveWishlistToStorage(storageKey, nextWishlist);
     setWishlistIfChanged(nextWishlist);
     if (shouldBroadcast) {
@@ -96,12 +119,8 @@ export const useWishlist = () => {
     }
   }, [storageKey, setWishlistIfChanged]);
 
-  const persistWishlist = useCallback((nextWishlist: string[]) => {
-    updateWishlistCache(nextWishlist, true);
-  }, [updateWishlistCache]);
-
-  const rollbackWishlist = useCallback((previousWishlist: string[]) => {
-    updateWishlistCache(previousWishlist, true);
+  const persistWishlist = useCallback((update: string[] | ((current: string[]) => string[])) => {
+    updateWishlistCache(update, true);
   }, [updateWishlistCache]);
 
   useEffect(() => {
@@ -187,97 +206,96 @@ export const useWishlist = () => {
 
   const addToWishlist = useCallback((productId: string, productTitle?: string) => {
     if (!user) {
-      toast({
-        title: "Login Required",
-        description: "Please login or signup to add items to your wishlist",
-        variant: "destructive",
-      });
+      showSignInToast();
       return false;
     }
 
-    if (wishlist.includes(productId)) {
+    if (wishlistRef.current.includes(productId)) {
       return false;
     }
 
-    const previousWishlist = [...wishlist];
-    const nextWishlist = [...wishlist, productId];
-    persistWishlist(nextWishlist);
+    persistWishlist((current) => (current.includes(productId) ? current : [...current, productId]));
 
     void addWishlistItemRemote(user.uid, productId).catch((error) => {
       console.error('Error adding wishlist item to Firestore:', error);
-      rollbackWishlist(previousWishlist);
+      // Undo only this item, so other changes made meanwhile are kept.
+      persistWishlist((current) => current.filter((id) => id !== productId));
       toast({
-        title: 'Wishlist Sync Failed',
-        description: 'The item was not saved to your account. Please try again.',
+        title: 'Could not save to your wishlist',
+        description: 'Check your connection and try again.',
         variant: 'destructive',
       });
     });
 
     toast({
-      title: "Added to Wishlist",
-      description: productTitle || "Product added to your wishlist",
+      title: 'Saved to wishlist',
+      description: productTitle,
     });
     return true;
-  }, [persistWishlist, rollbackWishlist, user, wishlist]);
+  }, [persistWishlist, user]);
 
   const removeFromWishlist = useCallback((productId: string, productTitle?: string) => {
-    const previousWishlist = [...wishlist];
-    const nextWishlist = wishlist.filter(id => id !== productId);
-    persistWishlist(nextWishlist);
+    if (!wishlistRef.current.includes(productId)) {
+      return false;
+    }
+
+    persistWishlist((current) => current.filter((id) => id !== productId));
 
     if (user) {
       void removeWishlistItemRemote(user.uid, productId).catch((error) => {
         console.error('Error removing wishlist item from Firestore:', error);
-        rollbackWishlist(previousWishlist);
+        // Put back only this item, so other changes made meanwhile are kept.
+        persistWishlist((current) => (current.includes(productId) ? current : [...current, productId]));
         toast({
-          title: 'Wishlist Sync Failed',
-          description: 'The item could not be removed from your account. Please try again.',
+          title: 'Could not remove from your wishlist',
+          description: 'Check your connection and try again.',
           variant: 'destructive',
         });
       });
     }
 
     toast({
-      title: "Removed from Wishlist",
-      description: productTitle || "Product removed from your wishlist",
-      variant: "default",
+      title: 'Removed from wishlist',
+      description: productTitle,
+      action: user
+        ? { label: 'Undo', onClick: () => { addToWishlistRef.current(productId, productTitle); } }
+        : undefined,
     });
     return true;
-  }, [persistWishlist, rollbackWishlist, user, wishlist]);
+  }, [persistWishlist, user]);
+
+  // Lets the Undo action call the newest addToWishlist after re-renders.
+  const addToWishlistRef = useRef(addToWishlist);
+  addToWishlistRef.current = addToWishlist;
 
   const toggleWishlist = useCallback((productId: string, productTitle?: string) => {
     if (!user) {
-      toast({
-        title: "Login Required",
-        description: "Please login or signup to add items to your wishlist",
-        variant: "destructive",
-      });
+      showSignInToast();
       return;
     }
 
-    const isInWishlist = wishlist.includes(productId);
-    if (isInWishlist) {
+    if (wishlistRef.current.includes(productId)) {
       removeFromWishlist(productId, productTitle);
     } else {
       addToWishlist(productId, productTitle);
     }
-  }, [user, wishlist, addToWishlist, removeFromWishlist]);
+  }, [user, addToWishlist, removeFromWishlist]);
 
   const isInWishlist = useCallback((productId: string) => {
     return wishlist.includes(productId);
   }, [wishlist]);
 
   const clearWishlist = useCallback(() => {
-    const previousWishlist = [...wishlist];
+    const previousWishlist = [...wishlistRef.current];
     persistWishlist([]);
 
     if (user) {
       void clearUserWishlist(user.uid).catch((error) => {
         console.error('Error clearing wishlist from Firestore:', error);
-        rollbackWishlist(previousWishlist);
+        persistWishlist(previousWishlist);
       });
     }
-  }, [persistWishlist, rollbackWishlist, user, wishlist]);
+  }, [persistWishlist, user]);
 
   return {
     wishlist,
