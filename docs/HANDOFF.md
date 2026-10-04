@@ -7,9 +7,22 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-05 (Scratch & Win money-logic review and the check of its fixes are done on `scratch-win`; next is the owner's OK for the rules deploy and a live test).
+Last updated: 2026-10-05 (Scratch & Win: rules deployed, live test passed, merged into `main`).
 
 ## State
+
+- **2026-10-05: Scratch & Win is finished and merged into `main`** (`--no-ff`, local only, never pushed). It stays **off** until the client confirms the placeholder values and an admin turns it on.
+  - **Rules deployed** with the owner's OK (`node docs/handoff/deploy-rules.mjs`, ruleset `2abcb7dc-…`): the `scratchCards` read-only rule, a return request must start `pending`, and a customer can cancel a return only while it is `pending`.
+  - **Live test passed** with the owner's OK: `node docs/handoff/scratch-win-live.mjs http://127.0.0.1:5182 ../shots/scratch-win-live` (dev server on 5182). It uses the real create-order, verify-payment and notify-order code, live Firestore, the deployed rules (over REST as the test shopper) and the real storefront in Chromium. The browser's `/api/notify-order` calls go to the real handler in the script's process, because the dev server doesn't serve that route. Only Razorpay is faked. It checked:
+    - With the switch off, a delivered order gets points but no card. After the switch goes on, an order delivered more than 15 minutes earlier still gets no card. (The server allows 15 minutes either way for device clocks, which is by design.)
+    - A delivered order of ₹1,098 gets exactly one card, even after a second reconcile, and the payment is stamped with `scratchCardGivenAt`. The shopper can read the card but cannot create or change one. The prize unlocks at the same time as the order's earned points, delivery + 7 days.
+    - Scratching in the browser at 390 px with "Reveal prize" won 5 points. The ledger got `scratch_<rzp>` (earn, source scratch, active, not held), and scratching again returns the same prize.
+    - Returns: a request that starts `approved` is refused (403) and a `pending` one is accepted. The prize and the earned points are held while the return is open, the customer can't cancel once the shop approves, and when the order is returned both are voided. The dialog is told the prize was taken back.
+    - An unscratched card survives a cancelled (pending) return. Once the order is returned the card is void, and a scratch gets 409 `card_void` with no draw.
+    - The wallet and order page with live cards at 390 and 1440, light and dark, have 0 console errors and no sideways overflow. Screenshots are in `../shots/scratch-win-live/`, including the "return approved" wording on the order page and "Points taken back" on the wallet.
+    - Cleanup: the 4 test orders and their payments, cards and 5 ledger entries are deleted, and `siteSettings/scratchWin` is deleted again (it had never been set). The shopper's ledger is back to its 2 demo entries.
+  - **Verified on `main` after the merge:** `npm test` 74/74, `npm run build` passes.
+  - **Still not tested:** a real Razorpay payment (needs the owner's test keys).
 
 - **2026-10-05: Scratch & Win money-logic review done; fixes committed on `scratch-win` (`7be97a1`, `400646b`, `84df237`, docs after them; local only, not merged).** Report: `docs/superpowers/reviews/2026-10-05-scratch-win-money-review.md`.
   - **How:** 4 reviewers (draws, returns, ownership, timing/spec) and 2 adversarial verifiers.
@@ -76,7 +89,7 @@ Last updated: 2026-10-05 (Scratch & Win money-logic review and the check of its 
 ## Next steps (in order)
 
 1. **No redesign.** The owner likes the current design. Any future visual change: keep the product-dense e-commerce layout, show a cheap mockup of ONE screen first, and get a yes before building.
-2. **Scratch & Win: built and money-reviewed; needs the rules deploy (owner OK), a live test, then merge.** Decisions (owner said "just complete it", 2026-10-04):
+2. **Scratch & Win: DONE 2026-10-05** (rules deployed, live test passed, merged into `main`; see "State"). To switch it on: the client confirms the values in `CLIENT.md`, then an admin turns it on in Commerce settings > Scratch & Win. Decisions (owner said "just complete it", 2026-10-04):
    - Admin-configurable (`siteSettings.scratchWin`), shipped **off**, values marked as placeholders and listed in `CLIENT.md`.
    - One card per **delivered** online order at or above an admin minimum; created by `reconcileRewards` as `users/<uid>/scratchCards/<rzp>`.
    - Prizes: loyalty points in admin-set sizes with weights, plus "better luck next time" (weight 0 by default). No coupons or cashback for now (coupons are public and not tied to a customer; cashback is the riskiest).
@@ -84,9 +97,10 @@ Last updated: 2026-10-05 (Scratch & Win money-logic review and the check of its 
    - Customers can only read their cards; only the Admin SDK writes them. The admin page shows the average cost per card.
    - **Built on branch `scratch-win` (2026-10-04, see "State").** Next, in order:
      1. ~~Money-logic review~~ **Done 2026-10-05** (see "State" and the report).
-     2. **Fixes and the check of the fixes: done 2026-10-05.** Next: ask the owner's OK to deploy the rules (`node docs/handoff/deploy-rules.mjs`): the `scratchCards` read rule, the return-cancel rule and the return-request rule.
-     3. With the owner's OK (it writes to live Firestore): a live run with the test shopper. Turn the feature on, take a test order to delivered, scratch it, check the ledger, return it, check the void, then turn the feature off again.
-     4. Merge `scratch-win` into `main` (`--no-ff`, local only).
+     2. ~~Fixes and the check of the fixes~~ **Done 2026-10-05.**
+     3. ~~Rules deploy and live run with the test shopper~~ **Done 2026-10-05** (`docs/handoff/scratch-win-live.mjs`).
+     4. ~~Merge `scratch-win` into `main`~~ **Done 2026-10-05.**
+   - **Still open from the review, before delivery partners are switched on** (rules plus emulator): a partner can flip a return-pickup order back to delivered; a partner can write any `deliveredAt`; the partner's own return-pickup update seems refused by the current rules.
 3. **Smaller follow-ups:**
    - Owner to do in Admin > Commerce: set Ships From = Telangana (delivery charges still assume Andhra Pradesh).
    - **Done 2026-10-04 (`4e64b8d`):** the wishlist page shows one toast on remove; cart lines keep the order they were added in. Not checked in a browser (needs the live preview shopper).
@@ -198,7 +212,7 @@ Which next steps need ultracode:
 | Step | Ultracode? | Effort |
 |---|---|---|
 | 1. (no redesign) | - | - |
-| 2. Scratch & Win: rules deploy, live test, merge | No (review done) | High |
+| 2. Scratch & Win | Done | - |
 | 3. Small follow-ups | No | Medium |
 | 4. Dealer, Loyalty card | Yes, for the plan and the money logic review | Extra high |
 

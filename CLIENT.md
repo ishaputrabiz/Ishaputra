@@ -50,7 +50,7 @@
     - Video-call shopping → reworded as "video consultation with an expert" (user may still ask to remove it).
     - Gift cards and the admin AI prompt tool → kept; rewrite the AI prompts for Ishaputra's products.
 - Build after Step 2: Dealer Membership, Loyalty Card (TODO(client): a digital tier card on `/wallet`, or a separate card?). Business rules are open questions below.
-- Scratch & Win: built 2026-10-04 on branch `scratch-win`, shipped **off** (see "Scratch & Win" below).
+- Scratch & Win: built 2026-10-04, money-reviewed and live-tested 2026-10-05, merged into `main`; shipped **off** (see "Scratch & Win" below). Its rules are deployed.
 
 ## Rewards (Task 8)
 Loyalty points and wallet cashback, built in Step 2B and merged into `main` on 2026-10-03. The rules are in `src/lib/rewards.ts`; `docs/HANDOFF.md` explains how they work.
@@ -247,11 +247,11 @@ Owner to do: set Ships From = Telangana in Admin > Commerce (the delivery-charge
 - [x] Step 0 safe preview (2026-09-23): home, products and product pages show demo content on Ishaputra Firebase; only the YouTube section is hidden (no videos yet)
 - [ ] Step 1 new look: done 2026-09-27, waiting for client review
 - [x] Step 2 design (2026-09-29): Home, Products, Product detail, Checkout, Profile and the remaining pages; waiting for client review
-- [ ] Step 2B features: rewards (points and cashback) merged 2026-10-03; Scratch & Win built 2026-10-04 (branch `scratch-win`, waiting for review); Dealer Membership and the loyalty card still to build
+- [ ] Step 2B features: rewards (points and cashback) merged 2026-10-03; Scratch & Win merged 2026-10-05 (shipped off, values are placeholders); Dealer Membership and the loyalty card still to build
 - [ ] Step 3 accounts   - [ ] Step 4 test and publish   - [ ] Step 5 client changes
 
 ## Next step
-Scratch & Win is built on branch `scratch-win`. Next: a money-logic review of it (ultracode), then the owner's OK to deploy the `scratchCards` rule, then merge into `main`. After that, the rest of Step 2B (Dealer Membership, loyalty card), which needs the open answers below.
+Scratch & Win is merged into `main` (off until the client confirms its values and an admin turns it on). Next: the rest of Step 2B (Dealer Membership, loyalty card), which needs the open answers below.
 
 ## Open questions
 - Real business details to replace the dummy ones in `src/config/brand.ts`: legal name, address, phone, WhatsApp, email, hours, GSTIN, domain, social links (blocking for launch, not for review)
