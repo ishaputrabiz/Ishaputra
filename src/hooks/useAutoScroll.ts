@@ -20,6 +20,11 @@ export interface UseAutoScrollOptions {
   enabled?: boolean;
 }
 
+/** Resume soon after the mouse leaves or keyboard focus moves out. */
+const HOVER_RESUME_MS = 350;
+/** After a finger lifts, wait for a flick's momentum scroll to finish. */
+const TOUCH_RESUME_MS = 1200;
+
 export interface UseAutoScrollReturn {
   scrollerRef: React.RefObject<HTMLDivElement>;
   pause: () => void;
@@ -92,12 +97,17 @@ export function useAutoScroll(opts: UseAutoScrollOptions = {}): UseAutoScrollRet
       const logicalScrollWidth = hasLoopCopies ? el.scrollWidth / 2 : el.scrollWidth;
       const max = Math.max(0, el.scrollWidth - el.clientWidth);
       const logicalMax = Math.max(0, logicalScrollWidth - el.clientWidth);
+      // One full set of cards, gap included: where the first copy starts.
+      // Half of scrollWidth is off by half a gap plus padding, a visible hop.
+      const first = el.children[0] as HTMLElement | undefined;
+      const firstCopy = el.children[loopItemCount] as HTMLElement | undefined;
+      const period = hasLoopCopies && first && firstCopy ? firstCopy.offsetLeft - first.offsetLeft : 0;
 
       return {
         hasLoopCopies,
         logicalMax,
         max,
-        resetPoint: hasLoopCopies ? el.scrollWidth / 2 : max,
+        resetPoint: hasLoopCopies ? (period > 0 ? period : el.scrollWidth / 2) : max,
       };
     },
     [loop, loopItemCount]
@@ -281,61 +291,86 @@ export function useAutoScroll(opts: UseAutoScrollOptions = {}): UseAutoScrollRet
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, []);
 
-  // Pause on touch, pointer, hover and keyboard focus; the loop re-reads the
-  // position once afterwards instead of reading scrollLeft every frame.
+  /**
+   * Stop while someone is holding the row, start again once they let go.
+   *
+   * Three independent "holds": a mouse over the row, a finger on it, and
+   * keyboard focus inside it. The row moves only when none is held. Earlier
+   * versions paused on mouseenter and on any focus, which left phones stuck:
+   * a tap fires a synthetic mouseenter with no mouseleave, and a click leaves
+   * focus on the card, so the row never started again.
+   */
   useEffect(() => {
     if (!enabled || !scrollerEl) return;
+
+    const holds = { hover: false, touch: false, keyboard: false };
+    const release = (delay: number) => {
+      if (holds.hover || holds.touch || holds.keyboard) return;
+      clearResumeTimer();
+      resumeTimerRef.current = window.setTimeout(() => {
+        needsSyncRef.current = true;
+        pausedRef.current = false;
+        setIsPaused(false);
+      }, delay);
+    };
+    const hold = (key: keyof typeof holds) => {
+      holds[key] = true;
+      needsSyncRef.current = true;
+      pause();
+    };
 
     const markUserScroll = () => {
       needsSyncRef.current = true;
     };
-    const handlePointerDown = () => {
-      needsSyncRef.current = true;
-      pause();
+    // Mouse only: touch and pen hover events are synthetic and unbalanced.
+    const handlePointerEnter = (event: PointerEvent) => {
+      if (event.pointerType === "mouse") hold("hover");
     };
-    const handlePointerUp = () => {
-      resume();
+    const handlePointerLeave = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") return;
+      holds.hover = false;
+      release(HOVER_RESUME_MS);
     };
-    const handleMouseEnter = () => {
-      pause();
+    const handleTouchStart = () => hold("touch");
+    const handleTouchEnd = (event: TouchEvent) => {
+      if (event.touches.length > 0) return;
+      holds.touch = false;
+      // Let a flick's momentum settle before the drift takes over again.
+      release(TOUCH_RESUME_MS);
     };
-    const handleMouseLeave = () => {
-      resume();
-    };
-    const handleFocusIn = () => {
-      needsSyncRef.current = true;
-      pause();
+    // Keyboard focus only (:focus-visible); a mouse click must not freeze the row.
+    const handleFocusIn = (event: FocusEvent) => {
+      const target = event.target as Element | null;
+      if (target?.matches?.(":focus-visible")) hold("keyboard");
     };
     const handleFocusOut = (event: FocusEvent) => {
       if (event.relatedTarget instanceof Node && scrollerEl.contains(event.relatedTarget)) return;
-      resume();
+      if (!holds.keyboard) return;
+      holds.keyboard = false;
+      release(HOVER_RESUME_MS);
     };
 
-    scrollerEl.addEventListener("pointerdown", handlePointerDown, { passive: true });
-    scrollerEl.addEventListener("pointerup", handlePointerUp, { passive: true });
-    scrollerEl.addEventListener("pointercancel", handlePointerUp, { passive: true });
-    scrollerEl.addEventListener("touchstart", handlePointerDown, { passive: true });
-    scrollerEl.addEventListener("touchend", handlePointerUp, { passive: true });
+    scrollerEl.addEventListener("pointerenter", handlePointerEnter);
+    scrollerEl.addEventListener("pointerleave", handlePointerLeave);
+    scrollerEl.addEventListener("touchstart", handleTouchStart, { passive: true });
+    scrollerEl.addEventListener("touchend", handleTouchEnd, { passive: true });
+    scrollerEl.addEventListener("touchcancel", handleTouchEnd, { passive: true });
     scrollerEl.addEventListener("wheel", markUserScroll, { passive: true });
-    scrollerEl.addEventListener("mouseenter", handleMouseEnter);
-    scrollerEl.addEventListener("mouseleave", handleMouseLeave);
     scrollerEl.addEventListener("focusin", handleFocusIn);
     scrollerEl.addEventListener("focusout", handleFocusOut);
 
     return () => {
       clearResumeTimer();
-      scrollerEl.removeEventListener("pointerdown", handlePointerDown);
-      scrollerEl.removeEventListener("pointerup", handlePointerUp);
-      scrollerEl.removeEventListener("pointercancel", handlePointerUp);
-      scrollerEl.removeEventListener("touchstart", handlePointerDown);
-      scrollerEl.removeEventListener("touchend", handlePointerUp);
+      scrollerEl.removeEventListener("pointerenter", handlePointerEnter);
+      scrollerEl.removeEventListener("pointerleave", handlePointerLeave);
+      scrollerEl.removeEventListener("touchstart", handleTouchStart);
+      scrollerEl.removeEventListener("touchend", handleTouchEnd);
+      scrollerEl.removeEventListener("touchcancel", handleTouchEnd);
       scrollerEl.removeEventListener("wheel", markUserScroll);
-      scrollerEl.removeEventListener("mouseenter", handleMouseEnter);
-      scrollerEl.removeEventListener("mouseleave", handleMouseLeave);
       scrollerEl.removeEventListener("focusin", handleFocusIn);
       scrollerEl.removeEventListener("focusout", handleFocusOut);
     };
-  }, [enabled, pause, resume, scrollerEl]);
+  }, [enabled, pause, scrollerEl]);
 
   useEffect(() => {
     if (!autoplay || !scrollerEl) return;
@@ -395,11 +430,10 @@ export function useAutoScroll(opts: UseAutoScrollOptions = {}): UseAutoScrollRet
           posRef.current = 0;
         }
 
-        // Kept as the original write. The rows carry scroll-behavior: smooth
-        // (index.css), which swallows it, so on screen the rows stay still, as
-        // they always have. The owner kept today's behaviour (2026-10-04); a
-        // visible drift would need behavior: 'instant' here and their OK.
-        el.scrollLeft = posRef.current;
+        // 'instant' overrides the rows' CSS scroll-behavior: smooth (index.css).
+        // A plain scrollLeft write inherits it, so each frame started a smooth
+        // scroll the next frame cancelled, and the row moved only sometimes.
+        el.scrollTo({ left: posRef.current, behavior: "instant" as ScrollBehavior });
         appliedRef.current = posRef.current;
       }
       rafRef.current = requestAnimationFrame(tick);
