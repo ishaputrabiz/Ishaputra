@@ -7,7 +7,7 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-04.
+Last updated: 2026-10-04 (toolbox finished).
 
 ## State
 
@@ -37,7 +37,7 @@ Last updated: 2026-10-04.
    - Owner to do in Admin > Commerce: set Ships From = Telangana (delivery charges still assume Andhra Pradesh).
    - Small leftovers, none blocking: `useWishlist`'s own toast and the wishlist page's toast could be merged; cart lines could keep the order they were added in (needs an `addedAt` on cart lines in `CartContext`); generate `public/sitemap.xml` once the domain is real (`robots.txt` points at it, marked TODO(client)); set `VITE_SITE_URL` on Vercel so `og:image` is absolute; PERF-14's `initializeAuth` part (needs a full sign-in regression test).
    - Client placeholders to confirm are listed in `CLIENT.md` ("Placeholders for the client").
-2. **Finish the toolbox.** See "Skills" below.
+2. **Toolbox: done 2026-10-04.** See "Skills" below. Restart Claude Code once so the `motion` and `chrome-devtools` MCP servers load in new sessions.
 3. **Later:** Scratch & Win, Dealer Membership, Loyalty Card (rest of Step 2B), then Step 3 accounts.
 
 ## Review result
@@ -83,15 +83,26 @@ The full rules are in `src/lib/rewards.ts`. Its `rewards-core` block is copied i
   - `jakubkrehel/skills`: 9 `better-*`, `interface-review` and `explain-interface` skills.
   - `shadcn-ui/ui`: `shadcn` (caution: never run its `add --overwrite`, `apply`, `init --force`, `migrate` or `eject` without asking).
   - `ChromeDevTools/chrome-devtools-mcp`: 3 skills.
-- **To do:**
-  - Add the Motion MCP: `claude mcp add --transport http -s user motion https://mcp.motion.dev`.
-  - Add the Chrome DevTools MCP, pinned: `claude mcp add chrome-devtools -s user -e CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS=1 -e CHROME_DEVTOOLS_MCP_NO_CONFIG_DISCOVERY=1 -- cmd /c npx -y chrome-devtools-mcp@1.10.1 --isolated --no-usage-statistics --redact-network-headers`.
-  - Vet, then maybe install, the candidates that are not vetted yet:
-    - `firebase/agent-skills` (rules auditor), `coreyhaines31/marketingskills` (CRO, SEO, copy), `medusajs/medusa-agent-skills` (storefront best practices).
-    - `googlechrome/modern-web-guidance`, `ibelick/ui-skills`, `currents-dev/playwright-best-practices-skill`.
-    - The Playwright trace and component-testing skills. The earlier install was blocked and needs the owner's OK.
-  - Update the skill table in `~/.claude/CLAUDE.md`. Emil plus `motion` govern motion; the taste skills govern visual direction only.
-  - Regenerate the catalog: `node ~/.claude/tools/skills-catalog.mjs out.json`, then `node ~/.claude/tools/write-catalog.mjs out.json ~/.claude/SKILLS-CATALOG.md`.
+- **Done 2026-10-04:**
+  - MCP servers added at user scope, both connected: `motion` (https://mcp.motion.dev) and `chrome-devtools` (pinned 1.10.1, isolated profile, no usage stats, network headers redacted, update checks off).
+  - Vetted by 3 read-only reviewers (SKILL.md, references, scripts, repo-level files): no prompt injection, secret reads or telemetry in the installed skills. Installed:
+    - `coreyhaines31/marketingskills` @dda3841: `seo-audit`, `product-marketing`, `cro`, `copywriting`, `copy-editing`, `analytics`, `schema`, `ai-seo`, `site-architecture`, `marketing-psychology`, `popups`, `sms`.
+    - `firebase/agent-skills` @de359da: `firebase-security-rules-auditor`, `firestore-rules-creation`.
+    - `medusajs/medusa-agent-skills` @da659ef: `storefront-best-practices`.
+    - `ibelick/ui-skills` @ebf5f26: `fixing-motion-performance`, `fixing-metadata`.
+    - `currents-dev/playwright-best-practices-skill` @283d5cb: `playwright-best-practices`.
+    - Playwright v1.63.0: `playwright-trace`, `playwright-component-testing` (owner OK'd 2026-10-04).
+    - `googlechrome/modern-web-guidance` @84ae725: `modern-web-guidance`.
+  - Owner-approved local patches, which must be re-applied after any reinstall (also listed in `~/.claude/CLAUDE.md`): `playwright-trace` only pre-approves `npx playwright trace`; `modern-web-guidance` is pinned to `@0.0.191` with `DISABLE_TELEMETRY=1`.
+  - Caveats written into `~/.claude/CLAUDE.md`:
+    - The marketing skills' example stats, ratings, countdowns and "selling fast" lines must never reach a client site without real data.
+    - Medusa's skill must not grep `.env`.
+    - Firestore rules are validated with the emulator, never with a live deploy.
+    - Don't copy the Playwright samples that reset databases.
+  - Not installed: Firebase's `firestore-rules-author` agent (runs commands without asking) and its `.mcp.json` (unpinned `firebase-tools@latest`).
+  - Skill table in `~/.claude/CLAUDE.md` updated: Emil plus `motion` decide motion. New rows cover storefront UX, SEO, copy/CRO, Firebase rules and Chrome DevTools.
+  - Catalog regenerated: `~/.claude/SKILLS-CATALOG.md`, 307 skills.
+- **Still not vetted (lower priority, only if a need comes up):** `vercel-labs/agent-skills`, `antfu/skills`, `hookdeck/webhook-skills`, `google-gemini/gemini-skills`, `shadcn/improve`, `getsentry/skills`, `content-designer/ux-writing-skill`, `googleanalytics/google-analytics-mcp`.
 - **Research:** the full results (50 candidates and their vetting notes) are in `~/.claude/vendor/skills-research-2026-10-03.json`.
 
 ## Screenshots
@@ -116,7 +127,6 @@ The full rules are in `src/lib/rewards.ts`. Its `rewards-core` block is copied i
   - Razorpay test keys, needed for a live checkout test.
   - Loyalty values: points per ₹100, point value, unlock days, maximum %.
   - GST settings and business details. The WhatsApp number and GSTIN are empty on purpose.
-  - The Playwright trace skill and the two MCP additions.
 
 ## Workflows, ultracode and chats (owner's standing rules)
 
@@ -134,7 +144,7 @@ Which next steps need ultracode:
 | Step | Ultracode? | Effort |
 |---|---|---|
 | 1. UI pass follow-ups (small) | No | Medium |
-| 2. Toolbox | No | Medium |
+| 2. Toolbox | Done | n/a |
 | 3. Step 2B features (Scratch & Win, Dealer, Loyalty card) | Yes, for the plan and the money logic review | Extra high for rewards / money logic |
 
 **Context:** read file ranges, not whole large files. `ssecommerce/CLAUDE.md` is 27 KB and loads into every session in this folder, so trimming it would cut the cost of every turn.
