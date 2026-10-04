@@ -212,3 +212,101 @@ test('prizes count as pending points until the order unlock date', async () => {
   assert.deepEqual(summariseRewards([entry], now()).points, { available: 0, pending: 50 });
   assert.deepEqual(summariseRewards([entry], now() + 8 * DAY).points, { available: 50, pending: 0 });
 });
+
+const earnPath = `users/${UID}/rewardLedger/earn_${RZP}`;
+
+test('points and prizes never unlock before the return window closes', async () => {
+  // A short unlock setting: the 7-day return window still decides.
+  const db = shop();
+  db.applyUpdate('siteSettings/rewards', { unlockDays: 3 });
+  await reconcile(db);
+  const delivered = db.read(`orders/${RZP}`)!.deliveredAt.toMillis();
+  assert.equal(db.read(earnPath)!.unlockAt.toMillis(), delivered + 7 * DAY);
+  assert.equal(db.read(cardPath)!.unlockAt.toMillis(), delivered + 7 * DAY);
+
+  // A delivery date written 30 days ahead keeps returns open that long, so the points wait with it.
+  const ahead = shop();
+  const future = now() + 30 * DAY;
+  ahead.applyUpdate(`orders/${RZP}`, { deliveredAt: T(future) });
+  await reconcile(ahead);
+  assert.equal(ahead.read(earnPath)!.unlockAt.toMillis(), future + 7 * DAY);
+  const card = ahead.read(cardPath)!;
+  assert.equal(card.unlockAt.toMillis(), future + 7 * DAY);
+  assert.ok(card.expiresAt.toMillis() <= now() + 30 * DAY, 'expiry still counts from now');
+});
+
+test('a card is given once per payment: deleting it does not bring a fresh draw', async () => {
+  const db = shop();
+  await reconcile(db);
+  await scratchCard(asDb(db), UID, RZP, () => 0);
+  assert.ok(db.read(`payments/${RZP}`)!.scratchCardGivenAt);
+  db.docs.delete(cardPath);
+  db.docs.delete(prizePath);
+  await reconcile(db);
+  assert.equal(db.read(cardPath), undefined);
+});
+
+test('turning Scratch & Win on gives no cards for orders delivered while it was off', async () => {
+  const before = shop({ deliveredAgoDays: 2 });
+  before.applyUpdate('siteSettings/scratchWin', { enabledAt: T(now() - DAY) });
+  await reconcile(before);
+  assert.equal(before.read(cardPath), undefined);
+
+  const after = shop();
+  after.applyUpdate('siteSettings/scratchWin', { enabledAt: T(now() - DAY) });
+  await reconcile(after);
+  assert.equal(after.read(cardPath)!.status, 'new');
+});
+
+test('an unscratched card is cancelled on return or refund, restored without its cancellation fields', async () => {
+  for (const status of ['returned', 'refunded']) {
+    const db = shop();
+    await reconcile(db);
+    await setStatus(db, status);
+    assert.deepEqual([db.read(cardPath)!.status, db.read(cardPath)!.voidReason], ['void', `order-${status}`]);
+    const again = await reconcile(db);
+    assert.ok(!again.changed.some((c) => c.startsWith('scratchCards')), again.changed.join(' '));
+    await setStatus(db, 'delivered');
+    const card = db.read(cardPath)!;
+    assert.equal(card.status, 'new');
+    assert.ok(card.restoredAt);
+    assert.deepEqual([card.voidedAt, card.voidedBy, card.voidReason], [undefined, undefined, undefined]);
+  }
+});
+
+test('holding and releasing a prize twice changes nothing the second time', async () => {
+  const db = shop();
+  await reconcile(db);
+  await scratchCard(asDb(db), UID, RZP, () => 99);
+  await setStatus(db, 'returnRequested');
+  const held = await reconcile(db);
+  assert.ok(!held.changed.some((c) => c.startsWith('scratchCards')), held.changed.join(' '));
+  await setStatus(db, 'delivered');
+  const released = await reconcile(db);
+  assert.ok(!released.changed.some((c) => c.startsWith('scratchCards')), released.changed.join(' '));
+});
+
+test('scratching again after the prize was taken back says so', async () => {
+  const db = shop();
+  await reconcile(db);
+  await scratchCard(asDb(db), UID, RZP, () => 99);
+  await setStatus(db, 'returned');
+  const r = await scratchCard(asDb(db), UID, RZP, () => 0);
+  assert.deepEqual([r.status, r.body.points, r.body.prizeState], [200, 50, 'void']);
+});
+
+test('a card whose order is missing or not the caller\'s is cancelled, not scratched', async () => {
+  const db = shop();
+  await reconcile(db);
+  db.applyUpdate(`orders/${RZP}`, { userId: 'someone-else' });
+  const r = await scratchCard(asDb(db), UID, RZP, () => 0);
+  assert.deepEqual([r.status, r.body.error, r.body.reason], [409, 'card_void', 'order-not-yours']);
+  assert.equal(db.read(prizePath), undefined);
+
+  const gone = shop();
+  await reconcile(gone);
+  gone.docs.delete(`orders/${RZP}`);
+  const g = await scratchCard(asDb(gone), UID, RZP, () => 0);
+  assert.deepEqual([g.status, g.body.reason], [409, 'order-missing']);
+  assert.equal(gone.read(prizePath), undefined);
+});

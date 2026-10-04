@@ -93,7 +93,9 @@ interface ScratchTiming {
 /**
  * Whether an order should get its card now (null: no). Only delivered orders,
  * only while Scratch & Win and loyalty rewards are on, only at or above the
- * minimum paid online, and never a card that would already have expired.
+ * minimum paid online, never for an order delivered before the switch was
+ * last turned on (no cards for orders delivered while it was off), and never
+ * a card that would already have expired.
  */
 function scratchCardEligible(i: {
   status: string;
@@ -103,11 +105,14 @@ function scratchCardEligible(i: {
   rewardsEnabled: boolean;
   /** order.deliveredAt in ms, 0 when unknown. */
   deliveredAtMs: number;
+  /** When the switch was last turned on (siteSettings/scratchWin.enabledAt), 0 when unknown. */
+  enabledAtMs?: number;
   nowMs: number;
 }): ScratchTiming | null {
   if (i.status !== 'delivered' || !i.scratch.enabled || !i.rewardsEnabled) return null;
   if (!(i.amountRupees >= i.scratch.minOrder)) return null;
   const anchorMs = i.deliveredAtMs > 0 && i.deliveredAtMs <= i.nowMs ? i.deliveredAtMs : i.nowMs;
+  if (anchorMs < (i.enabledAtMs || 0)) return null;
   const expiresAtMs = anchorMs + i.scratch.expiryDays * 86_400_000;
   return expiresAtMs > i.nowMs ? { anchorMs, expiresAtMs } : null;
 }
@@ -248,11 +253,13 @@ function scratchPrizeStats(s: ScratchWinSettings): ScratchPrizeStats {
   if (totalWeight <= 0) return { totalWeight: 0, averagePoints: 0, top: null, topOneIn: null, winShare: 0 };
   const averagePoints = s.prizes.reduce((sum, p) => sum + p.points * p.weight, 0) / totalWeight;
   const top = s.prizes.reduce<ScratchPrize | null>((m, p) => (p.weight > 0 && (!m || p.points > m.points) ? p : m), null);
+  // Every row with the biggest prize counts towards its odds.
+  const topWeight = top ? s.prizes.reduce((sum, p) => sum + (p.points === top.points ? p.weight : 0), 0) : 0;
   return {
     totalWeight,
     averagePoints,
     top,
-    topOneIn: top ? Math.round(totalWeight / top.weight) : null,
+    topOneIn: top ? Math.round(totalWeight / topWeight) : null,
     winShare: (totalWeight - s.noWinWeight) / totalWeight,
   };
 }

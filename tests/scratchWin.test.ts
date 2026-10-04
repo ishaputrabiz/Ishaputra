@@ -107,6 +107,13 @@ test('no card for an order delivered longer ago than the expiry; a future delive
   assert.deepEqual(elig({ deliveredAtMs: 1001 * DAY }), { anchorMs: 1000 * DAY, expiresAtMs: 1030 * DAY });
 });
 
+test('no card for an order delivered before the switch was last turned on', () => {
+  assert.equal(elig({ deliveredAtMs: 995 * DAY, enabledAtMs: 996 * DAY }), null);
+  assert.deepEqual(elig({ deliveredAtMs: 997 * DAY, enabledAtMs: 996 * DAY }), { anchorMs: 997 * DAY, expiresAtMs: 1027 * DAY });
+  // Unknown delivery time: the card is given now, which is after the switch.
+  assert.deepEqual(elig({ deliveredAtMs: 0, enabledAtMs: 996 * DAY }), { anchorMs: 1000 * DAY, expiresAtMs: 1030 * DAY });
+});
+
 const plan = (over: Partial<ScratchReconcileInput>) =>
   planScratchReconcile({ status: 'delivered', ended: false, reachedCustomer: true, card: null, prize: null, give: null, ...over });
 const GIVE = { anchorMs: 1, expiresAtMs: 2 };
@@ -201,6 +208,9 @@ test('prize stats for the admin page', () => {
   assert.equal(none.top, null);
   assert.equal(none.topOneIn, null);
   assert.equal(none.winShare, 0);
+  // Two rows with the biggest prize: their odds add up.
+  const twice = scratchPrizeStats({ ...S, prizes: [{ points: 50, weight: 5 }, { points: 10, weight: 90 }, { points: 50, weight: 5 }] });
+  assert.equal(twice.topOneIn, 10);
 });
 
 test('void reasons read as plain words', () => {
