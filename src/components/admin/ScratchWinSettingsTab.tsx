@@ -52,7 +52,8 @@ const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 const fmtPct = (share: number) => `${fmtNum(Math.round(share * 1000) / 10)}%`;
 
 function ChanceBar({ share }: { share: number | null }) {
-  if (share === null) return <span className="w-12 text-right text-sm text-muted-foreground">–</span>;
+  // A prize under 1 point is dropped on save, so it has no chance.
+  if (share === null) return <span className="text-right text-xs text-muted-foreground">Not saved</span>;
   return (
     <div className="flex items-center gap-2">
       <div aria-hidden="true" className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-foreground/[0.08] sm:block">

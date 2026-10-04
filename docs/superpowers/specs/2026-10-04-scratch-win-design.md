@@ -156,8 +156,8 @@ As in the approved mockup.
     - Phone: a horizontal swipe row of tiles. Desktop (`lg`): a 5-column grid. New cards come first (soonest expiry
       first), then the rest, newest first. The first 10 show, with "Show all N".
     - Tile states: **new** (charcoal tile with bronze foil, order number, "Expires 4 Nov", "Scratch now"); **won**
-      ("+25 Points", then "Unlocks 12 Oct", "In your wallet", "On hold, return open" or, struck through, "Taken back,
-      order returned"); **no prize** ("Scratched 20 Sep"); **expired** ("Ended 2 Sep"); **cancelled** ("Order
+      ("+25 Points", then "Unlocks 12 Oct", "In your wallet", "On hold, return open" or, struck through, "Points
+      taken back"); **no prize** ("Scratched 20 Sep"); **expired** ("Ended 2 Sep"); **cancelled** ("Order
       returned").
     - Footer line: "One card for every delivered order of ₹499 or more. Scratch it within 30 days of delivery." While
       the feature is off: "New cards are paused. Cards you already have can still be scratched until they expire."
@@ -173,8 +173,8 @@ As in the approved mockup.
       rather not scratch.
     - The first scratch or the Reveal press asks the server. Until it answers, the face under the foil is a skeleton.
       If it fails, the foil is repainted and "Couldn't reveal this card. Check your connection and try again." shows
-      with Try again. A 409 shows why ("This card has expired" or "This card was cancelled because the order was
-      returned") and closes the stage.
+      with Try again (in place of Reveal prize). A 409 shows why ("This card has expired." or "This card was
+      cancelled: order returned.") with Done.
     - Reveal: the foil fades, the prize pops from 0.96 and one copper sheen sweeps the number. With reduced motion,
       fades only.
     - The card has an `aria-label`, and the result is announced in a `role="status"` line: "25 points are in your
@@ -204,7 +204,7 @@ As in the approved mockup.
     - Like the Rewards tab, a failed load never falls back to defaults (saving stays off), and out-of-range values are
       clamped on save with a toast that says so.
 - **Admin order page:** one line under the points line: "Scratch card: not scratched yet, expires 4 Nov", "won 25
-  points", "no prize", "won 25 points, voided (order returned)", "cancelled (order returned)" or "expired, not
+  points" (+ " (on hold)" or " (voided)"), "no prize", "cancelled (order returned)" or "expired, not
   scratched".
 
 ## Error handling
