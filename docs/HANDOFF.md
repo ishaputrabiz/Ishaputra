@@ -7,7 +7,7 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-04 (toolbox finished).
+Last updated: 2026-10-04 (UI follow-ups: wishlist toast, cart order).
 
 ## State
 
@@ -35,7 +35,8 @@ Last updated: 2026-10-04 (toolbox finished).
 
 1. **UI pass merged (2026-10-04).** Remaining follow-ups:
    - Owner to do in Admin > Commerce: set Ships From = Telangana (delivery charges still assume Andhra Pradesh).
-   - Small leftovers, none blocking: `useWishlist`'s own toast and the wishlist page's toast could be merged; cart lines could keep the order they were added in (needs an `addedAt` on cart lines in `CartContext`); generate `public/sitemap.xml` once the domain is real (`robots.txt` points at it, marked TODO(client)); set `VITE_SITE_URL` on Vercel so `og:image` is absolute; PERF-14's `initializeAuth` part (needs a full sign-in regression test).
+   - **Done 2026-10-04 (`4e64b8d`):** the wishlist page shows one toast on remove (the hook's, with Undo); cart lines keep the order they were added in (`addedAt` + `src/lib/cartOrder.ts`, tested). `npm test` 32/32, build passes. Not checked in a browser: it needs the logged-in preview shopper, which writes to the live Firebase.
+   - Small leftovers, none blocking: generate `public/sitemap.xml` once the domain is real (`robots.txt` points at it, marked TODO(client)); set `VITE_SITE_URL` on Vercel so `og:image` is absolute; PERF-14's `initializeAuth` part (needs a full sign-in regression test).
    - Client placeholders to confirm are listed in `CLIENT.md` ("Placeholders for the client").
 2. **Toolbox: done 2026-10-04.** See "Skills" below. Restart Claude Code once so the `motion` and `chrome-devtools` MCP servers load in new sessions.
 3. **Later:** Scratch & Win, Dealer Membership, Loyalty Card (rest of Step 2B), then Step 3 accounts.
