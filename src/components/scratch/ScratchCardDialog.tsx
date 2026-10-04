@@ -29,7 +29,6 @@ export interface ScratchCardDialogProps {
   startId: string | null;
   scratch: (card: ScratchCard) => Promise<ScratchResult>;
   pointValue: number;
-  unlockDays: number;
   /** For the no-prize line; null while new cards are paused. */
   minOrder: number | null;
   title?: string;
@@ -53,7 +52,6 @@ export function ScratchCardDialog({
   startId,
   scratch,
   pointValue,
-  unlockDays,
   minOrder,
   title = 'Scratch card',
   describe = defaultDescription,
@@ -91,7 +89,6 @@ export function ScratchCardDialog({
       position={{ index: index + 1, total: queue.length }}
       scratch={() => scratch(card)}
       pointValue={pointValue}
-      unlockDays={unlockDays}
       minOrder={minOrder}
       onNext={nextIndex >= 0 ? () => setIndex(nextIndex) : undefined}
       onDone={() => onOpenChange(false)}

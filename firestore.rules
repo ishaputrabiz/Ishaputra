@@ -489,6 +489,8 @@ service cloud.firestore {
       // puts the order back to delivered.
       function isValidReturnCancel() {
         return resource.data.status == 'returnRequested'
+          // Only before the shop approves it: after that the goods may be on their way back.
+          && resource.data.get('returnStatus', 'pending') == 'pending'
           && request.resource.data.status == 'delivered'
           && request.resource.data.returnCancelled == true
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([

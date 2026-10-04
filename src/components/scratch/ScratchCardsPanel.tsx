@@ -248,7 +248,6 @@ export function ScratchCardsPanel({ uid }: { uid: string }) {
         startId={dialog.startId}
         scratch={(card) => requestScratch(card.id)}
         pointValue={rewards.pointValue}
-        unlockDays={rewards.unlockDays}
         minOrder={settings.enabled ? settings.minOrder : null}
       />
     </>

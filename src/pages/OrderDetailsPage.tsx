@@ -991,8 +991,8 @@ const OrderDetailsPage = () => {
             </Button>
           )}
 
-          {/* Cancel Return: only for returnRequested orders, one-time, asks first */}
-          {order.status === 'returnRequested' && !(order as any).returnCancelled && (
+          {/* Cancel Return: only while the return is still a request (not yet approved), one-time, asks first */}
+          {order.status === 'returnRequested' && !(order as any).returnCancelled && (order.returnStatus ?? 'pending') === 'pending' && (
             <Button
               ref={cancelReturnBtnRef}
               variant="destructive"

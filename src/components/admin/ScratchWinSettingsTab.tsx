@@ -147,7 +147,8 @@ export function ScratchWinSettingsTab() {
   }
 
   const total = scratchTotalWeight(clean);
-  const share = (weight: number) => (total > 0 ? Math.max(0, Math.floor(weight)) / total : 0);
+  // Clamped like the save, so a typed weight never shows more than 100%.
+  const share = (weight: number) => (total > 0 ? Math.min(1000, Math.max(0, Math.floor(weight))) / total : 0);
   const avgRupees = stats.averagePoints * rewards.pointValue;
   const ofOrder = clean.minOrder > 0 ? (avgRupees / clean.minOrder) * 100 : 0;
   const update = (id: string, patch: Partial<Row>) =>
@@ -159,7 +160,7 @@ export function ScratchWinSettingsTab() {
     setSaving(true);
     try {
       const next = normaliseScratchSettings(toSettings(before));
-      await saveScratchSettings(next);
+      await saveScratchSettings(next, saved?.enabled === true);
       const adjusted = JSON.stringify(next) !== JSON.stringify(toSettings(before));
       setSaved(next);
       // Show what was written, but keep anything typed while the save was running.
@@ -398,7 +399,6 @@ export function ScratchWinSettingsTab() {
         startId={preview?.id ?? null}
         scratch={previewScratch}
         pointValue={rewards.pointValue}
-        unlockDays={rewards.unlockDays}
         minOrder={clean.enabled ? clean.minOrder : null}
         title="Preview card"
         describe={() => 'Preview, gives nothing'}

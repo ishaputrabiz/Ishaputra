@@ -92,8 +92,19 @@ export const getScratchSettings = async (): Promise<ScratchWinSettings> => {
   return normaliseScratchSettings(snap.exists() ? (snap.data() as Partial<ScratchWinSettings>) : null);
 };
 
-export const saveScratchSettings = (s: ScratchWinSettings) =>
-  setDoc(settingsRef(), { ...normaliseScratchSettings(s), updatedAt: serverTimestamp() }, { merge: true });
+/**
+ * Save the settings. Turning the switch on stamps enabledAt: the server gives
+ * no card for an order delivered before it, so cards are not handed out for
+ * orders delivered while Scratch & Win was off.
+ */
+export const saveScratchSettings = (s: ScratchWinSettings, wasEnabled: boolean) => {
+  const next = normaliseScratchSettings(s);
+  return setDoc(
+    settingsRef(),
+    { ...next, ...(next.enabled && !wasEnabled ? { enabledAt: serverTimestamp() } : {}), updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+};
 
 /** One order's card (order pages). Null when there is none or it can't be read. Never throws. */
 export const getScratchCard = async (uid: string, orderId: string): Promise<ScratchCard | null> => {
@@ -106,7 +117,14 @@ export const getScratchCard = async (uid: string, orderId: string): Promise<Scra
 };
 
 export type ScratchResult =
-  | { ok: true; points: number; held: boolean; unlockAtMs: number }
+  | {
+      ok: true;
+      points: number;
+      held: boolean;
+      unlockAtMs: number;
+      /** The prize was taken back: its order was cancelled or returned. */
+      taken?: boolean;
+    }
   | { ok: false; reason: 'expired' | 'void' | 'missing' | 'network'; voidReason?: string; detail?: string };
 
 /**
@@ -121,6 +139,7 @@ export async function requestScratch(orderId: string): Promise<ScratchResult> {
       points: Math.max(0, Math.floor(Number(r.data.points) || 0)),
       held: r.data.held === true,
       unlockAtMs: Number(r.data.unlockAtMs) || 0,
+      taken: r.data.prizeState === 'void',
     };
   }
   if (r.status === 409) {

@@ -16,7 +16,7 @@ type Gone = Extract<ScratchResult, { ok: false }>;
 const points = (n: number) => `${formatNumber(n)} ${n === 1 ? 'point' : 'points'}`;
 
 /** The sentence announced after the reveal: what was won and when it can be spent. */
-function resultCopy(prize: Prize, unlockDays: number, minOrder: number | null, nowMs: number) {
+function resultCopy(prize: Prize, minOrder: number | null, nowMs: number) {
   if (prize.points <= 0) {
     return {
       lead: '',
@@ -27,6 +27,9 @@ function resultCopy(prize: Prize, unlockDays: number, minOrder: number | null, n
     };
   }
   const one = prize.points === 1;
+  if (prize.taken) {
+    return { lead: `You won ${points(prize.points)}.`, rest: `${one ? 'It was' : 'They were'} taken back when the order was cancelled or returned.` };
+  }
   const lead = `${points(prize.points)} ${one ? 'is' : 'are'} in your wallet.`;
   if (prize.held) {
     return { lead, rest: `${one ? 'It stays' : 'They stay'} on hold while the order's return is open.` };
@@ -34,7 +37,7 @@ function resultCopy(prize: Prize, unlockDays: number, minOrder: number | null, n
   if (prize.unlockAtMs > nowMs) {
     return {
       lead,
-      rest: `${one ? 'It unlocks' : 'They unlock'} on ${formatDayMonth(prize.unlockAtMs)}, when the order's ${unlockDays}-day return window ends.`,
+      rest: `${one ? 'It unlocks' : 'They unlock'} on ${formatDayMonth(prize.unlockAtMs)}, once the order's return window has closed.`,
     };
   }
   return { lead, rest: 'Ready to use now.' };
@@ -105,7 +108,6 @@ export interface ScratchCardStageProps {
   scratch: () => Promise<ScratchResult>;
   /** Rupee value of a point, for "Worth ₹25". */
   pointValue: number;
-  unlockDays: number;
   /** For the no-prize line; null while new cards are paused. */
   minOrder: number | null;
   /** Shown as "Next card" when another card is waiting. */
@@ -124,7 +126,6 @@ export function ScratchCardStage({
   position,
   scratch,
   pointValue,
-  unlockDays,
   minOrder,
   onNext,
   onDone,
@@ -180,7 +181,7 @@ export function ScratchCardStage({
   };
 
   const won = !!prize && prize.points > 0;
-  const copy = revealed && prize ? resultCopy(prize, unlockDays, minOrder, revealedAt || Date.now()) : null;
+  const copy = revealed && prize ? resultCopy(prize, minOrder, revealedAt || Date.now()) : null;
   const waiting = wantReveal && asking;
 
   return (
