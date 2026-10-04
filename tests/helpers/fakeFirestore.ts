@@ -4,6 +4,8 @@
  * Firestore's errors, and transactions that are retried when a document they
  * read changed before they commit, as Firestore's are.
  */
+// Document data is untyped on purpose: tests read Timestamps and numbers back out of it.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Data = Record<string, any>;
 
 class FakeSnap {

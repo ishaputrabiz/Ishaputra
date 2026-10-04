@@ -914,7 +914,7 @@ export async function scratchCard(
     const prizeSnap = await tx.get(refs.prize);
     const c = cardSnap.data();
     if (!c) return { status: 404, body: { error: 'card_not_found' } };
-    const reply = (d: Record<string, any>): ScratchReply => ({
+    const reply = (d: admin.firestore.DocumentData): ScratchReply => ({
       status: 200,
       body: {
         ok: true,
@@ -1084,9 +1084,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Always the caller's own card: users/<callerUid>/scratchCards/<orderId>.
       const r = await scratchCard(db, callerUid, orderId);
       return res.status(r.status).json(r.body);
-    } catch (err: any) {
+    } catch (err) {
       // Nothing was written: the card stays unscratched for another try.
-      return res.status(503).json({ error: 'scratch_failed', detail: err?.message || String(err) });
+      return res.status(503).json({ error: 'scratch_failed', detail: err instanceof Error ? err.message : String(err) });
     }
   }
 

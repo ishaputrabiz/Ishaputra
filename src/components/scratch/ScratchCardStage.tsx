@@ -185,7 +185,7 @@ export function ScratchCardStage({
 
   return (
     <div>
-      <div className="tx-slate tx-contour relative overflow-hidden rounded-panel p-4 text-charcoal-foreground shadow-panel">
+      <div className="tx-slate tx-contour relative select-none overflow-hidden rounded-panel p-4 text-charcoal-foreground shadow-panel">
         <div className="mb-3 flex items-center justify-between gap-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-highlight-soft">Scratch &amp; Win</p>
           <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-charcoal-foreground/70 tabular-nums">
@@ -256,10 +256,12 @@ export function ScratchCardStage({
               Couldn't reveal this card. Check your connection and try again.
             </Notice>
           )}
-          <Button variant="outline" className="mt-4 w-full" onClick={reveal} disabled={waiting} aria-busy={waiting}>
-            {waiting ? <Spinner /> : <Eye aria-hidden="true" />}
-            {waiting ? 'Revealing' : 'Reveal prize'}
-          </Button>
+          {!failed && (
+            <Button variant="outline" className="mt-4 w-full" onClick={reveal} disabled={waiting} aria-busy={waiting}>
+              {waiting ? <Spinner /> : <Eye aria-hidden="true" />}
+              {waiting ? 'Revealing' : 'Reveal prize'}
+            </Button>
+          )}
           <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground">
             Scratch the bronze foil, or press Reveal prize.
           </p>

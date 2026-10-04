@@ -126,7 +126,11 @@ export function ScratchFoil({ resetKey, fading, onFirstStroke, onCleared }: Scra
     const el = ref.current;
     const ctx = context();
     if (!el || !ctx) return;
+    // destination-out erases by the stroke's alpha: an opaque colour clears the foil fully
+    // (the painter's last colour is 55% opaque, which left a translucent trail).
     ctx.globalCompositeOperation = 'destination-out';
+    ctx.strokeStyle = '#000';
+    ctx.globalAlpha = 1;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.lineWidth = Math.max(34, el.height * 0.17);
@@ -178,6 +182,8 @@ export function ScratchFoil({ resetKey, fading, onFirstStroke, onCleared }: Scra
       )}
       onPointerDown={(e) => {
         if (fading || e.button > 0) return;
+        // A mouse drag would otherwise start selecting the text around the card.
+        e.preventDefault();
         e.currentTarget.setPointerCapture(e.pointerId);
         if (!touched.current) {
           touched.current = true;
