@@ -56,6 +56,13 @@ export function formatDate(value: unknown): string {
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+/** '4 Nov'. Empty string when the date is missing. */
+export function formatDayMonth(value: unknown): string {
+  const d = toDate(value);
+  if (!d) return '';
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+
 /** '8:01 pm'. Empty string when the date is missing. */
 export function formatTime(value: unknown): string {
   const d = toDate(value);
