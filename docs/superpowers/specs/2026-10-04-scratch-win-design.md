@@ -15,7 +15,7 @@ cannot choose, repeat or keep a prize it should lose.
 
 | Rule | Placeholder | Setting (`siteSettings/scratchWin`) |
 |---|---|---|
-| Switch | Off. Off stops new cards; cards already given can still be scratched until they expire. | `enabled` |
+| Switch | Off. Off stops new cards; cards already given can still be scratched until they expire. Turning it on gives no cards for orders delivered while it was off. | `enabled`, `enabledAt` (stamped by the admin tab when the switch goes on) |
 | Who gets a card | One per online order paid through Razorpay, once it is **delivered**, when the amount paid online is at least the minimum | `minOrder` (₹499) |
 | Expiry | 30 days, counted from the order's delivery time | `expiryDays` |
 | Prizes | 5 / 10 / 25 / 50 points at weights 40 / 35 / 20 / 5 | `prizes: [{ points, weight }]` (max 10 rows) |
@@ -25,9 +25,13 @@ cannot choose, repeat or keep a prize it should lose.
   "better luck next time".
 - **New cards also need loyalty rewards on** (`siteSettings/rewards.enabled`), because the prizes are loyalty points.
 - **Won points follow their order**, exactly like the points earned on it:
-    - pending until the order's unlock date (the earn entry's `unlockAt`, or `unlockDays` after the card was given when
-      the order earned no points);
-    - frozen while a return is open (only spendable while the order sits at `delivered`);
+    - pending until the order's unlock date (the earn entry's `unlockAt`, or as it would have been when the order
+      earned no points). An unlock date is the later of "`unlockDays` after the server first sees the delivery" and
+      "the order's `deliveredAt` + 7 days" (the customer's return window), so points never unlock while a return can
+      still be requested (2026-10-05 review);
+    - frozen while a return is open (only spendable while the order sits at `delivered`). Checkout also holds an
+      unlocked earning or prize whose order is not at `delivered`, in case the reconcile after a status change never
+      ran (`holdEarnedOffDelivered` in `api/create-order.ts`);
     - voided if the order is cancelled, returned or refunded; restored if the shop reopens it.
 - **An unscratched card** is cancelled if its order ends, and comes back if the shop reopens the order.
 - **The prize table in force when the card is scratched** is used, not the one when it was given. Expiry and unlock
@@ -102,12 +106,14 @@ All in `api/notify-order.ts` (the Vercel Hobby plan has no free function slots).
 `rewards-core`.
 
 - `normaliseScratchSettings(raw)`: defaults and clamps. `minOrder` 0 to 1,000,000; `expiryDays` 1 to 365; prize
-  `points` whole 1 to 10,000 (rows outside are dropped); weights whole 0 to 1,000; at most 10 prizes; `enabled` true
-  only when `=== true`.
+  `points` whole, rows below 1 dropped and above 10,000 clamped (the admin tab says so when it saves); weights whole 0
+  to 1,000; at most 10 prizes; `enabled` true only when `=== true`. A missing or non-array `prizes` falls back to the
+  default table.
 - `scratchTotalWeight(s)` and `drawScratchPrize(s, roll)`: `roll` is a whole number in `[0, total)`; returns the
   points (0 = no prize). The server passes `crypto.randomInt(total)`.
-- `scratchCardEligible({ status, amountRupees, scratch, rewardsEnabled, deliveredAtMs, nowMs })`: whether reconcile
-  should give a card now, and its expiry.
+- `scratchCardEligible({ status, amountRupees, scratch, rewardsEnabled, deliveredAtMs, enabledAtMs, nowMs })`:
+  whether reconcile should give a card now, and its expiry. A delivery time in the future counts as now; an order
+  delivered before `enabledAt` gets none.
 - `planScratchReconcile({ status, ended, reachedCustomer, card, prize })`: what reconcile changes on the card and on
   the prize entry (create, void, restore, hold, release, mirror `prizeState`). Pure, so every transition is unit
   tested.
@@ -115,7 +121,10 @@ All in `api/notify-order.ts` (the Vercel Hobby plan has no free function slots).
 ### Reconcile (`action: 'reconcile-rewards'`)
 
 After the existing steps (spends, earn, refunds), and before it writes the order's display fields, one Firestore
-transaction reads the order, the card and `scratch_<rzp>`, and applies `planScratchReconcile`:
+transaction reads the order, the card, `scratch_<rzp>`, `earn_<rzp>` (for the card's unlock date) and `payments/<rzp>`,
+and applies `planScratchReconcile`. A payment gets one card, ever: creating it also writes
+`payments/<rzp>.scratchCardGivenAt`, and no card is created once that is set, so a card deleted by hand never comes back
+for a fresh draw. A restored card loses `voidedAt`, `voidedBy` and `voidReason`.
 
 | Order | Card | Change |
 |---|---|---|
@@ -143,8 +152,11 @@ admin's "Check payment & rewards" button runs it again.
     - otherwise it draws (inside the transaction, so a retried transaction draws again and only one draw is ever
       committed), creates `scratch_<rzp>` when the prize is above 0 (`held` when the order is not at `delivered`), and
       marks the card `scratched` with `points`, `scratchedAt` and `prizeState`.
-- The response is `{ ok, points, unlockAtMs, held, scratchedAtMs }`, sent only after the commit, so a customer can't
-  see a prize and cancel it.
+- The response is `{ ok, points, unlockAtMs, held, prizeState, scratchedAtMs }`, sent only after the commit, so a
+  customer can't see a prize and cancel it. `prizeState: 'void'` means the prize was taken back (the order ended), and
+  the dialog says so.
+- An expired card answers `card_expired` even when its order has ended; reconcile cancels it later.
+- A failure answers 503 `scratch_failed` with no detail (it is logged on the server).
 - It works while the feature is off (cards already given stay scratchable).
 
 ## Customer screens
