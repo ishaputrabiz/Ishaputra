@@ -7,10 +7,12 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-04 (redesign rejected and shelved; `>>` checkout bug fixed on `main`).
+Last updated: 2026-10-04 (one-slide checkout on `main`; redesign rejected and shelved).
 
 ## State
 
+- **2026-10-04: one slide pays (`b0c7f28`, on `main`).** The owner reported that sliding "Slide to pay" on the phone opened a second checkout screen ("Payment details", with another "Slide to place order"). Desktop had the same double step ("Place order" opened a popup with a second "Pay" button). Both extra screens only repeated the bill and the single payment method, so they are removed: the slide (phone) or the "Pay ₹…" button (desktop) opens Razorpay straight away. At the owner's request the **Payment method card** (Pay online, Razorpay) now sits on the checkout step itself, above the bill on the phone and above the Pay button on desktop. If the payment is cancelled or fails, the slider resets.
+  - Verified with the test shopper, `/api/create-order` stubbed to 500 in the browser (no Razorpay or Firestore writes): one slide or one click makes exactly 1 create-order call, no "Payment details" screen, the slider or button comes back, 0 page errors, page width stays 390. Screenshots at 390 and 1440, light and dark. `npm test` 32/32, build passes. A real Razorpay payment still needs the owner's test keys.
 - **2026-10-04: the mobile-first redesign was REJECTED by the owner; `main` keeps the old (pre-redesign) design.**
   - Owner's words: "the before is good, not the after. We need an e-commerce website, a product website, not an information website." The editorial direction (big type, lots of space, few products per screen) read as a brand/information site.
   - The work is kept, unmerged, on branch `redesign-mobile-first` (spec `docs/superpowers/specs/2026-10-04-mobile-first-redesign-design.md` there). Do not merge it. Individual non-visual fixes could be cherry-picked later only if the owner asks.

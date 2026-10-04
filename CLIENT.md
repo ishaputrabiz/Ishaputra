@@ -116,6 +116,8 @@ Loyalty points and wallet cashback, built in Step 2B and merged into `main` on 2
     - Logo files, favicon, push icon, OG image and the empty-cart illustration all come from `node scripts/build-logo-assets.mjs`.
     - The admin AI prompt tool (`src/services/geminiService.ts` + `AdminImagePrompts.tsx`) was rewritten for men's wellness (2026-09-27): packaging fidelity, Indian male models, natural product use, brand palette, the brief's "avoid" list. It still needs `GEMINI_API_KEY` to run.
 
+- 2026-10-04: Checkout pays in one step. The phone slide and the desktop button open Razorpay directly (the separate "Payment details" screen and popup are gone); the payment method card shows on the checkout step. Owner's request.
+
 ## Design decisions
 - Colours, light mode:
     - Background: cream `#F6F2EB`
