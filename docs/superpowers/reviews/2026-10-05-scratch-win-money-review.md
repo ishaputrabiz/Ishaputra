@@ -29,7 +29,7 @@ status writers and the rules).
 - **The real problems were in how won points follow the order.** Most of them already existed for the points earned on an
   order (`earn_<rzp>`), and the prizes made them worse.
 
-### Fixed (commits `7be97a1`, `400646b`)
+### Fixed (commits `7be97a1`, `400646b`, then `84df237` after the check of the fixes)
 
 | Finding | Severity | Problem | Fix |
 |---|---|---|---|
@@ -47,8 +47,14 @@ status writers and the rules).
 
 ### Needs the owner's OK: a rules deploy
 
-`firestore.rules` holds two changes that are written but not deployed: the `scratchCards` read rule (from the build) and the
-return-cancel rule (R3). Deploy them together with `node docs/handoff/deploy-rules.mjs`.
+`firestore.rules` holds three changes that are written but not deployed:
+
+- the `scratchCards` read rule (from the build);
+- the return-cancel rule (R3);
+- the return-request rule (S2, below): a request always starts `pending`.
+
+Deploy them together with `node docs/handoff/deploy-rules.mjs`. Until then, the app's own checks cover honest customers.
+A customer writing to Firestore directly can still cancel an approved return, or mark their own request as approved.
 
 ### Before delivery partners are switched on
 
@@ -75,4 +81,34 @@ emulator can't run here (no Java), so they were left alone.
 
 ## Checking the fixes
 
-<!-- filled in after the fix review -->
+A second run reviewed `git diff 2be43ae..400646b` for regressions, for findings not actually closed, and for new holes. It
+used 3 reviewers (the checkout hold, the server changes, the screens and rule) and 3 adversarial verifiers.
+
+- **Nothing critical or high.** The verifiers confirmed these:
+  - Legitimate spending isn't blocked: a kept order stays at "delivered", and COD orders and admin adjustments are never
+    looked up.
+  - The 409 `rewards_changed` retry ends, because the browser's live balance picks up the hold.
+  - Every caller of `/api/notify-order` sends a valid order id.
+  - The parity tests pass.
+- **What it found, all fixed in `84df237`:**
+
+| Finding | Severity | Problem | Fix |
+|---|---|---|---|
+| FC-1 | Low | The checkout hold was a plain write after a plain read. If the customer cancelled the return in between (and its reconcile found nothing to release), the points stayed held at "delivered" until an admin reconciled. | Each hold is a transaction that re-reads the order and the entry. |
+| FC-2 | Low | The hold only looked at earnings unlocked in the last 120 days, so an older earning on an order the shop later marked returned (with a failed reconcile) was still spendable. | No age limit. The orders are read in one batch (`getAll`), and an earning and a prize on the same order share one read. |
+| FC-3 | Info | A checkout hold left the order page ("added to your wallet") and the card label saying the points were usable. | The hold also sets the order's `pointsEarnedState` and the card's `prizeState` to `held`, as reconcile would. |
+| FS-1, S3 | Low | The wallet, checkout and admin preview still said points unlock `unlockDays` after delivery, which is wrong when it is below 7. | They show `max(unlockDays, 7)` (`unlockDaysAfterDelivery` in `src/lib/returnWindow.ts`). The admin hint reads "Never sooner than the 7-day return window." |
+| FS-2 | Low | `enabledAt` comes from the server clock but `deliveredAt` from a device clock, so an order delivered just as the switch went on could be refused. | A 15-minute allowance. |
+| FS-3 | Info | The admin tab decided whether to stamp `enabledAt` from its last load, so a stale tab could re-stamp it. | The save reads the stored document in a transaction. |
+| S1 | Low | After the shop approved a return, the Cancel return button disappeared but the page still said "Waiting for approval". | It says "Return approved. We'll arrange a pickup. To change it, please contact us." |
+| S2 | Info | A customer writing their own return request could set `returnStatus` to `approved`. | `firestore.rules`: a request must start `pending`. **Written, not deployed.** |
+| S4 | Info | "Taken back when the order was cancelled or returned" was wrong when the shop voided a prize by hand. | "They were taken back." |
+
+- **Refuted:** FS-4 (cards made before the marker existed). No such card exists, because the feature has never run
+  live.
+- **Verification after `84df237`:**
+  - `npm test` 74/74 and `npm run build` pass.
+  - The type check is at its baseline, and ESLint shows no change on any touched file.
+  - The scratch result was shown in a throwaway page with fixture cards (won, taken back) at 390 and 1440, light and
+    dark: 0 console errors and no overflow (`../shots/scratch-win-review-fixes/`).
+  - The wallet, checkout and order page wording changes were not shown in a browser. They need the live test shopper.

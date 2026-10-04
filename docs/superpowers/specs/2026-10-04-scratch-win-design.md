@@ -31,7 +31,8 @@ cannot choose, repeat or keep a prize it should lose.
       still be requested (2026-10-05 review);
     - frozen while a return is open (only spendable while the order sits at `delivered`). Checkout also holds an
       unlocked earning or prize whose order is not at `delivered`, in case the reconcile after a status change never
-      ran (`holdEarnedOffDelivered` in `api/create-order.ts`);
+      ran (`holdEarnedOffDelivered` in `api/create-order.ts`: a transaction per entry, which also sets the order's
+      `pointsEarnedState` and the card's `prizeState` to `held`);
     - voided if the order is cancelled, returned or refunded; restored if the shop reopens it.
 - **An unscratched card** is cancelled if its order ends, and comes back if the shop reopens the order.
 - **The prize table in force when the card is scratched** is used, not the one when it was given. Expiry and unlock
@@ -113,7 +114,8 @@ All in `api/notify-order.ts` (the Vercel Hobby plan has no free function slots).
   points (0 = no prize). The server passes `crypto.randomInt(total)`.
 - `scratchCardEligible({ status, amountRupees, scratch, rewardsEnabled, deliveredAtMs, enabledAtMs, nowMs })`:
   whether reconcile should give a card now, and its expiry. A delivery time in the future counts as now; an order
-  delivered before `enabledAt` gets none.
+  delivered more than 15 minutes before `enabledAt` gets none (the allowance is for device clocks). The admin save
+  stamps `enabledAt` in a transaction, when the saved document says the switch was off.
 - `planScratchReconcile({ status, ended, reachedCustomer, card, prize })`: what reconcile changes on the card and on
   the prize entry (create, void, restore, hold, release, mirror `prizeState`). Pure, so every transition is unit
   tested.

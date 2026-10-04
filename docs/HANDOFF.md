@@ -7,22 +7,29 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-05 (Scratch & Win money-logic review done and its fixes committed on `scratch-win`; a check of the fixes is the open item).
+Last updated: 2026-10-05 (Scratch & Win money-logic review and the check of its fixes are done on `scratch-win`; next is the owner's OK for the rules deploy and a live test).
 
 ## State
 
-- **2026-10-05: Scratch & Win money-logic review done; fixes committed on `scratch-win` (`7be97a1`, `400646b`, docs `1e0c65c`; local only, not merged).** Report: `docs/superpowers/reviews/2026-10-05-scratch-win-money-review.md`.
+- **2026-10-05: Scratch & Win money-logic review done; fixes committed on `scratch-win` (`7be97a1`, `400646b`, `84df237`, docs after them; local only, not merged).** Report: `docs/superpowers/reviews/2026-10-05-scratch-win-money-review.md`.
   - **How:** 4 reviewers (draws, returns, ownership, timing/spec) and 2 adversarial verifiers.
   - **Result:** nothing critical. No double draw, no re-roll, no claim on another customer's card; 50 racing scratches commit one draw.
   - **Biggest problem, fixed:** R1, high and pre-existing for earned points too. A return written without a reconcile left points and prizes spendable while the goods came back.
     - Checkout now holds any unlocked earning or prize whose order is not at "delivered" (`holdEarnedOffDelivered` in `api/create-order.ts`).
     - Points never unlock before `deliveredAt + 7 days` (`unlockAtMs` in `api/notify-order.ts`).
   - **Other fixes:** one card per payment ever (`payments/<rzp>.scratchCardGivenAt`); no cards for orders delivered while the switch was off (`siteSettings/scratchWin.enabledAt`, stamped by the admin tab); create-order always INR; order-id check on every notify-order action; the dialog says when a prize was taken back; admin odds; plus tests (`npm test` 72/72).
-  - **Written, NOT deployed:** the return-cancel rule (a customer can cancel a return only while `returnStatus` is `pending`), next to the `scratchCards` rule. Both need the owner's OK to deploy.
+  - **Written, NOT deployed** (next to the `scratchCards` rule; all need the owner's OK to deploy):
+    - a customer can cancel a return only while `returnStatus` is `pending`;
+    - a customer's return request must start `pending`.
   - **Left for before delivery partners are switched on** (rules plus emulator; listed in the report): a partner can flip a return-pickup order back to delivered; a partner can write any `deliveredAt`; the partner's own return-pickup update seems refused by the current rules.
-  - **Verified:** `npm test` 72/72, `npm run build` passes, type check at baseline, ESLint unchanged on every touched file.
+  - **Verified (at `84df237`):** `npm test` 74/74, `npm run build` passes, type check at baseline, ESLint unchanged on every touched file.
     - Screenshots of the new result copy (won, taken back) at 390 and 1440, light and dark, show 0 console errors and no overflow: `../shots/scratch-win-review-fixes/`. They came from a temporary harness page, since deleted.
-  - **A check of the fixes** (3 reviewers, 3 verifiers, `git diff 2be43ae..400646b`) was cut off twice when the window closed. See Next steps.
+  - **Check of the fixes** (3 reviewers, 3 verifiers, `git diff 2be43ae..400646b`): nothing critical or high. 9 small issues were confirmed and fixed in `84df237`; the report lists them. The main ones:
+    - The checkout hold is now a transaction per entry with no age limit, and it also labels the order and the card as held.
+    - `enabledAt` allows 15 minutes for device clocks and is stamped from the saved document.
+    - The wallet and checkout say points unlock `max(unlockDays, 7)` days after delivery.
+    - The order page says when a return was approved.
+  - **Not shown in a browser:** the wallet, checkout and order-page wording changes. They need the live test shopper.
 - **2026-10-04: Scratch & Win is built on branch `scratch-win` (11 commits from `b24cd56`, not merged, local only).** The owner approved the mockup with no changes. Spec `docs/superpowers/specs/2026-10-04-scratch-win-design.md`, plan `docs/superpowers/plans/2026-10-04-scratch-win.md`. Shipped **off**; placeholders are in `CLIENT.md` ("Scratch & Win" and "Placeholders for the client").
   - **Server (`api/notify-order.ts`):** `reconcileRewards` now gives a card on delivery (feature and rewards on, paid online at or above the minimum, not already past its expiry), cancels an unscratched card when the order ends, restores it if reopened, and keeps a won prize in line with the order (hold, release, void, restore). It's one transaction that re-reads the order. New action `scratch-card` draws with `crypto.randomInt` inside a transaction and writes `rewardLedger/scratch_<rzp>` as `kind: 'earn', source: 'scratch'`, so `summariseRewards` treats it like earned points with no change to `rewards-core`. The card id is checked (`[\w-]`) before it's used in a path.
   - **Shared rules:** `src/lib/scratchWin.ts`, whose `scratch-core` block is copied into `notify-order.ts`. `npm run sync:rewards` now syncs both blocks, and the parity test checks both.
@@ -77,7 +84,7 @@ Last updated: 2026-10-05 (Scratch & Win money-logic review done and its fixes co
    - Customers can only read their cards; only the Admin SDK writes them. The admin page shows the average cost per card.
    - **Built on branch `scratch-win` (2026-10-04, see "State").** Next, in order:
      1. ~~Money-logic review~~ **Done 2026-10-05** (see "State" and the report).
-     2. **Fixes done.** Open: a fresh-eyes check of the fixes (`git diff 2be43ae..400646b`): does the checkout hold block legitimate spending or loop on 409 `rewards_changed`, does `enabledAt` withhold legitimate cards, and does the `orderId` check reject any real caller? Then fix what it finds and fill in "Checking the fixes" in the report. Then ask the owner's OK to deploy the rules (`node docs/handoff/deploy-rules.mjs`): the `scratchCards` read rule and the return-cancel rule.
+     2. **Fixes and the check of the fixes: done 2026-10-05.** Next: ask the owner's OK to deploy the rules (`node docs/handoff/deploy-rules.mjs`): the `scratchCards` read rule, the return-cancel rule and the return-request rule.
      3. With the owner's OK (it writes to live Firestore): a live run with the test shopper. Turn the feature on, take a test order to delivered, scratch it, check the ledger, return it, check the void, then turn the feature off again.
      4. Merge `scratch-win` into `main` (`--no-ff`, local only).
 3. **Smaller follow-ups:**
@@ -191,7 +198,7 @@ Which next steps need ultracode:
 | Step | Ultracode? | Effort |
 |---|---|---|
 | 1. (no redesign) | - | - |
-| 2. Scratch & Win review | Yes, for the money-logic review | Extra high |
+| 2. Scratch & Win: rules deploy, live test, merge | No (review done) | High |
 | 3. Small follow-ups | No | Medium |
 | 4. Dealer, Loyalty card | Yes, for the plan and the money logic review | Extra high |
 
