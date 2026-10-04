@@ -28,7 +28,7 @@ function resultCopy(prize: Prize, minOrder: number | null, nowMs: number) {
   }
   const one = prize.points === 1;
   if (prize.taken) {
-    return { lead: `You won ${points(prize.points)}.`, rest: `${one ? 'It was' : 'They were'} taken back when the order was cancelled or returned.` };
+    return { lead: `You won ${points(prize.points)}.`, rest: `${one ? 'It was' : 'They were'} taken back.` };
   }
   const lead = `${points(prize.points)} ${one ? 'is' : 'are'} in your wallet.`;
   if (prize.held) {

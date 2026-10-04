@@ -15,6 +15,7 @@ import { Notice } from '@/components/ui/notice';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { RewardEntry } from '@/services/rewardsService';
 import { formatDate } from '@/lib/format';
+import { unlockDaysAfterDelivery } from '@/lib/returnWindow';
 
 const KIND_ICON = {
   earn: ArrowDownLeft,
@@ -98,7 +99,7 @@ const RewardsWalletCardBody = ({ uid, onRetry }: { uid: string; onRetry: () => v
     {
       label: 'Pending',
       value: Math.floor(balances.points.pending).toLocaleString('en-IN'),
-      sub: `Unlock ${settings.unlockDays} days after delivery`,
+      sub: `Unlock ${unlockDaysAfterDelivery(settings.unlockDays)} days after delivery`,
       icon: Hourglass,
     },
     {
@@ -179,7 +180,7 @@ const RewardsWalletCardBody = ({ uid, onRetry }: { uid: string; onRetry: () => v
       ) : entries.length === 0 ? (
         <p className="text-xs text-muted-foreground leading-relaxed">
           {settings.enabled
-            ? `Earn ${settings.pointsPer100} point${settings.pointsPer100 === 1 ? '' : 's'} for every ₹100 you spend, once your order is delivered. Points unlock after the ${settings.unlockDays}-day return window and can cover up to ${settings.maxPointsPercent}% of your products at checkout.`
+            ? `Earn ${settings.pointsPer100} point${settings.pointsPer100 === 1 ? '' : 's'} for every ₹100 you spend, once your order is delivered. Points unlock ${unlockDaysAfterDelivery(settings.unlockDays)} days after delivery, once the return window has closed, and can cover up to ${settings.maxPointsPercent}% of your products at checkout.`
             : 'Rewards are paused right now.'}
         </p>
       ) : (

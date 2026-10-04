@@ -1,6 +1,7 @@
 import { Switch } from '@/components/ui/switch';
 import type { RewardBalances, RewardSettings } from '@/lib/rewards';
 import { formatINR, formatNumber } from '@/lib/format';
+import { unlockDaysAfterDelivery } from '@/lib/returnWindow';
 import { cn } from '@/lib/utils';
 
 const inr = (n: number) => formatINR(n);
@@ -72,7 +73,7 @@ export const RewardsRedeemCard = ({
                 ? usePoints && pointsApplied > 0
                   ? `${formatNumber(pointsApplied)} points save ${inr(pointsValue)}. Covers up to ${settings.maxPointsPercent}% of the product total.`
                   : `Worth ${inr(points * settings.pointValue)}. Covers up to ${settings.maxPointsPercent}% of the product total.`
-                : `${formatNumber(pending)} points unlock after the ${settings.unlockDays}-day return window`
+                : `${formatNumber(pending)} points unlock ${unlockDaysAfterDelivery(settings.unlockDays)} days after delivery`
             }
             checked={usePoints && points > 0}
             onChange={onUsePoints}

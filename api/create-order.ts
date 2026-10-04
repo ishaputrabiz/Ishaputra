@@ -331,10 +331,10 @@ const toLedgerLike = (d: LedgerDoc): LedgerLike => {
   };
 };
 
-/** How far back an unlocked earning is checked against its order at checkout. */
-const RECHECK_EARNED_MS = 120 * 86_400_000;
+type LedgerSnap = LedgerDoc & { id: string; ref: firestore.DocumentReference };
 
-type LedgerSnap = LedgerDoc & { id: string; ref: { update: (data: Record<string, unknown>) => Promise<unknown> } };
+/** An order whose earned points must not be spent: it exists (the shop may delete one) and is not at delivered. */
+const offDelivered = (status: unknown) => status !== undefined && status !== 'delivered';
 
 /**
  * Earned points and scratch prizes (kind 'earn', on an order) are spendable
@@ -344,16 +344,23 @@ type LedgerSnap = LedgerDoc & { id: string; ref: { update: (data: Record<string,
  * dropped request, or a modified browser writing the return request straight
  * to Firestore) an unlocked entry could be spent while its goods are on their
  * way back. This looks up the orders behind the entries that would count as
- * available now (unlocked within RECHECK_EARNED_MS), holds each one whose
- * order is not at delivered - the step reconcile takes, so the customer's
- * live balance shows it too - and returns their ids. Reconcile releases them
- * once the order is back at delivered, and voids them if it ended.
+ * available now and holds each one whose order is not at delivered - the step
+ * reconcile takes, with the same labels on the order and the card, so the
+ * customer's live balance and pages show it too - and returns their ids.
+ * Reconcile releases them once the order is back at delivered, and voids them
+ * if it ended.
+ *
+ * Each hold is a transaction that re-reads the order and the entry, so it
+ * cannot land after a cancelled return put the order back at delivered (and
+ * its reconcile found nothing to release).
  */
 export async function holdEarnedOffDelivered(
   db: firestore.Firestore,
+  uid: string,
   docs: LedgerSnap[],
   nowMs: number,
 ): Promise<Set<string>> {
+  const orderOf = (d: LedgerSnap) => String(d.data().orderId || '');
   const due = docs.filter((d) => {
     const x = d.data();
     const unlockAtMs = typeof x.unlockAt?.toMillis === 'function' ? x.unlockAt.toMillis() : 0;
@@ -363,21 +370,36 @@ export async function holdEarnedOffDelivered(
       x.held !== true &&
       Number(x.amount) > 0 &&
       unlockAtMs <= nowMs &&
-      unlockAtMs > nowMs - RECHECK_EARNED_MS &&
-      /^[\w-]{1,128}$/.test(String(x.orderId || ''))
+      /^[\w-]{1,128}$/.test(orderOf(d))
     );
   });
   const held = new Set<string>();
   if (!due.length) return held;
-  const orders = await Promise.all(due.map((d) => db.collection('orders').doc(String(d.data().orderId)).get()));
+  // One read for all the orders (earn_X and scratch_X share one).
+  const ids = [...new Set(due.map(orderOf))];
+  const snaps = await db.getAll(...ids.map((id) => db.collection('orders').doc(id)));
+  const statusOf = new Map(ids.map((id, i) => [id, snaps[i].data()?.status]));
   await Promise.all(
-    due.map(async (d, i) => {
-      const status = orders[i].data()?.status;
-      // No order: the shop deleted it, so there is nothing to follow.
-      if (status === undefined || status === 'delivered') return;
-      await d.ref.update({ held: true });
-      held.add(d.id);
-    }),
+    due
+      .filter((d) => offDelivered(statusOf.get(orderOf(d))))
+      .map(async (d) => {
+        const id = orderOf(d);
+        const orderRef = db.collection('orders').doc(id);
+        const cardRef = db.collection('users').doc(uid).collection('scratchCards').doc(id);
+        const isEarn = d.id === `earn_${id}`;
+        const isPrize = d.id === `scratch_${id}`;
+        const did = await db.runTransaction(async (tx) => {
+          const order = (await tx.get(orderRef)).data();
+          const entry = (await tx.get(d.ref)).data();
+          const card = isPrize ? (await tx.get(cardRef)).data() : undefined;
+          if (!order || !offDelivered(order.status) || entry?.status !== 'active' || entry.held === true) return false;
+          tx.update(d.ref, { held: true });
+          if (isEarn && order.pointsEarnedState === 'active') tx.update(orderRef, { pointsEarnedState: 'held' });
+          if (card?.prizeState === 'active') tx.update(cardRef, { prizeState: 'held' });
+          return true;
+        });
+        if (did) held.add(d.id);
+      }),
   );
   return held;
 }
@@ -401,7 +423,11 @@ async function priceRewards(
   );
   const nowMs = Date.now();
   // The reservation re-reads the ledger, so it sees these holds as well.
-  const held = await withTimeout(holdEarnedOffDelivered(db, ledgerSnap.docs, nowMs), ADMIN_TIMEOUT_MS, 'Rewards check');
+  const held = await withTimeout(
+    holdEarnedOffDelivered(db, uid, ledgerSnap.docs, nowMs),
+    ADMIN_TIMEOUT_MS,
+    'Rewards check',
+  );
   const balances = summariseRewards(
     ledgerSnap.docs.map((d) => (held.has(d.id) ? { ...toLedgerLike(d), held: true } : toLedgerLike(d))),
     nowMs,

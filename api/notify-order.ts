@@ -328,7 +328,8 @@ function scratchCardEligible(i: {
   if (i.status !== 'delivered' || !i.scratch.enabled || !i.rewardsEnabled) return null;
   if (!(i.amountRupees >= i.scratch.minOrder)) return null;
   const anchorMs = i.deliveredAtMs > 0 && i.deliveredAtMs <= i.nowMs ? i.deliveredAtMs : i.nowMs;
-  if (anchorMs < (i.enabledAtMs || 0)) return null;
+  // deliveredAt comes from a device clock and enabledAt from the server's: allow a few minutes either way.
+  if (anchorMs < (i.enabledAtMs || 0) - 15 * 60_000) return null;
   const expiresAtMs = anchorMs + i.scratch.expiryDays * 86_400_000;
   return expiresAtMs > i.nowMs ? { anchorMs, expiresAtMs } : null;
 }

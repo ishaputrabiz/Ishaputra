@@ -120,6 +120,9 @@ export class FakeFirestore {
   doc(path: string) {
     return new FakeDoc(this, path);
   }
+  async getAll(...refs: FakeDoc[]) {
+    return Promise.all(refs.map((r) => r.get()));
+  }
   read(path: string) {
     const d = this.docs.get(path);
     return d ? { ...d } : undefined;

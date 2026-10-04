@@ -10,6 +10,13 @@
 
 export const RETURN_WINDOW_DAYS = 7;
 
+/**
+ * Days after delivery before earned points (and scratch prizes) unlock: the
+ * admin's unlockDays, but never sooner than the return window closes - the
+ * rule api/notify-order.ts applies (unlockAtMs).
+ */
+export const unlockDaysAfterDelivery = (unlockDays: number) => Math.max(unlockDays, RETURN_WINDOW_DAYS);
+
 const DAY_MS = 86_400_000;
 
 /** A Firestore Timestamp, {seconds}, Date, ISO string or epoch millis as a Date; null when missing or unreadable. */

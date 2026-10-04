@@ -112,6 +112,10 @@ test('no card for an order delivered before the switch was last turned on', () =
   assert.deepEqual(elig({ deliveredAtMs: 997 * DAY, enabledAtMs: 996 * DAY }), { anchorMs: 997 * DAY, expiresAtMs: 1027 * DAY });
   // Unknown delivery time: the card is given now, which is after the switch.
   assert.deepEqual(elig({ deliveredAtMs: 0, enabledAtMs: 996 * DAY }), { anchorMs: 1000 * DAY, expiresAtMs: 1030 * DAY });
+  // The delivery time comes from a device clock: a few minutes early still counts.
+  const MIN = 60_000;
+  assert.notEqual(elig({ deliveredAtMs: 996 * DAY - 10 * MIN, enabledAtMs: 996 * DAY }), null);
+  assert.equal(elig({ deliveredAtMs: 996 * DAY - 20 * MIN, enabledAtMs: 996 * DAY }), null);
 });
 
 const plan = (over: Partial<ScratchReconcileInput>) =>

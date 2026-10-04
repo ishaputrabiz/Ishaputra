@@ -904,7 +904,10 @@ const OrderDetailsPage = () => {
                 {isReturnPickup && 'The pickup partner has collected the item. Return in progress.'}
                 {order.status === 'delivered' && 'Your package has been delivered.'}
                 {order.status === 'cancelled' && 'This order has been cancelled.'}
-                {order.status === 'returnRequested' && 'Return request submitted. Waiting for approval.'}
+                {order.status === 'returnRequested' &&
+                  ((order.returnStatus ?? 'pending') === 'approved'
+                    ? "Return approved. We'll arrange a pickup. To change it, please contact us."
+                    : 'Return request submitted. Waiting for approval.')}
                 {order.status === 'returnScheduled' && "Return approved. We'll schedule a pickup."}
                 {order.status === 'returned' && 'The item has been picked up and returned.'}
                 {order.status === 'refunded' && 'Your refund has been processed.'}

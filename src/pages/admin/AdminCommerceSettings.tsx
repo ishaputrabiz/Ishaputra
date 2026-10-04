@@ -939,7 +939,7 @@ const RewardsTab = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
         {field('pointsPer100', 'Points per ₹100 spent', 'On products paid for, once the order is delivered.')}
         {field('pointValue', 'Value of 1 point (₹)', 'What a point is worth at checkout.', 0.5)}
-        {field('unlockDays', 'Days until points unlock', 'Match the return window.')}
+        {field('unlockDays', 'Days until points unlock', 'Never sooner than the 7-day return window.')}
         {field('maxPointsPercent', 'Max % of products payable with points', 'Wallet cashback has no cap.')}
       </div>
       <div className="flex justify-end">

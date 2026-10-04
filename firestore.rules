@@ -477,6 +477,8 @@ service cloud.firestore {
         let deliveredAt = resource.data.get('deliveredAt', null);
         return currentStatus == 'delivered' && newStatus == 'returnRequested'
           && resource.data.get('returnCancelled', false) != true
+          // The shop decides: a request always starts pending.
+          && request.resource.data.get('returnStatus', 'pending') == 'pending'
           && deliveredAt is timestamp
           && request.time < deliveredAt + duration.value(7, 'd')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([

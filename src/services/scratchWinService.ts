@@ -4,6 +4,7 @@ import {
   getDoc,
   onSnapshot,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   Timestamp,
@@ -95,15 +96,19 @@ export const getScratchSettings = async (): Promise<ScratchWinSettings> => {
 /**
  * Save the settings. Turning the switch on stamps enabledAt: the server gives
  * no card for an order delivered before it, so cards are not handed out for
- * orders delivered while Scratch & Win was off.
+ * orders delivered while Scratch & Win was off. Whether it was on is read
+ * from the saved document in the same transaction, not from this tab.
  */
-export const saveScratchSettings = (s: ScratchWinSettings, wasEnabled: boolean) => {
+export const saveScratchSettings = (s: ScratchWinSettings) => {
   const next = normaliseScratchSettings(s);
-  return setDoc(
-    settingsRef(),
-    { ...next, ...(next.enabled && !wasEnabled ? { enabledAt: serverTimestamp() } : {}), updatedAt: serverTimestamp() },
-    { merge: true },
-  );
+  return runTransaction(db, async (tx) => {
+    const wasOn = (await tx.get(settingsRef())).data()?.enabled === true;
+    tx.set(
+      settingsRef(),
+      { ...next, ...(next.enabled && !wasOn ? { enabledAt: serverTimestamp() } : {}), updatedAt: serverTimestamp() },
+      { merge: true },
+    );
+  });
 };
 
 /** One order's card (order pages). Null when there is none or it can't be read. Never throws. */

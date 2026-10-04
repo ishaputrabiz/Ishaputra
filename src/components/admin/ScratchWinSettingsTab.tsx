@@ -14,6 +14,7 @@ import { StatCard } from '@/components/admin/StatCard';
 import { ScratchCardDialog } from '@/components/scratch/ScratchCardDialog';
 import { describeError } from '@/lib/errorMessage';
 import { formatINR } from '@/lib/format';
+import { unlockDaysAfterDelivery } from '@/lib/returnWindow';
 import { type RewardSettings } from '@/lib/rewards';
 import {
   SCRATCH_MAX_PRIZES,
@@ -160,7 +161,7 @@ export function ScratchWinSettingsTab() {
     setSaving(true);
     try {
       const next = normaliseScratchSettings(toSettings(before));
-      await saveScratchSettings(next, saved?.enabled === true);
+      await saveScratchSettings(next);
       const adjusted = JSON.stringify(next) !== JSON.stringify(toSettings(before));
       setSaved(next);
       // Show what was written, but keep anything typed while the save was running.
@@ -188,7 +189,7 @@ export function ScratchWinSettingsTab() {
       createdAtMs: now,
       deliveredAtMs: now,
       expiresAtMs: now + clean.expiryDays * DAY,
-      unlockAtMs: now + rewards.unlockDays * DAY,
+      unlockAtMs: now + unlockDaysAfterDelivery(rewards.unlockDays) * DAY,
       scratchedAtMs: 0,
       voidedAtMs: 0,
     });
@@ -196,7 +197,7 @@ export function ScratchWinSettingsTab() {
   const previewScratch = async (): Promise<ScratchResult> => {
     await new Promise((r) => window.setTimeout(r, 400));
     const points = total > 0 ? drawScratchPrize(clean, localRoll(total)) : 0;
-    return { ok: true, points, held: false, unlockAtMs: Date.now() + rewards.unlockDays * DAY };
+    return { ok: true, points, held: false, unlockAtMs: Date.now() + unlockDaysAfterDelivery(rewards.unlockDays) * DAY };
   };
 
   return (
