@@ -8,7 +8,6 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { IconButton } from '@/components/ui/icon-button';
@@ -150,6 +149,42 @@ const UnavailableTag = ({ reason }: { reason?: string }) =>
  */
 const sortLines = <T extends { id: string; name: string }>(list: T[]): T[] =>
   [...list].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+
+/** How the customer pays. Razorpay is the only method today, shown selected. */
+const PaymentMethodCard = ({
+  value,
+  onChange,
+  name,
+  className = '',
+}: {
+  value: string;
+  onChange: (method: string) => void;
+  name: string;
+  className?: string;
+}) => (
+  <fieldset className={className}>
+    <legend className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Payment method</legend>
+    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-card border-2 border-primary bg-primary/5 p-3.5">
+      <span className="flex items-center gap-3">
+        <span className="flex size-9 flex-shrink-0 items-center justify-center rounded-control bg-primary">
+          <CreditCard aria-hidden="true" className="size-4 text-primary-foreground" />
+        </span>
+        <span>
+          <span className="block text-sm font-medium text-foreground">Pay online (Razorpay)</span>
+          <span className="text-xs text-muted-foreground">Cards, UPI, wallets and net banking</span>
+        </span>
+      </span>
+      <input
+        type="radio"
+        name={name}
+        value="Razorpay"
+        checked={value === 'Razorpay'}
+        onChange={(e) => onChange(e.target.value)}
+        className="size-4 flex-shrink-0 accent-primary"
+      />
+    </label>
+  </fieldset>
+);
 
 const SlideToPayButton = ({
   amount,
@@ -769,7 +804,7 @@ const MobileCheckout = () => {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [tempSelectedAddress, setTempSelectedAddress] = useState<Address | null>(null);
-  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+  // Razorpay is the only method today; the card on the checkout step shows it.
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('Razorpay');
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [showOrderAnimation, setShowOrderAnimation] = useState(false);
@@ -789,7 +824,6 @@ const MobileCheckout = () => {
   const [addressesLoading, setAddressesLoading] = useState(true);
   // The add-on that was just added keeps showing a check for a moment.
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
-  const paymentHeadingRef = useRef<HTMLHeadingElement>(null);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
   const returnFocus = useReturnFocus();
   // Ref-based flag so the navigation guard sees it synchronously before any re-render
@@ -823,22 +857,6 @@ const MobileCheckout = () => {
     }
   }, [items, cartLoading, showOrderSuccess, currentStep]);
 
-  // Payment details: move focus in, Escape goes back (never while paying).
-  useEffect(() => {
-    if (showPaymentDetails) paymentHeadingRef.current?.focus();
-  }, [showPaymentDetails]);
-  useEffect(() => {
-    if (!showPaymentDetails || isPlacingOrder) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowPaymentDetails(false);
-        setSlideAutoFocus(true);
-        setSlideResetKey((k) => k + 1);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [showPaymentDetails, isPlacingOrder]);
   useEffect(() => {
     if (showOrderSuccess) successHeadingRef.current?.focus();
   }, [showOrderSuccess]);
@@ -1180,8 +1198,7 @@ const MobileCheckout = () => {
       setShowOrderAnimation(true);
       setTimeout(() => setShowOrderAnimation(false), 2800);
 
-      // Close payment modal and clear cart AFTER success flag is set
-      setShowPaymentDetails(false);
+      // Clear the cart AFTER the success flag is set
       clearCart();
     } catch (error) {
       console.error('Error placing order:', error);
@@ -1221,13 +1238,6 @@ const MobileCheckout = () => {
     sonnerToast(`Removed ${item.name}`, {
       action: { label: 'Undo', onClick: () => addToCart(line, quantity) },
     });
-  };
-
-  // Closing the panel remounts the slider (to reset it), so focus goes to the new one.
-  const closePaymentDetails = () => {
-    setShowPaymentDetails(false);
-    setSlideAutoFocus(true);
-    setSlideResetKey((k) => k + 1);
   };
 
   // Same rows in every bill block (display only).
@@ -1686,6 +1696,16 @@ const MobileCheckout = () => {
           </div>
         </div>
 
+        {/* Payment Method */}
+        <div className="mx-4 mb-4">
+          <PaymentMethodCard
+            name="paymentMethod"
+            value={selectedPaymentMethod}
+            onChange={setSelectedPaymentMethod}
+            className="tx-sheet rounded-card border border-foreground/[0.08] p-4 shadow-panel"
+          />
+        </div>
+
         {/* Bill Summary */}
         <div className="mx-4 mb-4">
           <section aria-labelledby="bill-summary-2" className="tx-sheet overflow-hidden rounded-card border border-foreground/[0.08] p-4 shadow-panel">
@@ -1790,125 +1810,17 @@ const MobileCheckout = () => {
                 setShowAddressSelector(true);
                 return;
               }
-              setShowPaymentDetails(true);
+              // One slide pays: it opens Razorpay straight away. If the order
+              // was not placed (cancelled, bag changed, error), reset the slider.
+              void handlePlaceOrder().finally(() => {
+                if (orderPlacedRef.current) return;
+                setSlideAutoFocus(true);
+                setSlideResetKey((k) => k + 1);
+              });
             }}
           />
         )}
       </div>
-
-      {/* ─── Payment Details (full-screen panel) ─── */}
-      {/* Not a Radix dialog on purpose: Razorpay opens its own window on top of
-          this panel, and a modal focus trap would block it. */}
-      <AnimatePresence>
-        {showPaymentDetails && (
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="payment-details-title"
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%', transition: { duration: DUR.exit, ease: EASE_OUT } }}
-            transition={{ duration: DUR.drawer, ease: EASE_DRAWER }}
-            className="tx-paper fixed inset-0 z-drawer flex flex-col"
-            style={{ fontFamily: "var(--font-body)" }}
-          >
-            {/* Header */}
-            <div className="border-b border-foreground/[0.08] bg-background/90 px-2 py-2 backdrop-blur">
-              <div className="flex items-center gap-1">
-                <IconButton label="Back to checkout" onClick={closePaymentDetails} disabled={isPlacingOrder}>
-                  <ArrowLeft aria-hidden="true" />
-                </IconButton>
-                <h2
-                  id="payment-details-title"
-                  ref={paymentHeadingRef}
-                  tabIndex={-1}
-                  className="text-lg font-semibold text-foreground outline-none"
-                  style={HEADING_FONT}
-                >
-                  Payment details
-                </h2>
-              </div>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6">
-              <div className="px-4 pb-3 pt-4">
-                <CheckoutStepper step={3} />
-              </div>
-
-              {/* Payment Method */}
-              <section className="px-4 py-4">
-                <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Payment method</h3>
-                <label className="flex cursor-pointer items-center justify-between rounded-card border-2 border-primary bg-primary/5 p-3.5">
-                  <span className="flex items-center gap-3">
-                    <span className="flex size-9 items-center justify-center rounded-control bg-primary">
-                      <CreditCard aria-hidden="true" className="size-4 text-primary-foreground" />
-                    </span>
-                    <span>
-                      <span className="block text-sm font-medium text-foreground">Pay online (Razorpay)</span>
-                      <span className="text-xs text-muted-foreground">Cards, UPI, wallets and net banking</span>
-                    </span>
-                  </span>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="Razorpay"
-                    checked={selectedPaymentMethod === 'Razorpay'}
-                    onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                    className="size-4 accent-primary"
-                  />
-                </label>
-              </section>
-
-              {/* Order Details */}
-              <section className="border-t border-foreground/[0.08] px-4 py-4">
-                <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Order details</h3>
-                <BillRows {...billProps} />
-              </section>
-
-              {/* Selected Items */}
-              <section className="border-t border-foreground/[0.08] px-4 py-4">
-                <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">In this order</h3>
-                <div className="space-y-3">
-                  {lines.slice(0, 1).map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 rounded-card border border-foreground/[0.08] bg-card p-3">
-                      <div className="size-16 flex-shrink-0 overflow-hidden rounded-control bg-foreground/[0.03]">
-                        <SmartImage src={item.image} alt="" className="h-full w-full object-cover" preset="thumb" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="line-clamp-1 text-xs font-semibold text-foreground">{item.name}</p>
-                        <p className="text-xs text-muted-foreground tabular-nums">Qty {item.quantity}</p>
-                      </div>
-                    </div>
-                  ))}
-                  {items.length > 1 && (
-                    <p className="text-xs text-muted-foreground">And {plural(items.length - 1, 'more product')}</p>
-                  )}
-                </div>
-              </section>
-            </div>
-
-            {/* Place Order Slide Button */}
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: DUR.modal, ease: EASE_OUT }}
-              className="border-t border-foreground/[0.08] bg-background/90 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-panel backdrop-blur"
-            >
-              {isPlacingOrder ? (
-                <div role="status" className="tx-slate flex h-14 items-center justify-center gap-2 rounded-[8px] text-[11px] font-bold uppercase tracking-[0.2em] text-charcoal-foreground">
-                  <Spinner size={18} />
-                  Placing order
-                </div>
-              ) : (
-                <SlideToPayButton
-                  amount="Place Order"
-                  onComplete={handlePlaceOrder}
-                />
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ─── Order confirmed moment ─── */}
       <AnimatePresence>{showOrderAnimation && <OrderCelebration />}</AnimatePresence>
@@ -2071,7 +1983,7 @@ const Checkout = () => {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [tempSelectedAddress, setTempSelectedAddress] = useState<Address | null>(null);
-  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+  // Razorpay is the only method today; the card on the checkout step shows it.
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('Razorpay');
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [showOrderAnimation, setShowOrderAnimation] = useState(false);
@@ -2086,8 +1998,6 @@ const Checkout = () => {
   const [orderedItems, setOrderedItems] = useState<CartItem[]>([]);
   const [confirmAction, setConfirmAction] = useState<{ kind: 'remove' | 'move'; count: number } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const paymentDialogRef = useRef<HTMLDivElement>(null);
-  const paymentReturnFocusRef = useRef<HTMLElement | null>(null);
   const returnFocus = useReturnFocus();
   const cartWasPopulatedRef = useRef(false);
   
@@ -2226,24 +2136,6 @@ const Checkout = () => {
     mq.addEventListener('change', check);
     return () => mq.removeEventListener('change', check);
   }, []);
-
-  // Payment dialog: focus moves in and back out; Escape closes it (never while paying).
-  useEffect(() => {
-    if (!showPaymentDetails) return;
-    paymentReturnFocusRef.current = document.activeElement as HTMLElement | null;
-    paymentDialogRef.current?.focus();
-    return () => {
-      paymentReturnFocusRef.current?.focus?.();
-    };
-  }, [showPaymentDetails]);
-  useEffect(() => {
-    if (!showPaymentDetails || isPlacingOrder) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowPaymentDetails(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [showPaymentDetails, isPlacingOrder]);
 
   // Format price in Indian Rupees
   // Display only: Indian grouping, paise only when there are paise.
@@ -2451,8 +2343,6 @@ const Checkout = () => {
       // Clear cart
       clearCart();
 
-      // Close payment modal and show success
-      setShowPaymentDetails(false);
       setShowOrderSuccess(true);
       setShowOrderAnimation(true);
       setTimeout(() => setShowOrderAnimation(false), 2800);
@@ -2523,10 +2413,6 @@ const Checkout = () => {
       return;
     }
     items.forEach((item) => removeFromCart(item.id));
-  };
-
-  const closePayment = () => {
-    if (!isPlacingOrder) setShowPaymentDetails(false);
   };
 
   // Same rows in every bill block (display only).
@@ -2941,21 +2827,28 @@ const Checkout = () => {
                 }
               />
 
+              <PaymentMethodCard
+                name="desktopPaymentMethod"
+                value={selectedPaymentMethod}
+                onChange={setSelectedPaymentMethod}
+                className="mt-6"
+              />
+
               <button
                 type="button"
                 className="btn-copper mt-6 h-12 w-full !text-[12px]"
-                onClick={() => {
-                  if (!selectedAddress) {
-                    toast({
-                      title: 'Add a delivery address to continue',
-                      variant: 'destructive',
-                    });
-                    return;
-                  }
-                  setShowPaymentDetails(true);
-                }}
+                // One click pays: it opens Razorpay straight away.
+                onClick={handlePlaceOrder}
+                disabled={isPlacingOrder}
               >
-                Place order
+                {isPlacingOrder ? (
+                  <>
+                    <Spinner size={16} />
+                    Processing
+                  </>
+                ) : (
+                  <span className="tabular-nums">Pay {formatPrice(total)}</span>
+                )}
               </button>
 
               {/* Trust Badges */}
@@ -2990,144 +2883,6 @@ const Checkout = () => {
         cancelLabel="Keep items"
         onConfirm={handleConfirmed}
       />
-
-      {/* ─── Payment Details (Desktop) ─── */}
-      {/* Hand-built rather than a Radix dialog on purpose: Razorpay opens its
-          own window on top of this one, and a modal focus trap would block it. */}
-      <AnimatePresence>
-        {showPaymentDetails && (
-          <>
-            <motion.div
-              key="payment-scrim"
-              aria-hidden="true"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, transition: { duration: DUR.exit } }}
-              transition={{ duration: DUR.modal, ease: EASE_OUT }}
-              onClick={closePayment}
-              className="fixed inset-0 z-overlay bg-charcoal/60 backdrop-blur-[2px]"
-            />
-            <motion.div
-              key="payment-dialog"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96, transition: { duration: DUR.exit } }}
-              transition={{ duration: DUR.modal, ease: EASE_OUT }}
-              className="pointer-events-none fixed inset-0 z-overlay flex items-center justify-center p-8"
-            >
-              <div
-                ref={paymentDialogRef}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="payment-title"
-                tabIndex={-1}
-                className="pointer-events-auto flex max-h-[min(92dvh,800px)] w-full max-w-md flex-col overflow-hidden rounded-panel border border-foreground/10 bg-card shadow-panel outline-none"
-                style={{ fontFamily: "var(--font-body)" }}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between gap-3 border-b border-foreground/[0.08] py-3 pl-6 pr-3">
-                  <div>
-                    <h2 id="payment-title" className="text-xl font-semibold text-foreground" style={HEADING_FONT}>Complete your order</h2>
-                    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <ShieldCheck aria-hidden="true" className="size-3.5 text-primary" />
-                      Secure payment via Razorpay
-                    </p>
-                  </div>
-                  <IconButton label="Close" onClick={closePayment} disabled={isPlacingOrder}>
-                    <X aria-hidden="true" />
-                  </IconButton>
-                </div>
-
-                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-5">
-                  {/* Items */}
-                  <ul className="space-y-2.5">
-                    {lines.slice(0, showAllItems ? lines.length : 2).map((item) => (
-                      <li key={item.id} className="flex items-center gap-3">
-                        <div className="size-12 flex-shrink-0 overflow-hidden rounded-control bg-foreground/[0.03] ring-1 ring-foreground/[0.06]">
-                          <SmartImage src={item.image} alt="" className="h-full w-full object-cover" preset="thumb" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
-                          <p className="text-xs text-muted-foreground tabular-nums">Qty {item.quantity}</p>
-                        </div>
-                        <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-foreground">{formatPrice(item.price * item.quantity)}</span>
-                      </li>
-                    ))}
-                    {items.length > 2 && (
-                      <li>
-                        <button
-                          type="button"
-                          onClick={() => setShowAllItems((v) => !v)}
-                          aria-expanded={showAllItems}
-                          className="min-h-9 text-xs font-semibold text-primary underline-offset-4 hover:underline"
-                        >
-                          {showAllItems ? 'Show less' : `Show ${plural(items.length - 2, 'more product')}`}
-                        </button>
-                      </li>
-                    )}
-                  </ul>
-
-                  <Separator />
-
-                  {/* Payment Method */}
-                  <div>
-                    <h3 className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Payment method</h3>
-                    <label className={`flex cursor-pointer items-center gap-3 rounded-card p-3.5 transition-[border-color,background-color] duration-hover ease-out ${selectedPaymentMethod === 'Razorpay' ? 'border-2 border-primary bg-primary/5' : 'border border-foreground/[0.08] hover:border-foreground/25'}`}>
-                      <span className={`flex size-9 flex-shrink-0 items-center justify-center rounded-control ${selectedPaymentMethod === 'Razorpay' ? 'bg-primary' : 'bg-foreground/[0.06]'}`}>
-                        <CreditCard aria-hidden="true" className={`size-5 ${selectedPaymentMethod === 'Razorpay' ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
-                      </span>
-                      <span className="flex-1">
-                        <span className="block text-sm font-semibold text-foreground">Pay online</span>
-                        <span className="text-xs text-muted-foreground">Cards, UPI, wallets and net banking</span>
-                      </span>
-                      <input
-                        type="radio"
-                        name="desktopPaymentMethod"
-                        value="Razorpay"
-                        checked={selectedPaymentMethod === 'Razorpay'}
-                        onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                        className="size-5 accent-primary"
-                      />
-                    </label>
-                  </div>
-
-                  <Separator />
-
-                  {/* Price Breakdown */}
-                  <BillRows {...billProps} amountClassName="text-xl" />
-                </div>
-
-                {/* Footer with CTA */}
-                <div className="space-y-1 border-t border-foreground/[0.08] px-6 py-4">
-                  <button
-                    type="button"
-                    onClick={handlePlaceOrder}
-                    disabled={isPlacingOrder}
-                    className="btn-copper h-12 w-full !text-[12px]"
-                  >
-                    {isPlacingOrder ? (
-                      <>
-                        <Spinner size={16} />
-                        Processing
-                      </>
-                    ) : (
-                      <span className="tabular-nums">Pay {formatPrice(total)}</span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={closePayment}
-                    disabled={isPlacingOrder}
-                    className="min-h-10 w-full text-center text-xs font-medium text-muted-foreground transition-colors duration-hover hover:text-foreground disabled:opacity-60"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
 
       {/* ─── Order confirmed moment (Desktop) ─── */}
       <AnimatePresence>{showOrderAnimation && <OrderCelebration />}</AnimatePresence>
