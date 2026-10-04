@@ -76,7 +76,7 @@ Last updated: 2026-10-05 (Scratch & Win money-logic review and the check of its 
 ## Next steps (in order)
 
 1. **No redesign.** The owner likes the current design. Any future visual change: keep the product-dense e-commerce layout, show a cheap mockup of ONE screen first, and get a yes before building.
-2. **Scratch & Win: built, needs its money-logic review.** Decisions (owner said "just complete it", 2026-10-04):
+2. **Scratch & Win: built and money-reviewed; needs the rules deploy (owner OK), a live test, then merge.** Decisions (owner said "just complete it", 2026-10-04):
    - Admin-configurable (`siteSettings.scratchWin`), shipped **off**, values marked as placeholders and listed in `CLIENT.md`.
    - One card per **delivered** online order at or above an admin minimum; created by `reconcileRewards` as `users/<uid>/scratchCards/<rzp>`.
    - Prizes: loyalty points in admin-set sizes with weights, plus "better luck next time" (weight 0 by default). No coupons or cashback for now (coupons are public and not tied to a customer; cashback is the riskiest).
