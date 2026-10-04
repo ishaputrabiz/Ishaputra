@@ -7,57 +7,45 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-03.
+Last updated: 2026-10-04.
 
 ## State
 
-- **2026-10-03 (later): step 1 done.** `step-2b-rewards` is merged into `main` (`46aba50`, local only, never pushed).
+- **2026-10-04: the world-class UI pass is built on branch `ui-world-class`** (22 commits after `main`'s `46aba50`; local only, never pushed, not merged). It waits for the owner's review.
+  - **How it was done:** a full-site audit (8 auditors + 1 synthesis, 295 findings, screenshots at 390 / 768 / 1440 in light and dark, `playwright-cli` checks), the owner's 14 decisions (recorded in `CLIENT.md`, "UI pass decisions"), a shared foundation (`488317e`), 9 area packages in two waves, a fresh-eyes review (70 issues, no regressions) and a fix round that closed all 70.
+  - **The design system** for this and future clients is documented in `docs/ui-system.md`: tokens (motion, status, radius, z-index), skeletons, StatusBadge / `lib/orderStatus`, Notice, EmptyState, ConfirmDialog (with `returnFocusRef`), IconButton, WishlistToggle, ProductCard, AuthCard / AuthField, AdminPageHeader, StatCard, format helpers, `usePageMeta`.
+  - **Behaviour changes the owner approved** are listed in `CLIENT.md` ("UI pass decisions"): old Sreerasthu URLs open `/products`; desktop `/search`; one password policy; Buy again at today's price; new visitors follow the system theme; confirmations before irreversible actions; contact form opens a prefilled email; analytics loads lazily; and more.
+  - **Bugs fixed on the way:** the order page read every order to show one (now one document read; its chunk went from 686 kB to 51 kB); the wishlist heart pressed with Enter on category pages didn't save (stale state in `useWishlist`); the login form vanished on a wrong password; 'Shop by concern' and footer links led to "Category not found"; a fake fixed delivery date in the success modal; the contact form only logged to the console.
+  - **Not approved, left as it was:** the home product rows' drift (they stay still on screen, as before: `scroll-behavior: smooth` swallows the per-frame writes, see the comment in `useAutoScroll.ts`), one product card everywhere, deleting the hidden mobile bottom nav.
+- **Verification (2026-10-04, at `9dd7ddb`):**
+  - `npm test` 29/29. `npm run build` passes. `tsc` (via `tsconfig.check.json`): only the old `videoCallService` (6) and `DeliveryDashboard` (1) errors; the `VideoCallRequestModal` one is fixed.
+  - ESLint: 197 errors, down from 224 on `main` before the pass; nothing new (mostly old `no-explicit-any`).
+  - Final capture: 52 page views (home, products, product, login, about, `/jewelry`, checkout, account, an order, wallet, admin dashboard, admin orders, the late-return order) at 390 and 1440 in light and dark: **0 console errors, 0 failed requests, 0 axe violations**.
+  - The live test data is deleted (13 `ui-fx-*` orders and the temporary admin; `admin.local` is gone). The preview shopper's cart is back to its 3 lines.
+- **2026-10-03: step 1 done.** `step-2b-rewards` is merged into `main` (`46aba50`).
   - Review result B is closed (owner chose rule + admin warning, `24194ef`). The 7-day rule is deployed to `ishaputrabotanicals`. `hardening-check` PASS, including the new late / undated / in-window return cases.
   - The `CLIENT.md` "Rewards (Task 8)" notes are written (`16964f8`).
-  - **The UI pass is on branch `ui-world-class`** (from `main`). Tooling: `docs/handoff/ui-shots.mjs` (screenshots) and `docs/handoff/ui-fixtures.mjs` (demo orders in every status + a temporary admin; `remove` deletes them).
-  - `docs/handoff/ui-profiles.mjs` makes logged-in browser profiles for `playwright-cli` (owner asked for it): `playwright-cli -s=<name> open --profile=<dir>/<name> <url>`; no password on any command line.
-  - **Live test data is present until the UI pass ends:** 13 `ui-fx-*` orders for the preview shopper and a temporary admin (`docs/handoff/admin.local`). Remove with `node docs/handoff/ui-fixtures.mjs remove`.
-  - The full-site audit (8 auditors + 1 synthesis) is a workflow; the first run was cut off when a session ended, and it was relaunched. If it is lost again: restart the dev server on 5182, recreate profiles, relaunch the audit.
+- **UI tooling (kept for the next client):** `docs/handoff/ui-shots.mjs` (per-screen screenshots + console, network and axe logs), `docs/handoff/ui-fixtures.mjs` (`seed` / `remove` demo orders in all 13 states + a temporary admin; needs the owner's OK, it writes to the live Firebase), `docs/handoff/ui-profiles.mjs` (logged-in profiles for `playwright-cli`, no password on any command line).
 - **Before that, branch `step-2b-rewards`:**
   - `102bef7` Rewards hardening. `9469bea` reservation timeout. `7128f23` rewards display fixes.
-  - `d2573f4` (2026-10-03) Fixes found in the display screenshots:
-    - Wallet "Total spent" was always ₹0: it summed `order.totalAmount`, a field no order has. It now uses `order.total`, so membership tiers finally move.
-    - "Out for delivery" orders were never counted as pending.
-    - The points card showed a false "0 points / ₹0" while loading. It now shows a shimmer, and an honest message if the ledger can't be read (`useRewards` has a new `error` flag).
-    - Order page: one card style (`panel tx-sheet`) for every block, buttons in the brand palette, no old-theme blue banner, and the delivered card shows the delivery time.
-    - Footer map is muted monochrome, with colour on hover or focus.
-- **Firestore rules:** the hardened rules are deployed to `ishaputrabotanicals`.
-- **Verification (2026-10-03, after `d2573f4`):**
-  - `npm test` passes (15). `npm run build` passes. `tsc`: only the known old errors (`videoCallService`, `DeliveryDashboard`, `VideoCallRequestModal`). See the `tsc` gotcha below.
-  - `hardening-check.mjs`: **PASS** against the real Firestore and rules.
-  - Screenshots taken with the owner's OK (step 1, option A): `/wallet`, `/account/orders/<id>`, `/admin/orders/<id>` and the mismatch state, at 390 and 1440 px, light and dark. All look right. The demo data was deleted afterwards.
-  - One reviewer checked the diff `1191020..HEAD` against the 27 findings: all resolved, one new defect fixed in `6982afc`, one open for the owner (see "Review result").
-  - `6982afc` re-verified: `hardening-check` PASS (it now also checks the late-payment flag; it failed on the old code).
+  - `d2573f4` (2026-10-03) Fixes found in the display screenshots (wallet total spent, out-for-delivery as pending, honest points loading state, order page card style, monochrome footer map).
+- **Firestore rules:** the hardened rules, plus the 7-day return rule, are deployed to `ishaputrabotanicals`.
 
 ## Next steps (in order)
 
-1. **Write the "Rewards (Task 8)" notes in `CLIENT.md`, then merge locally:** `git checkout main && git merge --no-ff step-2b-rewards`. The notes should cover:
-   - `FIREBASE_ADMIN_SDK_BASE64` is now required on Vercel. Without it, every paid order is saved as "payment pending, needs review".
-   - The `payments` collection.
-   - Reservations and holds, and the "Check payment & rewards" button.
-   - The known limits listed below.
-   - Ask the owner about "Review result" B (return window) and note the decision. It doesn't block the merge.
-2. **World-class Ishaputra UI/UX (the owner's top priority, 2026-10-03).** The owner wants people who see the site to ask "who made this?": perfect design, smooth animation and transitions, every old Sreerasthu bug fixed.
-   - **Needs ultracode** for the first full-site audit.
-   - **Evidence:** 84 component files still use old-theme colours. The worst are `AdminOrders`, `AdminDeliveryBoys`, `AdminOrderDetails`, `ProductForm`, `Account` and `SecurityPage`. The order page still has emerald, purple and red return-status banners.
-   - **Plan:** audit the whole site (workflow, about 6 agents: home, product and listing, cart and checkout, account, admin, global header/footer/motion), then fix one area at a time with screenshots.
-   - **Skills:** `ui-ux-pro-max` and the taste skills for direction; `emil-design-eng`, `animate` and `motion` for motion; `better-interface` and `web-quality-audit` for review.
-   - **Rule:** keep the layout, change the design.
-   - **Also fix:** the order page loads all of a customer's orders to show one (slow; use one document read). The full-page loaders are bare spinners; use skeletons.
-3. **Finish the toolbox.** See "Skills" below.
-4. **Later:** Scratch & Win, Dealer Membership, Loyalty Card (rest of Step 2B), then Step 3 accounts.
+1. **Owner reviews the UI pass** on branch `ui-world-class` (run `npx vite --port 5182 --strictPort --host 127.0.0.1`; light, dark and system; phone and desktop). Then merge locally: `git checkout main && git merge --no-ff ui-world-class`.
+   - Owner to do in Admin > Commerce: set Ships From = Telangana (delivery charges still assume Andhra Pradesh).
+   - Small leftovers, none blocking: `useWishlist`'s own toast and the wishlist page's toast could be merged; cart lines could keep the order they were added in (needs an `addedAt` on cart lines in `CartContext`); generate `public/sitemap.xml` once the domain is real (`robots.txt` points at it, marked TODO(client)); set `VITE_SITE_URL` on Vercel so `og:image` is absolute; PERF-14's `initializeAuth` part (needs a full sign-in regression test).
+   - Client placeholders to confirm are listed in `CLIENT.md` ("Placeholders for the client").
+2. **Finish the toolbox.** See "Skills" below.
+3. **Later:** Scratch & Win, Dealer Membership, Loyalty Card (rest of Step 2B), then Step 3 accounts.
 
 ## Review result
 
 One reviewer (2026-10-03) checked `git diff 1191020..HEAD` against the 27 findings: **all 27 are resolved.** It found 3 new issues:
 
 - **A. Fixed (`6982afc`).** A reservation released as unpaid and then paid late was re-spent silently. The order was never flagged, so repeated late payments could push a balance far below zero unseen. Reconcile now flags such an order for review once (`rewardsLate`), and `hardening-check` covers it.
-- **B. Open, owner decides.** `firestore.rules` `isValidReturnRequest` has no time limit; only the app's button enforces the 7-day window. A customer writing straight to Firestore could spend earned points (they unlock after 7 days), then request a return; if the shop approves it, the points are voided and the balance goes negative. The shop still has to approve. Options:
+- **B. Closed 2026-10-03 (`24194ef`, owner chose both options below; rule deployed, hardening-check covers it).** It was: `firestore.rules` `isValidReturnRequest` had no time limit; only the app's button enforces the 7-day window. A customer writing straight to Firestore could spend earned points (they unlock after 7 days), then request a return; if the shop approves it, the points are voided and the balance goes negative. The shop still has to approve. Options:
   1. Add a rule: `request.time < resource.data.deliveredAt + duration.value(7, 'd')`. This needs a rules deploy to the live project, and orders without `deliveredAt` need handling.
   2. In admin, warn when a return was requested after the window.
 - **C. Low, theoretical.** Someone who learned another customer's Razorpay order id before that customer saved the order could create `orders/<id>` first and block them. Razorpay ids are not guessable. No action.
@@ -145,8 +133,8 @@ Which next steps need ultracode:
 
 | Step | Ultracode? | Effort |
 |---|---|---|
-| 1. Notes and merge | No | Medium |
-| 2. World-class UI audit | Yes, for the first full-site audit; individual areas after that don't need it | High |
-| 3. Toolbox | No | Medium |
+| 1. Owner review of the UI pass, then merge | No | Medium |
+| 2. Toolbox | No | Medium |
+| 3. Step 2B features (Scratch & Win, Dealer, Loyalty card) | Yes, for the plan and the money logic review | Extra high for rewards / money logic |
 
 **Context:** read file ranges, not whole large files. `ssecommerce/CLAUDE.md` is 27 KB and loads into every session in this folder, so trimming it would cut the cost of every turn.
