@@ -218,29 +218,27 @@ const PurchaseSummary: React.FC = () => {
     <div className="min-h-dvh tx-paper">
       <div className="hidden lg:block"><Header /></div>
 
-      {/* Desktop Back Button */}
-      <div className="hidden border-b border-foreground/[0.08] lg:block">
-        <div className="mx-auto max-w-4xl px-4">
-          <button
-            type="button"
-            onClick={() => navigate('/account')}
-            className="inline-flex min-h-[44px] items-center gap-1.5 text-muted-foreground transition-colors duration-hover hover:text-primary"
-          >
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.18em]">Back to account</span>
-          </button>
-        </div>
-      </div>
-
       {/* Mobile Header */}
       <div className="tx-sheet sticky top-0 z-sticky flex items-center gap-2 border-b border-foreground/[0.08] px-2 py-1.5 lg:hidden">
         <IconButton label="Back" onClick={() => navigate(-1)}>
           <ArrowLeft />
         </IconButton>
-        <p className="font-heading text-lg font-semibold tracking-tight text-foreground" aria-hidden="true">Wallet & rewards</p>
+        <p className="font-heading text-xl font-semibold tracking-tight text-foreground" aria-hidden="true">Wallet & rewards</p>
       </div>
 
       <main id="main" tabIndex={-1} className="mx-auto max-w-4xl px-4 py-6 pb-24 outline-none lg:py-10 lg:pb-10">
+        {/* Title: the mobile bar above shows it on phones, so the h1 is for screen readers there */}
+        <div className="lg:mb-8 lg:flex lg:items-center lg:gap-2">
+          <div className="hidden lg:block">
+            <IconButton label="Back" onClick={() => navigate('/account')} className="-ml-2">
+              <ArrowLeft />
+            </IconButton>
+          </div>
+          <div className="min-w-0">
+            <h1 className="sr-only lg:not-sr-only font-heading text-xl font-semibold tracking-tight text-foreground lg:text-2xl">Wallet & rewards</h1>
+            <p className="mt-0.5 hidden text-xs text-muted-foreground lg:block">Your tier, points and cashback</p>
+          </div>
+        </div>
         {content}
       </main>
 
@@ -253,9 +251,6 @@ const PurchaseSummary: React.FC = () => {
     return shell(
       <div aria-busy="true">
         <span className="sr-only" role="status">Loading your wallet</span>
-        <div className="mb-8 hidden lg:block">
-          <div className="h-10 w-72 rounded-control bg-foreground/[0.06]" />
-        </div>
         <div className="tx-slate mb-6 h-48 rounded-panel opacity-60" />
         <StatCardsSkeleton count={3} className="mb-6 grid-cols-3 lg:grid-cols-3" label="" />
         <PanelSkeleton lines={3} label="" />
@@ -280,11 +275,6 @@ const PurchaseSummary: React.FC = () => {
 
   return shell(
     <>
-      <div className="lg:mb-8">
-        <p className="eyebrow-no mb-3 hidden lg:inline-flex"><span>Your wallet</span></p>
-        <h1 className="sr-only lg:not-sr-only font-heading text-4xl font-semibold tracking-tight text-foreground">Wallet & rewards</h1>
-      </div>
-
       {/* ─── LOYALTY TIER CARD ──────────────────────── */}
       <motion.div
         {...enter()}
@@ -412,7 +402,7 @@ const PurchaseSummary: React.FC = () => {
           <div className="mb-1 flex items-baseline gap-1">
             <IndianRupee aria-hidden="true" className="mt-1 size-6 text-primary" />
             <span className="font-heading text-4xl font-semibold tracking-tight text-foreground tabular-nums">
-              {showAmount ? stats.totalSpent.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : <><span aria-hidden="true">••••••</span><span className="sr-only">Hidden</span></>}
+              {showAmount ? formatINR(stats.totalSpent).replace('₹', '') : <><span aria-hidden="true">••••••</span><span className="sr-only">Hidden</span></>}
             </span>
           </div>
           <p className="text-xs font-medium text-muted-foreground">From delivered orders only</p>

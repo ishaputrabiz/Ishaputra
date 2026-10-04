@@ -143,8 +143,26 @@ const UnavailableTag = ({ reason }: { reason?: string }) =>
  * confirms exactly like a completed drag. Under reduced motion it becomes a
  * plain copper button that calls the same onComplete.
  */
-const SlideToPayButton = ({ amount, onComplete }: { amount: string; onComplete: () => void }) => {
+/**
+ * Cart lines in a fixed order. The cart is a Firestore map, which keeps no
+ * order, so lines would shuffle between loads. Display only: the order, the
+ * totals and the payment still use the cart as it is.
+ */
+const sortLines = <T extends { id: string; name: string }>(list: T[]): T[] =>
+  [...list].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+
+const SlideToPayButton = ({
+  amount,
+  onComplete,
+  autoFocus = false,
+}: {
+  amount: string;
+  onComplete: () => void;
+  /** Focus the control on mount, e.g. after the Payment details panel closes. */
+  autoFocus?: boolean;
+}) => {
   const constraintsRef = useRef<HTMLDivElement>(null);
+  const focusRef = useRef<HTMLButtonElement>(null);
   const x = useMotionValue(0);
   const [sliderWidth, setSliderWidth] = useState(0);
   const [completed, setCompleted] = useState(false);
@@ -157,6 +175,8 @@ const SlideToPayButton = ({ amount, onComplete }: { amount: string; onComplete: 
     if (constraintsRef.current) {
       setSliderWidth(constraintsRef.current.offsetWidth - 56);
     }
+    if (autoFocus) focusRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const textOpacity = useTransform(x, [0, sliderWidth * 0.3], [1, 0]);
@@ -179,7 +199,7 @@ const SlideToPayButton = ({ amount, onComplete }: { amount: string; onComplete: 
 
   if (reduceMotion) {
     return (
-      <button type="button" onClick={complete} disabled={completed} className="btn-copper h-14 w-full !text-[12px]">
+      <button ref={focusRef} type="button" onClick={complete} disabled={completed} className="btn-copper h-14 w-full !text-[12px]">
         {completed ? (
           <>
             <Spinner size={16} />
@@ -222,6 +242,7 @@ const SlideToPayButton = ({ amount, onComplete }: { amount: string; onComplete: 
       {/* Draggable thumb, also a keyboard control */}
       {!completed && (
         <motion.button
+          ref={focusRef}
           type="button"
           aria-label={isPlaceOrder ? 'Place order. Press Enter or slide to confirm' : `Pay ${amount}. Press Enter or slide to confirm`}
           onKeyDown={(e) => {
@@ -759,6 +780,7 @@ const MobileCheckout = () => {
   const [showAllItems, setShowAllItems] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [slideResetKey, setSlideResetKey] = useState(0);
+  const [slideAutoFocus, setSlideAutoFocus] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
   const [showOffers, setShowOffers] = useState(false);
@@ -810,6 +832,7 @@ const MobileCheckout = () => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setShowPaymentDetails(false);
+        setSlideAutoFocus(true);
         setSlideResetKey((k) => k + 1);
       }
     };
@@ -1200,8 +1223,10 @@ const MobileCheckout = () => {
     });
   };
 
+  // Closing the panel remounts the slider (to reset it), so focus goes to the new one.
   const closePaymentDetails = () => {
     setShowPaymentDetails(false);
+    setSlideAutoFocus(true);
     setSlideResetKey((k) => k + 1);
   };
 
@@ -1225,6 +1250,8 @@ const MobileCheckout = () => {
   // just added stays for a moment so its check mark can show.
   const addOns = suggestedProducts.filter((p) => p.id === justAddedId || !items.some((i) => i.id === p.id));
   const showForm = showAddressForm || addresses.length === 0;
+  const lines = sortLines(items);
+  const orderedLines = sortLines(orderedItems);
 
   return (
     <div className="min-h-screen tx-paper flex flex-col pb-24" style={{ fontFamily: "var(--font-body)" }}>
@@ -1256,14 +1283,14 @@ const MobileCheckout = () => {
         >
           <div className="flex items-center justify-between gap-2 border-b border-foreground/[0.08] py-2 pl-4 pr-2">
             <SheetTitle className="text-lg" style={HEADING_FONT}>
-              Select delivery address
+              {showForm ? 'New delivery address' : 'Delivery address'}
             </SheetTitle>
             <div className="flex items-center gap-1">
               {!showForm && (
                 <button
                   type="button"
                   onClick={() => setShowAddressForm(true)}
-                  className="inline-flex h-10 items-center gap-1 rounded-control px-3 text-sm font-semibold text-primary transition-[background-color,transform] duration-press ease-out hover:bg-primary/10 active:scale-[0.97]"
+                  className="inline-flex h-10 items-center gap-1 whitespace-nowrap rounded-control px-3 text-sm font-semibold text-primary transition-[background-color,transform] duration-press ease-out hover:bg-primary/10 active:scale-[0.97]"
                 >
                   <Plus aria-hidden="true" className="size-4" />
                   Add address
@@ -1278,7 +1305,6 @@ const MobileCheckout = () => {
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
             {showForm ? (
               <form id="mobile-address-form" onSubmit={handleFormSubmit} noValidate className="space-y-4">
-                <p className="text-xs text-muted-foreground">Add a new delivery address for your order.</p>
                 <AddressFields
                   prefix="mobile"
                   formData={formData}
@@ -1367,7 +1393,7 @@ const MobileCheckout = () => {
             </div>
             <ul className="tx-sheet mx-4 mb-4 divide-y divide-foreground/[0.08] overflow-hidden rounded-card border border-foreground/[0.08] shadow-panel">
               <AnimatePresence initial={false}>
-                {items.map((item) => {
+                {lines.map((item) => {
                   // Show the strike-through MRP only when the product genuinely has one.
                   const origPrice = item.originalPrice && item.originalPrice > item.price ? item.originalPrice : null;
                   return (
@@ -1634,7 +1660,7 @@ const MobileCheckout = () => {
         <div className="mx-4 mb-3 mt-3">
           <div className="tx-sheet flex items-center gap-3 rounded-card border border-foreground/[0.08] px-4 py-3 shadow-panel">
             <div className="flex -space-x-2">
-              {items.slice(0, 3).map((item, idx) => (
+              {lines.slice(0, 3).map((item, idx) => (
                 <div key={item.id} className="size-14 flex-shrink-0 overflow-hidden rounded-full border-2 border-card" style={{ zIndex: 3 - idx }}>
                   <SmartImage src={item.image} alt="" className="h-full w-full object-cover" preset="thumb" />
                 </div>
@@ -1754,7 +1780,9 @@ const MobileCheckout = () => {
           <SlideToPayButton
             key={slideResetKey}
             amount={formatPrice(total)}
+            autoFocus={slideAutoFocus}
             onComplete={() => {
+              setSlideAutoFocus(false);
               if (!selectedAddress) {
                 setSlideResetKey(k => k + 1);
                 setShowAddressSelector(true);
@@ -1839,7 +1867,7 @@ const MobileCheckout = () => {
               <section className="border-t border-foreground/[0.08] px-4 py-4">
                 <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">In this order</h3>
                 <div className="space-y-3">
-                  {items.slice(0, 1).map((item) => (
+                  {lines.slice(0, 1).map((item) => (
                     <div key={item.id} className="flex items-center gap-3 rounded-card border border-foreground/[0.08] bg-card p-3">
                       <div className="size-16 flex-shrink-0 overflow-hidden rounded-control bg-foreground/[0.03]">
                         <SmartImage src={item.image} alt="" className="h-full w-full object-cover" preset="thumb" />
@@ -1851,7 +1879,7 @@ const MobileCheckout = () => {
                     </div>
                   ))}
                   {items.length > 1 && (
-                    <p className="text-xs text-muted-foreground">And {plural(items.length - 1, 'more item')}</p>
+                    <p className="text-xs text-muted-foreground">And {plural(items.length - 1, 'more product')}</p>
                   )}
                 </div>
               </section>
@@ -1933,7 +1961,7 @@ const MobileCheckout = () => {
                 Order confirmed
               </h2>
               <p className="mx-auto mb-6 max-w-xs text-center text-sm leading-relaxed text-muted-foreground">
-                We have your payment and your order. We will email you when it ships.
+                We have your payment and your order. You can track it any time in My orders.
               </p>
 
               <div className="space-y-4">
@@ -1965,8 +1993,8 @@ const MobileCheckout = () => {
                   <section aria-labelledby="ordered-items-title" className="tx-sheet rounded-card border border-foreground/[0.08] p-4 shadow-panel">
                     <h3 id="ordered-items-title" className="mb-3 text-base font-semibold text-foreground" style={HEADING_FONT}>Order summary</h3>
                     <ul className="divide-y divide-foreground/[0.08]">
-                      <OrderedLine item={orderedItems[0]} />
-                      {showAllItems && orderedItems.slice(1).map((item) => <OrderedLine key={item.id} item={item} />)}
+                      <OrderedLine item={orderedLines[0]} />
+                      {showAllItems && orderedLines.slice(1).map((item) => <OrderedLine key={item.id} item={item} />)}
                     </ul>
                     {orderedItems.length > 1 && (
                       <button
@@ -1975,7 +2003,7 @@ const MobileCheckout = () => {
                         aria-expanded={showAllItems}
                         className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-control text-sm font-medium text-primary transition-colors duration-hover hover:bg-primary/10"
                       >
-                        {showAllItems ? 'Show less' : `Show ${plural(orderedItems.length - 1, 'more item')}`}
+                        {showAllItems ? 'Show less' : `Show ${plural(orderedItems.length - 1, 'more product')}`}
                         <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-dropdown ease-out ${showAllItems ? 'rotate-180' : ''}`} />
                       </button>
                     )}
@@ -2025,7 +2053,7 @@ const Checkout = () => {
     else navigate('/');
   };
   const { user, userProfile } = useAuth();
-  const { items, unavailable, subtotal, clearCart, updateCartPrice, updateQuantity, removeFromCart, addToCart, closeCart, loading: cartLoading } = useCart();
+  const { items, unavailable, subtotal, totalItems, clearCart, updateCartPrice, updateQuantity, removeFromCart, addToCart, closeCart, loading: cartLoading } = useCart();
   const { toast } = useToast();
   const { addToWishlist } = useWishlist();
   const [couponCode, setCouponCode] = useState('');
@@ -2455,6 +2483,8 @@ const Checkout = () => {
   const offers = pricing.redeemableCoupons;
   const visibleOffers = showAllOffers ? offers : offers.slice(0, 2);
   const showForm = showAddressForm || addresses.length === 0;
+  const lines = sortLines(items);
+  const orderedLines = sortLines(orderedItems);
 
   /** Remove a line and offer to put it back at the same quantity. */
   const removeWithUndo = (item: CartItem) => {
@@ -2594,7 +2624,7 @@ const Checkout = () => {
               >
                 <div className="flex items-center justify-between gap-4 border-b border-foreground/[0.08] py-4 pl-6 pr-4">
                   <DialogTitle className="text-2xl font-semibold text-foreground" style={HEADING_FONT}>
-                    Select delivery address
+                    {showForm ? 'New delivery address' : 'Delivery address'}
                   </DialogTitle>
                   <IconButton label="Close" onClick={handleCloseAddressSelector}>
                     <X aria-hidden="true" />
@@ -2604,9 +2634,6 @@ const Checkout = () => {
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6">
                   {showForm ? (
                     <form id="desktop-address-form" onSubmit={handleFormSubmit} noValidate className="space-y-5">
-                      <Notice tone="info" role="note" compact>
-                        Add a new delivery address for your order.
-                      </Notice>
                       <AddressFields
                         prefix="desktop"
                         roomy
@@ -2739,7 +2766,7 @@ const Checkout = () => {
               )}
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <h2 id="bag-title" className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground tabular-nums">
-                  {plural(items.length, 'item')} in your bag
+                  {plural(totalItems, 'item')} in your bag
                 </h2>
                 <div className="flex gap-5">
                   <button
@@ -2760,7 +2787,7 @@ const Checkout = () => {
               </div>
 
               <ul className="space-y-6">
-                {items.map((item) => (
+                {lines.map((item) => (
                   <li key={item.id} className="flex gap-4">
                     <div className="size-24 flex-shrink-0 overflow-hidden rounded-card bg-muted">
                       <SmartImage src={item.image} alt="" className="h-full w-full object-cover" preset="thumb" />
@@ -2886,12 +2913,13 @@ const Checkout = () => {
               pointsApplied={pricing.pointsApplied}
               pointsValue={pricing.pointsValue}
               cashbackApplied={pricing.cashbackApplied}
+              className="rounded-panel px-6 py-4"
             />
 
             {/* Price Details */}
             <section aria-labelledby="price-title" className={`${panel} lg:sticky lg:top-[var(--sticky-top)]`}>
               <h2 id="price-title" className="mb-5 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground tabular-nums">
-                Price details · {plural(items.length, 'item')}
+                Price details · {plural(totalItems, 'item')}
               </h2>
 
               <BillRows
@@ -2925,10 +2953,6 @@ const Checkout = () => {
 
               {/* Trust Badges */}
               <ul className="mt-4 space-y-2 border-t border-border pt-4 text-xs text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <ShieldCheck aria-hidden="true" className="size-4 text-primary" />
-                  Secure payment via Razorpay
-                </li>
                 <li className="flex items-center gap-2">
                   <RotateCcw aria-hidden="true" className="size-4 text-primary" />
                   7-day returns
@@ -3010,7 +3034,7 @@ const Checkout = () => {
                 <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-5">
                   {/* Items */}
                   <ul className="space-y-2.5">
-                    {items.slice(0, showAllItems ? items.length : 2).map((item) => (
+                    {lines.slice(0, showAllItems ? lines.length : 2).map((item) => (
                       <li key={item.id} className="flex items-center gap-3">
                         <div className="size-12 flex-shrink-0 overflow-hidden rounded-control bg-foreground/[0.03] ring-1 ring-foreground/[0.06]">
                           <SmartImage src={item.image} alt="" className="h-full w-full object-cover" preset="thumb" />
@@ -3030,7 +3054,7 @@ const Checkout = () => {
                           aria-expanded={showAllItems}
                           className="min-h-9 text-xs font-semibold text-primary underline-offset-4 hover:underline"
                         >
-                          {showAllItems ? 'Show less' : `Show ${plural(items.length - 2, 'more item')}`}
+                          {showAllItems ? 'Show less' : `Show ${plural(items.length - 2, 'more product')}`}
                         </button>
                       </li>
                     )}
@@ -3135,7 +3159,7 @@ const Checkout = () => {
               Order confirmed
             </DialogTitle>
             <DialogDescription className="mx-auto mb-8 max-w-sm text-center text-sm leading-relaxed text-muted-foreground">
-              We have your payment and your order. We will email you when it ships.
+              We have your payment and your order. You can track it any time in My orders.
             </DialogDescription>
 
             <div className="space-y-4">
@@ -3166,8 +3190,8 @@ const Checkout = () => {
                 <section aria-labelledby="desktop-ordered-title" className="rounded-card border border-foreground/[0.08] p-4">
                   <h3 id="desktop-ordered-title" className="mb-3 text-base font-semibold text-foreground" style={HEADING_FONT}>Order summary</h3>
                   <ul className="divide-y divide-foreground/[0.08]">
-                    <OrderedLine item={orderedItems[0]} />
-                    {showAllItems && orderedItems.slice(1).map((item) => <OrderedLine key={item.id} item={item} />)}
+                    <OrderedLine item={orderedLines[0]} />
+                    {showAllItems && orderedLines.slice(1).map((item) => <OrderedLine key={item.id} item={item} />)}
                   </ul>
                   {orderedItems.length > 1 && (
                     <button
@@ -3176,7 +3200,7 @@ const Checkout = () => {
                       aria-expanded={showAllItems}
                       className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-control text-sm font-medium text-primary transition-colors duration-hover hover:bg-primary/10"
                     >
-                      {showAllItems ? 'Show less' : `Show ${plural(orderedItems.length - 1, 'more item')}`}
+                      {showAllItems ? 'Show less' : `Show ${plural(orderedItems.length - 1, 'more product')}`}
                       <ChevronDown aria-hidden="true" className={`size-4 transition-transform duration-dropdown ease-out ${showAllItems ? 'rotate-180' : ''}`} />
                     </button>
                   )}

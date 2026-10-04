@@ -80,7 +80,7 @@ const MobileOrders = () => {
               <ArrowLeft />
             </IconButton>
             <div className="min-w-0">
-              <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground">My orders</h1>
+              <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground lg:text-2xl">My orders</h1>
               {!ordersLoading && (
                 <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
                   {plural(orders.length, 'order')} · {activeCount} active

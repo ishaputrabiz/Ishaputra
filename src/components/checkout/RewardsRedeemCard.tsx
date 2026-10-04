@@ -1,6 +1,7 @@
 import { Switch } from '@/components/ui/switch';
 import type { RewardBalances, RewardSettings } from '@/lib/rewards';
 import { formatINR, formatNumber } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 const inr = (n: number) => formatINR(n);
 
@@ -60,9 +61,7 @@ export const RewardsRedeemCard = ({
   if (!settings.enabled || (points <= 0 && cashback <= 0 && pending <= 0)) return null;
 
   return (
-    <div
-      className={`tx-sheet rounded-card border border-foreground/[0.08] shadow-panel px-4 py-2 ${className}`}
-    >
+    <div className={cn('tx-sheet rounded-card border border-foreground/[0.08] px-4 py-2 shadow-panel', className)}>
       <h2 className="pt-2 pb-1 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Your rewards</h2>
       <div className="divide-y divide-foreground/[0.08]">
         {(points > 0 || pending > 0) && (

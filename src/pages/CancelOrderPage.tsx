@@ -12,11 +12,10 @@ import { Notice } from '@/components/ui/notice';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
-import { STATUS_TONE_CLASSES } from '@/components/ui/status-badge';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { ArrowLeft, Ban, MapPin, PackageSearch } from 'lucide-react';
+import { ArrowLeft, MapPin, PackageSearch } from 'lucide-react';
 
 const CANCEL_REASONS = [
   'Changed my mind',
@@ -209,17 +208,9 @@ const CancelOrderPage = () => {
           <IconButton label="Back" onClick={() => navigate(`/account/orders/${orderId}`)}>
             <ArrowLeft />
           </IconButton>
-          <div className="flex min-w-0 items-center gap-3">
-            <div
-              aria-hidden="true"
-              className={cn('flex size-10 shrink-0 items-center justify-center rounded-full border', STATUS_TONE_CLASSES.danger)}
-            >
-              <Ban className="size-5" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground">Cancel order</h1>
-              <p className="text-xs text-muted-foreground tabular-nums">ORD-{order.orderId}</p>
-            </div>
+          <div className="min-w-0">
+            <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground lg:text-2xl">Cancel order</h1>
+            <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">ORD-{order.orderId}</p>
           </div>
         </div>
       </div>

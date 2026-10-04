@@ -171,7 +171,7 @@ const ShoppingCart = () => {
 
         {/* ─── HEADER: NAVBAR & SEARCH ─── */}
         <div className="border-b border-border">
-          <div className="flex items-center justify-between gap-2 py-3 pl-4 pr-2">
+          <div className="flex items-center justify-between gap-2 py-3 pl-6 pr-4">
             <img
               src={resolvedTheme === 'dark' ? '/white_logo.png' : '/black_logo.png'}
               alt="Ishaputra Botanicals"
@@ -213,7 +213,7 @@ const ShoppingCart = () => {
             <>
               <form
                 role="search"
-                className="px-4 pb-3"
+                className="px-6 pb-3"
                 onSubmit={(e) => {
                   e.preventDefault();
                   runSearch();
@@ -234,7 +234,7 @@ const ShoppingCart = () => {
                 </div>
               </form>
 
-              <div className="px-4 pb-3">
+              <div className="px-6 pb-3">
                 <DrawerStepper step={currentStep} />
               </div>
             </>
@@ -290,7 +290,10 @@ const ShoppingCart = () => {
               {/* Cart Items */}
               <ul className="divide-y divide-border px-6 py-2">
                 <AnimatePresence initial={false}>
-                  {items.map((item) => (
+                  {/* Fixed order: the cart is a Firestore map, which keeps none (display only). */}
+                  {[...items]
+                    .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+                    .map((item) => (
                     <motion.li
                       key={item.id}
                       initial={{ opacity: 0 }}
@@ -475,7 +478,7 @@ const ShoppingCart = () => {
                 {/* Price breakdown */}
                 <dl className="space-y-3.5 pt-1 text-sm">
                   <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Subtotal</dt>
+                    <dt className="text-muted-foreground">Item total</dt>
                     <dd className="tabular-nums text-foreground">{formatINR(subtotal)}</dd>
                   </div>
                   {discount > 0 && (
@@ -512,7 +515,10 @@ const ShoppingCart = () => {
                   )}
                   <div className="h-px bg-border" aria-hidden="true" />
                   <div className="flex items-baseline justify-between">
-                    <dt className="font-bold text-foreground">Total (incl. all taxes)</dt>
+                    <dt className="font-bold text-foreground">
+                      To pay
+                      <span className="ml-1 text-xs font-medium text-muted-foreground">(incl. all taxes)</span>
+                    </dt>
                     <dd className="text-base font-bold tabular-nums text-foreground">{formatINR(total)}</dd>
                   </div>
                   {discount > 0 && (

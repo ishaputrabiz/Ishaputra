@@ -13,9 +13,8 @@ import { useRewards } from '@/hooks/useRewards';
 import { Notice } from '@/components/ui/notice';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { RewardEntry } from '@/services/rewardsService';
+import { formatDate } from '@/lib/format';
 
-const fmtDate = (ms: number) =>
-  new Date(ms).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 const KIND_ICON = {
   earn: ArrowDownLeft,
   spend: ArrowUpRight,
@@ -51,7 +50,7 @@ const entryState = (e: RewardEntry, now: number): { label: string; voided: boole
   if (e.kind === 'spend' && e.hold) return { label: 'reserved for a payment in progress', voided: false };
   if (e.kind === 'earn' && e.amount > 0) {
     if (e.held) return { label: 'on hold, return in progress', voided: false };
-    if (e.unlockAtMs > now) return { label: `unlocks ${fmtDate(e.unlockAtMs)}`, voided: false };
+    if (e.unlockAtMs > now) return { label: `unlocks ${formatDate(e.unlockAtMs)}`, voided: false };
   }
   return { label: '', voided: false };
 };
@@ -198,7 +197,7 @@ const RewardsWalletCardBody = ({ uid, onRetry }: { uid: string; onRetry: () => v
                       {e.note}
                     </p>
                     <p className="text-xs text-muted-foreground tabular-nums">
-                      {fmtDate(e.createdAtMs)}
+                      {formatDate(e.createdAtMs)}
                       {state.label ? ` · ${state.label}` : ''}
                     </p>
                   </div>

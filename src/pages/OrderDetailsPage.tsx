@@ -256,6 +256,7 @@ const OrderDetailsPage = () => {
   // The sheets open from state, not a Radix trigger, so they hand focus back here on close.
   const shareTriggerRef = useRef<HTMLButtonElement>(null);
   const returnTriggerRef = useRef<HTMLButtonElement>(null);
+  const cancelReturnBtnRef = useRef<HTMLButtonElement>(null);
 
   // Return modal states
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -789,7 +790,7 @@ const OrderDetailsPage = () => {
             <ArrowLeft />
           </IconButton>
           <div className="min-w-0">
-            <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground">Order details</h1>
+            <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground lg:text-2xl">Order details</h1>
             <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">ORD-{order.orderId}</p>
           </div>
         </div>
@@ -820,7 +821,8 @@ const OrderDetailsPage = () => {
                   : order.items[0]?.name
                 }
               </p>
-              <p className="mt-1 text-base font-semibold text-foreground tabular-nums">{formatINR(order.total)}</p>
+              <p className="mt-1.5 text-xs text-muted-foreground">Order total</p>
+              <p className="text-base font-semibold text-foreground tabular-nums">{formatINR(order.total)}</p>
             </div>
           </div>
         </div>
@@ -877,7 +879,8 @@ const OrderDetailsPage = () => {
               <p className="mt-1 text-sm text-muted-foreground">
                 {order.status === 'pending' && 'Your order has been placed.'}
                 {order.status === 'processing' && 'We are preparing your package.'}
-                {(order.status === 'packed' || order.status === 'shipped' || order.status === 'assigned') && 'Packed and ready to dispatch.'}
+                {(order.status === 'packed' || order.status === 'assigned') && 'Packed and ready to dispatch.'}
+                {order.status === 'shipped' && 'Shipped and on its way to you.'}
                 {order.status === 'outForDelivery' && 'On its way to you.'}
                 {order.status === 'picked' && !isReturnPickup && 'On its way to you.'}
                 {isReturnPickup && 'The pickup partner has collected the item. Return in progress.'}
@@ -938,21 +941,21 @@ const OrderDetailsPage = () => {
         {/* Delivery Failed notice */}
         {order.status === 'deliveryFailed' && (
           <Notice tone="danger" role="status">
-            <p className={cn(eyebrow, 'text-status-danger-fg')}>Delivery attempted</p>
-            <p className="mt-1.5 font-semibold text-foreground">We couldn't reach you for delivery.</p>
+            <p className="font-semibold text-foreground">We couldn't reach you for delivery.</p>
             <p className="mt-1 text-sm text-muted-foreground">Your item is coming back to our store. Our team will contact you to reschedule the delivery.</p>
           </Notice>
         )}
 
-        {/* Delivery Message */}
-        {order.status !== 'delivered' && order.status !== 'cancelled' &&
-         order.status !== 'returnRequested' && order.status !== 'returnScheduled' &&
-         order.status !== 'returned' && order.status !== 'refunded' && order.status !== 'deliveryFailed' && (
-          <Notice tone="info" compact role="note" icon={order.status === 'shipped' || order.status === 'outForDelivery' || order.status === 'picked' ? Truck : Clock}>
-            {(order.status === 'shipped' || order.status === 'outForDelivery' || order.status === 'picked')
-              ? 'On its way. Arriving soon.'
-              : "Your order is being processed. We'll let you know once it ships."
-            }
+        {/* What happens next, before the order ships (once it is on its way,
+            the status card and the delivery window already say so) */}
+        {order.status === 'pending' && (
+          <Notice tone="info" compact role="note" icon={Clock}>
+            We'll confirm your order shortly and let you know when it ships.
+          </Notice>
+        )}
+        {(order.status === 'processing' || order.status === 'packed') && (
+          <Notice tone="info" compact role="note" icon={Clock}>
+            We'll let you know when it ships.
           </Notice>
         )}
 
@@ -973,6 +976,7 @@ const OrderDetailsPage = () => {
           {/* Cancel Return: only for returnRequested orders, one-time, asks first */}
           {order.status === 'returnRequested' && !(order as any).returnCancelled && (
             <Button
+              ref={cancelReturnBtnRef}
               variant="destructive"
               onClick={() => setConfirmCancelReturn(true)}
               disabled={cancellingReturn}
@@ -1150,7 +1154,9 @@ const OrderDetailsPage = () => {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-foreground">{order.shippingAddress.fullName}</p>
-              <p className="text-xs text-muted-foreground tabular-nums">ORD-{order.orderId}</p>
+              {order.shippingAddress.mobile && (
+                <p className="text-xs text-muted-foreground tabular-nums">{order.shippingAddress.mobile}</p>
+              )}
             </div>
           </div>
         </section>
@@ -1325,7 +1331,7 @@ const OrderDetailsPage = () => {
               <Download aria-hidden="true" className="size-5 text-muted-foreground" />
               <span className="text-left">
                 <span className="block">Download invoice</span>
-                <span className="block text-xs font-normal text-muted-foreground tabular-nums">Order ID {order.orderId}</span>
+                <span className="block text-xs font-normal text-muted-foreground tabular-nums">Order ORD-{order.orderId}</span>
               </span>
             </span>
             {isDownloadingInvoice ? (
@@ -1730,6 +1736,7 @@ const OrderDetailsPage = () => {
         cancelLabel="Keep return"
         tone="danger"
         onConfirm={handleCancelReturn}
+        returnFocusRef={cancelReturnBtnRef}
       />
     </>
   );

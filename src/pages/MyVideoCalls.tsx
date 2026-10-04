@@ -84,12 +84,9 @@ const MyVideoCalls = () => {
           <IconButton label="Back" onClick={() => navigate(-1)} className="-ml-2">
             <ArrowLeft />
           </IconButton>
-          <div aria-hidden="true" className="tx-slate grid size-10 shrink-0 place-items-center rounded-card">
-            <Video className="size-5 text-highlight-soft" />
-          </div>
-          <div className="min-w-0 flex-1 pl-1">
-            <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground">My video calls</h1>
-            <p className="text-xs text-muted-foreground">Your video consultations</p>
+          <div className="min-w-0 flex-1">
+            <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground lg:text-2xl">My video calls</h1>
+            <p className="mt-0.5 text-xs text-muted-foreground">Your video consultations</p>
           </div>
         </div>
 
