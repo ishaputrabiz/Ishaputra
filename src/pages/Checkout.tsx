@@ -1703,7 +1703,9 @@ const MobileCheckout = () => {
             </div>
 
             {/* Horizontal scroll products */}
-            <ul className="no-scrollbar flex gap-3 overflow-x-auto px-4 pb-2">
+            {/* relative: the cards' sr-only "Was" spans are absolute; without a positioned
+                scroller they escape it and widen the phone page (the blank ">>" checkout bug). */}
+            <ul className="no-scrollbar relative flex gap-3 overflow-x-auto px-4 pb-2">
               {addOns.map((product) => {
                 const added = justAddedId === product.id;
                 return (
@@ -2044,6 +2046,9 @@ const MobileCheckout = () => {
   );
 };
 
+/** Phone layout below Tailwind's md breakpoint (768px). */
+const MOBILE_QUERY = '(max-width: 767.98px)';
+
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -2059,7 +2064,7 @@ const Checkout = () => {
   const [couponCode, setCouponCode] = useState('');
   const [showOffers, setShowOffers] = useState(false);
   const [showAllOffers, setShowAllOffers] = useState(false);
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia(MOBILE_QUERY).matches);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [showAddressSelector, setShowAddressSelector] = useState(false);
@@ -2212,12 +2217,14 @@ const Checkout = () => {
     handleCloseAddressSelector();
   };
 
-  // Detect mobile
+  // Detect mobile with the same breakpoint as Tailwind's md. A media query, unlike
+  // innerWidth, can't be inflated by content that overflows the page.
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
+    const mq = window.matchMedia(MOBILE_QUERY);
+    const check = () => setIsMobile(mq.matches);
     check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    mq.addEventListener('change', check);
+    return () => mq.removeEventListener('change', check);
   }, []);
 
   // Payment dialog: focus moves in and back out; Escape closes it (never while paying).
