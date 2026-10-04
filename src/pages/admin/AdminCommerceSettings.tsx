@@ -15,7 +15,6 @@ import {
   Mail,
   MessageCircle,
   Clock,
-  Percent,
   IndianRupee,
   Coins,
   AlertCircle,
@@ -601,8 +600,8 @@ const DeliveryGstTab = () => {
             <Label htmlFor="cs-gst-on" className="text-sm font-normal text-foreground">GST enabled</Label>
           </div>
           <div>
-            <Label htmlFor="cs-gst-rate" className="flex items-center gap-1 text-xs">
-              <Percent aria-hidden="true" className="h-3 w-3" /> Rate (%)
+            <Label htmlFor="cs-gst-rate" className="text-xs">
+              GST rate (%)
             </Label>
             <Input
               id="cs-gst-rate"

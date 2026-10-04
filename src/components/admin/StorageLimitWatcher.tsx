@@ -81,8 +81,8 @@ const StorageLimitWatcher = () => {
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
-            <AlertTriangle className={`h-5 w-5 ${blocked ? 'text-red-600' : 'text-highlight'}`} />
-            {blocked ? 'Uploads paused — free storage limit reached' : 'Free storage plan is almost used up'}
+            <AlertTriangle aria-hidden="true" className={`h-5 w-5 shrink-0 ${blocked ? 'text-status-danger-fg' : 'text-status-warning-fg'}`} />
+            {blocked ? 'Uploads paused: free storage limit reached' : 'Free storage plan is almost used up'}
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-3 text-sm">

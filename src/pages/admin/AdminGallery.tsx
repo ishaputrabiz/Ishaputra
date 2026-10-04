@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { useInlineFormFocus } from '@/components/admin/useInlineFormFocus';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MediaGridSkeleton } from '@/components/skeletons';
@@ -42,6 +43,8 @@ const AdminGallery = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<GalleryImage | null>(null);
+  // Focus moves to the form when it opens and back to the opener when it closes.
+  const { headingRef: formHeadingRef, addButtonRef, rememberOpener } = useInlineFormFocus(showForm, editing?.id);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
@@ -112,6 +115,7 @@ const AdminGallery = () => {
   };
 
   const handleEdit = (img: GalleryImage) => {
+    rememberOpener();
     setEditing(img);
     setFormData({
       alt: img.alt,
@@ -154,7 +158,7 @@ const AdminGallery = () => {
       }
       actions={
         !showForm && (
-          <Button onClick={() => setShowForm(true)}>
+          <Button ref={addButtonRef} onClick={() => setShowForm(true)}>
             <Plus aria-hidden="true" />
             Add image
           </Button>
@@ -183,7 +187,7 @@ const AdminGallery = () => {
           aria-labelledby="gallery-form-title"
           className="mb-8 rounded-card border border-border bg-card p-4 shadow-sm sm:p-6"
         >
-          <h2 id="gallery-form-title" className="mb-6 text-lg font-semibold text-foreground">
+          <h2 ref={formHeadingRef} tabIndex={-1} id="gallery-form-title" className="mb-6 text-lg font-semibold text-foreground">
             {editing ? 'Edit gallery image' : 'Add gallery image'}
           </h2>
 
@@ -300,8 +304,8 @@ const AdminGallery = () => {
                 >
                   <SelectTrigger id="gl-status"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="active">Live</SelectItem>
+                    <SelectItem value="inactive">Hidden</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -332,12 +336,11 @@ const AdminGallery = () => {
         </div>
 
         {images.length === 0 ? (
-          <div className="px-4 py-12">
+          <div className="m-4 rounded-card border border-dashed border-border px-4 py-12 sm:m-6">
             <EmptyState
               icon={ImageIcon}
               title="No gallery images yet"
-              description="Add your first image."
-              action={!showForm ? { label: 'Add image', onClick: () => setShowForm(true) } : undefined}
+              description="Add your first image with Add image."
             />
           </div>
         ) : (
@@ -356,7 +359,7 @@ const AdminGallery = () => {
                     className={`h-full w-full object-cover ${img.status === 'inactive' ? 'opacity-50' : ''}`} preset="tile" />
                   {img.status === 'inactive' && (
                     <span className="absolute bottom-2 left-2">
-                      <StatusBadge tone="neutral" icon={EyeOff} label="Inactive" />
+                      <StatusBadge tone="neutral" icon={EyeOff} label="Hidden" />
                     </span>
                   )}
                   <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-100 transition-opacity duration-hover lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
@@ -373,7 +376,7 @@ const AdminGallery = () => {
                   <div className="mt-1 flex items-center gap-2">
                     <span className="text-xs tabular-nums text-muted-foreground">Position {index + 1}</span>
                     {img.status === 'active' && (
-                      <Eye aria-label="Active" className="h-3 w-3 text-status-success-fg" />
+                      <Eye aria-label="Live" className="h-3 w-3 text-status-success-fg" />
                     )}
                   </div>
                 </div>

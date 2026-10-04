@@ -58,7 +58,8 @@ const BASE: Record<string, StatusDisplay> = {
   delivered: { label: 'Delivered', tone: 'success', icon: CircleCheck },
   refunded: { label: 'Refunded', tone: 'success', icon: CircleCheck },
   cancelled: { label: 'Cancelled', tone: 'danger', icon: CircleX },
-  deliveryFailed: { label: 'Delivery attempted', tone: 'danger', icon: TriangleAlert },
+  // One label for shopper and shop: plain about what happened, no blame.
+  deliveryFailed: { label: 'Delivery failed', tone: 'danger', icon: TriangleAlert },
   returnRequested: { label: 'Return requested', tone: 'returns', icon: RotateCcw },
   returnScheduled: { label: 'Return scheduled', tone: 'returns', icon: RotateCcw },
   picked: { label: 'Return picked up', tone: 'returns', icon: RotateCcw },
@@ -117,6 +118,18 @@ export function getProductStatus(product: { isActive?: boolean; stock?: number |
   if (typeof product.stock === 'number' && product.stock <= 0) return { label: 'Sold out', tone: 'danger', icon: PackageX };
   if (product.isActive) return { label: 'Live', tone: 'success', icon: Eye };
   return { label: 'Hidden', tone: 'neutral', icon: EyeOff };
+}
+
+/**
+ * The one way admin screens print an order number: 'ORD-48273723'. The list,
+ * the order page, its confirmations and customer order history all use it,
+ * so the owner can match an order at a glance and search for what they see.
+ * Accepts the number with or without the prefix or a leading '#'.
+ */
+export function orderLabel(orderNumber: string | number | null | undefined): string {
+  const raw = String(orderNumber ?? '').trim().replace(/^#/, '');
+  if (!raw) return 'Order';
+  return /^ORD-/i.test(raw) ? raw.toUpperCase() : `ORD-${raw}`;
 }
 
 /** 'outForDelivery' -> 'Out for delivery' (sentence case) for any status this map does not know. */

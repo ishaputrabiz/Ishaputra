@@ -13,6 +13,7 @@ import { Notice } from '@/components/ui/notice';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { useInlineFormFocus } from '@/components/admin/useInlineFormFocus';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ListSkeleton } from '@/components/skeletons';
@@ -52,6 +53,8 @@ const AdminTestimonials = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Testimonial | null>(null);
+  // Focus moves to the form when it opens and back to the opener when it closes.
+  const { headingRef: formHeadingRef, addButtonRef, rememberOpener } = useInlineFormFocus(showForm, editing?.id);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
@@ -139,6 +142,7 @@ const AdminTestimonials = () => {
   };
 
   const handleEdit = (t: Testimonial) => {
+    rememberOpener();
     setEditing(t);
     setFormData({
       title: t.title,
@@ -189,7 +193,7 @@ const AdminTestimonials = () => {
       }
       actions={
         !showForm && (
-          <Button onClick={() => setShowForm(true)}>
+          <Button ref={addButtonRef} onClick={() => setShowForm(true)}>
             <Plus aria-hidden="true" />
             Add testimonial
           </Button>
@@ -220,7 +224,7 @@ const AdminTestimonials = () => {
           aria-labelledby="testimonial-form-title"
           className="mb-8 rounded-card border border-border bg-card p-4 shadow-sm sm:p-6"
         >
-          <h2 id="testimonial-form-title" className="mb-6 text-lg font-semibold text-foreground">
+          <h2 ref={formHeadingRef} tabIndex={-1} id="testimonial-form-title" className="mb-6 text-lg font-semibold text-foreground">
             {editing ? 'Edit testimonial' : 'Add testimonial'}
           </h2>
 
@@ -400,8 +404,8 @@ const AdminTestimonials = () => {
                 >
                   <SelectTrigger id="tm-status"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="active">Live</SelectItem>
+                    <SelectItem value="inactive">Hidden</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -468,12 +472,11 @@ const AdminTestimonials = () => {
         )}
 
         {testimonials.length === 0 ? (
-          <div className="px-4 py-12">
+          <div className="m-4 rounded-card border border-dashed border-border px-4 py-12 sm:m-6">
             <EmptyState
               icon={Quote}
               title="No testimonials yet"
-              description="Add a real customer review."
-              action={!showForm ? { label: 'Add testimonial', onClick: () => setShowForm(true) } : undefined}
+              description="Add a real customer review with Add testimonial."
             />
           </div>
         ) : (
@@ -498,8 +501,8 @@ const AdminTestimonials = () => {
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <h3 className="truncate text-sm font-semibold text-foreground">“{t.title}”</h3>
                       {t.status === 'active'
-                        ? <StatusBadge tone="success" icon={Eye} label="Active" />
-                        : <StatusBadge tone="neutral" icon={EyeOff} label="Inactive" />}
+                        ? <StatusBadge tone="success" icon={Eye} label="Live" />
+                        : <StatusBadge tone="neutral" icon={EyeOff} label="Hidden" />}
                       {t.demo && <StatusBadge tone="neutral" icon={FlaskConical} label="Demo" title="Placeholder from the preview store" />}
                       <span className="text-xs tabular-nums text-muted-foreground">Position {index + 1}</span>
                     </div>

@@ -10,6 +10,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { useInlineFormFocus } from '@/components/admin/useInlineFormFocus';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ListSkeleton } from '@/components/skeletons';
@@ -35,6 +36,8 @@ const AdminBanners = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
+  // Focus moves to the form when it opens and back to the opener when it closes.
+  const { headingRef: formHeadingRef, addButtonRef, rememberOpener } = useInlineFormFocus(showForm, editingBanner?.id);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bannerToDelete, setBannerToDelete] = useState<Banner | null>(null);
 
@@ -142,6 +145,7 @@ const AdminBanners = () => {
   };
 
   const handleEdit = (banner: Banner) => {
+    rememberOpener();
     setEditingBanner(banner);
     setFormData({
       imageUrl: banner.imageUrl,
@@ -179,7 +183,7 @@ const AdminBanners = () => {
 
   const header = (
     <AdminPageHeader
-      title="Banners"
+      title="Hero banners"
       description="Home page carousel banners."
       leading={
         <IconButton label="Back to dashboard" tooltip onClick={() => navigate('/admin')}>
@@ -188,7 +192,7 @@ const AdminBanners = () => {
       }
       actions={
         !showForm && (
-          <Button onClick={() => setShowForm(true)}>
+          <Button ref={addButtonRef} onClick={() => setShowForm(true)}>
             <Plus aria-hidden="true" />
             Add banner
           </Button>
@@ -217,7 +221,7 @@ const AdminBanners = () => {
           aria-labelledby="banner-form-title"
           className="mb-8 rounded-card border border-border bg-card p-4 shadow-sm sm:p-6"
         >
-          <h2 id="banner-form-title" className="mb-6 text-lg font-semibold text-foreground">
+          <h2 ref={formHeadingRef} tabIndex={-1} id="banner-form-title" className="mb-6 text-lg font-semibold text-foreground">
             {editingBanner ? 'Edit banner' : 'Add banner'}
           </h2>
 
@@ -304,8 +308,8 @@ const AdminBanners = () => {
                 >
                   <SelectTrigger id="banner-status"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="active">Live</SelectItem>
+                    <SelectItem value="inactive">Hidden</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -336,12 +340,11 @@ const AdminBanners = () => {
         </div>
 
         {banners.length === 0 ? (
-          <div className="px-4 py-12">
+          <div className="m-4 rounded-card border border-dashed border-border px-4 py-12 sm:m-6">
             <EmptyState
               icon={GalleryHorizontal}
               title="No banners yet"
-              description="Add your first home page banner."
-              action={!showForm ? { label: 'Add banner', onClick: () => setShowForm(true) } : undefined}
+              description="Add your first home page banner with Add banner."
             />
           </div>
         ) : (
@@ -378,9 +381,9 @@ const AdminBanners = () => {
                           Position {index + 1}
                         </span>
                         {banner.status === 'active' ? (
-                          <StatusBadge tone="success" icon={Eye} label="Active" />
+                          <StatusBadge tone="success" icon={Eye} label="Live" />
                         ) : (
-                          <StatusBadge tone="neutral" icon={EyeOff} label="Inactive" />
+                          <StatusBadge tone="neutral" icon={EyeOff} label="Hidden" />
                         )}
                       </div>
                       <p className="truncate text-sm text-foreground/80">
@@ -393,7 +396,7 @@ const AdminBanners = () => {
 
                     {/* Actions */}
                     <div className="flex shrink-0 gap-1">
-                      <IconButton label="Copy banner ID" tooltip onClick={() => copyId(banner.id)} className="text-muted-foreground">
+                      <IconButton label={`Copy ID of banner ${index + 1}`} tooltip="Copy ID" onClick={() => copyId(banner.id)} className="text-muted-foreground">
                         <Copy />
                       </IconButton>
                       <IconButton label={`Edit banner ${index + 1}`} tooltip="Edit" onClick={() => handleEdit(banner)} className="text-foreground/70">

@@ -239,7 +239,7 @@ const ProductForm = () => {
   const [scannerOpen, setScannerOpen] = useState(false);
   /** Why the loaded product is hidden, when a rule hid it (see InactiveReason). */
   const [inactiveReason, setInactiveReason] = useState<'outOfStock' | 'noImages' | null>(null);
-  /** Shown under the Active switch when a rule changed it for the admin. */
+  /** Shown under the Live in store switch when a rule changed it for the admin. */
   const [statusNote, setStatusNote] = useState<string | null>(null);
 
   /**
@@ -818,28 +818,32 @@ const ProductForm = () => {
     <div className="mx-auto max-w-6xl space-y-6">
       {/* Header: sticky so Save is reachable from anywhere in the long form. */}
       <div className="sticky top-0 z-sticky -mx-4 flex flex-wrap items-center gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur-md lg:-mx-6 lg:px-6">
-        <IconButton label="Back to products" onClick={goBack} tooltip>
-          <ArrowLeft />
-        </IconButton>
-        <div className="min-w-0 flex-1">
-          <h1
-            className="truncate text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
-            style={{ fontFamily: 'var(--font-heading)', fontStretch: 'var(--font-heading-stretch)' }}
-          >
-            {isEditing ? 'Edit product' : 'Add product'}
-          </h1>
-          <p className="truncate text-xs text-muted-foreground">
-            {isEditing ? formData.name || 'Update product details' : 'Add a new product to your catalogue'}
-            <span className="ml-2 hidden sm:inline">
-              · fields marked <span aria-hidden="true" className="text-status-danger-fg">*</span> are required
-            </span>
-          </p>
+        {/* Below sm the title row takes the full width and the actions wrap under it, so the title never truncates. */}
+        <div className="flex min-w-0 flex-1 basis-full items-center gap-3 sm:basis-auto">
+          <IconButton label="Back to products" onClick={goBack} tooltip>
+            <ArrowLeft />
+          </IconButton>
+          <div className="min-w-0 flex-1">
+            <h1
+              className="truncate text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
+              style={{ fontFamily: 'var(--font-heading)', fontStretch: 'var(--font-heading-stretch)' }}
+            >
+              {isEditing ? 'Edit product' : 'Add product'}
+            </h1>
+            <p className="truncate text-xs text-muted-foreground">
+              {isEditing ? formData.name || 'Update product details' : 'Add a new product to your catalogue'}
+              <span className="ml-2 hidden sm:inline">
+                · Required fields are marked <span aria-hidden="true" className="text-status-danger-fg">*</span>
+                <span className="sr-only">with an asterisk</span>
+              </span>
+            </p>
+          </div>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" className="h-10" onClick={goBack} disabled={loading}>
+        <div className="ml-auto flex w-full items-center gap-2 sm:w-auto">
+          <Button type="button" variant="outline" size="sm" className="h-10 flex-1 sm:flex-none" onClick={goBack} disabled={loading}>
             Cancel
           </Button>
-          <Button type="submit" form="product-form" size="sm" className="h-10" disabled={loading}>
+          <Button type="submit" form="product-form" size="sm" className="h-10 flex-1 sm:flex-none" disabled={loading}>
             {loading ? <Spinner /> : <Save aria-hidden="true" />}
             {saveLabel}
           </Button>
@@ -1562,14 +1566,17 @@ const ProductForm = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between gap-4">
-                <Label htmlFor="pf-active" className="text-foreground/80">Active</Label>
-                <Switch id="pf-active" checked={formData.isActive} onCheckedChange={(checked) => { setStatusNote(null); setFormData((prev) => ({ ...prev, isActive: checked })); }} />
+                <div className="min-w-0">
+                  <Label htmlFor="pf-active" className="text-foreground/80">Live in store</Label>
+                  <p id="pf-active-hint" className="mt-0.5 text-xs text-muted-foreground">Off hides it from shoppers</p>
+                </div>
+                <Switch id="pf-active" aria-describedby="pf-active-hint" checked={formData.isActive} onCheckedChange={(checked) => { setStatusNote(null); setFormData((prev) => ({ ...prev, isActive: checked })); }} />
               </div>
               {!formData.isActive && inactiveReason && !statusNote && (
                 <Notice tone="info" compact>
                   {inactiveReason === 'outOfStock'
                     ? 'Hidden automatically because it sold out. Add stock and it goes live again.'
-                    : 'Hidden because it had no photos. Add a photo, then switch Active on.'}
+                    : 'Hidden because it had no photos. Add a photo, then switch Live in store on.'}
                 </Notice>
               )}
               {statusNote && (

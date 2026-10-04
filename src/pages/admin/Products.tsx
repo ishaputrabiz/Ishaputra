@@ -498,7 +498,7 @@ const Products = () => {
         value={statusFilter}
         onValueChange={(v) => v && setStatusFilter(v as StatusFilter)}
         aria-label="Filter by status"
-        className="max-w-full justify-start overflow-x-auto [scrollbar-width:none]"
+        className="max-w-full flex-wrap justify-start sm:flex-nowrap sm:overflow-x-auto sm:[scrollbar-width:none]"
       >
         {STATUS_TABS.map((tab) => {
           const count = statusCounts[tab.value] ?? 0;
@@ -647,7 +647,7 @@ const Products = () => {
           ))}
         </div>
       ) : filteredProducts.length === 0 ? (
-        <div className="rounded-card border border-border bg-card px-4 py-12">
+        <div className="rounded-card border border-dashed border-border bg-card px-4 py-12">
           <EmptyState
             icon={Package}
             title="No products found"

@@ -19,6 +19,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatCard } from '@/components/admin/StatCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ListSkeleton, StatCardsSkeleton } from '@/components/skeletons';
@@ -329,7 +330,7 @@ const AdminGiftCards: React.FC = () => {
     return (
       <div className="mx-auto max-w-6xl space-y-6">
         {header}
-        <StatCardsSkeleton count={3} className="grid-cols-1 md:grid-cols-3 lg:grid-cols-3" label="Loading gift cards" />
+        <StatCardsSkeleton count={3} className="sm:grid-cols-3 lg:grid-cols-3" label="Loading gift cards" />
         <ListSkeleton rows={3} label="" />
       </div>
     );
@@ -340,11 +341,11 @@ const AdminGiftCards: React.FC = () => {
       {header}
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4">
-        <Stat icon={Gift} label="Active cards" value={String(totalActive)} />
-        <Stat icon={IndianRupee} label="Total issued" value={formatINR(totalValue)} />
-        <Stat icon={CreditCard} label="Remaining balance" value={formatINR(totalRemaining)} />
-      </div>
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
+        <li><StatCard icon={Gift} label="Active cards" value={String(totalActive)} /></li>
+        <li><StatCard icon={IndianRupee} label="Total issued" value={formatINR(totalValue)} /></li>
+        <li className="col-span-2 sm:col-span-1"><StatCard icon={CreditCard} label="Remaining balance" value={formatINR(totalRemaining)} /></li>
+      </ul>
 
       {/* Create form */}
       <AnimatePresence initial={false}>
@@ -551,12 +552,11 @@ const AdminGiftCards: React.FC = () => {
       {/* Gift cards grid/list */}
       <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3' : 'space-y-3'}>
         {filteredCards.length === 0 ? (
-          <div className="col-span-full rounded-card border border-border bg-card px-4 py-12">
+          <div className="col-span-full rounded-card border border-dashed border-border bg-card px-4 py-12">
             <EmptyState
               icon={Gift}
               title={giftCards.length === 0 ? 'No gift cards yet' : 'No gift cards match'}
               description={giftCards.length === 0 ? 'Issue one with New gift card.' : 'Try another search or filter.'}
-              action={giftCards.length === 0 && !showForm ? { label: 'New gift card', onClick: () => setShowForm(true) } : undefined}
             />
           </div>
         ) : (
@@ -671,17 +671,5 @@ const AdminGiftCards: React.FC = () => {
     </div>
   );
 };
-
-const Stat = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) => (
-  <div className="flex flex-col gap-3 rounded-card border border-border bg-card p-3 sm:flex-row sm:items-center sm:p-4">
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-muted text-foreground/70">
-      <Icon aria-hidden="true" className="h-5 w-5" />
-    </div>
-    <div className="min-w-0">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="truncate text-lg font-semibold tabular-nums text-foreground sm:text-xl">{value}</p>
-    </div>
-  </div>
-);
 
 export default AdminGiftCards;

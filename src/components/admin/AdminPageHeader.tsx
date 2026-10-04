@@ -27,20 +27,26 @@ export interface AdminPageHeaderProps extends Omit<React.HTMLAttributes<HTMLElem
  */
 export function AdminPageHeader({ title, eyebrow, description, actions, leading, children, className, ...props }: AdminPageHeaderProps) {
   return (
-    <header className={cn("flex flex-wrap items-end justify-between gap-4 pb-6", className)} {...props}>
-      <div className="flex min-w-0 flex-col gap-1.5">
-        {eyebrow && <p className="text-xs font-medium tracking-wide text-muted-foreground">{eyebrow}</p>}
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
-          {leading}
-          <h1
-            className="text-2xl font-semibold tracking-tight text-foreground [text-wrap:balance]"
-            style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
-          >
-            {title}
-          </h1>
-          {children}
+    <header className={cn("flex flex-wrap items-center justify-between gap-4 pb-6", className)} {...props}>
+      {/* The back button sits beside the whole text column, so the description lines up under the title. */}
+      <div className="flex min-w-0 items-start gap-3">
+        {leading && (
+          // 32px tall = the h1's first line, so the 40px button centres on the title.
+          <div className={cn("flex h-8 shrink-0 items-center", eyebrow && "mt-[1.375rem]")}>{leading}</div>
+        )}
+        <div className="flex min-w-0 flex-col gap-1.5">
+          {eyebrow && <p className="text-xs font-medium tracking-wide text-muted-foreground">{eyebrow}</p>}
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <h1
+              className="text-2xl font-semibold tracking-tight text-foreground [text-wrap:balance]"
+              style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
+            >
+              {title}
+            </h1>
+            {children}
+          </div>
+          {description && <p className="max-w-prose text-sm text-muted-foreground [text-wrap:pretty]">{description}</p>}
         </div>
-        {description && <p className="max-w-prose text-sm text-muted-foreground [text-wrap:pretty]">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>

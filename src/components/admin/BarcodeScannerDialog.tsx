@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, Loader2, X, RefreshCw, Usb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Notice } from '@/components/ui/notice';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,7 @@ import { useHardwareScanner } from '@/hooks/useHardwareScanner';
  * Camera barcode scanner for the admin panel.
  *
  * ZXing is loaded with a dynamic import so its ~200KB decoder never lands in
- * the storefront bundle — admins are the only ones who scan anything.
+ * the storefront bundle: admins are the only ones who scan anything.
  *
  * Works on any browser that grants `getUserMedia`; note that browsers only hand
  * out the camera on https:// or http://localhost, so a plain-http LAN address
@@ -137,7 +138,7 @@ export const BarcodeScannerDialog = ({
             ? 'Camera permission was blocked. Allow camera access for this site and try again.'
             : /NotFound|no video|Requested device/i.test(msg)
               ? 'No camera found on this device.'
-              : 'Camera unavailable. Browsers only allow scanning on https:// or localhost — you can type the barcode instead.',
+              : 'Camera unavailable. Browsers only allow scanning on https:// or localhost. You can type the barcode instead.',
         );
       } finally {
         if (!cancelled) setStarting(false);
@@ -187,14 +188,14 @@ export const BarcodeScannerDialog = ({
         </div>
 
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Usb className="h-3.5 w-3.5 shrink-0 text-highlight" />
-          A USB scanner works here too — just scan, no setup needed.
+          <Usb aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-highlight" />
+          A USB scanner works here too. Just scan, no setup needed.
         </p>
 
         {error && (
-          <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 rounded-lg p-2.5">
+          <Notice tone="danger" compact>
             {error}
-          </p>
+          </Notice>
         )}
 
         <div className="flex items-center justify-between gap-2">

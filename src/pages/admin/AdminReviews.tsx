@@ -17,7 +17,7 @@ import {
   List,
   Clock,
   Video,
-  type LucideIcon,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatCard } from '@/components/admin/StatCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ListSkeleton, StatCardsSkeleton } from '@/components/skeletons';
@@ -206,12 +207,12 @@ const AdminReviews = () => {
       {header}
 
       {/* Stats */}
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        <Stat label="Total reviews" value={stats.total} />
-        <Stat label="Pending" value={stats.pending} tone="warning" icon={Clock} />
-        <Stat label="Approved" value={stats.approved} tone="success" icon={CheckCircle} />
-        <Stat label="Rejected" value={stats.rejected} tone="danger" icon={XCircle} />
-      </div>
+      <ul className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <li><StatCard label="Total reviews" value={stats.total} icon={MessageSquare} /></li>
+        <li><StatCard label="Pending" value={stats.pending} tone="warning" icon={Clock} /></li>
+        <li><StatCard label="Approved" value={stats.approved} tone="success" icon={CheckCircle} /></li>
+        <li><StatCard label="Rejected" value={stats.rejected} tone="danger" icon={XCircle} /></li>
+      </ul>
 
       {/* Search and filter */}
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center">
@@ -259,7 +260,7 @@ const AdminReviews = () => {
 
       {/* Reviews */}
       {filteredReviews.length === 0 ? (
-        <div className="rounded-card border border-border bg-card px-4 py-12">
+        <div className="rounded-card border border-dashed border-border bg-card px-4 py-12">
           <EmptyState
             icon={Star}
             title="No reviews found"
@@ -499,29 +500,6 @@ const AdminReviews = () => {
         tone="danger"
         onConfirm={() => (showDeleteConfirm ? handleDelete(showDeleteConfirm) : undefined)}
       />
-    </div>
-  );
-};
-
-const Stat = ({
-  label,
-  value,
-  tone,
-  icon: Icon,
-}: {
-  label: string;
-  value: number;
-  tone?: 'warning' | 'success' | 'danger';
-  icon?: LucideIcon;
-}) => {
-  const fg = tone === 'warning' ? 'text-status-warning-fg' : tone === 'success' ? 'text-status-success-fg' : tone === 'danger' ? 'text-status-danger-fg' : 'text-muted-foreground';
-  return (
-    <div className="rounded-card border border-border bg-card p-4">
-      <p className="mb-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-        {Icon && <Icon aria-hidden="true" className={`h-3.5 w-3.5 ${fg}`} />}
-        {label}
-      </p>
-      <p className="text-2xl font-semibold tabular-nums text-foreground">{value}</p>
     </div>
   );
 };

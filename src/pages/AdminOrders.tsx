@@ -32,41 +32,48 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TableSkeleton } from '@/components/skeletons';
 import { EmptyState } from '@/components/EmptyState';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { getOrderStatus, type OrderStatusContext } from '@/lib/orderStatus';
+import { getOrderStatus, orderLabel as formatOrderLabel, type OrderStatusContext } from '@/lib/orderStatus';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatDate, formatINR, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-/** The statuses the order page offers, in workflow order. */
-const STATUS_CHOICES: Array<{ value: Order['status']; label: string }> = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'processing', label: 'Processing' },
-  { value: 'packed', label: 'Packed' },
-  { value: 'outForDelivery', label: 'Out for delivery' },
-  { value: 'delivered', label: 'Delivered' },
-  { value: 'cancelled', label: 'Cancelled' },
-  { value: 'returnRequested', label: 'Return requested' },
-  { value: 'returnScheduled', label: 'Return scheduled' },
-  { value: 'picked', label: 'Return picked up' },
-  { value: 'returned', label: 'Returned' },
-  { value: 'refunded', label: 'Refunded' },
-  { value: 'deliveryFailed', label: 'Delivery failed' },
-];
+/** The statuses the order page offers, in workflow order. Labels come from the shared status map. */
+const STATUS_CHOICES: Array<{ value: Order['status']; label: string }> = (
+  [
+    'pending',
+    'processing',
+    'packed',
+    'outForDelivery',
+    'delivered',
+    'cancelled',
+    'returnRequested',
+    'returnScheduled',
+    'picked',
+    'returned',
+    'refunded',
+    'deliveryFailed',
+  ] as Array<Order['status']>
+).map((value) => ({ value, label: getOrderStatus(value).label }));
 
 /** The status filter, in workflow order. */
 const FILTER_CHOICES: Array<{ value: 'all' | Order['status']; label: string }> = [
   { value: 'all', label: 'All orders' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'processing', label: 'Processing' },
-  { value: 'packed', label: 'Packed' },
-  { value: 'outForDelivery', label: 'Out for delivery' },
-  { value: 'deliveryFailed', label: 'Delivery failed' },
-  { value: 'delivered', label: 'Delivered' },
-  { value: 'cancelled', label: 'Cancelled' },
-  { value: 'returnRequested', label: 'Return requested' },
-  { value: 'returnScheduled', label: 'Return scheduled' },
-  { value: 'picked', label: 'Return picked up' },
-  { value: 'returned', label: 'Returned' },
-  { value: 'refunded', label: 'Refunded' },
+  ...(
+    [
+      'pending',
+      'processing',
+      'packed',
+      'outForDelivery',
+      'deliveryFailed',
+      'delivered',
+      'cancelled',
+      'returnRequested',
+      'returnScheduled',
+      'picked',
+      'returned',
+      'refunded',
+    ] as Array<Order['status']>
+  ).map((value) => ({ value, label: getOrderStatus(value).label })),
 ];
 
 const VIEW_KEY = 'ishaputra-admin-orders-view';
@@ -130,6 +137,9 @@ const AdminOrders = () => {
   // Confirmations: delete an order, change a status from the table.
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
   const [statusTarget, setStatusTarget] = useState<{ order: Order; status: Order['status'] } | null>(null);
+  // The control that opened a confirmation, so focus goes back to it on close.
+  const confirmOpenerRef = useRef<HTMLElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const setViewMode = (mode: 'grid' | 'table') => {
     setViewModeState(mode);
@@ -179,11 +189,14 @@ const AdminOrders = () => {
   }, []);
 
   // Filter orders based on search and status
+  // The list prints ORD-48273723, so a search for 'ORD-4827' or '#4827' finds it too.
+  const query = searchQuery.trim().toLowerCase();
+  const idQuery = query.replace(/^#/, '').replace(/^ord-?/, '');
   const filteredOrders = orders.filter(order => {
     const matchesSearch =
-      order.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.userEmail.toLowerCase().includes(searchQuery.toLowerCase());
+      order.orderId.toLowerCase().includes(idQuery) ||
+      order.userName.toLowerCase().includes(query) ||
+      order.userEmail.toLowerCase().includes(query);
 
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
 
@@ -262,6 +275,8 @@ const AdminOrders = () => {
     try {
       await deleteOrder(orderId);
       toast.success('Order deleted');
+      // The deleted row's button is gone, so focus lands on the search field instead of the page body.
+      confirmOpenerRef.current = searchInputRef.current;
     } catch (error) {
       console.error('Error deleting order:', error);
       toast.error('Failed to delete order');
@@ -350,7 +365,7 @@ const AdminOrders = () => {
     </AdminPageHeader>
   );
 
-  const orderLabel = (order: Order) => `ORD-${order.orderId}`;
+  const orderLabel = (order: Order) => formatOrderLabel(order.orderId);
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col" style={{ fontFamily: "var(--font-body)" }}>
@@ -362,6 +377,7 @@ const AdminOrders = () => {
           <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
+            ref={searchInputRef}
             aria-label="Search orders"
             placeholder="Search by order, name or email"
             value={searchQuery}
@@ -369,18 +385,18 @@ const AdminOrders = () => {
             className="pl-10"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-          aria-label="Filter by status"
-          className="h-11 w-full rounded-control border border-input bg-card px-3 text-base text-foreground transition-[border-color,box-shadow] duration-hover ease-out focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 sm:w-48 md:text-sm"
-        >
-          {FILTER_CHOICES.map((choice) => (
-            <option key={choice.value} value={choice.value}>
-              {choice.label}
-            </option>
-          ))}
-        </select>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+          <SelectTrigger aria-label="Filter by status" className="w-full sm:w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {FILTER_CHOICES.map((choice) => (
+              <SelectItem key={choice.value} value={choice.value}>
+                {choice.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Order management header */}
@@ -432,7 +448,7 @@ const AdminOrders = () => {
           <TableSkeleton rows={8} cols={DELIVERY_PARTNERS_ENABLED ? 8 : 7} label="Loading orders" />
         )
       ) : filteredOrders.length === 0 ? (
-        <div className="rounded-card border border-foreground/[0.08] bg-card">
+        <div className="rounded-card border border-dashed border-border bg-card">
           <EmptyState
             icon={Package}
             title="No orders found"
@@ -502,7 +518,10 @@ const AdminOrders = () => {
                   <IconButton
                     label={`Delete order ${orderLabel(order)}`}
                     size="sm"
-                    onClick={() => setDeleteTarget(order)}
+                    onClick={(e) => {
+                      confirmOpenerRef.current = e.currentTarget;
+                      setDeleteTarget(order);
+                    }}
                     className="z-raised text-muted-foreground hover:bg-status-danger-bg hover:text-status-danger-fg"
                   >
                     <Trash2 />
@@ -581,10 +600,11 @@ const AdminOrders = () => {
                           onChange={(e) => {
                             const next = e.target.value as Order['status'];
                             if (next === displayStatus(order)) return;
+                            confirmOpenerRef.current = e.currentTarget;
                             setStatusTarget({ order, status: next });
                           }}
                           disabled={savingStatusId === order.id || choices.length < 2}
-                          aria-label={`Status of order ${order.orderId}`}
+                          aria-label={`Status of order ${orderLabel(order)}`}
                           className={cn(
                             'h-8 cursor-pointer rounded-control border px-2 text-xs font-semibold transition-opacity disabled:cursor-default',
                             STATUS_TONE_CLASSES[status.tone],
@@ -622,7 +642,10 @@ const AdminOrders = () => {
                         <IconButton
                           label={`Delete order ${orderLabel(order)}`}
                           size="sm"
-                          onClick={() => setDeleteTarget(order)}
+                          onClick={(e) => {
+                      confirmOpenerRef.current = e.currentTarget;
+                      setDeleteTarget(order);
+                    }}
                           className="text-muted-foreground hover:bg-status-danger-bg hover:text-status-danger-fg"
                         >
                           <Trash2 />
@@ -651,6 +674,7 @@ const AdminOrders = () => {
         confirmLabel="Delete order"
         tone="danger"
         onConfirm={() => (deleteTarget ? handleDeleteOrder(deleteTarget.id) : undefined)}
+        returnFocusRef={confirmOpenerRef}
       />
 
       <ConfirmDialog
@@ -664,6 +688,7 @@ const AdminOrders = () => {
         description="Status only moves forward in the workflow, so this cannot be undone from here."
         confirmLabel="Change status"
         onConfirm={() => (statusTarget ? handleStatusChange(statusTarget.order, statusTarget.status) : undefined)}
+        returnFocusRef={confirmOpenerRef}
       />
     </div>
   );

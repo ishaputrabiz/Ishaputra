@@ -285,7 +285,7 @@ const AdminVideos = () => {
       {header}
 
       {videos.length === 0 ? (
-        <div className="rounded-card border border-dashed border-input bg-card px-4 py-12">
+        <div className="rounded-card border border-dashed border-border bg-card px-4 py-12">
           <EmptyState
             icon={YoutubeIcon}
             title="No videos yet"

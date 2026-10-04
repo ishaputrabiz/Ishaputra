@@ -199,7 +199,7 @@ const AdminHomeCollections = () => {
       {loading ? (
         <MediaGridSkeleton count={3} className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 [&>*]:aspect-[4/5]" label="Loading collections" />
       ) : items.length === 0 ? (
-        <div className="rounded-card border border-dashed border-input bg-card px-4 py-12">
+        <div className="rounded-card border border-dashed border-border bg-card px-4 py-12">
           <EmptyState
             icon={LayoutGrid}
             title="No collection cards yet"

@@ -146,7 +146,7 @@ const SlotCard = ({ config, banner }: { config: SlotConfig; banner?: HomeBanner 
         </div>
         <div className="flex items-center gap-2">
           <Switch id={`slot-${config.slot}-active`} checked={draft.active} onCheckedChange={(v) => setField('active', v)} />
-          <Label htmlFor={`slot-${config.slot}-active`} className="text-sm font-normal text-foreground/80">{draft.active ? 'Active' : 'Hidden'}</Label>
+          <Label htmlFor={`slot-${config.slot}-active`} className="text-sm font-normal text-foreground/80">{draft.active ? 'Live' : 'Hidden'}</Label>
         </div>
       </div>
 

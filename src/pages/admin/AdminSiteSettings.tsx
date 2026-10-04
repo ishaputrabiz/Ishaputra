@@ -252,7 +252,7 @@ const AdminSiteSettings = () => {
   if (loading) {
     return (
       <div className="mx-auto max-w-6xl [&>*]:max-w-4xl space-y-6">
-        <AdminPageHeader eyebrow="Footer and branding" title="Site settings" description="The footer content shown across the store." className="pb-0" />
+        <AdminPageHeader title="Footer and brand" description="The footer content shown across the store." className="pb-0" />
         <div className="rounded-card border border-border bg-card p-4 sm:p-6">
           <FormSkeleton fields={6} label="Loading site settings" />
         </div>
@@ -263,8 +263,7 @@ const AdminSiteSettings = () => {
   return (
     <div className="mx-auto max-w-6xl [&>*]:max-w-4xl space-y-6">
       <AdminPageHeader
-        eyebrow="Footer and branding"
-        title="Site settings"
+        title="Footer and brand"
         description="The footer content shown across the store."
         className="pb-0"
         actions={

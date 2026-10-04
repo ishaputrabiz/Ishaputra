@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search, Users as UsersIcon, Mail, ShoppingBag, TrendingUp, X, LayoutGrid, List, Trash2,
@@ -15,6 +15,7 @@ import { getAllOrders, type Order } from '@/services/orderService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatCard } from '@/components/admin/StatCard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { IconButton } from '@/components/ui/icon-button';
 import { Notice } from '@/components/ui/notice';
@@ -63,7 +64,6 @@ const getDaysRemaining = (trashedAt: any): number => {
 const displayName = (c: Customer) => c.name || c.username;
 const initial = (c: Customer) => (c.name || c.username || 'U').charAt(0).toUpperCase();
 
-const HEADING_FONT = { fontFamily: 'var(--font-heading)', fontStretch: 'var(--font-heading-stretch)' } as const;
 
 const AdminCustomers: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -77,6 +77,12 @@ const AdminCustomers: React.FC = () => {
     type: 'soft' | 'permanent' | 'batch-soft' | 'batch-permanent';
     customer?: Customer;
   } | null>(null);
+  // The button that opened the confirmation, so focus goes back to it on close.
+  const confirmOpenerRef = useRef<HTMLElement | null>(null);
+  const openDeleteConfirm = (opener: HTMLElement, value: NonNullable<typeof deleteConfirm>) => {
+    confirmOpenerRef.current = opener;
+    setDeleteConfirm(value);
+  };
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { fetchCustomers(); }, []);
@@ -263,20 +269,8 @@ const AdminCustomers: React.FC = () => {
       ) : (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
           {stats.map((s, i) => (
-            <li
-              key={s.label}
-              className={cn(
-                'flex items-center gap-3 rounded-card border border-foreground/[0.08] bg-card p-3 text-card-foreground shadow-sm sm:gap-4 sm:p-4',
-                i === 2 && 'col-span-2 sm:col-span-1',
-              )}
-            >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-control bg-muted text-foreground/70">
-                <s.icon aria-hidden="true" className="size-5" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
-                <p className="truncate text-2xl font-semibold tabular-nums text-foreground" style={HEADING_FONT}>{s.value}</p>
-              </div>
+            <li key={s.label} className={cn(i === 2 && 'col-span-2 sm:col-span-1')}>
+              <StatCard label={s.label} value={s.value} icon={s.icon} />
             </li>
           ))}
         </ul>
@@ -355,12 +349,12 @@ const AdminCustomers: React.FC = () => {
                   <Button variant="outline" size="sm" onClick={batchRestore} disabled={submitting}>
                     <RotateCcw aria-hidden="true" />Restore all
                   </Button>
-                  <Button variant="destructive" size="sm" onClick={() => setDeleteConfirm({ type: 'batch-permanent' })}>
+                  <Button variant="destructive" size="sm" onClick={(e) => openDeleteConfirm(e.currentTarget, { type: 'batch-permanent' })}>
                     <Trash2 aria-hidden="true" />Delete all
                   </Button>
                 </>
               ) : (
-                <Button variant="destructive" size="sm" onClick={() => setDeleteConfirm({ type: 'batch-soft' })}>
+                <Button variant="destructive" size="sm" onClick={(e) => openDeleteConfirm(e.currentTarget, { type: 'batch-soft' })}>
                   <Trash2 aria-hidden="true" />Move to trash
                 </Button>
               )}
@@ -383,7 +377,7 @@ const AdminCustomers: React.FC = () => {
       {loading ? (
         <ListSkeleton rows={4} thumb label="Loading customers" />
       ) : list.length === 0 ? (
-        <div className="rounded-card border border-foreground/[0.08] bg-card">
+        <div className="rounded-card border border-dashed border-border bg-card">
           <EmptyState
             icon={isTrash ? UserX : UsersIcon}
             title={isTrash ? 'Trash is empty' : 'No customers found'}
@@ -448,7 +442,7 @@ const AdminCustomers: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setDeleteConfirm({ type: 'permanent', customer })}
+                        onClick={(e) => openDeleteConfirm(e.currentTarget, { type: 'permanent', customer })}
                         className="relative z-raised text-status-danger-fg hover:bg-status-danger-bg hover:text-status-danger-fg"
                       >
                         <Trash2 aria-hidden="true" />Delete
@@ -458,7 +452,7 @@ const AdminCustomers: React.FC = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setDeleteConfirm({ type: 'soft', customer })}
+                      onClick={(e) => openDeleteConfirm(e.currentTarget, { type: 'soft', customer })}
                       className="relative z-raised text-muted-foreground hover:bg-status-danger-bg hover:text-status-danger-fg"
                     >
                       <Trash2 aria-hidden="true" />Trash
@@ -556,7 +550,7 @@ const AdminCustomers: React.FC = () => {
                         <IconButton
                           label={`Delete ${displayName(customer)} permanently`}
                           size="sm"
-                          onClick={() => setDeleteConfirm({ type: 'permanent', customer })}
+                          onClick={(e) => openDeleteConfirm(e.currentTarget, { type: 'permanent', customer })}
                           className="text-status-danger-fg hover:bg-status-danger-bg hover:text-status-danger-fg"
                         >
                           <Trash2 />
@@ -566,7 +560,7 @@ const AdminCustomers: React.FC = () => {
                       <IconButton
                         label={`Move ${displayName(customer)} to trash`}
                         size="sm"
-                        onClick={() => setDeleteConfirm({ type: 'soft', customer })}
+                        onClick={(e) => openDeleteConfirm(e.currentTarget, { type: 'soft', customer })}
                         className="text-muted-foreground hover:bg-status-danger-bg hover:text-status-danger-fg"
                       >
                         <Trash2 />
@@ -584,6 +578,7 @@ const AdminCustomers: React.FC = () => {
       <ConfirmDialog
         open={deleteConfirm !== null}
         onOpenChange={open => { if (!open) setDeleteConfirm(null); }}
+        returnFocusRef={confirmOpenerRef}
         title={
           deleteConfirm?.type === 'permanent' && deleteConfirm.customer
             ? `Permanently delete ${displayName(deleteConfirm.customer)}?`

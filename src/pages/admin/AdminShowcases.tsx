@@ -13,6 +13,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { useInlineFormFocus } from '@/components/admin/useInlineFormFocus';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MediaGridSkeleton } from '@/components/skeletons';
@@ -39,6 +40,8 @@ const AdminShowcases = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingShowcase, setEditingShowcase] = useState<Showcase | null>(null);
+  // Focus moves to the form when it opens and back to the opener when it closes.
+  const { headingRef: formHeadingRef, addButtonRef, rememberOpener } = useInlineFormFocus(showForm, editingShowcase?.id);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [showcaseToDelete, setShowcaseToDelete] = useState<Showcase | null>(null);
@@ -164,6 +167,7 @@ const AdminShowcases = () => {
   };
 
   const handleEdit = (showcase: Showcase) => {
+    rememberOpener();
     setEditingShowcase(showcase);
     setFormData({
       title: showcase.title,
@@ -217,7 +221,7 @@ const AdminShowcases = () => {
       }
       actions={
         !showForm && (
-          <Button onClick={() => setShowForm(true)}>
+          <Button ref={addButtonRef} onClick={() => setShowForm(true)}>
             <Plus aria-hidden="true" />
             Add showcase
           </Button>
@@ -246,7 +250,7 @@ const AdminShowcases = () => {
           aria-labelledby="showcase-form-title"
           className="mb-8 rounded-card border border-border bg-card p-4 shadow-sm sm:p-6"
         >
-          <h2 id="showcase-form-title" className="mb-6 text-lg font-semibold text-foreground">
+          <h2 ref={formHeadingRef} tabIndex={-1} id="showcase-form-title" className="mb-6 text-lg font-semibold text-foreground">
             {editingShowcase ? 'Edit showcase' : 'Add showcase'}
           </h2>
 
@@ -416,8 +420,8 @@ const AdminShowcases = () => {
                 >
                   <SelectTrigger id="sc-status"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="active">Live</SelectItem>
+                    <SelectItem value="inactive">Hidden</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -465,12 +469,11 @@ const AdminShowcases = () => {
         </div>
 
         {showcases.length === 0 ? (
-          <div className="px-4 py-12">
+          <div className="m-4 rounded-card border border-dashed border-border px-4 py-12 sm:m-6">
             <EmptyState
               icon={LayoutPanelTop}
               title="No showcases yet"
-              description="Add your first category showcase."
-              action={!showForm ? { label: 'Add showcase', onClick: () => setShowForm(true) } : undefined}
+              description="Add your first category showcase with Add showcase."
             />
           </div>
         ) : viewMode === 'grid' ? (
@@ -486,8 +489,8 @@ const AdminShowcases = () => {
                   <SmartImage src={showcase.imageUrl} alt={showcase.title} className="h-full w-full object-cover" preset="hero" />
                   <span className="absolute right-2 top-2">
                     {showcase.status === 'active'
-                      ? <StatusBadge tone="success" icon={Eye} label="Active" />
-                      : <StatusBadge tone="neutral" icon={EyeOff} label="Inactive" />}
+                      ? <StatusBadge tone="success" icon={Eye} label="Live" />
+                      : <StatusBadge tone="neutral" icon={EyeOff} label="Hidden" />}
                   </span>
                 </div>
                 <div className="p-4">
@@ -533,8 +536,8 @@ const AdminShowcases = () => {
                           Position {index + 1}
                         </span>
                         {showcase.status === 'active'
-                          ? <StatusBadge tone="success" icon={Eye} label="Active" />
-                          : <StatusBadge tone="neutral" icon={EyeOff} label="Inactive" />}
+                          ? <StatusBadge tone="success" icon={Eye} label="Live" />
+                          : <StatusBadge tone="neutral" icon={EyeOff} label="Hidden" />}
                       </div>
                       <p className="mb-1 text-sm font-medium text-foreground/80">
                         {categoryName(showcase.subtitle)}

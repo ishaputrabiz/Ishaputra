@@ -5,7 +5,7 @@ import {
   ChevronLeft,
   ExternalLink,
   Mail,
-  Package,
+  UserCheck,
   Phone,
   ShoppingBag,
   TrendingUp,
@@ -23,11 +23,12 @@ import { UIProduct, adaptFirebaseToUI } from '@/lib/productAdapter';
 import { SmartImage } from "@/components/ui/smart-image";
 import { RewardsAdminPanel } from '@/components/admin/RewardsAdminPanel';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatCard } from '@/components/admin/StatCard';
 import { IconButton } from '@/components/ui/icon-button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { DetailSkeleton } from '@/components/skeletons';
 import { EmptyState } from '@/components/EmptyState';
-import { getOrderStatus, type OrderStatusContext } from '@/lib/orderStatus';
+import { getOrderStatus, orderLabel, type OrderStatusContext } from '@/lib/orderStatus';
 import { formatDate as fmtDate, formatINR, plural } from '@/lib/format';
 
 interface CustomerOrder {
@@ -72,7 +73,6 @@ const orderStatusDisplay = (order: CustomerOrder) => {
 };
 
 const PANEL = 'panel bg-card p-5 text-card-foreground sm:p-6';
-const HEADING_FONT = { fontFamily: 'var(--font-heading)', fontStretch: 'var(--font-heading-stretch)' } as const;
 
 const AdminCustomerDetails = () => {
   const navigate = useNavigate();
@@ -201,7 +201,7 @@ const AdminCustomerDetails = () => {
   const stats = [
     { label: 'Orders', value: String(customer.orders.length), icon: ShoppingBag },
     { label: 'Delivered revenue', value: formatPrice(customer.totalSpent), icon: TrendingUp },
-    { label: 'Account status', value: (customer.status || 'active').replace(/^\w/, (c) => c.toUpperCase()), icon: Package },
+    { label: 'Account status', value: (customer.status || 'active').replace(/^\w/, (c) => c.toUpperCase()), icon: UserCheck },
     { label: 'Wishlist items', value: String(customer.wishlistItems.length), icon: Heart },
   ];
 
@@ -245,14 +245,8 @@ const AdminCustomerDetails = () => {
 
       <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         {stats.map((s) => (
-          <li key={s.label} className="flex items-center gap-3 rounded-card border border-foreground/[0.08] bg-card p-3 text-card-foreground shadow-sm sm:p-4">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-control bg-muted text-foreground/70">
-              <s.icon aria-hidden="true" className="size-5" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
-              <p className="truncate text-xl font-semibold tabular-nums text-foreground sm:text-2xl" style={HEADING_FONT}>{s.value}</p>
-            </div>
+          <li key={s.label}>
+            <StatCard label={s.label} value={s.value} icon={s.icon} />
           </li>
         ))}
       </ul>
@@ -282,7 +276,7 @@ const AdminCustomerDetails = () => {
                           to={`/admin/orders/${order.id}`}
                           className="text-sm font-semibold tabular-nums text-foreground underline-offset-4 hover:text-primary hover:underline"
                         >
-                          #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}
+                          {order.orderNumber ? orderLabel(order.orderNumber) : `Order ${order.id.slice(0, 8).toUpperCase()}`}
                         </Link>
                         <StatusBadge tone={s.tone} label={s.label} icon={s.icon} />
                       </div>

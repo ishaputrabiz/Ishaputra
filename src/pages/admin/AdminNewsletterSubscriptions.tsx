@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Download, Users, Search, Trash2 } from 'lucide-react';
+import { Download, Users, Search, Trash2, Mail, ListFilter } from 'lucide-react';
 import { IconButton } from '@/components/ui/icon-button';
 import { Spinner } from '@/components/ui/spinner';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatCard } from '@/components/admin/StatCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { TableSkeleton } from '@/components/skeletons';
@@ -82,16 +83,10 @@ const AdminNewsletterSubscriptions = () => {
       />
 
       {/* Stats */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4">
-        <div className="rounded-card border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Total subscribers</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground sm:text-3xl">{subs.length}</p>
-        </div>
-        <div className="rounded-card border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Showing</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground sm:text-3xl">{filtered.length}</p>
-        </div>
-      </div>
+      <ul className="mb-6 grid grid-cols-2 gap-3 lg:gap-4">
+        <li><StatCard label="Total subscribers" value={subs.length} icon={Mail} /></li>
+        <li><StatCard label="Showing" value={filtered.length} icon={ListFilter} /></li>
+      </ul>
 
       {/* Search */}
       <div className="relative mb-4">
@@ -110,7 +105,7 @@ const AdminNewsletterSubscriptions = () => {
       {loading ? (
         <TableSkeleton rows={6} cols={3} label="Loading subscribers" />
       ) : filtered.length === 0 ? (
-        <div className="rounded-card border border-border bg-card px-4 py-12">
+        <div className="rounded-card border border-dashed border-border bg-card px-4 py-12">
           <EmptyState
             icon={search ? Search : Users}
             title={search ? 'No matching emails' : 'No subscribers yet'}

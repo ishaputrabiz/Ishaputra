@@ -10,6 +10,7 @@ import {
   Coins,
   Save,
   ImagePlus,
+  type LucideIcon,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,25 +22,24 @@ import { db } from '@/config/firebase';
 import { toast } from 'sonner';
 import { SmartImage } from "@/components/ui/smart-image";
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatCard } from '@/components/admin/StatCard';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Spinner } from '@/components/ui/spinner';
 import { ListSkeleton, StatCardsSkeleton } from '@/components/skeletons';
 import { getProductStatus } from '@/lib/orderStatus';
 import { formatINR, formatNumber } from '@/lib/format';
 import { SILVER_PRICING_ENABLED } from '@/config/features';
-import { cn } from '@/lib/utils';
 
-interface StatCard {
+interface StatItem {
   title: string;
   value: string;
   subtitle: string;
-  icon: React.ElementType;
+  icon: LucideIcon;
   /** Tints the value when it needs attention (low stock above zero). */
   valueClassName?: string;
   link: string;
 }
 
-const HEADING_FONT = { fontFamily: 'var(--font-heading)', fontStretch: 'var(--font-heading-stretch)' } as const;
 
 const Dashboard = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -113,7 +113,7 @@ const Dashboard = () => {
   const totalRevenue = deliveredOrders.reduce((sum, order) => sum + order.total, 0);
   const pendingOrders = orders.filter(order => order.status === 'pending').length;
 
-  const stats: StatCard[] = [
+  const stats: StatItem[] = [
     {
       title: 'Total revenue',
       value: formatINR(totalRevenue),
@@ -212,21 +212,14 @@ const Dashboard = () => {
         <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
           {stats.map((stat) => (
             <li key={stat.title}>
-              <Link
+              <StatCard
                 to={stat.link}
-                className="group block h-full rounded-card border border-foreground/[0.08] bg-card p-3 text-card-foreground shadow-sm transition-[box-shadow,transform,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-foreground/[0.14] hover:shadow-panel motion-reduce:hover:translate-y-0 sm:p-4"
-              >
-                <div className="mb-2 flex items-start justify-between gap-2">
-                  <p className="text-xs font-medium text-muted-foreground">{stat.title}</p>
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-control bg-muted text-foreground/70">
-                    <stat.icon aria-hidden="true" className="size-4" />
-                  </span>
-                </div>
-                <p className={cn('text-2xl font-semibold tabular-nums text-foreground', stat.valueClassName)} style={HEADING_FONT}>
-                  {stat.value}
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{stat.subtitle}</p>
-              </Link>
+                label={stat.title}
+                value={stat.value}
+                icon={stat.icon}
+                subtitle={stat.subtitle}
+                valueClassName={stat.valueClassName}
+              />
             </li>
           ))}
         </ul>

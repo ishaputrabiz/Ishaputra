@@ -18,6 +18,7 @@ import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatCard } from '@/components/admin/StatCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { fadeUp, staggerDelay } from '@/lib/motion';
@@ -344,11 +345,11 @@ const AdminCoupons = () => {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4">
-        <StatCard icon={<Ticket aria-hidden="true" className="h-5 w-5" />} label="Total coupons" value={stats.total} />
-        <StatCard icon={<Check aria-hidden="true" className="h-5 w-5" />} label="Live now" value={stats.active} />
-        <StatCard icon={<UsersIcon aria-hidden="true" className="h-5 w-5" />} label="Redemptions" value={stats.uses} />
-      </div>
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
+        <li><StatCard icon={Ticket} label="Total coupons" value={stats.total} /></li>
+        <li><StatCard icon={Check} label="Live now" value={stats.active} /></li>
+        <li className="col-span-2 sm:col-span-1"><StatCard icon={UsersIcon} label="Redemptions" value={stats.uses} /></li>
+      </ul>
 
       {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -391,12 +392,11 @@ const AdminCoupons = () => {
           ))}
         </div>
       ) : list.length === 0 ? (
-        <div className="rounded-card border border-dashed border-input bg-card px-4 py-12">
+        <div className="rounded-card border border-dashed border-border bg-card px-4 py-12">
           <EmptyState
             icon={Ticket}
             title={items.length === 0 ? 'No coupons yet' : 'No coupons match'}
             description={items.length === 0 ? 'Create your first code with New coupon.' : 'Try another code or filter.'}
-            action={items.length === 0 ? { label: 'New coupon', onClick: openNew } : undefined}
           />
         </div>
       ) : (
@@ -696,16 +696,6 @@ const AdminCoupons = () => {
     </div>
   );
 };
-
-const StatCard = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) => (
-  <div className="flex flex-col gap-3 rounded-card border border-border bg-card p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-muted text-foreground/70">{icon}</div>
-    <div className="min-w-0">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-2xl font-semibold tabular-nums text-foreground">{value}</p>
-    </div>
-  </div>
-);
 
 const Row = ({ label, value }: { label: string; value: string }) => (
   <div className="flex items-center justify-between gap-2">

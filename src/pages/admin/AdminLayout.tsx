@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePageMeta } from '@/hooks/usePageMeta';
 import { useToast } from '@/hooks/use-toast';
 import { onCatalogPublishFailure } from '@/services/catalogPublisher';
 import { DELIVERY_PARTNERS_ENABLED, SILVER_PRICING_ENABLED } from '@/config/features';
@@ -128,16 +129,16 @@ const AdminLayout = () => {
     { path: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
     // Delivery-partner management: only shown when the delivery system is enabled.
     ...(DELIVERY_PARTNERS_ENABLED
-      ? [{ path: '/admin/delivery-boys', icon: Truck, label: 'Delivery Boys' }]
+      ? [{ path: '/admin/delivery-boys', icon: Truck, label: 'Delivery boys' }]
       : []),
     { path: '/admin/customers', icon: Users2, label: 'Customers' },
     { path: '/admin/coupons', icon: Ticket, label: 'Coupons' },
-    { path: '/admin/gift-cards', icon: Gift, label: 'Gift Cards' },
-    { path: '/admin/video-calls', icon: Video, label: 'Video Calls' },
+    { path: '/admin/gift-cards', icon: Gift, label: 'Gift cards' },
+    { path: '/admin/video-calls', icon: Video, label: 'Video calls' },
     { path: '/admin/newsletter', icon: Mail, label: 'Newsletter' },
-    ...(SILVER_PRICING_ENABLED ? [{ path: '/admin/silver-rate', icon: Coins, label: 'Silver Rate' }] : []),
+    ...(SILVER_PRICING_ENABLED ? [{ path: '/admin/silver-rate', icon: Coins, label: 'Silver rate' }] : []),
     { path: '/admin/commerce-settings', icon: Store, label: 'Commerce' },
-    { path: '/admin/image-prompts', icon: Sparkles, label: 'AI Prompts' },
+    { path: '/admin/image-prompts', icon: Sparkles, label: 'AI prompts' },
     { path: '/admin/marketing', icon: Bell, label: 'Marketing' },
     { path: '/admin/whatsapp', icon: MessagesSquare, label: 'WhatsApp' },
     { path: '/admin/storage', icon: HardDrive, label: 'Storage' },
@@ -145,18 +146,47 @@ const AdminLayout = () => {
   ];
 
   const contentMediaItems: NavItem[] = [
-    { path: '/admin/banners', icon: GalleryHorizontal, label: 'Hero Banners' },
+    { path: '/admin/banners', icon: GalleryHorizontal, label: 'Hero banners' },
     { path: '/admin/showcases', icon: LayoutPanelTop, label: 'Showcases' },
-    { path: '/admin/home-banners', icon: PanelTop, label: 'Collection Banner' },
-    { path: '/admin/home-collections', icon: LayoutGrid, label: 'Our Collections' },
-    { path: '/admin/videos', icon: Youtube, label: 'Videos' },
+    { path: '/admin/home-banners', icon: PanelTop, label: 'Collection banner' },
+    { path: '/admin/home-collections', icon: LayoutGrid, label: 'Our collections' },
+    { path: '/admin/videos', icon: Youtube, label: 'Video stories' },
     { path: '/admin/testimonials', icon: MessageSquare, label: 'Testimonials' },
     { path: '/admin/gallery', icon: Image, label: 'Gallery' },
-    { path: '/admin/reviews', icon: Star, label: 'Reviews' },
-    { path: '/admin/site-settings', icon: Globe, label: 'Footer & Brand' },
+    { path: '/admin/reviews', icon: Star, label: 'Customer reviews' },
+    { path: '/admin/site-settings', icon: Globe, label: 'Footer and brand' },
   ];
 
   const settingsItem = mainNavItems[mainNavItems.length - 1];
+
+  // Tab and history names: the nav label of the current page (detail pages get their own), never indexed.
+  const pageTitle = (() => {
+    const path = location.pathname.replace(/\/+$/, '');
+    if (path === '/admin/products/new') return 'Add product';
+    if (path.startsWith('/admin/products/')) return 'Edit product';
+    if (path.startsWith('/admin/orders/')) return 'Order details';
+    if (path.startsWith('/admin/customers/')) return 'Customer details';
+    if (path.startsWith('/admin/delivery-boys/')) return 'Delivery partner';
+    const item = [...mainNavItems, ...contentMediaItems].find((i) => path === i.path || path.startsWith(`${i.path}/`));
+    return item?.label ?? 'Dashboard';
+  })();
+  usePageMeta({ title: `${pageTitle} · Admin`, noindex: true });
+
+  // Keep the current page's link in view: with Content and media open, the
+  // active row can sit below the sidebar's fold on a 900px-tall screen.
+  React.useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      document.querySelectorAll<HTMLElement>('nav[aria-label="Admin"] a[aria-current="page"]').forEach((link) => {
+        const nav = link.closest('nav');
+        if (!nav || nav.clientHeight === 0) return;
+        const navBox = nav.getBoundingClientRect();
+        const linkBox = link.getBoundingClientRect();
+        if (linkBox.bottom > navBox.bottom) nav.scrollTop += linkBox.bottom - navBox.bottom + 16;
+        else if (linkBox.top < navBox.top) nav.scrollTop -= navBox.top - linkBox.top + 16;
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [location.pathname, contentMediaOpen, sidebarOpen]);
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) => cn(NAV_ROW, isActive ? NAV_ACTIVE : NAV_IDLE);
 
@@ -186,7 +216,7 @@ const AdminLayout = () => {
             >
               <span className="flex items-center gap-3">
                 <Image aria-hidden="true" className="size-4 shrink-0" />
-                <span>Content & Media</span>
+                <span>Content and media</span>
               </span>
               <ChevronDown
                 aria-hidden="true"

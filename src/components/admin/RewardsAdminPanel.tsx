@@ -169,7 +169,38 @@ export const RewardsAdminPanel = ({ customerId }: { customerId: string }) => {
       ) : entries.length === 0 ? (
         <p className="text-sm text-muted-foreground">No reward activity yet.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        {/* Phones: one stacked row per entry, so nothing hides past a scroll edge. */}
+        <ul aria-label="Rewards history" className="divide-y divide-border sm:hidden">
+          {entries.map((e) => {
+            const status = entryStatus(e, now);
+            const voided = e.status === 'void';
+            return (
+              <li key={e.id} className="py-3 first:pt-0 last:pb-0">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-xs tabular-nums text-muted-foreground">{fmt(e.createdAtMs)}</span>
+                  <span
+                    className={`shrink-0 text-sm font-medium tabular-nums ${
+                      voided ? 'text-muted-foreground line-through' : e.amount < 0 ? 'text-foreground/80' : 'text-status-success-fg'
+                    }`}
+                  >
+                    {signed(e.amount, e.currency === 'cashback' ? '₹' : 'pts', true)}
+                  </span>
+                </div>
+                <p className={`mt-1 text-sm ${voided ? 'text-muted-foreground' : 'text-foreground'}`}>
+                  <span className="capitalize">{e.kind}</span>
+                  {e.note ? <> · {e.note}</> : null}
+                </p>
+                <p className={`mt-0.5 text-xs ${TONE[status.tone]}`}>
+                  {status.label}
+                  {status.hint ? <span className="text-muted-foreground"> · {status.hint}</span> : null}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+        {/* From sm: the table. Focusable so keyboard users can scroll it when it is wider than the panel. */}
+        <div className="hidden overflow-x-auto rounded-control sm:block" tabIndex={0} role="region" aria-label="Rewards history">
           <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs text-muted-foreground">
@@ -209,6 +240,7 @@ export const RewardsAdminPanel = ({ customerId }: { customerId: string }) => {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </section>
   );

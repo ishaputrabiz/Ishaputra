@@ -28,7 +28,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { DetailSkeleton } from '@/components/skeletons';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { getOrderStatus, type OrderStatusContext } from '@/lib/orderStatus';
+import { getOrderStatus, orderLabel, type OrderStatusContext } from '@/lib/orderStatus';
 import { formatDate as fmtDate, formatDateTime as fmtDateTime, formatINR, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import {
@@ -95,7 +95,7 @@ const STATUS_OPTIONS: Array<{ value: Order['status']; label: string }> = [
   { value: 'picked', label: 'Return picked up' },
   { value: 'returned', label: 'Returned' },
   { value: 'refunded', label: 'Refunded' },
-  { value: 'deliveryFailed', label: 'Delivery failed' },
+  { value: 'deliveryFailed', label: getOrderStatus('deliveryFailed').label },
 ];
 
 /** The dropdown's label for a status (sentence case). */
@@ -812,7 +812,7 @@ const AdminOrderDetails = () => {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       {/* Header */}
       <AdminPageHeader
-        title={<span className="tabular-nums">Order #{order.orderId}</span>}
+        title={<span className="tabular-nums">Order {orderLabel(order.orderId)}</span>}
         className="items-center pb-0"
         leading={
           <IconButton label="Back to orders" onClick={() => navigate('/admin/orders')} className="-ml-2">
@@ -1488,11 +1488,11 @@ const AdminOrderDetails = () => {
         returnFocusRef={confirmAction?.kind === 'status' ? statusTriggerRef : undefined}
         title={
           confirmAction?.kind === 'approve'
-            ? `Approve the return for #${order.orderId}?`
+            ? `Approve the return for ${orderLabel(order.orderId)}?`
             : confirmAction?.kind === 'reject'
-              ? `Reject the return for #${order.orderId}?`
+              ? `Reject the return for ${orderLabel(order.orderId)}?`
               : confirmAction?.kind === 'status'
-                ? `Mark #${order.orderId} as ${statusLabel(confirmAction.next).toLowerCase()}?`
+                ? `Mark ${orderLabel(order.orderId)} as ${statusLabel(confirmAction.next).toLowerCase()}?`
                 : 'Confirm'
         }
         description={

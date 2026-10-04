@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -64,6 +64,8 @@ const AdminVideoCalls = () => {
   const [actioning, setActioning] = useState<Record<string, boolean>>({});
   // The request waiting for "Cancel this request?" to be confirmed.
   const [cancelTarget, setCancelTarget] = useState<VideoCallRequest | null>(null);
+  // The Cancel button that opened the confirmation, so focus goes back to it on close.
+  const cancelOpenerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const unsubQ = listenAdminQueue((data) => { setQueue(data); setLoadingQueue(false); });
@@ -256,7 +258,10 @@ const AdminVideoCalls = () => {
               <Button size="sm" variant="ghost" disabled={busy} onClick={() => handleMarkNoShow(req.id)}>
                 No show
               </Button>
-              <Button size="sm" variant="destructive" disabled={busy} onClick={() => setCancelTarget(req)}>
+              <Button size="sm" variant="destructive" disabled={busy} onClick={(e) => {
+                  cancelOpenerRef.current = e.currentTarget;
+                  setCancelTarget(req);
+                }}>
                 <X aria-hidden="true" /> Cancel
               </Button>
             </div>
@@ -283,7 +288,7 @@ const AdminVideoCalls = () => {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <AdminPageHeader
-        title="Video call requests"
+        title="Video calls"
         description="Manage customer demo call bookings."
         className="pb-0"
       />
@@ -308,7 +313,7 @@ const AdminVideoCalls = () => {
         {loading ? (
           <ListSkeleton rows={3} label="Loading requests" />
         ) : items.length === 0 ? (
-          <div className="rounded-card border border-foreground/[0.08] bg-card">
+          <div className="rounded-card border border-dashed border-border bg-card">
             <EmptyState
               icon={Video}
               title="No requests in this section"
@@ -324,6 +329,7 @@ const AdminVideoCalls = () => {
       <ConfirmDialog
         open={!!cancelTarget}
         onOpenChange={(open) => !open && setCancelTarget(null)}
+        returnFocusRef={cancelOpenerRef}
         title="Cancel this request?"
         description={cancelTarget ? `The demo call request from ${cancelTarget.customerName} is cancelled.` : undefined}
         confirmLabel="Cancel request"
