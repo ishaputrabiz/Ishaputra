@@ -7,10 +7,15 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-04 (home rows fixed; owner wants a visible redesign next).
+Last updated: 2026-10-04 (redesign rejected and shelved; `>>` checkout bug fixed on `main`).
 
 ## State
 
+- **2026-10-04: the mobile-first redesign was REJECTED by the owner; `main` keeps the old (pre-redesign) design.**
+  - Owner's words: "the before is good, not the after. We need an e-commerce website, a product website, not an information website." The editorial direction (big type, lots of space, few products per screen) read as a brand/information site.
+  - The work is kept, unmerged, on branch `redesign-mobile-first` (spec `docs/superpowers/specs/2026-10-04-mobile-first-redesign-design.md` there). Do not merge it. Individual non-visual fixes could be cherry-picked later only if the owner asks.
+  - **Kept on `main`: the `>>` bug fix (`4416715`).** On phone checkout step 2, the add-ons rail's `sr-only` "Was" spans escaped the unpositioned scroller and widened the page to 927px: a blank cream page with only the slide-to-pay handle showing, and `innerWidth`-based `isMobile` flipped the phone into the desktop checkout. The rail is now `relative` and `isMobile` uses `matchMedia`. Verified with the repro script (width stays 390, phone layout stays). `npm test` 32/32, build passes.
+  - `fix-row-autoscroll` is merged into `main` (`a403da8`).
 - **2026-10-04: home product rows fixed** (`a7cf774`, branch `fix-row-autoscroll`, not merged yet). The owner reported the section card rows (Top Deals, Most loved, New arrivals, Trending) often did not move. Causes:
   - CSS `scroll-behavior: smooth` swallowed the per-frame writes; the hook now writes with `behavior: 'instant'`.
   - A tap's synthetic mouseenter and a click's focus left rows paused for good. Now it pauses only while held (a mouse over the row, a finger on it, or keyboard focus), and resumes 350 ms after the mouse leaves or 1.2 s after a finger lifts.
@@ -39,14 +44,7 @@ Last updated: 2026-10-04 (home rows fixed; owner wants a visible redesign next).
 
 ## Next steps (in order)
 
-1. **Visible, mobile-first redesign of the 5 key screens (owner's priority, 2026-10-04).**
-   - **Order:** Home, product list (`/products` and category pages), product detail, checkout, profile/account. The rest of the site comes after, in the same style.
-   - **Mobile first:** 99% of the store's users are on phones. Design and judge at 390 px first, then check 1440.
-   - **New layouts are allowed** (the "keep Sreerasthu's layouts" rule is lifted for these screens). Keep the brand (logo, copper/bronze, cream and dark themes), the real data, and all working behaviour (cart, rewards, checkout money logic untouched).
-   - **No questions to the owner:** use every relevant design skill (`ui-ux-pro-max` search, `high-end-visual-design`, `design-taste-frontend`, `redesign-existing-projects`, `storefront-best-practices`, Emil's motion skills + `motion`), decide, then show before/after phone screenshots.
-   - **First:** merge `fix-row-autoscroll` into `main`, then take before-screenshots of the 5 screens at 390 (light and dark).
-   - **Investigate:** the owner sent a phone screenshot: a blank cream page with only a copper `>>` button at the bottom left, on a dark bar cut off at the right edge. Find which screen and element this is (a possibly broken bottom bar or drawer handle) and fix it.
-   - **Ultracode recommended** (5 screens, multi-file, parallel work, a review pass). Effort High.
+1. **No redesign.** The owner likes the current design. Any future visual change: keep the product-dense e-commerce layout, show a cheap mockup of ONE screen first, and get a yes before building.
 2. **Scratch & Win, decided (owner said "just complete it", 2026-10-04).** Build after the redesign. Decisions so far:
    - Admin-configurable (`siteSettings.scratchWin`), shipped **off**, values marked as placeholders and listed in `CLIENT.md`.
    - One card per **delivered** online order at or above an admin minimum; created by `reconcileRewards` as `users/<uid>/scratchCards/<rzp>`.
@@ -164,7 +162,7 @@ Which next steps need ultracode:
 
 | Step | Ultracode? | Effort |
 |---|---|---|
-| 1. Redesign of the 5 key screens (mobile first) | Yes | High |
+| 1. (no redesign) | - | - |
 | 2. Scratch & Win | Yes, for the money logic review | Extra high |
 | 3. Small follow-ups | No | Medium |
 | 4. Dealer, Loyalty card | Yes, for the plan and the money logic review | Extra high |
