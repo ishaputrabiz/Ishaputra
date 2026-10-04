@@ -7,16 +7,22 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-04 (UI follow-ups: wishlist toast, cart order).
+Last updated: 2026-10-04 (home rows fixed; owner wants a visible redesign next).
 
 ## State
 
+- **2026-10-04: home product rows fixed** (`a7cf774`, branch `fix-row-autoscroll`, not merged yet). The owner reported the section card rows (Top Deals, Most loved, New arrivals, Trending) often did not move. Causes:
+  - CSS `scroll-behavior: smooth` swallowed the per-frame writes; the hook now writes with `behavior: 'instant'`.
+  - A tap's synthetic mouseenter and a click's focus left rows paused for good. Now it pauses only while held (a mouse over the row, a finger on it, or keyboard focus), and resumes 350 ms after the mouse leaves or 1.2 s after a finger lifts.
+  - The loop wrapped at half the scroll width, not the period; Top Deals desktop paged every 4.5 s and now uses the same continuous loop.
+  - Checked in Chromium at 1440 (3 rows) and 390 touch (4 rows): every row drifts, stops while held and resumes, with 0 page errors. `npm test` 32/32, build passes.
+- **2026-10-04: owner feedback.** The owner sees no visible difference from the UI pass and wants a clearly world-class look. Cause: `CLIENT.md` locked "keep Sreerasthu's layouts exactly", so the pass polished inside the old layouts (a11y, states, consistency, bugs). **Next step: a visible redesign, home page first, with new layouts allowed.** The owner doesn't want business questions: Claude picks sensible defaults, marks placeholders, and shows before/after screenshots.
 - **2026-10-04: the world-class UI pass is merged into `main`** (`f3205c3`, `--no-ff` from `ui-world-class`; local only, never pushed). The owner reviewed and approved it. After the merge: `npm test` 29/29, `npm run build` passes.
   - **How it was done:** a full-site audit (8 auditors + 1 synthesis, 295 findings, screenshots at 390 / 768 / 1440 in light and dark, `playwright-cli` checks), the owner's 14 decisions (recorded in `CLIENT.md`, "UI pass decisions"), a shared foundation (`488317e`), 9 area packages in two waves, a fresh-eyes review (70 issues, no regressions) and a fix round that closed all 70.
   - **The design system** for this and future clients is documented in `docs/ui-system.md`: tokens (motion, status, radius, z-index), skeletons, StatusBadge / `lib/orderStatus`, Notice, EmptyState, ConfirmDialog (with `returnFocusRef`), IconButton, WishlistToggle, ProductCard, AuthCard / AuthField, AdminPageHeader, StatCard, format helpers, `usePageMeta`.
   - **Behaviour changes the owner approved** are listed in `CLIENT.md` ("UI pass decisions"): old Sreerasthu URLs open `/products`; desktop `/search`; one password policy; Buy again at today's price; new visitors follow the system theme; confirmations before irreversible actions; contact form opens a prefilled email; analytics loads lazily; and more.
   - **Bugs fixed on the way:** the order page read every order to show one (now one document read; its chunk went from 686 kB to 51 kB); the wishlist heart pressed with Enter on category pages didn't save (stale state in `useWishlist`); the login form vanished on a wrong password; 'Shop by concern' and footer links led to "Category not found"; a fake fixed delivery date in the success modal; the contact form only logged to the console.
-  - **Not approved, left as it was:** the home product rows' drift (they stay still on screen, as before: `scroll-behavior: smooth` swallows the per-frame writes, see the comment in `useAutoScroll.ts`), one product card everywhere, deleting the hidden mobile bottom nav.
+  - **Not approved, left as it was:** one product card everywhere, deleting the hidden mobile bottom nav.
 - **Verification (2026-10-04, at `9dd7ddb`):**
   - `npm test` 29/29. `npm run build` passes. `tsc` (via `tsconfig.check.json`): only the old `videoCallService` (6) and `DeliveryDashboard` (1) errors; the `VideoCallRequestModal` one is fixed.
   - ESLint: 197 errors, down from 224 on `main` before the pass; nothing new (mostly old `no-explicit-any`).
@@ -33,13 +39,27 @@ Last updated: 2026-10-04 (UI follow-ups: wishlist toast, cart order).
 
 ## Next steps (in order)
 
-1. **UI pass merged (2026-10-04).** Remaining follow-ups:
+1. **Visible, mobile-first redesign of the 5 key screens (owner's priority, 2026-10-04).**
+   - **Order:** Home, product list (`/products` and category pages), product detail, checkout, profile/account. The rest of the site comes after, in the same style.
+   - **Mobile first:** 99% of the store's users are on phones. Design and judge at 390 px first, then check 1440.
+   - **New layouts are allowed** (the "keep Sreerasthu's layouts" rule is lifted for these screens). Keep the brand (logo, copper/bronze, cream and dark themes), the real data, and all working behaviour (cart, rewards, checkout money logic untouched).
+   - **No questions to the owner:** use every relevant design skill (`ui-ux-pro-max` search, `high-end-visual-design`, `design-taste-frontend`, `redesign-existing-projects`, `storefront-best-practices`, Emil's motion skills + `motion`), decide, then show before/after phone screenshots.
+   - **First:** merge `fix-row-autoscroll` into `main`, then take before-screenshots of the 5 screens at 390 (light and dark).
+   - **Investigate:** the owner sent a phone screenshot: a blank cream page with only a copper `>>` button at the bottom left, on a dark bar cut off at the right edge. Find which screen and element this is (a possibly broken bottom bar or drawer handle) and fix it.
+   - **Ultracode recommended** (5 screens, multi-file, parallel work, a review pass). Effort High.
+2. **Scratch & Win, decided (owner said "just complete it", 2026-10-04).** Build after the redesign. Decisions so far:
+   - Admin-configurable (`siteSettings.scratchWin`), shipped **off**, values marked as placeholders and listed in `CLIENT.md`.
+   - One card per **delivered** online order at or above an admin minimum; created by `reconcileRewards` as `users/<uid>/scratchCards/<rzp>`.
+   - Prizes: loyalty points in admin-set sizes with weights, plus "better luck next time" (weight 0 by default). No coupons or cashback for now (coupons are public and not tied to a customer; cashback is the riskiest).
+   - The server draws the prize **when scratched** (new `scratch-card` action in `api/notify-order.ts`, a transaction plus `crypto` randomness); points go in as a `scratch_<rzp>` ledger entry that unlocks, freezes and voids exactly like `earn_<rzp>`. An unscratched card is voided if the order is returned; cards expire after admin `expiryDays`.
+   - Customers can only read their cards; only the Admin SDK writes them. The admin page shows the average cost per card.
+   - Still to design: the scratch screen (where cards show, scratch gesture, accessible "Reveal" button, reduced motion) and the admin screen. Then a spec, a plan, and an **ultracode** money-logic review (effort Extra high).
+3. **Smaller follow-ups:**
    - Owner to do in Admin > Commerce: set Ships From = Telangana (delivery charges still assume Andhra Pradesh).
-   - **Done 2026-10-04 (`4e64b8d`):** the wishlist page shows one toast on remove (the hook's, with Undo); cart lines keep the order they were added in (`addedAt` + `src/lib/cartOrder.ts`, tested). `npm test` 32/32, build passes. Not checked in a browser: it needs the logged-in preview shopper, which writes to the live Firebase.
-   - Small leftovers, none blocking: generate `public/sitemap.xml` once the domain is real (`robots.txt` points at it, marked TODO(client)); set `VITE_SITE_URL` on Vercel so `og:image` is absolute; PERF-14's `initializeAuth` part (needs a full sign-in regression test).
-   - Client placeholders to confirm are listed in `CLIENT.md` ("Placeholders for the client").
-2. **Toolbox: done 2026-10-04.** See "Skills" below. Restart Claude Code once so the `motion` and `chrome-devtools` MCP servers load in new sessions.
-3. **Later:** Scratch & Win, Dealer Membership, Loyalty Card (rest of Step 2B), then Step 3 accounts.
+   - **Done 2026-10-04 (`4e64b8d`):** the wishlist page shows one toast on remove; cart lines keep the order they were added in. Not checked in a browser (needs the live preview shopper).
+   - Generate `public/sitemap.xml` once the domain is real; set `VITE_SITE_URL` on Vercel; PERF-14's `initializeAuth` part.
+   - Client placeholders: `CLIENT.md` ("Placeholders for the client").
+4. **Later:** Dealer Membership, Loyalty Card (rest of Step 2B), then Step 3 accounts.
 
 ## Review result
 
@@ -144,8 +164,9 @@ Which next steps need ultracode:
 
 | Step | Ultracode? | Effort |
 |---|---|---|
-| 1. UI pass follow-ups (small) | No | Medium |
-| 2. Toolbox | Done | n/a |
-| 3. Step 2B features (Scratch & Win, Dealer, Loyalty card) | Yes, for the plan and the money logic review | Extra high for rewards / money logic |
+| 1. Redesign of the 5 key screens (mobile first) | Yes | High |
+| 2. Scratch & Win | Yes, for the money logic review | Extra high |
+| 3. Small follow-ups | No | Medium |
+| 4. Dealer, Loyalty card | Yes, for the plan and the money logic review | Extra high |
 
 **Context:** read file ranges, not whole large files. `ssecommerce/CLAUDE.md` is 27 KB and loads into every session in this folder, so trimming it would cut the cost of every turn.

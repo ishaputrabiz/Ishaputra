@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef } from "react";
-import { useReducedMotion } from "framer-motion";
+import { useState, useEffect } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -42,7 +41,6 @@ const Header = ({ children }: { children?: React.ReactNode }) => (
 );
 
 const TopDeals = () => {
-  const reduceMotion = useReducedMotion();
   const [products, setProducts] = useState<UIProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const {
@@ -60,48 +58,22 @@ const TopDeals = () => {
   const featuredProduct = products[0];
   const restProducts = products.slice(1);
   const desktopProducts = restProducts.length > 0 ? restProducts : products;
-  const desktopScrollRef = useRef<HTMLDivElement>(null);
-  const canDesktopDealsScroll = desktopProducts.length > 3;
-
-  const scrollDesktopByPage = (dir: 'prev' | 'next') => {
-    const node = desktopScrollRef.current;
-    if (!node) return;
-    const delta = Math.max(260, node.clientWidth * 0.82) * (dir === 'next' ? 1 : -1);
-    node.scrollBy({ left: delta, behavior: reduceMotion ? 'auto' : 'smooth' });
-  };
-
-  // Desktop auto-loop: rotate the right-hand product page automatically so the
-  // section feels alive. Pauses while the pointer is over the cards or keyboard
-  // focus is inside them, after manual prev/next, in a hidden tab, and never
-  // runs under reduced motion.
-  const desktopHoverRef = useRef(false);
-  const manualPauseUntilRef = useRef(0);
-  const ROTATE_INTERVAL_MS = 4500;
-  const RESUME_DELAY_MS = 6000;
-
-  useEffect(() => {
-    if (!canDesktopDealsScroll || reduceMotion) return;
-    const interval = window.setInterval(() => {
-      if (desktopHoverRef.current) return;
-      if (document.visibilityState === 'hidden') return;
-      if (Date.now() < manualPauseUntilRef.current) return;
-      const node = desktopScrollRef.current;
-      if (!node) return;
-      const maxLeft = node.scrollWidth - node.clientWidth;
-      if (node.scrollLeft >= maxLeft - 8) {
-        node.scrollTo({ left: 0, behavior: 'smooth' });
-      } else {
-        scrollDesktopByPage('next');
-      }
-    }, ROTATE_INTERVAL_MS);
-    return () => window.clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canDesktopDealsScroll, reduceMotion]);
-
-  const handleManualPage = (dir: 'prev' | 'next') => {
-    manualPauseUntilRef.current = Date.now() + RESUME_DELAY_MS;
-    scrollDesktopByPage(dir);
-  };
+  // Desktop: the same continuous loop as the other home rows (it used to jump
+  // a page every 4.5 s and rewind at the end).
+  const {
+    scrollerRef: desktopScrollRef,
+    scrollByPage: desktopScrollByPage,
+    canScroll: canDesktopDealsScroll,
+  } = useAutoScroll({
+    speed: 0.5,
+    resumeDelay: 2400,
+    loop: true,
+    direction: 1,
+    loopItemCount: desktopProducts.length,
+    pageStep: 221,
+  });
+  const desktopLoopProducts =
+    canDesktopDealsScroll && desktopProducts.length > 1 ? [...desktopProducts, ...desktopProducts] : desktopProducts;
 
   useEffect(() => {
     const unsubscribe = subscribeToActiveProductsByFlag('isTopDeal', (fbProducts) => {
@@ -228,35 +200,21 @@ const TopDeals = () => {
           </div>
 
           {/* Right: product cards */}
-          <div
-            className="flex w-[62%] flex-col justify-between rounded-card border border-foreground/[0.06] bg-background/40 p-6"
-            onMouseEnter={() => { desktopHoverRef.current = true; }}
-            onMouseLeave={() => { desktopHoverRef.current = false; }}
-            onFocus={() => { desktopHoverRef.current = true; }}
-            onBlur={(e) => {
-              if (e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)) return;
-              desktopHoverRef.current = false;
-            }}
-          >
+          <div className="flex w-[62%] flex-col justify-between rounded-card border border-foreground/[0.06] bg-background/40 p-6">
             <div
               ref={desktopScrollRef}
-              /*
-                No `scroll-smooth` and no mandatory snap here.
-
-                `scroll-behavior: smooth` animates EVERY scroll, including the
-                user's own wheel and trackpad, which is what made this row
-                feel heavy and laggy to drag - the arrows pass
-                `behavior: 'smooth'` themselves, so nothing is lost. Mandatory
-                snapping then pulled the row back to the nearest card after
-                each programmatic page, producing a visible tug. Proximity
-                snapping still tidies the resting position without fighting.
-              */
-              className="flex snap-x snap-proximity gap-4 overflow-x-auto scrollbar-hide p-1"
+              // No scroll snap: snapping pulls a continuously drifting row back to the nearest card.
+              className="flex gap-4 overflow-x-auto scrollbar-hide p-1"
               style={{ WebkitOverflowScrolling: 'touch' }}
             >
-              {desktopProducts.map((product, index) => (
-                <div key={product.id} className="w-[190px] flex-none snap-start lg:w-[205px]">
-                  <ProductCard product={product} index={index} size="row" className="w-full" />
+              {desktopLoopProducts.map((product, index) => (
+                <div
+                  key={`${product.id}-${index}`}
+                  className="w-[190px] flex-none lg:w-[205px]"
+                  aria-hidden={index >= desktopProducts.length || undefined}
+                  {...(index >= desktopProducts.length ? INERT : {})}
+                >
+                  <ProductCard product={product} index={index % desktopProducts.length} size="row" className="w-full" />
                 </div>
               ))}
             </div>
@@ -265,7 +223,7 @@ const TopDeals = () => {
             <div className="mt-5 flex items-center gap-2 pt-3">
               <button
                 type="button"
-                onClick={() => handleManualPage('prev')}
+                onClick={() => desktopScrollByPage('prev')}
                 disabled={!canDesktopDealsScroll}
                 aria-label="Previous deals"
                 className="btn-round"
@@ -274,7 +232,7 @@ const TopDeals = () => {
               </button>
               <button
                 type="button"
-                onClick={() => handleManualPage('next')}
+                onClick={() => desktopScrollByPage('next')}
                 disabled={!canDesktopDealsScroll}
                 aria-label="Next deals"
                 className="btn-round"
