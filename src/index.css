@@ -511,6 +511,31 @@
   .offer-ticket__foil { animation: none; opacity: 0; }
 }
 
+/* ── Scratch & Win (src/components/scratch/) ───────────────────────────────── */
+/* Bronze foil on the wallet tiles; the canvas in ScratchFoil.tsx paints the same stops. */
+.scratch-foil {
+  background-image: linear-gradient(125deg, #6f5230 0%, #b8925a 22%, #8c6834 42%, #d4b27a 62%, #94703c 82%, #6a4d2a 100%);
+}
+/* The reveal, once per card: the prize pops, one copper sheen sweeps the number. */
+@keyframes sw-pop {
+  from { transform: scale(0.96); opacity: 0.5; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes sw-sheen {
+  from { transform: translateX(-130%) skewX(-18deg); }
+  to { transform: translateX(260%) skewX(-18deg); }
+}
+@keyframes sw-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.sw-pop { animation: sw-pop var(--dur-reveal) var(--ease-out) both; }
+.sw-sheen { animation: sw-sheen 900ms var(--ease-out) 160ms 1 both; }
+@media (prefers-reduced-motion: reduce) {
+  .sw-pop { animation: sw-fade var(--dur-dropdown) var(--ease-out) both; }
+  .sw-sheen { display: none; }
+}
+
 /* ── Product offer ticket (src/components/offers/ProductOfferTag.tsx) ──────── */
 .product-offer {
   background: linear-gradient(100deg, hsl(26 55% 93%) 0%, hsl(36 45% 95%) 55%, hsl(40 50% 98%) 100%);
