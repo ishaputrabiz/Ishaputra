@@ -2,7 +2,23 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck, Sparkles, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ShieldCheck, ArrowLeft, OctagonAlert } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import { EASE_OUT } from '@/lib/motion';
+import { cn } from '@/lib/utils';
+
+const HEADING_FONT: React.CSSProperties = {
+  fontFamily: 'var(--font-heading)',
+  fontStretch: 'var(--font-heading-stretch)',
+};
+
+/** Shared entrance: opacity + 8px, 240ms on the strong ease-out. */
+const enter = (delay = 0) => ({
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.24, ease: [...EASE_OUT] as [number, number, number, number], delay },
+});
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -44,143 +60,123 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen w-full grid lg:grid-cols-2 bg-charcoal text-white overflow-hidden">
-      {/* LEFT — Brand panel */}
-      <div className="relative hidden lg:flex flex-col justify-between p-12 bg-gradient-to-br from-charcoal via-charcoal to-charcoal overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-[480px] h-[480px] rounded-full bg-highlight/20 blur-[120px]" />
-        <div className="absolute bottom-[-160px] right-[-160px] w-[520px] h-[520px] rounded-full bg-primary/30 blur-[140px]" />
-        <div className="absolute inset-0 opacity-[0.05]"
+    <main className="grid min-h-screen w-full overflow-hidden bg-charcoal text-charcoal-foreground lg:grid-cols-2">
+      {/* LEFT: brand panel */}
+      <div className="relative hidden flex-col justify-between overflow-hidden p-12 lg:flex">
+        <div aria-hidden="true" className="absolute -left-40 -top-40 size-[480px] rounded-full bg-primary/20 blur-[120px]" />
+        <div aria-hidden="true" className="absolute bottom-[-160px] right-[-160px] size-[520px] rounded-full bg-primary/30 blur-[140px]" />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 opacity-[0.05]"
           style={{
             backgroundImage:
               'linear-gradient(to right, hsl(var(--highlight)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--highlight)) 1px, transparent 1px)',
             backgroundSize: '64px 64px',
-          }} />
+          }}
+        />
 
-        <div className="relative z-10">
+        <div className="relative z-raised">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-highlight/70 to-highlight flex items-center justify-center shadow-lg shadow-highlight/10">
-              <span className="font-bold text-charcoal" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>S</span>
-            </div>
+            <img src="/icon-192.png" alt="" width={44} height={44} className="size-11 rounded-card" />
             <div>
-              <p className="text-[10px] uppercase tracking-[0.4em] text-highlight-soft/70">Ishaputra</p>
-              <p className="text-sm font-medium text-white/90">Silvers & Jewellery</p>
+              <p className="text-[10px] uppercase tracking-[0.4em] text-highlight-soft">Ishaputra</p>
+              <p className="text-sm font-medium text-charcoal-foreground/90">Botanicals</p>
             </div>
           </div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          className="relative z-10 max-w-md"
-        >
-          <p className="text-highlight-soft/80 text-xs uppercase tracking-[0.4em] mb-5 inline-flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5" /> Admin Console
+        <motion.div {...enter()} className="relative z-raised max-w-md">
+          <p className="mb-5 text-xs uppercase tracking-[0.4em] text-highlight-soft">Admin console</p>
+          <p className="text-5xl font-light leading-[1.05] text-charcoal-foreground xl:text-6xl" style={HEADING_FONT}>
+            Run the <span className="italic text-highlight-soft">store.</span>
           </p>
-          <h1
-            className="text-5xl xl:text-6xl leading-[1.05] font-light text-white"
-            style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
-          >
-            Crafted with <span className="italic text-highlight-soft">elegance.</span>
-            <br />
-            Managed with <span className="italic text-highlight-soft">precision.</span>
-          </h1>
-          <p className="text-white/60 mt-6 text-sm leading-relaxed">
-            Welcome to the Ishaputra Botanicals control room — orchestrate your collections,
-            curate your storefront, and craft moments that last lifetimes.
+          <p className="mt-6 text-sm leading-relaxed text-charcoal-foreground/70">
+            Orders, products and content for Ishaputra Botanicals.
           </p>
         </motion.div>
 
-        <div className="relative z-10 flex items-center gap-2 text-xs text-white/40">
-          <ShieldCheck className="w-4 h-4 text-highlight-soft/70" />
-          <span>Restricted access · All sessions are audited.</span>
+        <div className="relative z-raised flex items-center gap-2 text-xs text-charcoal-foreground/70">
+          <ShieldCheck aria-hidden="true" className="size-4 text-highlight-soft" />
+          <span>Restricted access</span>
         </div>
       </div>
 
-      {/* RIGHT — Login card */}
-      <div className="relative flex items-center justify-center p-6 sm:p-12 bg-charcoal">
-        <div className="lg:hidden absolute -top-40 left-1/2 -translate-x-1/2 w-[420px] h-[420px] rounded-full bg-highlight/20 blur-[120px]" />
-
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55 }}
-          className="relative w-full max-w-md"
-        >
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur-2xl shadow-[0_30px_80px_-30px_hsl(var(--highlight)/0.35)] p-8 sm:p-10">
-            <div className="flex flex-col items-center text-center mb-8">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-highlight/70 to-highlight flex items-center justify-center shadow-lg shadow-highlight/8 mb-5">
-                <ShieldCheck className="w-7 h-7 text-charcoal" />
-              </div>
-              <p className="text-[10px] uppercase tracking-[0.4em] text-highlight-soft/70 mb-1.5">Sign in</p>
-              <h2 className="text-3xl text-white" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
-                Admin Console
-              </h2>
-              <p className="text-white/50 text-sm mt-2">Use your authorized credentials to continue.</p>
+      {/* RIGHT: sign-in card */}
+      <div className="relative flex items-center justify-center p-4 py-10 sm:p-12">
+        <motion.div {...enter(0.04)} className="relative w-full max-w-md">
+          <div className="rounded-panel border border-charcoal-foreground/10 bg-charcoal-foreground/[0.04] p-6 shadow-[0_30px_80px_-30px_hsl(var(--highlight)/0.35)] sm:p-10">
+            <div className="mb-8 flex flex-col items-center text-center">
+              <img src="/icon-192.png" alt="" width={56} height={56} className="mb-5 size-14 rounded-card" />
+              <p className="mb-1.5 text-[11px] uppercase tracking-[0.3em] text-highlight-soft">Sign in</p>
+              <h1 className="text-3xl text-charcoal-foreground" style={HEADING_FONT}>
+                Admin console
+              </h1>
+              <p className="mt-2 text-sm text-charcoal-foreground/70">Use your admin email and password.</p>
             </div>
 
             {error && (
               <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-200"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+                role="alert"
+                className="mb-5 flex items-start gap-2.5 rounded-control border border-status-danger-line bg-status-danger-bg px-4 py-3 text-sm text-status-danger-fg"
               >
-                {error}
+                <OctagonAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                <span>{error}</span>
               </motion.div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <FloatingInput
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              <LoginField
                 id="email"
                 type="email"
                 label="Admin email"
                 value={email}
                 onChange={setEmail}
                 disabled={loading}
-                icon={<Mail className="w-4 h-4" />}
+                autoComplete="username"
+                inputMode="email"
+                icon={<Mail aria-hidden="true" className="size-4" />}
               />
 
-              <div className="relative">
-                <FloatingInput
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  label="Password"
-                  value={password}
-                  onChange={setPassword}
-                  disabled={loading}
-                  icon={<Lock className="w-4 h-4" />}
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  onClick={() => setShowPassword((s) => !s)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-highlight-soft transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-
-              <button
-                type="submit"
+              <LoginField
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                label="Password"
+                value={password}
+                onChange={setPassword}
                 disabled={loading}
-                className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-highlight to-highlight hover:from-highlight/70 hover:to-highlight text-charcoal font-semibold py-3.5 text-sm tracking-wide transition-all shadow-lg shadow-highlight/8 disabled:opacity-60"
-              >
-                <span className="relative z-10 inline-flex items-center justify-center gap-2">
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" /> Authenticating…
-                    </>
-                  ) : (
-                    'Enter Admin Console'
-                  )}
-                </span>
-                <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-              </button>
+                autoComplete="current-password"
+                icon={<Lock aria-hidden="true" className="size-4" />}
+                trailing={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
+                    aria-controls="password"
+                    className="relative inline-flex size-9 items-center justify-center rounded-full text-charcoal-foreground/70 transition-[color,background-color,transform] duration-press ease-out after:absolute after:-inset-1 after:rounded-full after:content-[''] hover:bg-charcoal-foreground/10 hover:text-highlight-soft active:scale-[0.97]"
+                  >
+                    {showPassword ? <EyeOff aria-hidden="true" className="size-4" /> : <Eye aria-hidden="true" className="size-4" />}
+                  </button>
+                }
+              />
+
+              <Button type="submit" disabled={loading} className="mt-1 h-12 w-full">
+                {loading ? (
+                  <>
+                    <Spinner /> Signing in
+                  </>
+                ) : (
+                  'Sign in'
+                )}
+              </Button>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-white/10 text-center">
-              <p className="text-white/40 text-[11px] uppercase tracking-wider">
-                This is a restricted area · Unauthorized access is prohibited
+            <div className="mt-8 border-t border-charcoal-foreground/10 pt-6 text-center">
+              <p className="text-xs text-charcoal-foreground/60">
+                Restricted area. Unauthorised access is prohibited.
               </p>
             </div>
           </div>
@@ -188,19 +184,20 @@ const AdminLogin = () => {
           <div className="mt-6 text-center">
             <a
               href="/"
-              className="inline-flex items-center gap-2 text-white/50 hover:text-highlight-soft text-sm transition-colors"
+              className="inline-flex min-h-11 items-center gap-2 rounded-control px-2 text-sm text-charcoal-foreground/70 transition-colors duration-hover hover:text-highlight-soft"
             >
-              <ArrowLeft className="w-4 h-4" /> Back to website
+              <ArrowLeft aria-hidden="true" className="size-4" /> Back to website
             </a>
           </div>
         </motion.div>
       </div>
-    </div>
+    </main>
   );
 };
 
-const FloatingInput = ({
-  id, type, label, value, onChange, disabled, icon,
+/** Label above a 48px field with a leading icon and an optional trailing control. */
+const LoginField = ({
+  id, type, label, value, onChange, disabled, icon, trailing, autoComplete, inputMode,
 }: {
   id: string;
   type: string;
@@ -209,13 +206,17 @@ const FloatingInput = ({
   onChange: (v: string) => void;
   disabled?: boolean;
   icon?: React.ReactNode;
-}) => {
-  const [focused, setFocused] = useState(false);
-  const active = focused || value.length > 0;
-  return (
+  trailing?: React.ReactNode;
+  autoComplete?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+}) => (
+  <div className="flex flex-col gap-2">
+    <label htmlFor={id} className="text-[11px] font-semibold uppercase tracking-[0.18em] text-charcoal-foreground/70">
+      {label}
+    </label>
     <div className="relative">
       {icon && (
-        <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${active ? 'text-highlight-soft' : 'text-white/40'}`}>
+        <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-foreground/60">
           {icon}
         </div>
       )}
@@ -224,25 +225,20 @@ const FloatingInput = ({
         type={type}
         value={value}
         disabled={disabled}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
         onChange={(e) => onChange(e.target.value)}
         required
-        className="peer w-full rounded-xl border border-white/10 bg-white/[0.03] pl-11 pr-11 pt-5 pb-2 text-sm text-white placeholder-transparent focus:outline-none focus:border-highlight/42 focus:bg-white/[0.06] transition-colors disabled:opacity-50"
-        placeholder={label}
+        autoComplete={autoComplete}
+        inputMode={inputMode}
+        className={cn(
+          'h-12 w-full rounded-control border border-charcoal-foreground/25 bg-charcoal-foreground/[0.04] pl-11 text-base text-charcoal-foreground transition-[border-color,background-color,box-shadow] duration-hover ease-out md:text-sm',
+          'focus-visible:border-highlight-soft focus-visible:bg-charcoal-foreground/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight-soft/60',
+          'disabled:cursor-not-allowed disabled:opacity-60',
+          trailing ? 'pr-12' : 'pr-4',
+        )}
       />
-      <label
-        htmlFor={id}
-        className={`pointer-events-none absolute left-11 transition-all ${
-          active
-            ? 'top-1.5 text-[10px] uppercase tracking-[0.2em] text-highlight-soft/80'
-            : 'top-1/2 -translate-y-1/2 text-sm text-white/40'
-        }`}
-      >
-        {label}
-      </label>
+      {trailing && <div className="absolute right-1.5 top-1/2 -translate-y-1/2">{trailing}</div>}
     </div>
-  );
-};
+  </div>
+);
 
 export default AdminLogin;

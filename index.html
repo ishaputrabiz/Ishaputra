@@ -2,29 +2,49 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Theme before first paint: the saved choice (system by default) sets the
+         class and colour-scheme so dark visitors never see a light frame.
+         Same key and logic as src/contexts/ThemeContext.tsx. -->
+    <script>
+      (function () {
+        var theme = 'system';
+        try {
+          var stored = localStorage.getItem('ishaputra-theme');
+          if (stored === 'light' || stored === 'dark' || stored === 'system') theme = stored;
+        } catch (e) {}
+        var dark = theme === 'dark' || (theme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var root = document.documentElement;
+        root.classList.add(dark ? 'dark' : 'light');
+        root.style.colorScheme = dark ? 'dark' : 'light';
+      })();
+    </script>
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="theme-color" content="#1B1A18" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#F6F2EB" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0E0D0C" media="(prefers-color-scheme: dark)" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ishaputra Botanicals - Premium Men's Ayurveda &amp; Botanical Wellness</title>
+    <title>Ishaputra Botanicals: Premium Men's Ayurveda &amp; Botanical Wellness</title>
     <meta name="description" content="Premium men's Ayurveda and botanical wellness. Shop shilajit, ashwagandha, hair, skin, beard and personal care made with classical herbs. Pure wellness for a stronger you." />
     <meta name="author" content="Ishaputra Botanicals" />
     <meta name="keywords" content="men's ayurveda, shilajit, ashwagandha, hair oil, beard oil, men's skin care, herbal wellness, Ishaputra Botanicals" />
-    <!-- TODO(client): set to the live domain -->
-    <link rel="canonical" href="https://ishaputra.com" />
 
-    <meta property="og:title" content="Ishaputra Botanicals - Men's Ayurveda &amp; Botanical Wellness" />
-    <meta property="og:description" content="Classical Ayurvedic formulations for energy, hair, skin and grooming - made for the modern man." />
+    <meta property="og:title" content="Ishaputra Botanicals: Men's Ayurveda &amp; Botanical Wellness" />
+    <meta property="og:description" content="Classical Ayurvedic formulations for energy, hair, skin and grooming, made for the modern man." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/og-image.jpg" />
+    <!-- Absolute, from VITE_SITE_URL (set it on Vercel; see .env.example). -->
+    <meta property="og:image" content="%VITE_SITE_URL%/og-image.jpg" />
 
     <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image" content="/og-image.jpg" />
+    <meta name="twitter:image" content="%VITE_SITE_URL%/og-image.jpg" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Archivo at 112% width only (headings) + Manrope (body). -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,400..800&family=Manrope:wght@300..800&display=swap" />
   </head>
 
   <body>

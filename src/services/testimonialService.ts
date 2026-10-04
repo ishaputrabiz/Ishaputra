@@ -24,6 +24,8 @@ export interface Testimonial {
   avatarUrl: string; // cloudinary URL, external URL, or built-in avatar key
   order: number;
   status: 'active' | 'inactive';
+  /** Seeded placeholder (scripts/seed-demo.mjs). Must not be live at launch; the UI marks it as a demo. */
+  demo?: boolean;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }

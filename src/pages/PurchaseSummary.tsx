@@ -1,27 +1,31 @@
 // ============================================
-// WALLET — loyalty tier, spend, gift cards and recent orders
+// WALLET: loyalty tier, spend, gift cards and recent orders
 // ============================================
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
+import { OrderStatusBadge, StatusBadge } from '@/components/ui/status-badge';
+import { PanelSkeleton, StatCardsSkeleton } from '@/components/skeletons';
+import { formatDate, formatINR } from '@/lib/format';
+import { DUR, EASE_OUT } from '@/lib/motion';
+import { cn } from '@/lib/utils';
 import {
   ArrowLeft, Package, CheckCircle2, Clock, XCircle, 
   TrendingUp, Award, Crown, Diamond, Sparkles, IndianRupee,
-  ShoppingBag, Calendar, Eye, EyeOff, Gift, CreditCard, AlertCircle
+  ShoppingBag, Calendar, Eye, EyeOff, Gift, CreditCard, CircleCheck, CircleX,
 } from 'lucide-react';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { SmartImage } from "@/components/ui/smart-image";
 import { BRAND } from '@/config/brand';
 import { RewardsWalletCard } from '@/components/rewards/RewardsWalletCard';
-
-const HEADING = { fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" };
 
 // Loyalty tiers: names and thresholds from the brand config, look from here
 // (metal tones on the charcoal card, copper for the top tier).
@@ -209,475 +213,446 @@ const PurchaseSummary: React.FC = () => {
   const { nextTier, progress, remaining } = getNextTierProgress();
   const TierIcon = currentTier.icon;
 
+  // Page chrome around every state: desktop header + back row, phone top bar.
+  const shell = (content: React.ReactNode) => (
+    <div className="min-h-dvh tx-paper">
+      <div className="hidden lg:block"><Header /></div>
+
+      {/* Mobile Header */}
+      <div className="tx-sheet sticky top-0 z-sticky flex items-center gap-2 border-b border-foreground/[0.08] px-2 py-1.5 lg:hidden">
+        <IconButton label="Back" onClick={() => navigate(-1)}>
+          <ArrowLeft />
+        </IconButton>
+        <p className="font-heading text-xl font-semibold tracking-tight text-foreground" aria-hidden="true">Wallet & rewards</p>
+      </div>
+
+      <main id="main" tabIndex={-1} className="mx-auto max-w-4xl px-4 py-6 pb-24 outline-none lg:py-10 lg:pb-10">
+        {/* Title: the mobile bar above shows it on phones, so the h1 is for screen readers there */}
+        <div className="lg:mb-8 lg:flex lg:items-center lg:gap-2">
+          <div className="hidden lg:block">
+            <IconButton label="Back" onClick={() => navigate('/account')} className="-ml-2">
+              <ArrowLeft />
+            </IconButton>
+          </div>
+          <div className="min-w-0">
+            <h1 className="sr-only lg:not-sr-only font-heading text-xl font-semibold tracking-tight text-foreground lg:text-2xl">Wallet & rewards</h1>
+            <p className="mt-0.5 hidden text-xs text-muted-foreground lg:block">Your tier, points and cashback</p>
+          </div>
+        </div>
+        {content}
+      </main>
+
+      <div className="lg:hidden"><MobileBottomNav /></div>
+      <div className="hidden lg:block"><Footer /></div>
+    </div>
+  );
+
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center tx-paper">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    return shell(
+      <div aria-busy="true">
+        <span className="sr-only" role="status">Loading your wallet</span>
+        <div className="tx-slate mb-6 h-48 rounded-panel opacity-60" />
+        <StatCardsSkeleton count={3} className="mb-6 grid-cols-3 lg:grid-cols-3" label="" />
+        <PanelSkeleton lines={3} label="" />
       </div>
     );
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center tx-paper">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">Please log in to view your purchase summary</p>
-          <Button onClick={() => navigate('/account')} className="btn-copper h-auto py-3 text-[11px] font-bold rounded-[6px]">Go to account</Button>
-        </div>
+    return shell(
+      <div className="panel tx-sheet p-8 text-center">
+        <p className="mb-4 text-muted-foreground">Sign in to see your wallet and rewards.</p>
+        <Button onClick={() => navigate('/account')}>Go to account</Button>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen tx-paper">
-      <div className="hidden lg:block"><Header /></div>
+  const enter = (delay = 0) => ({
+    initial: { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: DUR.modal, ease: EASE_OUT, delay },
+  });
 
-      {/* Desktop Back Button */}
-      <div className="hidden lg:block border-b border-foreground/[0.08]">
-        <div className="max-w-4xl mx-auto px-4">
-          <button
-            onClick={() => navigate('/account')}
-            className="flex items-center gap-1.5 py-3 text-muted-foreground hover:text-primary transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.18em]">Back to account</span>
-          </button>
+  return shell(
+    <>
+      {/* ─── LOYALTY TIER CARD ──────────────────────── */}
+      <motion.div
+        {...enter()}
+        className="tx-slate tx-contour relative mb-6 overflow-hidden rounded-panel p-6 text-charcoal-foreground shadow-[var(--shadow-panel)]"
+      >
+        <div aria-hidden="true" className="absolute right-0 top-0 opacity-[0.07]">
+          <TierIcon className="size-32 -translate-y-8 translate-x-8" />
         </div>
-      </div>
 
-      {/* Mobile Header */}
-      <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-foreground/[0.08] px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-1 hover:bg-foreground/[0.06] rounded-full">
-          <ArrowLeft className="w-5 h-5 text-foreground/80" />
-        </button>
-        <h1 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Wallet & rewards</h1>
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 py-6 lg:py-10 pb-24 lg:pb-10">
-        <div className="hidden lg:block mb-8">
-          <p className="eyebrow-no mb-3"><span>Your wallet</span></p>
-          <h1 className="text-4xl font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Wallet & rewards</h1>
-        </div>
-        
-        {/* ─── LOYALTY TIER CARD ──────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="tx-slate tx-contour rounded-[var(--radius-panel)] p-6 mb-6 relative overflow-hidden shadow-[var(--shadow-panel)] text-charcoal-foreground"
-        >
-          <div className="absolute top-0 right-0 opacity-[0.07]">
-            <TierIcon className="w-32 h-32 -translate-y-8 translate-x-8" />
-          </div>
-
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="relative">
-                {currentTier.isPremium && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
-                    <Crown className="w-5 h-5 text-highlight fill-highlight-soft drop-shadow-lg" />
-                  </div>
-                )}
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-charcoal border border-white/20 shadow-md"
-                  style={{ background: currentTier.accent }}
-                >
-                  <TierIcon className="w-6 h-6" />
+        <div className="relative z-10">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="relative">
+              {currentTier.isPremium && (
+                <div aria-hidden="true" className="absolute -top-3 left-1/2 z-20 -translate-x-1/2">
+                  <Crown className="size-5 fill-highlight-soft text-highlight" />
                 </div>
-              </div>
-              <div>
-                <p className="eyebrow-no on-dark !text-[9px]"><span>Your status</span></p>
-                <h2 className="text-xl font-semibold mt-1" style={{ ...HEADING, color: currentTier.accent }}>{currentTier.name}</h2>
+              )}
+              <div
+                aria-hidden="true"
+                className="flex size-12 items-center justify-center rounded-full border border-charcoal-foreground/20 text-charcoal shadow-md"
+                style={{ background: currentTier.accent }}
+              >
+                <TierIcon className="size-6" />
               </div>
             </div>
+            <div>
+              <p className="eyebrow-no on-dark !text-[10px]"><span>Your status</span></p>
+              <h2 className="mt-1 font-heading text-xl font-semibold tracking-tight" style={{ color: currentTier.accent }}>{currentTier.name}</h2>
+            </div>
+          </div>
 
-            {/* Tier Stages Display */}
-            <div className="space-y-3 mt-4">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-charcoal-foreground/60 font-medium">Membership progress</span>
-                <span className="font-semibold tabular-nums">₹{stats.totalSpent.toLocaleString('en-IN')} / ₹{PROGRAMME_TOP.toLocaleString('en-IN')}</span>
+          {/* Tier Stages Display */}
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium text-charcoal-foreground/70">Membership progress</span>
+              <span className="font-semibold tabular-nums">{formatINR(stats.totalSpent)} / {formatINR(PROGRAMME_TOP)}</span>
+            </div>
+
+            {/* All Stages with Progress Bar */}
+            <div className="relative py-2">
+              {/* Progress Bar connecting badges */}
+              <div aria-hidden="true" className="absolute left-[12.5%] right-[12.5%] top-[26px] h-1 overflow-hidden rounded-full bg-charcoal-foreground/10">
+                <motion.div
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: Math.min(stats.totalSpent / PROGRAMME_TOP, 1) }}
+                  transition={{ duration: DUR.reveal * 2, ease: EASE_OUT }}
+                  className="h-full origin-left rounded-full bg-gradient-to-r from-highlight-soft to-primary"
+                />
               </div>
 
-              {/* All Stages with Progress Bar */}
-              <div className="relative py-2">
-                {/* Progress Bar connecting badges */}
-                <div className="absolute top-[26px] left-[12.5%] right-[12.5%] h-1 bg-white/10 rounded-full">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min((stats.totalSpent / PROGRAMME_TOP) * 100, 100)}%` }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    className="h-full bg-gradient-to-r from-highlight-soft to-primary rounded-full"
-                  />
-                </div>
+              {/* Stage Indicators */}
+              <ol className="relative flex items-start justify-between">
+                {LOYALTY_TIERS.map((tier) => {
+                  const TierBadgeIcon = tier.icon;
+                  const isCurrentTier = currentTier.name === tier.name;
+                  const isCompleted = stats.totalSpent >= tier.min;
 
-                {/* Stage Indicators */}
-                <div className="relative flex justify-between items-start">
-                  {LOYALTY_TIERS.map((tier) => {
-                    const TierBadgeIcon = tier.icon;
-                    const isCurrentTier = currentTier.name === tier.name;
-                    const isCompleted = stats.totalSpent >= tier.min;
-
-                    return (
-                      <div key={tier.name} className="flex flex-col items-center flex-1 z-10">
-                        <div
-                          className={`relative w-11 h-11 rounded-full flex items-center justify-center transition-all ${
-                            isCurrentTier
-                              ? 'text-charcoal ring-2 ring-offset-2 ring-offset-charcoal ring-white/40 scale-110 shadow-xl'
-                              : isCompleted
+                  return (
+                    <li key={tier.name} aria-current={isCurrentTier ? 'step' : undefined} className="z-10 flex flex-1 flex-col items-center">
+                      <div
+                        aria-hidden="true"
+                        className={cn(
+                          'relative flex size-11 items-center justify-center rounded-full',
+                          isCurrentTier
+                            ? 'scale-110 text-charcoal shadow-xl ring-2 ring-charcoal-foreground/40 ring-offset-2 ring-offset-charcoal'
+                            : isCompleted
                               ? 'text-charcoal shadow-md'
-                              : 'bg-charcoal border border-white/15 text-white/35'
-                          }`}
-                          style={isCompleted ? { background: tier.accent } : undefined}
-                        >
-                          {tier.isPremium && isCurrentTier && (
-                            <div className="absolute -top-2 left-1/2 -translate-x-1/2">
-                              <Crown className="w-4 h-4 text-highlight fill-highlight-soft drop-shadow" />
-                            </div>
-                          )}
-                          <TierBadgeIcon className="w-5 h-5" />
-                        </div>
-                        <p className={`text-[10px] mt-2.5 text-center font-bold uppercase tracking-[0.12em] leading-tight ${
-                          isCurrentTier ? 'text-charcoal-foreground' : 'text-charcoal-foreground/45'
-                        }`}>
-                          {tier.name.replace(' Member', '')}
-                        </p>
-                        <p className="text-[10px] text-charcoal-foreground/40 tabular-nums">₹{tier.min.toLocaleString('en-IN')}</p>
+                              : 'border border-charcoal-foreground/15 bg-charcoal text-charcoal-foreground/45',
+                        )}
+                        style={isCompleted ? { background: tier.accent } : undefined}
+                      >
+                        {tier.isPremium && isCurrentTier && (
+                          <div className="absolute -top-2 left-1/2 -translate-x-1/2">
+                            <Crown className="size-4 fill-highlight-soft text-highlight" />
+                          </div>
+                        )}
+                        <TierBadgeIcon className="size-5" />
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
+                      <p className={cn(
+                        'mt-2.5 text-center text-[10px] font-bold uppercase leading-tight tracking-[0.12em]',
+                        isCurrentTier ? 'text-charcoal-foreground' : 'text-charcoal-foreground/60',
+                      )}>
+                        {tier.name.replace(' Member', '')}
+                      </p>
+                      <p className="text-[10px] text-charcoal-foreground/60 tabular-nums">{formatINR(tier.min)}</p>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
 
-              {/* Next Tier Info */}
-              {nextTier ? (
-                <p className="text-xs text-charcoal-foreground/70 font-medium text-center">
-                  Spend ₹{remaining.toLocaleString('en-IN')} more to unlock {nextTier.name}
-                </p>
-              ) : (
-                <div className="flex items-center justify-center gap-2 bg-white/5 rounded-[8px] p-2 border border-highlight-soft/30">
-                  <Sparkles className="w-4 h-4 text-highlight-soft" />
-                  <p className="text-xs font-medium">
-                    You've reached the highest tier!
-                  </p>
-                </div>
+            {/* Next Tier Info */}
+            {nextTier ? (
+              <p className="text-center text-xs font-medium text-charcoal-foreground/75">
+                Spend <span className="tabular-nums">{formatINR(remaining)}</span> more to unlock {nextTier.name}
+              </p>
+            ) : (
+              <div className="flex items-center justify-center gap-2 rounded-[8px] border border-highlight-soft/30 bg-charcoal-foreground/5 p-2">
+                <Sparkles aria-hidden="true" className="size-4 text-highlight-soft" />
+                <p className="text-xs font-medium">You're at the top tier.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ─── POINTS & CASHBACK ──────────────────── */}
+      <RewardsWalletCard uid={user.uid} />
+
+      {/* ─── TOTAL SPENT CARD ──────────────────── */}
+      <motion.section {...enter(0.04)} aria-labelledby="total-spent-heading" className="panel tx-sheet mb-6 p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div aria-hidden="true" className="tx-slate flex size-10 items-center justify-center rounded-[8px] text-highlight-soft">
+              <TrendingUp className="size-5" />
+            </div>
+            <h2 id="total-spent-heading" className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Total spent</h2>
+          </div>
+          <IconButton label="Hide amount" aria-pressed={!showAmount} onClick={() => setShowAmount(!showAmount)}>
+            {showAmount ? <Eye className="text-muted-foreground" /> : <EyeOff className="text-muted-foreground" />}
+          </IconButton>
+        </div>
+
+        <div className="mb-6">
+          <div className="mb-1 flex items-baseline gap-1">
+            <IndianRupee aria-hidden="true" className="mt-1 size-6 text-primary" />
+            <span className="font-heading text-4xl font-semibold tracking-tight text-foreground tabular-nums">
+              {showAmount ? formatINR(stats.totalSpent).replace('₹', '') : <><span aria-hidden="true">••••••</span><span className="sr-only">Hidden</span></>}
+            </span>
+          </div>
+          <p className="text-xs font-medium text-muted-foreground">From delivered orders only</p>
+        </div>
+
+        <dl className="grid grid-cols-3 gap-4">
+          {[
+            { label: 'Delivered', value: stats.deliveredCount, icon: CheckCircle2 },
+            { label: 'Pending', value: stats.pendingCount, icon: Clock },
+            { label: 'Cancelled', value: stats.cancelledCount, icon: XCircle },
+          ].map(({ label, value, icon: Icon }) => (
+            <div key={label} className="flex flex-col items-center text-center">
+              <div aria-hidden="true" className="tx-slate mx-auto mb-2 flex size-12 items-center justify-center rounded-[8px] text-highlight-soft">
+                <Icon className="size-6" />
+              </div>
+              <dt className="order-last text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</dt>
+              <dd className="font-heading text-2xl font-semibold text-foreground tabular-nums">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </motion.section>
+
+      {/* ─── QUICK ACTIONS ──────────────────── */}
+      <div className="mb-6">
+        <Button
+          variant="outline"
+          className="h-12 w-full border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+          onClick={() => navigate('/products')}
+        >
+          <ShoppingBag aria-hidden="true" />
+          Continue shopping
+        </Button>
+      </div>
+
+      {/* ─── GIFT CARDS ──────────────────── */}
+      <motion.section {...enter(0.08)} aria-labelledby="gift-cards-heading" className="panel tx-sheet mb-6 p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div aria-hidden="true" className="tx-slate flex size-10 items-center justify-center rounded-[8px] text-highlight-soft">
+              <Gift className="size-5" />
+            </div>
+            <div>
+              <h2 id="gift-cards-heading" className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Gift cards</h2>
+              {totalGiftBalance > 0 && (
+                <p className="text-xs font-medium text-primary tabular-nums">{formatINR(totalGiftBalance)} available</p>
               )}
             </div>
           </div>
-        </motion.div>
-
-        {/* ─── POINTS & CASHBACK ──────────────────── */}
-        <RewardsWalletCard uid={user.uid} />
-
-        {/* ─── TOTAL SPENT CARD ──────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="panel tx-sheet p-6 mb-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="tx-slate w-10 h-10 rounded-[8px] flex items-center justify-center text-highlight-soft">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Total spent</h3>
-            </div>
-            <button 
-              onClick={() => setShowAmount(!showAmount)} 
-              className="p-2 hover:bg-foreground/[0.06] rounded-full transition-colors"
-            >
-              {showAmount ? <Eye className="w-4 h-4 text-muted-foreground" /> : <EyeOff className="w-4 h-4 text-muted-foreground" />}
-            </button>
-          </div>
-
-          <div className="mb-6">
-            <div className="flex items-baseline gap-1 mb-1">
-              <IndianRupee className="w-6 h-6 text-primary mt-1" />
-              <span className="text-4xl font-semibold text-foreground tabular-nums" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
-                {showAmount ? stats.totalSpent.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '••••••'}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground font-medium">From delivered orders only</p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="tx-slate w-12 h-12 rounded-[8px] flex items-center justify-center mx-auto mb-2 text-emerald-400">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <p className="text-2xl font-semibold text-foreground tabular-nums" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>{stats.deliveredCount}</p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Delivered</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="tx-slate w-12 h-12 rounded-[8px] flex items-center justify-center mx-auto mb-2 text-highlight-soft">
-                <Clock className="w-6 h-6" />
-              </div>
-              <p className="text-2xl font-semibold text-foreground tabular-nums" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>{stats.pendingCount}</p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Pending</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="tx-slate w-12 h-12 rounded-[8px] flex items-center justify-center mx-auto mb-2 text-red-400">
-                <XCircle className="w-6 h-6" />
-              </div>
-              <p className="text-2xl font-semibold text-foreground tabular-nums" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>{stats.cancelledCount}</p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Cancelled</p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ─── QUICK ACTIONS ──────────────────── */}
-        <div className="mb-6">
-          <Button 
-            variant="outline"
-            className="w-full h-12 flex items-center justify-center gap-2 rounded-[6px] border-primary/50 bg-transparent text-primary hover:bg-primary/10 hover:text-primary text-[11px] font-bold uppercase tracking-[0.16em] transition-all"
-            onClick={() => navigate('/products')}
-          >
-            <ShoppingBag className="w-4 h-4" />
-            Continue Shopping
-          </Button>
         </div>
 
-        {/* ─── GIFT CARDS ──────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="panel tx-sheet p-6 mb-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="tx-slate w-10 h-10 rounded-[8px] flex items-center justify-center text-highlight-soft">
-                <Gift className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Gift cards</h3>
-                {totalGiftBalance > 0 && (
-                  <p className="text-xs text-primary font-medium">₹{totalGiftBalance.toLocaleString('en-IN')} available</p>
-                )}
-              </div>
-            </div>
+        {giftCardsLoading ? (
+          <div aria-busy="true" className="space-y-3">
+            <span className="sr-only" role="status">Loading gift cards</span>
+            <div className="h-24 rounded-card bg-foreground/[0.05]" />
           </div>
-
-          {giftCardsLoading ? (
-            <div className="flex justify-center py-6">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+        ) : giftCards.length === 0 ? (
+          <div className="py-6 text-center">
+            <div aria-hidden="true" className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-foreground/[0.04]">
+              <Gift className="size-7 text-muted-foreground" />
             </div>
-          ) : giftCards.length === 0 ? (
-            <div className="text-center py-6">
-              <div className="w-14 h-14 bg-foreground/[0.03] rounded-full flex items-center justify-center mx-auto mb-3">
-                <Gift className="w-7 h-7 text-muted-foreground/60" />
-              </div>
-              <p className="text-sm font-medium text-muted-foreground">No gift cards yet</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">Gift cards from the store will appear here</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {giftCards.map((card) => {
-                const expired = isExpired(card.expiryDate);
-                const fullyUsed = card.remainingAmount <= 0;
-                const usagePercent = card.amount > 0 ? ((card.amount - card.remainingAmount) / card.amount) * 100 : 0;
-                
-                return (
-                  <div 
-                    key={card.id} 
-                    className={`relative overflow-hidden rounded-[10px] border-2 p-4 transition-all ${
-                      expired || fullyUsed 
-                        ? 'border-foreground/[0.08] bg-foreground/[0.03] opacity-60' 
-                        : 'border-primary/30 bg-primary/[0.05]'
-                    }`}
-                  >
-                    {/* Decorative circles */}
-                    <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-card rounded-full" />
-                    <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-card rounded-full" />
+            <p className="text-sm font-medium text-foreground">No gift cards yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">Gift cards from the store will appear here.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {giftCards.map((card) => {
+              const expired = isExpired(card.expiryDate);
+              const fullyUsed = card.remainingAmount <= 0;
+              const usagePercent = card.amount > 0 ? ((card.amount - card.remainingAmount) / card.amount) * 100 : 0;
 
-                    <div className="relative">
-                      {/* Header row */}
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-primary" />
-                            <span className="text-xs font-bold text-foreground/80 tracking-wider font-mono">{card.code}</span>
-                          </div>
-                          {card.description && (
-                            <p className="text-xs text-muted-foreground mt-1">{card.description}</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          {expired ? (
-                            <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Expired</span>
-                          ) : fullyUsed ? (
-                            <span className="text-[10px] bg-foreground/10 text-muted-foreground px-2 py-0.5 rounded-full font-medium">Fully Used</span>
-                          ) : (
-                            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Active</span>
-                          )}
-                        </div>
-                      </div>
+              return (
+                <div
+                  key={card.id}
+                  className={cn(
+                    'relative overflow-hidden rounded-card border p-4',
+                    expired || fullyUsed
+                      ? 'border-foreground/[0.08] bg-foreground/[0.03]'
+                      : 'border-primary/30 bg-primary/[0.05]',
+                  )}
+                >
+                  {/* Decorative ticket notches */}
+                  <div aria-hidden="true" className="absolute -left-3 top-1/2 size-6 -translate-y-1/2 rounded-full bg-card" />
+                  <div aria-hidden="true" className="absolute -right-3 top-1/2 size-6 -translate-y-1/2 rounded-full bg-card" />
 
-                      {/* Amount */}
-                      <div className="flex items-baseline gap-1 mb-2">
-                        <span className="text-xl font-bold text-foreground">₹{card.remainingAmount.toLocaleString('en-IN')}</span>
-                        {card.usedAmount > 0 && (
-                          <span className="text-xs text-muted-foreground/70">/ ₹{card.amount.toLocaleString('en-IN')}</span>
+                  <div className={cn('relative', (expired || fullyUsed) && 'opacity-70')}>
+                    {/* Header row */}
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <CreditCard aria-hidden="true" className="size-4 text-primary" />
+                          <span className="font-mono text-xs font-bold tracking-wider text-foreground">{card.code}</span>
+                        </div>
+                        {card.description && (
+                          <p className="mt-1 text-xs text-muted-foreground">{card.description}</p>
                         )}
                       </div>
-
-                      {/* Usage bar */}
-                      {card.usedAmount > 0 && (
-                        <div className="mb-2">
-                          <div className="h-1.5 bg-foreground/10 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-primary rounded-full transition-all"
-                              style={{ width: `${usagePercent}%` }}
-                            />
-                          </div>
-                          <p className="text-[10px] text-muted-foreground/70 mt-1">₹{card.usedAmount.toLocaleString('en-IN')} used</p>
-                        </div>
+                      {expired ? (
+                        <StatusBadge tone="danger" label="Expired" icon={CircleX} />
+                      ) : fullyUsed ? (
+                        <StatusBadge tone="neutral" label="Fully used" icon={CircleCheck} />
+                      ) : (
+                        <StatusBadge tone="success" label="Active" icon={CircleCheck} />
                       )}
+                    </div>
 
-                      {/* Expiry */}
-                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70">
-                        <Clock className="w-3 h-3" />
-                        <span>Expires {new Date(card.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    {/* Amount */}
+                    <div className="mb-2 flex items-baseline gap-1 tabular-nums">
+                      <span className="text-xl font-semibold text-foreground">{formatINR(card.remainingAmount)}</span>
+                      {card.usedAmount > 0 && (
+                        <span className="text-xs text-muted-foreground">/ {formatINR(card.amount)}</span>
+                      )}
+                    </div>
+
+                    {/* Usage bar */}
+                    {card.usedAmount > 0 && (
+                      <div className="mb-2">
+                        <div aria-hidden="true" className="h-1.5 overflow-hidden rounded-full bg-foreground/10">
+                          <div
+                            className="h-full origin-left rounded-full bg-primary"
+                            style={{ transform: `scaleX(${usagePercent / 100})` }}
+                          />
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground tabular-nums">{formatINR(card.usedAmount)} used</p>
                       </div>
+                    )}
+
+                    {/* Expiry */}
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock aria-hidden="true" className="size-3.5" />
+                      <span className="tabular-nums">{expired ? 'Expired' : 'Expires'} {formatDate(card.expiryDate)}</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </motion.div>
-
-        {/* ─── RECENT ORDERS SUMMARY ──────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="panel tx-sheet p-6 mb-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="tx-slate w-10 h-10 rounded-[8px] flex items-center justify-center text-highlight-soft">
-                <Calendar className="w-5 h-5" />
-              </div>
-              <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Recent orders</h3>
-            </div>
-            {stats.deliveredCount > 0 && (
-              <button 
-                onClick={() => navigate('/account/orders')}
-                className="link-arrow"
-              >
-                View All
-              </button>
-            )}
-          </div>
-
-          {(() => {
-            // Filter for delivered orders from the last month only
-            const oneMonthAgo = new Date();
-            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-            
-            const recentDeliveredOrders = stats.orderHistory.filter((order) => {
-              const isDelivered = order.status?.toLowerCase() === 'delivered';
-              const orderDate = order.createdAt?.toDate?.();
-              const isLastMonth = orderDate && orderDate >= oneMonthAgo;
-              return isDelivered && isLastMonth;
-            }).slice(0, 3);
-            
-            return recentDeliveredOrders.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-14 h-14 bg-foreground/[0.06] rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <Package className="w-7 h-7 text-muted-foreground/70" />
                 </div>
-                <p className="text-sm font-medium text-foreground/80 mb-1">No delivered orders this month</p>
-                <p className="text-xs text-muted-foreground/70 mb-4">Recent delivered orders will appear here</p>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => navigate('/products')}
-                  className="h-10 rounded-[6px] border-primary/50 text-primary hover:bg-primary/10 hover:text-primary text-[11px] font-bold uppercase tracking-[0.16em]"
-                >
-                  <ShoppingBag className="w-4 h-4 mr-2" />
-                  Browse Collection
-                </Button>
+              );
+            })}
+          </div>
+        )}
+      </motion.section>
+
+      {/* ─── RECENT ORDERS SUMMARY ──────────────────── */}
+      <motion.section {...enter(0.12)} aria-labelledby="recent-orders-heading" className="panel tx-sheet mb-6 p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div aria-hidden="true" className="tx-slate flex size-10 items-center justify-center rounded-[8px] text-highlight-soft">
+              <Calendar className="size-5" />
+            </div>
+            <h2 id="recent-orders-heading" className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Recent orders</h2>
+          </div>
+          {stats.deliveredCount > 0 && (
+            <Link to="/account/orders" className="link-arrow relative after:absolute after:-inset-x-2 after:-inset-y-3 after:content-['']">
+              View all<span className="sr-only"> orders</span>
+            </Link>
+          )}
+        </div>
+
+        {(() => {
+          // Filter for delivered orders from the last month only
+          const oneMonthAgo = new Date();
+          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+          const recentDeliveredOrders = stats.orderHistory.filter((order) => {
+            const isDelivered = order.status?.toLowerCase() === 'delivered';
+            const orderDate = order.createdAt?.toDate?.();
+            const isLastMonth = orderDate && orderDate >= oneMonthAgo;
+            return isDelivered && isLastMonth;
+          }).slice(0, 3);
+
+          return recentDeliveredOrders.length === 0 ? (
+            <div className="py-8 text-center">
+              <div aria-hidden="true" className="mx-auto mb-3 flex size-14 items-center justify-center rounded-card bg-foreground/[0.04]">
+                <Package className="size-7 text-muted-foreground" />
               </div>
-            ) : (
-              <div className="space-y-3">
-                {recentDeliveredOrders.map((order) => {
-                  const firstItem = order.items?.[0];
-                  const itemCount = order.items?.length || 0;
-                  const displayTitle = itemCount > 1 
-                    ? `${firstItem?.name || 'Product'} +${itemCount - 1} more`
-                    : firstItem?.name || 'Product';
-                  
-                  return (
-                    <div 
-                      key={order.id} 
-                      className="flex gap-3 p-3 bg-card rounded-[10px] border border-foreground/[0.08] hover:border-primary/35 hover:shadow-[var(--shadow-card-hover)] transition-all cursor-pointer"
-                      onClick={() => navigate(`/account/orders/${order.id}`)}
+              <p className="mb-1 text-sm font-medium text-foreground">No delivered orders this month</p>
+              <p className="mb-4 text-xs text-muted-foreground">Recent delivered orders will appear here.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/products')}
+                className="h-10 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+              >
+                <ShoppingBag aria-hidden="true" />
+                Browse products
+              </Button>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {recentDeliveredOrders.map((order) => {
+                const firstItem = order.items?.[0];
+                const itemCount = order.items?.length || 0;
+                const displayTitle = itemCount > 1
+                  ? `${firstItem?.name || 'Product'} +${itemCount - 1} more`
+                  : firstItem?.name || 'Product';
+
+                return (
+                  <li key={order.id}>
+                    <Link
+                      to={`/account/orders/${order.id}`}
+                      className="flex gap-3 rounded-card border border-foreground/[0.08] bg-card p-3 transition-[border-color,box-shadow] duration-hover ease-out hover:border-primary/35 hover:shadow-[var(--shadow-card-hover)]"
                     >
                       {/* Product Image */}
-                      <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-foreground/[0.06]">
+                      <div className="tile-img size-16 shrink-0 overflow-hidden">
                         {firstItem?.image ? (
-                          <SmartImage 
-                            src={firstItem.image} 
-                            alt={firstItem.name}
-                            className="w-full h-full object-cover" preset="thumb" />
+                          <SmartImage
+                            src={firstItem.image}
+                            alt=""
+                            className="h-full w-full object-cover" preset="thumb" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Package className="w-6 h-6 text-muted-foreground/70" />
+                          <div className="flex h-full w-full items-center justify-center">
+                            <Package aria-hidden="true" className="size-6 text-muted-foreground" />
                           </div>
                         )}
                       </div>
 
                       {/* Order Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate mb-1">
+                      <div className="min-w-0 flex-1">
+                        <p className="mb-1.5 truncate text-sm font-semibold text-foreground" title={displayTitle}>
                           {displayTitle}
                         </p>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                            {order.status}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <OrderStatusBadge status={order.status} order={order} />
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {formatDate(order.createdAt) || 'Date not available'}
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground/70">
-                          {order.createdAt?.toDate?.()?.toLocaleDateString('en-IN', { 
-                            day: 'numeric', 
-                            month: 'short',
-                            year: 'numeric'
-                          }) || 'N/A'}
-                        </p>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-        </motion.div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          );
+        })()}
+      </motion.section>
 
-        {/* ─── INFO SECTION ──────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="tx-slate rounded-[var(--radius-card)] p-5 mt-6 text-charcoal-foreground"
-        >
-          <div className="flex gap-3">
-            <Sparkles className="w-5 h-5 text-highlight-soft flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold mb-1" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Member benefits</p>
-              <p className="text-xs text-charcoal-foreground/65 leading-relaxed">
-                Unlock special offers, early access to new collections, and personalized recommendations as you progress through loyalty tiers.
-              </p>
-            </div>
+      {/* ─── INFO SECTION ──────────────────── */}
+      <motion.div
+        {...enter(0.16)}
+        className="tx-slate mt-6 rounded-card p-5 text-charcoal-foreground"
+      >
+        <div className="flex gap-3">
+          <Sparkles aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-highlight-soft" />
+          <div>
+            <p className="mb-1 font-heading text-sm font-semibold">Member benefits</p>
+            <p className="text-xs leading-relaxed text-charcoal-foreground/75">
+              Earn points on every delivered order and spend them, with your cashback, at checkout.
+            </p>
           </div>
-        </motion.div>
-      </div>
-
-      <div className="lg:hidden"><MobileBottomNav /></div>
-      <div className="hidden lg:block"><Footer /></div>
-    </div>
+        </div>
+      </motion.div>
+    </>
   );
 };
 

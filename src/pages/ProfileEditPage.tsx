@@ -12,6 +12,13 @@ import { Area } from 'react-easy-crop';
 import { motion } from 'framer-motion';
 import darkLogo from '@/assets/dark.png';
 import WhatsAppSetupModal from '@/components/auth/WhatsAppSetupModal';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { IconButton } from '@/components/ui/icon-button';
+import { Spinner } from '@/components/ui/spinner';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { formatDate } from '@/lib/format';
+import { fadeUp } from '@/lib/motion';
 import {
   ZoomIn,
   ZoomOut,
@@ -24,6 +31,7 @@ import {
   Calendar,
   Phone,
   ShieldCheck,
+  CircleCheck,
   X,
 } from 'lucide-react';
 import { SmartImage } from "@/components/ui/smart-image";
@@ -141,7 +149,7 @@ const ProfileEditPage = () => {
       setAvatarUrl(result.url);
       await updateUserProfile({ avatar: result.url });
       if (previousAvatar && previousAvatar !== result.url) void deleteMedia([previousAvatar]);
-      toast.success('Profile photo updated!');
+      toast.success('Profile photo updated');
       setImageToCrop(null);
     } catch (error) {
       console.error('Error uploading photo:', error);
@@ -165,16 +173,16 @@ const ProfileEditPage = () => {
 
   const handleSaveName = async () => {
     if (!nameInput.trim()) {
-      toast.error('Name cannot be empty');
+      toast.error('Enter your name.');
       return;
     }
     setSavingName(true);
     try {
       await updateUserProfile({ name: nameInput.trim() });
       setIsEditingName(false);
-      toast.success('Name updated!');
+      toast.success('Name updated');
     } catch {
-      toast.error('Failed to update name.');
+      toast.error('Unable to update your name. Try again.');
     } finally {
       setSavingName(false);
     }
@@ -183,207 +191,226 @@ const ProfileEditPage = () => {
   const displayName = userProfile?.name || userProfile?.username || user?.email?.split('@')[0] || 'User';
   const initials = displayName.charAt(0).toUpperCase();
 
-  const memberSince = userProfile?.createdAt
-    ? new Date(userProfile.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
-    : 'N/A';
+  const memberSince = (userProfile?.createdAt && formatDate(userProfile.createdAt)) || 'Not available';
+
+  const startEditingName = () => setIsEditingName(true);
+  const cancelEditingName = () => {
+    setIsEditingName(false);
+    setNameInput(displayName);
+  };
+
+  const zoomPercent = ((zoom - 1) / 2) * 100;
+  const rowLabel = 'text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground';
 
   return (
     <>
       {/* Desktop site header */}
       <div className="hidden lg:block"><Header /></div>
 
-      <div className="min-h-screen tx-paper pb-24 lg:pb-16">
+      <main id="main" tabIndex={-1} className="min-h-screen tx-paper pb-24 lg:pb-16 outline-none">
         {/* Desktop page wrapper for centered card width */}
         <div className="lg:max-w-3xl lg:mx-auto lg:px-6 lg:pt-8">
         <button
+          type="button"
           onClick={() => navigate('/account')}
-          className="mb-4 hidden items-center gap-2 rounded-full border border-foreground/10 bg-card/90 px-4 py-2 text-sm font-medium text-foreground/80 shadow-sm transition-colors hover:bg-card dark:border-highlight/20 lg:inline-flex"
+          className="mb-4 hidden h-10 items-center gap-2 rounded-control border border-input bg-card px-4 text-sm font-medium text-foreground/80 transition-[background-color,color,transform] duration-press ease-out hover:bg-muted hover:text-foreground active:scale-[0.97] lg:inline-flex"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          Back to account
         </button>
         {/* ── Banner + Avatar Section ── */}
-        <div className="relative lg:overflow-hidden lg:rounded-[var(--radius-panel)] lg:border lg:border-foreground/[0.08] lg:bg-card lg:shadow-sm">
+        <div className="relative lg:overflow-hidden lg:rounded-panel lg:border lg:border-foreground/[0.08] lg:bg-card lg:shadow-sm">
           {/* Banner Background with geometric pattern */}
           <div className="tx-slate tx-contour relative h-40 overflow-hidden">
-            {/* Back Button — mobile only (desktop has site header) */}
-            <button
+            {/* Back Button: mobile only (desktop has site header) */}
+            <IconButton
+              label="Back"
+              variant="onPhoto"
               onClick={() => navigate(-1)}
-              className="lg:hidden absolute top-4 left-4 z-10 rounded-full bg-white/80 p-2 shadow-sm transition-colors hover:bg-card"
+              className="lg:hidden absolute top-4 left-4 z-raised ring-1 ring-charcoal-foreground/15"
             >
-              <ArrowLeft className="w-5 h-5 text-foreground/80" />
-            </button>
+              <ArrowLeft aria-hidden="true" />
+            </IconButton>
 
-            {/* Geometric Network Pattern SVG */}
-            <svg className="absolute inset-0 w-full h-full opacity-[0.15]" xmlns="http://www.w3.org/2000/svg">
+            {/* Geometric network pattern (decorative), drawn in the bronze highlight */}
+            <svg aria-hidden="true" className="absolute inset-0 w-full h-full opacity-25" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <circle cx="20" cy="20" r="1.5" fill="#6B7280" />
+                <pattern id="profile-banner-dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <circle cx="20" cy="20" r="1.5" fill="hsl(var(--highlight-soft))" opacity="0.6" />
                 </pattern>
               </defs>
-              <rect width="100%" height="100%" fill="url(#dots)" />
-              {/* Connected lines */}
-              <line x1="20" y1="10" x2="80" y2="40" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="80" y1="40" x2="140" y2="20" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="140" y1="20" x2="200" y2="50" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="200" y1="50" x2="260" y2="30" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="260" y1="30" x2="320" y2="60" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="320" y1="60" x2="380" y2="25" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="50" y1="70" x2="120" y2="90" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="120" y1="90" x2="180" y2="65" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="180" y1="65" x2="250" y2="100" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="250" y1="100" x2="340" y2="70" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="30" y1="110" x2="100" y2="130" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="100" y1="130" x2="170" y2="105" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="170" y1="105" x2="240" y2="140" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="240" y1="140" x2="310" y2="110" stroke="#9CA3AF" strokeWidth="0.5" />
-              <line x1="310" y1="110" x2="380" y2="145" stroke="#9CA3AF" strokeWidth="0.5" />
-              {/* Cross connections */}
-              <line x1="80" y1="40" x2="120" y2="90" stroke="#D1D5DB" strokeWidth="0.3" />
-              <line x1="200" y1="50" x2="180" y2="65" stroke="#D1D5DB" strokeWidth="0.3" />
-              <line x1="260" y1="30" x2="250" y2="100" stroke="#D1D5DB" strokeWidth="0.3" />
-              <line x1="140" y1="20" x2="170" y2="105" stroke="#D1D5DB" strokeWidth="0.3" />
-              <line x1="320" y1="60" x2="310" y2="110" stroke="#D1D5DB" strokeWidth="0.3" />
-              {/* Nodes at intersections */}
-              <circle cx="80" cy="40" r="3" fill="#9CA3AF" opacity="0.4" />
-              <circle cx="140" cy="20" r="2.5" fill="#9CA3AF" opacity="0.3" />
-              <circle cx="200" cy="50" r="3.5" fill="#9CA3AF" opacity="0.4" />
-              <circle cx="260" cy="30" r="2" fill="#9CA3AF" opacity="0.3" />
-              <circle cx="320" cy="60" r="3" fill="#9CA3AF" opacity="0.4" />
-              <circle cx="120" cy="90" r="2.5" fill="#9CA3AF" opacity="0.3" />
-              <circle cx="180" cy="65" r="2" fill="#9CA3AF" opacity="0.4" />
-              <circle cx="250" cy="100" r="3" fill="#9CA3AF" opacity="0.3" />
-              <circle cx="170" cy="105" r="2.5" fill="#9CA3AF" opacity="0.4" />
-              <circle cx="310" cy="110" r="2" fill="#9CA3AF" opacity="0.3" />
+              <rect width="100%" height="100%" fill="url(#profile-banner-dots)" />
+              <g stroke="hsl(var(--highlight-soft))" strokeWidth="0.5">
+                <line x1="20" y1="10" x2="80" y2="40" />
+                <line x1="80" y1="40" x2="140" y2="20" />
+                <line x1="140" y1="20" x2="200" y2="50" />
+                <line x1="200" y1="50" x2="260" y2="30" />
+                <line x1="260" y1="30" x2="320" y2="60" />
+                <line x1="320" y1="60" x2="380" y2="25" />
+                <line x1="50" y1="70" x2="120" y2="90" />
+                <line x1="120" y1="90" x2="180" y2="65" />
+                <line x1="180" y1="65" x2="250" y2="100" />
+                <line x1="250" y1="100" x2="340" y2="70" />
+                <line x1="30" y1="110" x2="100" y2="130" />
+                <line x1="100" y1="130" x2="170" y2="105" />
+                <line x1="170" y1="105" x2="240" y2="140" />
+                <line x1="240" y1="140" x2="310" y2="110" />
+                <line x1="310" y1="110" x2="380" y2="145" />
+              </g>
+              <g stroke="hsl(var(--highlight-soft))" strokeWidth="0.3" opacity="0.7">
+                <line x1="80" y1="40" x2="120" y2="90" />
+                <line x1="200" y1="50" x2="180" y2="65" />
+                <line x1="260" y1="30" x2="250" y2="100" />
+                <line x1="140" y1="20" x2="170" y2="105" />
+                <line x1="320" y1="60" x2="310" y2="110" />
+              </g>
+              <g fill="hsl(var(--highlight-soft))">
+                <circle cx="80" cy="40" r="3" opacity="0.4" />
+                <circle cx="140" cy="20" r="2.5" opacity="0.3" />
+                <circle cx="200" cy="50" r="3.5" opacity="0.4" />
+                <circle cx="260" cy="30" r="2" opacity="0.3" />
+                <circle cx="320" cy="60" r="3" opacity="0.4" />
+                <circle cx="120" cy="90" r="2.5" opacity="0.3" />
+                <circle cx="180" cy="65" r="2" opacity="0.4" />
+                <circle cx="250" cy="100" r="3" opacity="0.3" />
+                <circle cx="170" cy="105" r="2.5" opacity="0.4" />
+                <circle cx="310" cy="110" r="2" opacity="0.3" />
+              </g>
             </svg>
 
-            {/* Logo in banner */}
+            {/* Logo in banner (decorative watermark) */}
             <img
               src={darkLogo}
-              alt="Ishaputra Botanicals"
+              alt=""
+              aria-hidden="true"
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-14 object-contain opacity-[0.08] pointer-events-none"
             />
           </div>
 
           {/* Avatar overlapping the banner */}
-          <div className="flex flex-col items-center -mt-14 relative z-10">
-            <div className="relative mb-2">
+          <div className="flex flex-col items-center -mt-14 relative z-raised px-4 lg:pb-6">
+            <div className="relative mb-3">
               {avatarUrl ? (
                 <SmartImage
                   key={avatarUrl}
                   src={avatarUrl}
-                  alt="Profile"
+                  alt="Your profile photo"
                   className="w-28 h-28 rounded-full object-cover border-4 border-card shadow-lg bg-card"
                   referrerPolicy="no-referrer" preset="thumb" />
               ) : (
-                <div className="w-28 h-28 rounded-full bg-foreground/10 flex items-center justify-center border-4 border-card shadow-lg">
-                  <span className="text-muted-foreground text-3xl font-bold">{initials}</span>
+                <div aria-hidden="true" className="w-28 h-28 rounded-full bg-muted flex items-center justify-center border-4 border-card shadow-lg">
+                  <span className="text-muted-foreground text-3xl font-semibold" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>{initials}</span>
                 </div>
               )}
-              <button
+              <IconButton
+                label="Change photo"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingPhoto}
-                className="absolute bottom-1 right-1 w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors border-2 border-card"
+                aria-busy={uploadingPhoto || undefined}
+                className="absolute -bottom-0.5 -right-0.5 size-10 border-2 border-card bg-primary text-primary-foreground shadow-md hover:bg-primary hover:text-primary-foreground [@media(pointer:fine)]:size-10 [&_svg]:size-4"
               >
-                {uploadingPhoto ? (
-                  <div className="w-4 h-4 border-2 border-card border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Camera className="w-4 h-4 text-white" />
-                )}
-              </button>
+                {uploadingPhoto ? <Spinner /> : <Camera aria-hidden="true" />}
+              </IconButton>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handlePhotoChange}
                 className="hidden"
+                tabIndex={-1}
+                aria-hidden="true"
               />
             </div>
 
             {/* Name */}
-            <div className="flex items-center gap-2 mb-0.5">
+            <div className="flex items-center gap-1 mb-0.5">
               {isEditingName ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <input
                     type="text"
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
-                    className="bg-foreground/[0.06] text-foreground text-lg font-bold text-center px-3 py-1 rounded-lg border border-foreground/15 focus:outline-none focus:border-primary"
+                    aria-label="Full name"
+                    autoComplete="name"
+                    autoCapitalize="words"
+                    className="h-11 w-[min(16rem,60vw)] rounded-control border border-input bg-background px-3 text-center text-base font-semibold text-foreground transition-[border-color,box-shadow] duration-hover focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-60"
                     autoFocus
                     disabled={savingName}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveName();
+                      if (e.key === 'Escape') cancelEditingName();
+                    }}
                   />
-                  <button onClick={handleSaveName} disabled={savingName} className="p-1 rounded-full bg-foreground/10">
-                    <Check className="w-4 h-4 text-foreground/80" />
-                  </button>
-                  <button onClick={() => setIsEditingName(false)} className="p-1 rounded-full bg-foreground/10">
-                    <X className="w-4 h-4 text-foreground/80" />
-                  </button>
+                  <IconButton label="Save name" variant="solid" onClick={handleSaveName} disabled={savingName}>
+                    {savingName ? <Spinner /> : <Check aria-hidden="true" />}
+                  </IconButton>
+                  <IconButton label="Cancel editing name" onClick={cancelEditingName} disabled={savingName}>
+                    <X aria-hidden="true" />
+                  </IconButton>
                 </div>
               ) : (
                 <>
-                  <h2 className="text-foreground text-xl font-semibold" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>{displayName}</h2>
-                  <button
-                    onClick={() => setIsEditingName(true)}
-                    className="p-1 rounded-full bg-foreground/[0.06] hover:bg-foreground/10 transition-colors"
-                  >
-                    <Edit3 className="w-3.5 h-3.5 text-muted-foreground" />
-                  </button>
+                  <h1 className="text-foreground text-xl font-semibold text-center break-words [overflow-wrap:anywhere]" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>{displayName}</h1>
+                  <IconButton label="Edit name" size="sm" onClick={startEditingName} className="text-muted-foreground">
+                    <Edit3 aria-hidden="true" />
+                  </IconButton>
                 </>
               )}
             </div>
-            <p className="text-muted-foreground text-xs">{user?.email}</p>
-            <p className="text-muted-foreground/70 text-[10px] mt-0.5">Member since {memberSince}</p>
+            <p className="text-muted-foreground text-sm break-words [overflow-wrap:anywhere] text-center">{user?.email}</p>
+            <p className="text-muted-foreground text-xs mt-1">Member since {memberSince}</p>
           </div>
         </div>
 
         {/* ── Personal Information ── */}
-        <div className="px-4 mt-5">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+        <div className="px-4 mt-6 lg:px-0">
+          <motion.section
+            aria-labelledby="personal-info-heading"
+            initial={fadeUp.initial}
+            animate={fadeUp.animate}
+            transition={{ ...fadeUp.transition, delay: 0.06 }}
           >
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-3 px-1">Personal information</h3>
-            <div className="overflow-hidden rounded-[var(--radius-card)] border border-foreground/[0.06] bg-card shadow-sm divide-y divide-foreground/[0.07]">
+            <h2 id="personal-info-heading" className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-3 px-1">Personal information</h2>
+            <div className="panel tx-sheet overflow-hidden divide-y divide-foreground/[0.08]">
               {/* Full Name */}
               <div className="flex items-center gap-3 px-4 py-3.5">
                 <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 h-5 text-primary" />
+                  <User aria-hidden="true" className="size-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">Full Name</p>
-                  <p className="text-sm text-foreground font-medium truncate">{displayName}</p>
+                  <p className={rowLabel}>Full name</p>
+                  <p className="text-sm text-foreground font-medium break-words [overflow-wrap:anywhere]">{displayName}</p>
                 </div>
                 <button
-                  onClick={() => setIsEditingName(true)}
-                  className="text-primary text-xs font-semibold"
+                  type="button"
+                  onClick={startEditingName}
+                  className="-mr-2 inline-flex min-h-11 items-center rounded-control px-2 text-xs font-semibold text-primary underline-offset-4 hover:underline"
                 >
-                  Edit
+                  Edit<span className="sr-only"> full name</span>
                 </button>
               </div>
 
               {/* Email */}
               <div className="flex items-center gap-3 px-4 py-3.5">
                 <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">
-                  <Mail className="w-5 h-5 text-primary" />
+                  <Mail aria-hidden="true" className="size-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">Email</p>
-                  <p className="text-sm text-foreground font-medium truncate">{user?.email || 'Not set'}</p>
+                  <p className={rowLabel}>Email</p>
+                  <p className="text-sm text-foreground font-medium break-words [overflow-wrap:anywhere]">{user?.email || 'Not set'}</p>
                 </div>
                 {user?.emailVerified && (
-                  <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">Verified</span>
+                  <StatusBadge tone="success" label="Verified" icon={CircleCheck} />
                 )}
               </div>
 
               {/* Member Since */}
               <div className="flex items-center gap-3 px-4 py-3.5">
                 <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-5 h-5 text-primary" />
+                  <Calendar aria-hidden="true" className="size-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">Member Since</p>
+                  <p className={rowLabel}>Member since</p>
                   <p className="text-sm text-foreground font-medium">{memberSince}</p>
                 </div>
               </div>
@@ -391,35 +418,34 @@ const ProfileEditPage = () => {
               {/* WhatsApp helper / guidance */}
               <div className="flex items-start gap-3 px-4 py-3.5">
                 <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">
-                  <Phone className="w-5 h-5 text-primary" />
+                  <Phone aria-hidden="true" className="size-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">WhatsApp</p>
+                  <p className={rowLabel}>WhatsApp</p>
                   {userProfile?.whatsappNumber ? (
-                    <p className="text-sm text-foreground font-medium truncate">+91 {userProfile.whatsappNumber.replace(/^\+?91/, '')}</p>
+                    <p className="text-sm text-foreground font-medium tabular-nums">+91 {userProfile.whatsappNumber.replace(/^\+?91/, '')}</p>
                   ) : (
                     <p className="text-sm text-muted-foreground">Not linked yet</p>
                   )}
-                  <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                    Verify a WhatsApp number to receive order updates, OTPs, and turn on two-factor sign-in.
+                  <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                    Verify a WhatsApp number for order updates and sign-in codes, and to turn on 2-step verification.
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowWhatsAppModal(true)}
-                  className="text-emerald-600 text-xs font-semibold inline-flex items-center gap-1 self-center whitespace-nowrap"
+                  className="-mr-2 inline-flex min-h-11 items-center gap-1.5 self-center whitespace-nowrap rounded-control px-2 text-xs font-semibold text-primary underline-offset-4 hover:underline"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <ShieldCheck aria-hidden="true" className="size-3.5" />
                   {userProfile?.whatsappNumber ? 'Manage' : 'Verify'}
+                  <span className="sr-only"> WhatsApp number</span>
                 </button>
               </div>
             </div>
-          </motion.div>
+          </motion.section>
         </div>
-
-        {/* App Version */}
-        <p className="text-center text-[10px] text-muted-foreground/70 pb-2 mt-8">Ishaputra Botanicals v1.0.0</p>
         </div>
-      </div>
+      </main>
 
       {/* Desktop site footer */}
       <div className="hidden lg:block"><Footer /></div>
@@ -435,7 +461,7 @@ const ProfileEditPage = () => {
             }
             toast.success('WhatsApp number saved');
           } catch {
-            toast.error('Could not save number');
+            toast.error('Unable to save your number. Try again.');
           } finally {
             setShowWhatsAppModal(false);
           }
@@ -444,20 +470,15 @@ const ProfileEditPage = () => {
       />
 
       {/* ── Crop Modal ── */}
-      {showCropModal && imageToCrop && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-0 sm:p-4">
-          <div className="bg-card rounded-none sm:rounded-2xl shadow-2xl w-full h-full sm:h-auto sm:max-w-md overflow-hidden flex flex-col sm:block">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-foreground/[0.08]">
-              <h2 className="text-foreground text-lg font-semibold">Edit Photo</h2>
-              <button
-                onClick={handleCropCancel}
-                className="p-1 text-muted-foreground/70 hover:text-foreground hover:bg-foreground/[0.06] rounded-full transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <Dialog open={showCropModal && !!imageToCrop} onOpenChange={(open) => { if (!open) handleCropCancel(); }}>
+        <DialogContent className="flex h-dvh max-h-dvh w-full max-w-none flex-col gap-0 rounded-none border-0 p-0 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100%-2rem)] sm:max-w-md sm:rounded-panel sm:border">
+          <DialogHeader className="border-b border-foreground/[0.08] px-5 py-4 text-left">
+            <DialogTitle className="px-0 pr-10 sm:pl-0 sm:pr-10">Edit photo</DialogTitle>
+            <DialogDescription className="sr-only">Drag to position your photo and use the slider to zoom.</DialogDescription>
+          </DialogHeader>
 
-            <div className="relative bg-foreground/[0.06] flex-1 sm:h-[400px]">
+          <div className="relative flex-1 bg-muted sm:h-[400px] sm:flex-none">
+            {imageToCrop && (
               <Cropper
                 image={imageToCrop}
                 crop={crop}
@@ -469,39 +490,38 @@ const ProfileEditPage = () => {
                 onCropComplete={onCropComplete}
                 onZoomChange={setZoom}
               />
-            </div>
-
-            <div className="px-6 py-5 bg-card border-t border-foreground/[0.08]">
-              <div className="flex items-center gap-3 mb-4">
-                <ZoomOut className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                <input
-                  type="range"
-                  min={1}
-                  max={3}
-                  step={0.01}
-                  value={zoom}
-                  onChange={(e) => setZoom(Number(e.target.value))}
-                  className="flex-1 h-1.5 bg-foreground/10 rounded-full appearance-none cursor-pointer"
-                  style={{
-                    background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${((zoom - 1) / 2) * 100}%, #E5E7EB ${((zoom - 1) / 2) * 100}%, #E5E7EB 100%)`
-                  }}
-                />
-                <ZoomIn className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                <span className="text-sm font-medium text-muted-foreground min-w-[3rem] text-right">
-                  {Math.round((zoom - 1) / 2 * 100)}%
-                </span>
-              </div>
-              <button
-                onClick={handleCropSave}
-                disabled={uploadingPhoto}
-                className="w-full px-4 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {uploadingPhoto ? 'Saving...' : 'Save'}
-              </button>
-            </div>
+            )}
           </div>
-        </div>
-      )}
+
+          <div className="border-t border-foreground/[0.08] bg-card px-6 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+            <div className="mb-4 flex items-center gap-3">
+              <ZoomOut aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.01}
+                value={zoom}
+                aria-label="Zoom"
+                aria-valuetext={`${Math.round(zoomPercent)}%`}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="h-1 flex-1 rounded-full accent-primary [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:bg-transparent"
+                style={{
+                  background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${zoomPercent}%, hsl(var(--foreground) / 0.12) ${zoomPercent}%, hsl(var(--foreground) / 0.12) 100%)`,
+                }}
+              />
+              <ZoomIn aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
+              <span aria-hidden="true" className="min-w-[3rem] text-right text-sm font-medium text-muted-foreground tabular-nums">
+                {Math.round(zoomPercent)}%
+              </span>
+            </div>
+            <Button size="lg" onClick={handleCropSave} disabled={uploadingPhoto} className="w-full">
+              {uploadingPhoto && <Spinner />}
+              {uploadingPhoto ? 'Saving…' : 'Save photo'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <MobileBottomNav />
     </>

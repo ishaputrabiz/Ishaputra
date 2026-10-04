@@ -4,12 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { VideoCall, type CallSession } from '@/services/videoCallService';
 import { confirmInApp, markLive } from '@/services/videoCallRequestService';
+import { EASE_OUT } from '@/lib/motion';
+import { usePageMeta } from '@/hooks/usePageMeta';
 import {
   Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff,
   Loader2, SwitchCamera,
 } from 'lucide-react';
 
-// ─── Brand mark ──────────────────────────────────────────────────────────────
+// Brand mark
 const BrandWatermark = () => (
   <div className="flex items-center gap-2.5">
     <img
@@ -20,7 +22,7 @@ const BrandWatermark = () => (
   </div>
 );
 
-// ─── Timer ───────────────────────────────────────────────────────────────────
+// Timer
 const CallTimer = ({ active }: { active: boolean }) => {
   const [secs, setSecs] = useState(0);
   useEffect(() => {
@@ -33,13 +35,13 @@ const CallTimer = ({ active }: { active: boolean }) => {
   const s = secs % 60;
   const pad = (n: number) => String(n).padStart(2, '0');
   return (
-    <span className="text-xs text-white/70 tabular-nums">
+    <span className="text-xs tabular-nums text-charcoal-foreground/75">
       {h > 0 ? `${pad(h)}:` : ''}{pad(m)}:{pad(s)}
     </span>
   );
 };
 
-// ─── Control button ──────────────────────────────────────────────────────────
+// Control button
 function CtrlBtn({
   active,
   danger,
@@ -47,6 +49,8 @@ function CtrlBtn({
   children,
   label,
   large,
+  disabled,
+  id,
 }: {
   active?: boolean;
   danger?: boolean;
@@ -54,31 +58,43 @@ function CtrlBtn({
   children: React.ReactNode;
   label: string;
   large?: boolean;
+  disabled?: boolean;
+  id?: string;
 }) {
   let bg = '';
   if (danger) {
-    bg = 'bg-red-500 hover:bg-red-600 shadow-xl shadow-red-900/60 border-2 border-red-400/40';
+    bg = 'bg-destructive text-destructive-foreground shadow-lg hover:bg-destructive/90';
   } else if (active) {
-    bg = 'bg-red-500/80 border-2 border-red-400/40 shadow-lg shadow-red-900/40';
+    bg = 'bg-charcoal-foreground text-charcoal shadow-md';
   } else {
-    bg = 'bg-white/10 hover:bg-white/20 border border-white/25 shadow-md shadow-black/30';
+    bg = 'bg-charcoal-foreground/10 text-charcoal-foreground border border-charcoal-foreground/25 hover:bg-charcoal-foreground/20';
   }
 
-  const btnSize = large ? 'w-16 h-16' : 'w-13 h-13';
+  const btnSize = large ? 'w-16 h-16' : 'w-12 h-12';
 
+  // Focus: the global ring, drawn in light bronze on the charcoal screen.
   return (
     <button
+      type="button"
+      id={id}
       onClick={onClick}
+      disabled={disabled}
       aria-label={label}
-      className="flex flex-col items-center gap-2 focus:outline-none active:scale-90 transition-all duration-150"
+      className="flex min-w-[64px] flex-col items-center gap-2 rounded-card transition-transform duration-press ease-out active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
     >
-      <div className={`${btnSize} rounded-full flex items-center justify-center backdrop-blur-sm transition-all duration-200 ${bg}`}>
+      <span
+        className={`${btnSize} flex items-center justify-center rounded-full transition-[background-color,color] duration-hover ${bg}`}
+      >
         {children}
-      </div>
-      <span className="text-[11px] font-medium text-white/70 tracking-wide">{label}</span>
+      </span>
+      <span aria-hidden="true" className="text-[11px] font-medium text-charcoal-foreground/75">{label}</span>
     </button>
   );
 }
+
+const BRAND_NAME = 'Ishaputra Botanicals';
+const INCOMPLETE_LINK = 'This call link is incomplete. Open it again from your WhatsApp message.';
+const CONNECT_FAILED = 'We could not connect the call. Check your connection and try again.';
 
 /**
  * /call               -> caller initiates a new call (?to=<uid>)
@@ -98,6 +114,8 @@ const VideoCallPage = () => {
     }
   }, [navigate]);
   const { user } = useAuth();
+
+  usePageMeta({ title: 'Video call', noindex: true });
 
   const localRef = useRef<HTMLVideoElement>(null);
   const remoteRef = useRef<HTMLVideoElement>(null);
@@ -158,7 +176,7 @@ const VideoCallPage = () => {
           s = await VideoCall.answerCall({ callId: routeCallId }, handlers);
         } else {
           const to = search.get('to');
-          if (!to) throw new Error('Missing ?to=<uid>');
+          if (!to) throw new Error(INCOMPLETE_LINK);
           const callIdOverride = search.get('callIdOverride') ?? undefined;
           setStatus('ringing');
           s = await VideoCall.startCall({ callerUid: user.uid, calleeUid: to, callIdOverride }, handlers);
@@ -178,7 +196,8 @@ const VideoCallPage = () => {
           }
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to start call');
+        console.warn('Video call failed to start', err);
+        setError(err instanceof Error && err.message === INCOMPLETE_LINK ? INCOMPLETE_LINK : CONNECT_FAILED);
         setStatus('error');
       }
     };
@@ -236,7 +255,7 @@ const VideoCallPage = () => {
 
       setFacingMode(newFacing);
     } catch {
-      // `exact` facingMode fails on desktop — try without `exact`
+      // `exact` facingMode fails on desktop: try without `exact`
       try {
         const fallback = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: newFacing },
@@ -258,41 +277,57 @@ const VideoCallPage = () => {
     }
   };
 
-  // ─── End-call confirmation dialog ──────────────────────────────────────────
+  // End-call confirmation dialog: Escape or Cancel keeps the call going and
+  // puts focus back on the End call control.
+  const closeEndDialog = () => {
+    setShowConfirmEnd(false);
+    requestAnimationFrame(() => document.getElementById('call-end-button')?.focus());
+  };
+
   const EndCallDialog = () => (
     <AnimatePresence>
       {showConfirmEnd && (
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 z-30 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={() => setShowConfirmEnd(false)}
+          animate={{ opacity: 1, transition: { duration: 0.24, ease: EASE_OUT } }}
+          exit={{ opacity: 0, transition: { duration: 0.18, ease: EASE_OUT } }}
+          className="absolute inset-0 z-overlay flex items-center justify-center bg-charcoal/60 backdrop-blur-[2px]"
+          onClick={closeEndDialog}
         >
           <motion.div
-            initial={{ scale: 0.9, y: 20 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.9, y: 20 }}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="end-call-title"
+            aria-describedby="end-call-desc"
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1, transition: { duration: 0.24, ease: EASE_OUT } }}
+            exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.18, ease: EASE_OUT } }}
             onClick={(e) => e.stopPropagation()}
-            className="mx-6 bg-[#1a1a2e]/95 border border-white/10 rounded-3xl p-6 text-center shadow-2xl w-full max-w-xs"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') closeEndDialog();
+            }}
+            className="mx-6 w-full max-w-xs rounded-panel border border-charcoal-foreground/10 bg-charcoal/95 p-6 text-center text-charcoal-foreground shadow-2xl"
           >
-            <div className="w-14 h-14 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
-              <PhoneOff className="w-7 h-7 text-red-400" />
+            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-destructive/20 text-destructive">
+              <PhoneOff aria-hidden="true" className="size-6" />
             </div>
-            <h3 className="text-white font-semibold text-base mb-1">End Call?</h3>
-            <p className="text-white/50 text-sm mb-6">This will disconnect both participants.</p>
+            <h2 id="end-call-title" className="mb-1 font-heading text-base font-semibold">End call?</h2>
+            <p id="end-call-desc" className="mb-6 text-sm text-charcoal-foreground/70">This disconnects both of you.</p>
             <div className="flex gap-3">
               <button
-                onClick={() => setShowConfirmEnd(false)}
-                className="flex-1 py-2.5 rounded-2xl bg-white/10 text-white/80 text-sm font-medium hover:bg-white/15 transition"
+                type="button"
+                autoFocus
+                onClick={closeEndDialog}
+                className="h-11 flex-1 rounded-control bg-charcoal-foreground/10 text-sm font-medium text-charcoal-foreground transition-[background-color,transform] duration-hover ease-out hover:bg-charcoal-foreground/15 active:scale-[0.97]"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={hangup}
-                className="flex-1 py-2.5 rounded-2xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition shadow-lg shadow-red-900/30"
+                className="h-11 flex-1 rounded-control bg-destructive text-sm font-semibold text-destructive-foreground transition-[background-color,transform] duration-hover ease-out hover:bg-destructive/90 active:scale-[0.97]"
               >
-                End Call
+                End call
               </button>
             </div>
           </motion.div>
@@ -302,43 +337,49 @@ const VideoCallPage = () => {
   );
 
   return (
-    <div
-      className="min-h-screen bg-[#0a0a14] text-white flex flex-col overflow-hidden"
+    <main
+      id="main"
+      tabIndex={-1}
+      // Always dark: the `dark` class scopes the dark tokens to the call screen in either theme.
+      className="dark relative min-h-[100dvh] bg-charcoal text-charcoal-foreground flex flex-col overflow-hidden outline-none"
       style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      {/* ── Remote video background ── */}
+      <h1 className="sr-only">Video call with {BRAND_NAME}</h1>
+
+      {/* Remote video background */}
       <div className="absolute inset-0 z-0">
         <video
           ref={remoteRef}
           autoPlay
           playsInline
+          aria-label="Expert's video"
           className="w-full h-full object-cover"
         />
         {/* Dark vignette overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/70" />
+        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-charcoal/50 via-transparent to-charcoal/70" />
       </div>
 
-      {/* ── End-call dialog ── */}
+      {/* End-call dialog */}
       <EndCallDialog />
 
-      {/* ── Top bar ── */}
+      {/* Top bar */}
       <div className="relative z-10 flex items-center justify-between px-5 pt-4 pb-2">
         <BrandWatermark />
         <div className="text-right">
-          <p className="text-xs text-white/50 leading-tight">
+          <p role="status" className="text-xs leading-tight text-charcoal-foreground/70">
             {status === 'ringing' && 'Connecting…'}
-            {status === 'connected' && 'In Call'}
-            {status === 'ended' && 'Call Ended'}
-            {status === 'error' && 'Error'}
-            {status === 'init' && 'Initialising…'}
+            {status === 'connected' && 'In call'}
+            {status === 'ended' && 'Call ended'}
+            {status === 'error' && 'Not connected'}
+            {status === 'init' && 'Starting…'}
           </p>
           {callId && status !== 'error' && (
-            <p className="text-[10px] text-white/30 leading-tight">ID {callId.slice(0, 8)}</p>
+            <p className="text-[10px] leading-tight tabular-nums text-charcoal-foreground/60">ID {callId.slice(0, 8)}</p>
           )}
         </div>
       </div>
 
-      {/* ── Status badges ── */}
+      {/* Status badges */}
       <div className="relative z-10 flex justify-center mt-2">
         <AnimatePresence>
           {status === 'connected' && (
@@ -347,14 +388,11 @@ const VideoCallPage = () => {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="flex items-center gap-2 bg-emerald-500/20 border border-emerald-400/30 rounded-full px-4 py-1.5 backdrop-blur-sm"
+              className="flex items-center gap-2 rounded-chip border border-charcoal-foreground/15 bg-charcoal/70 px-3 py-1.5 backdrop-blur-sm"
             >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              <span className="text-xs text-emerald-300 font-medium">Connected</span>
-              <span className="text-white/30 text-xs">·</span>
+              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-status-success-fg" />
+              <span className="text-xs font-medium text-charcoal-foreground">Connected</span>
+              <span aria-hidden="true" className="text-xs text-charcoal-foreground/60">·</span>
               <CallTimer active={status === 'connected'} />
             </motion.div>
           )}
@@ -364,26 +402,26 @@ const VideoCallPage = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex items-center gap-2 bg-highlight/20 border border-highlight/21 rounded-full px-4 py-1.5 backdrop-blur-sm"
+              className="flex items-center gap-2 rounded-chip border border-highlight-soft/25 bg-charcoal/70 px-3 py-1.5 backdrop-blur-sm"
             >
-              <Loader2 className="w-3.5 h-3.5 text-highlight-soft animate-spin" />
+              <Loader2 aria-hidden="true" className="size-3.5 animate-spin text-highlight-soft" />
               <span className="text-xs text-highlight-soft font-medium">Connecting…</span>
             </motion.div>
           )}
           {status === 'ended' && (
             <motion.div
               key="ended"
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 backdrop-blur-sm"
+              className="flex items-center gap-2 rounded-chip border border-charcoal-foreground/20 bg-charcoal/70 px-3 py-1.5 backdrop-blur-sm"
             >
-              <span className="text-xs text-white/70 font-medium">Call ended — returning…</span>
+              <span className="text-xs font-medium text-charcoal-foreground/80">Call ended. Returning…</span>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* ── Ringing / Error overlays ── */}
+      {/* Ringing and error overlays */}
       <AnimatePresence>
         {status === 'ringing' && (
           <motion.div
@@ -396,15 +434,15 @@ const VideoCallPage = () => {
             <div className="text-center">
               {/* Pulsing rings */}
               <div className="relative w-28 h-28 mx-auto mb-6">
-                <span className="absolute inset-0 rounded-full border-2 border-highlight/21 animate-ping" />
-                <span className="absolute inset-3 rounded-full border-2 border-highlight/28 animate-ping [animation-delay:300ms]" />
-                <span className="absolute inset-6 rounded-full border-2 border-highlight/42 animate-ping [animation-delay:600ms]" />
-                <div className="absolute inset-8 rounded-full bg-gradient-to-br from-highlight/70 to-highlight flex items-center justify-center shadow-xl shadow-highlight/13">
-                  <img src="/white_logo.png" alt="Ishaputra Botanicals" className="w-8 h-8 object-contain" />
+                <span aria-hidden="true" className="absolute inset-0 rounded-full border-2 border-highlight-soft/20 animate-ping" />
+                <span aria-hidden="true" className="absolute inset-3 rounded-full border-2 border-highlight-soft/28 animate-ping [animation-delay:300ms]" />
+                <span aria-hidden="true" className="absolute inset-6 rounded-full border-2 border-highlight-soft/42 animate-ping [animation-delay:600ms]" />
+                <div className="absolute inset-8 flex items-center justify-center rounded-full bg-primary shadow-xl">
+                  <img src="/white_logo.png" alt="" className="h-8 w-8 object-contain" />
                 </div>
               </div>
-              <p className="text-white/90 font-medium">Connecting to expert…</p>
-              <p className="text-white/50 text-sm mt-1">Please wait</p>
+              <p className="font-medium text-charcoal-foreground">Connecting to an expert…</p>
+              <p className="mt-1 text-sm text-charcoal-foreground/70">This takes a few seconds</p>
             </div>
           </motion.div>
         )}
@@ -413,83 +451,77 @@ const VideoCallPage = () => {
             key="error"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="absolute inset-0 z-10 flex items-center justify-center"
+            className="absolute inset-0 z-raised flex items-center justify-center"
           >
-            <div className="mx-6 bg-charcoal/90 border border-red-500/30 rounded-3xl px-6 py-8 text-center max-w-xs shadow-2xl backdrop-blur-sm">
-              <div className="w-14 h-14 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
-                <PhoneOff className="w-7 h-7 text-red-400" />
+            <div role="alert" className="mx-6 max-w-xs rounded-panel border border-charcoal-foreground/10 bg-charcoal/95 px-6 py-8 text-center shadow-2xl">
+              <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-card bg-charcoal-foreground/10 text-highlight-soft">
+                <PhoneOff aria-hidden="true" className="size-6" />
               </div>
-              <p className="text-white font-semibold mb-2">Connection Failed</p>
-              <p className="text-white/50 text-sm mb-6">{error || 'Unable to connect.'}</p>
+              <h2 className="mb-2 font-heading text-base font-semibold text-charcoal-foreground">Call not connected</h2>
+              <p className="mb-6 text-sm leading-relaxed text-charcoal-foreground/75 [text-wrap:pretty]">{error || CONNECT_FAILED}</p>
               <button
+                type="button"
                 onClick={() => goBack()}
-                className="w-full py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-sm font-medium transition"
+                className="h-11 w-full rounded-control bg-charcoal-foreground/10 text-sm font-medium text-charcoal-foreground transition-[background-color,transform] duration-hover ease-out hover:bg-charcoal-foreground/15 active:scale-[0.97]"
               >
-                Go Back
+                Go back
               </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Spacer ── */}
+      {/* Spacer */}
       <div className="flex-1" />
 
-      {/* ── Local (PiP) video ── */}
-      <div className="absolute bottom-32 right-4 z-20">
+      {/* Local (PiP) video: hidden when the call could not start (owner decision) */}
+      <div className={`absolute bottom-32 right-4 z-20 ${status === 'error' ? 'hidden' : ''}`}>
         <div className="relative">
           <video
             ref={localRef}
             autoPlay
             playsInline
             muted
-            className="w-28 h-40 sm:w-36 sm:h-52 rounded-2xl object-cover border-2 border-white/20 shadow-2xl bg-neutral-900"
+            aria-label="Your video"
+            className="h-40 w-28 rounded-card border-2 border-charcoal-foreground/20 bg-charcoal object-cover shadow-2xl sm:h-52 sm:w-36"
             style={{ filter: camOff ? 'brightness(0.3)' : 'none' }}
           />
           {camOff && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/40">
-              <VideoOff className="w-6 h-6 text-white/60" />
+            <div className="absolute inset-0 flex items-center justify-center rounded-card bg-charcoal/40">
+              <VideoOff aria-hidden="true" className="size-6 text-charcoal-foreground/70" />
             </div>
           )}
-          {/* Amber border accent */}
-          <div className="absolute -inset-0.5 rounded-2xl border border-highlight/14 pointer-events-none" />
+          <div aria-hidden="true" className="pointer-events-none absolute -inset-0.5 rounded-card border border-highlight-soft/14" />
         </div>
       </div>
 
-      {/* ── Controls bar ── */}
-      <div className="relative z-20 pb-8 pt-3 px-4">
-        {/* Glass pill */}
-        <div className="bg-black/50 backdrop-blur-2xl border border-white/12 rounded-[32px] px-6 py-5 max-w-sm mx-auto shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
+      {/* Controls dock: hidden when the call could not start (owner decision) */}
+      <div className={`relative z-20 px-4 pb-8 pt-3 ${status === 'error' ? 'hidden' : ''}`}>
+        <div className="mx-auto max-w-sm rounded-panel border border-charcoal-foreground/12 bg-charcoal/70 px-5 py-5 shadow-2xl backdrop-blur-xl">
           <div className="flex items-center justify-between">
             {/* Mute */}
             <CtrlBtn active={muted} onClick={toggleMute} label={muted ? 'Unmute' : 'Mute'}>
-              {muted
-                ? <MicOff className="w-5 h-5 text-white" />
-                : <Mic className="w-5 h-5 text-white/90" />
-              }
+              {muted ? <MicOff aria-hidden="true" className="size-5" /> : <Mic aria-hidden="true" className="size-5" />}
             </CtrlBtn>
 
             {/* Flip camera */}
-            <CtrlBtn onClick={switchCamera} label="Flip Cam">
-              <SwitchCamera className="w-5 h-5 text-white/90" />
+            <CtrlBtn onClick={switchCamera} label="Flip camera">
+              <SwitchCamera aria-hidden="true" className="size-5" />
             </CtrlBtn>
 
-            {/* Hang up — centre, larger */}
-            <CtrlBtn danger onClick={() => setShowConfirmEnd(true)} label="End Call" large>
-              <PhoneOff className="w-6 h-6 text-white" />
+            {/* Hang up: centre, larger */}
+            <CtrlBtn id="call-end-button" danger onClick={() => setShowConfirmEnd(true)} label="End call" large>
+              <PhoneOff aria-hidden="true" className="size-6" />
             </CtrlBtn>
 
             {/* Camera on/off */}
-            <CtrlBtn active={camOff} onClick={toggleCam} label={camOff ? 'Start Cam' : 'Stop Cam'}>
-              {camOff
-                ? <VideoOff className="w-5 h-5 text-white" />
-                : <VideoIcon className="w-5 h-5 text-white/90" />
-              }
+            <CtrlBtn active={camOff} onClick={toggleCam} label={camOff ? 'Start camera' : 'Stop camera'}>
+              {camOff ? <VideoOff aria-hidden="true" className="size-5" /> : <VideoIcon aria-hidden="true" className="size-5" />}
             </CtrlBtn>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 

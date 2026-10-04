@@ -6,11 +6,15 @@ import {
   policySectionClassName,
 } from "@/components/PolicyPageLayout";
 import PolicyPageLayout from "@/components/PolicyPageLayout";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { Link } from "react-router-dom";
 import { SITE_HOST, SITE_URL } from "@/lib/siteUrl";
 
 const TermsConditions = () => {
+  usePageMeta({ title: "Terms and conditions", description: "The terms for buying from Ishaputra Botanicals: prices, orders, payments, shipping and returns." });
+
   return (
-    <PolicyPageLayout title="Terms & Conditions" effectiveDate="Effective Date: February 17, 2026">
+    <PolicyPageLayout title="Terms and conditions" effectiveDate="Draft: pending review by Ishaputra Botanicals">
       <>
             {/* Introduction */}
             <section className={policySectionClassName}>
@@ -21,7 +25,7 @@ const TermsConditions = () => {
 
             {/* Products & Pricing */}
             <section className={policySectionClassName}>
-              <h2 className={policyHeadingClassName}>1. Products & Pricing</h2>
+              <h2 className={policyHeadingClassName}>1. Products and pricing</h2>
               <ul className={policyListClassName}>
                 <li>All prices are listed in INR (₹). We reserve the right to change prices at any time without prior notice.</li>
                 <li>Product images are for representation purposes. Slight variations may occur due to lighting and photography.</li>
@@ -53,7 +57,7 @@ const TermsConditions = () => {
             <section className={policySectionClassName}>
               <h2 className={policyHeadingClassName}>4. Shipping</h2>
               <p className={policyBodyClassName}>
-                We deliver across India only. Delivery timelines are mentioned in our Shipping Policy.
+                We deliver across India only. Delivery times are listed in our <Link to="/shipping-policy" className={policyLinkClassName}>shipping policy</Link>.
               </p>
             </section>
 
@@ -61,13 +65,13 @@ const TermsConditions = () => {
             <section className={policySectionClassName}>
               <h2 className={policyHeadingClassName}>5. Returns</h2>
               <p className={policyBodyClassName}>
-                Product returns are governed by our Return & Replacement Policy. We offer product replacements for eligible items.
+                Returns and refunds follow our <Link to="/cancellation-refund-policy" className={policyLinkClassName}>cancellation and refund policy</Link>.
               </p>
             </section>
 
             {/* Governing Law */}
             <section className={policySectionClassName}>
-              <h2 className={policyHeadingClassName}>6. Governing Law</h2>
+              <h2 className={policyHeadingClassName}>6. Governing law</h2>
               <p className={policyBodyClassName}>
                 These terms shall be governed by the laws of India.
               </p>

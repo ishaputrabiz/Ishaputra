@@ -1,50 +1,95 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { subscribeToUserOrders, Order, requestReturn, cancelReturn } from '@/services/orderService';
+import { subscribeToOrder, Order, requestReturn, cancelReturn } from '@/services/orderService';
 import Header from '@/components/Header';
 import MobileHeader from '@/components/MobileHeader';
 import MobileSearchBar from '@/components/MobileSearchBar';
 import CategoryIconNav from '@/components/CategoryIconNav';
 import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/MobileBottomNav';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import EmptyState from '@/components/EmptyState';
+import { DetailSkeleton } from '@/components/skeletons';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
+import { Notice } from '@/components/ui/notice';
+import { Spinner } from '@/components/ui/spinner';
+import { STATUS_TONE_CLASSES } from '@/components/ui/status-badge';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { toast } from 'sonner';
-import html2canvas from 'html2canvas';
-import { generateInvoicePDF } from '@/services/invoiceService';
 import { db } from '@/config/firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { hasUserReviewedProduct } from '@/services/reviewService';
 import { createOrderMessage, OrderMessage, subscribeToCustomerOrderMessages } from '@/services/orderMessagingService';
 import { notifyOrder } from '@/services/pushNotificationService';
 import {
-  Loader2,
-  Package,
   ArrowLeft,
   Truck,
   ExternalLink,
   Clock,
-  CheckCircle2,
-  XCircle,
+  Check,
   MapPin,
   Home,
   ChevronRight,
   ChevronDown,
   Ban,
   Mail,
-  X,
   Download,
   RotateCcw as ReturnIcon,
   Share2,
   MessageCircle,
   Star,
   Coins,
+  Phone,
+  PenLine,
+  SearchX,
+  Shuffle,
+  Undo2,
+  PackageOpen,
+  PackageX,
+  PackageSearch,
+  HeartCrack,
+  TriangleAlert,
+  CircleCheck,
+  type LucideIcon,
 } from 'lucide-react';
 import { SmartImage } from "@/components/ui/smart-image";
 import { BRAND } from "@/config/brand";
 import { SITE_HOST } from "@/lib/siteUrl";
 import { isWithinReturnWindow } from "@/lib/returnWindow";
+import { getOrderStatus } from "@/lib/orderStatus";
+import { formatDate as formatDay, formatDateTime, formatINR } from "@/lib/format";
+import { cn } from "@/lib/utils";
+
+/**
+ * Return reasons. `reason` is the value saved on the order (admin reads it),
+ * so it never changes; `label` is only what the customer sees.
+ */
+const RETURN_REASONS: Array<{ reason: string; label: string; icon: LucideIcon }> = [
+  { reason: 'Quality not as expected', label: 'Quality not as expected', icon: SearchX },
+  { reason: 'Received wrong item', label: 'Received the wrong item', icon: Shuffle },
+  { reason: "Don't want anymore", label: "Don't want it anymore", icon: Undo2 },
+  { reason: 'Missing in package', label: 'Item missing from the package', icon: PackageOpen },
+  { reason: 'Damaged/Broken item', label: 'Arrived damaged or broken', icon: PackageX },
+  { reason: 'Size/Fit issue', label: 'Not right for my skin or hair', icon: HeartCrack },
+];
+
+/** Warm the PDF and image libraries when the pointer or focus reaches a button that needs them. */
+const warmInvoice = () => { void import('@/services/invoiceService'); };
+const warmReceipt = () => { void import('html2canvas'); };
+
+/** Colours for the shared receipt image (drawn off screen, so plain hex). */
+const RECEIPT = {
+  text: '#1B1A18',
+  muted: '#6B645C',
+  rule: '#E7E0D4',
+  panel: '#F6F2EB',
+  accent: '#A4532C',
+  discount: '#4E6B3C',
+  paper: '#FFFDF9',
+};
 
 /**
  * Loyalty points and wallet cashback that paid part of an order, as price rows
@@ -65,21 +110,21 @@ const rewardsPaidRows = (order: Order): Array<[string, number]> => {
 const OrderStatusStepper = ({ status, isReturnPickedState = false }: { status: string; isReturnPickedState?: boolean }) => {
   // Check if this is a return flow
   const isReturnFlow = ['returnRequested', 'returnScheduled', 'returned'].includes(status) || isReturnPickedState;
-  
+
   // Normal order steps (canonical workflow)
   const orderSteps = [
-    { key: 'pending', label: 'Order\nPlaced' },
+    { key: 'pending', label: 'Order\nplaced' },
     { key: 'processing', label: 'Processing' },
     { key: 'packed', label: 'Packed' },
-    { key: 'outForDelivery', label: 'Out for\nDelivery' },
+    { key: 'outForDelivery', label: 'Out for\ndelivery' },
     { key: 'delivered', label: 'Delivered' },
   ];
 
   // Return flow steps (4 steps including the interim 'picked' state)
   const returnSteps = [
-    { key: 'returnRequested', label: 'Return\nRequested' },
-    { key: 'returnScheduled', label: 'Return\nScheduled' },
-    { key: 'picked', label: 'Return\nPickup' },
+    { key: 'returnRequested', label: 'Return\nrequested' },
+    { key: 'returnScheduled', label: 'Return\nscheduled' },
+    { key: 'picked', label: 'Return\npickup' },
     { key: 'returned', label: 'Returned' },
   ];
 
@@ -87,15 +132,16 @@ const OrderStatusStepper = ({ status, isReturnPickedState = false }: { status: s
 
   const getStepIndex = (currentStatus: string) => {
     if (isReturnFlow) {
-      // In return context, 'picked' is a valid step — do not normalize it away
+      // In return context, 'picked' is a valid step, do not normalize it away
       const index = steps.findIndex(s => s.key === currentStatus);
       return index >= 0 ? index : 0;
     }
     // Normalise legacy statuses to canonical ones for the normal stepper.
+    // A failed delivery got as far as out for delivery.
     const normalised =
       currentStatus === 'shipped' || currentStatus === 'assigned'
         ? 'packed'
-        : currentStatus === 'picked'
+        : currentStatus === 'picked' || currentStatus === 'deliveryFailed'
           ? 'outForDelivery'
           : currentStatus;
     const index = steps.findIndex(s => s.key === normalised);
@@ -104,57 +150,91 @@ const OrderStatusStepper = ({ status, isReturnPickedState = false }: { status: s
 
   const currentIndex = getStepIndex(status);
   const isCancelled = status === 'cancelled';
+  const isAttempted = status === 'deliveryFailed';
+  const progress = isCancelled ? 0 : currentIndex / (steps.length - 1);
+  // The track runs from the centre of the first node to the centre of the last.
+  const inset = `${50 / steps.length}%`;
 
-  // For return flow, use emerald color scheme
-  const activeColor = isReturnFlow ? 'bg-emerald-500' : 'bg-primary';
-  const activeBorder = isReturnFlow ? 'border-emerald-500' : 'border-primary';
-  const activeText = isReturnFlow ? 'text-emerald-600' : 'text-primary';
-  const activeDot = isReturnFlow ? 'bg-emerald-500' : 'bg-primary';
+  // Return flow uses the returns tone; everything else copper.
+  const doneNode = isReturnFlow
+    ? 'border-status-returns-fg bg-status-returns-fg text-status-returns-bg'
+    : 'border-primary bg-primary text-primary-foreground';
+  const doneLine = isReturnFlow ? 'bg-status-returns-fg' : 'bg-primary';
 
   return (
-    <div className="flex items-start justify-between relative" style={{ fontFamily: "var(--font-body)" }}>
-      {/* Progress Line Background */}
-      <div className="absolute top-4 left-6 right-6 h-0.5 bg-foreground/10 z-0" />
-      
-      {/* Progress Line Active */}
-      <div 
-        className={`absolute top-4 left-6 h-0.5 z-0 transition-all duration-500 ${isCancelled ? 'bg-red-500' : activeColor}`}
-        style={{ 
-          width: isCancelled ? '0%' : `calc(${(currentIndex / (steps.length - 1)) * 100}% - 12px)`,
-        }}
-      />
-      
+    <ol aria-label="Order progress" className="relative flex items-start justify-between">
+      {/* Track */}
+      <li
+        aria-hidden="true"
+        className={cn(
+          'absolute top-4 -translate-y-1/2',
+          isCancelled ? 'border-t-2 border-dashed border-status-danger-line' : 'h-0.5 bg-foreground/10',
+        )}
+        style={{ left: inset, right: inset }}
+      >
+        {!isCancelled && (
+          <span
+            className={cn('absolute inset-0 origin-left transition-transform duration-500 ease-in-out', doneLine)}
+            style={{ transform: `scaleX(${progress})` }}
+          />
+        )}
+      </li>
+
       {steps.map((step, index) => {
-        const isCompleted = !isCancelled && index <= currentIndex;
+        const attempted = isAttempted && index === currentIndex;
+        const isCompleted = !isCancelled && !attempted && index <= currentIndex;
         const isCurrent = !isCancelled && index === currentIndex;
-        
+        const label = attempted ? 'Attempted' : step.label;
+        const state = isCancelled ? '' : attempted ? ', delivery attempted' : isCurrent ? ', current step' : isCompleted ? ', done' : '';
+
         return (
-          <div key={step.key} className="flex flex-col items-center relative z-10" style={{ width: `${100 / steps.length}%`, fontFamily: "var(--font-body)" }}>
+          <li
+            key={step.key}
+            aria-current={isCurrent ? 'step' : undefined}
+            className="relative z-10 flex flex-col items-center"
+            style={{ width: `${100 / steps.length}%` }}
+          >
             {/* Step Circle */}
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-              isCancelled 
-                ? 'bg-foreground/[0.06] border-foreground/15'
-                : isCompleted 
-                  ? `${activeColor} ${activeBorder}` 
-                  : 'bg-card border-foreground/15'
-            }`}>
-              {isCompleted ? (
-                <CheckCircle2 className="w-5 h-5 text-white" />
-              ) : (
-                <div className={`w-2 h-2 rounded-full ${isCurrent ? activeDot : 'bg-gray-300'}`} />
+            <div
+              aria-hidden="true"
+              className={cn(
+                'flex size-8 items-center justify-center rounded-full border-2 transition-[background-color,border-color,color] duration-hover ease-out',
+                isCancelled
+                  ? 'border-dashed border-status-danger-line bg-card'
+                  : attempted
+                    ? 'border-transparent bg-status-danger-bg text-status-danger-fg ring-2 ring-status-danger-line'
+                    : isCompleted
+                      ? doneNode
+                      : 'border-foreground/15 bg-card',
               )}
+            >
+              {attempted ? (
+                <TriangleAlert className="size-4" />
+              ) : isCompleted ? (
+                <Check className="size-4 [stroke-width:2.5]" />
+              ) : !isCancelled ? (
+                <span className="size-2 rounded-full bg-foreground/20" />
+              ) : null}
             </div>
-            
+
             {/* Step Label */}
-            <p className={`text-[10px] text-center mt-2 leading-tight whitespace-pre-line ${
-              isCompleted ? `${activeText} font-medium` : 'text-muted-foreground/70'
-            }`}>
-              {step.label}
+            <p
+              className={cn(
+                'mt-2 whitespace-pre-line text-center text-[11px] leading-tight',
+                attempted
+                  ? 'font-semibold text-status-danger-fg'
+                  : isCompleted
+                    ? 'font-semibold text-foreground'
+                    : 'text-muted-foreground',
+              )}
+            >
+              {label}
+              <span className="sr-only">{state}</span>
             </p>
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 };
 
@@ -173,6 +253,10 @@ const OrderDetailsPage = () => {
   const receiptRef = useRef<HTMLDivElement>(null);
   const conversationSectionRef = useRef<HTMLDivElement>(null);
   const conversationInputRef = useRef<HTMLTextAreaElement>(null);
+  // The sheets open from state, not a Radix trigger, so they hand focus back here on close.
+  const shareTriggerRef = useRef<HTMLButtonElement>(null);
+  const returnTriggerRef = useRef<HTMLButtonElement>(null);
+  const cancelReturnBtnRef = useRef<HTMLButtonElement>(null);
 
   // Return modal states
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -183,6 +267,10 @@ const OrderDetailsPage = () => {
 
   // Cancel Return state
   const [cancellingReturn, setCancellingReturn] = useState(false);
+  const [confirmCancelReturn, setConfirmCancelReturn] = useState(false);
+  // The single order listener could not find (or was refused) this order, or failed.
+  const [loadState, setLoadState] = useState<'ok' | 'missing' | 'error'>('ok');
+  const [reloadKey, setReloadKey] = useState(0);
 
   const handleCancelReturn = async () => {
     if (!order) return;
@@ -222,35 +310,39 @@ const OrderDetailsPage = () => {
     }
 
     setLoading(true);
-    
-    const unsubscribe = subscribeToUserOrders(
-      user.uid,
-      (fetchedOrders) => {
-        const foundOrder = fetchedOrders.find(o => o.id === orderId);
-        if (foundOrder) {
+    setLoadState('ok');
+
+    // Listen to this one order document only (not every order the customer has).
+    // Someone else's order is refused by the rules or fails the owner check:
+    // both show the not-found state.
+    const unsubscribe = subscribeToOrder(
+      orderId,
+      (foundOrder) => {
+        if (foundOrder && foundOrder.userId === user.uid) {
           setOrder(foundOrder);
+          setLoadState('ok');
         } else {
-          toast.error('Order not found');
-          if (window.innerWidth >= 1024) {
-            navigate('/account');
-          } else {
-            navigate('/account/orders');
-          }
+          setOrder(null);
+          setLoadState('missing');
         }
         setLoading(false);
       },
       (error) => {
         console.error('Error fetching order:', error);
-        toast.error('Failed to load order details');
+        setOrder(null);
+        setLoadState((error as { code?: string })?.code === 'permission-denied' ? 'missing' : 'error');
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [user, orderId, navigate]);
+  }, [user, orderId, navigate, reloadKey]);
 
+  // Messages are read only once the order is known to be this customer's,
+  // so a wrong link does not ask for a conversation the rules will refuse.
+  const hasOrder = !!order;
   useEffect(() => {
-    if (!user || !orderId) return;
+    if (!user || !orderId || !hasOrder) return;
 
     const unsubscribe = subscribeToCustomerOrderMessages(
       orderId,
@@ -261,7 +353,7 @@ const OrderDetailsPage = () => {
     );
 
     return () => unsubscribe();
-  }, [user, orderId]);
+  }, [user, orderId, hasOrder]);
 
   // Check if user has already rated this delivery
   useEffect(() => {
@@ -299,7 +391,7 @@ const OrderDetailsPage = () => {
         createdAt: serverTimestamp(),
       });
       setHasRated(true);
-      toast.success('Thank you for your rating!');
+      toast.success('Thanks for rating your delivery.');
     } catch {
       toast.error('Failed to submit rating. Please try again.');
     } finally {
@@ -307,49 +399,11 @@ const OrderDetailsPage = () => {
     }
   };
 
-  // Format date
-  const formatDate = (date: Date | { seconds: number; nanoseconds: number } | undefined) => {
-    if (!date) return 'N/A';
-    
-    let jsDate: Date;
-    if (date instanceof Date) {
-      jsDate = date;
-    } else if (typeof date === 'object' && 'seconds' in date) {
-      jsDate = new Date(date.seconds * 1000);
-    } else {
-      return 'Invalid Date';
-    }
+  // Dates: '3 Oct 2026, 8:01 pm'
+  const formatDate = (date: unknown) => formatDateTime(date) || 'Not available';
 
-    return jsDate.toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
-
-  // Get status label
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending': return 'Pending';
-      case 'processing': return 'Processing';
-      case 'packed': return 'Packed';
-      case 'shipped': return 'Packed';
-      case 'assigned': return 'Packed';
-      case 'picked': return 'Out for Delivery';
-      case 'outForDelivery': return 'Out for Delivery';
-      case 'delivered': return 'Delivered';
-      case 'cancelled': return 'Cancelled';
-      case 'returnRequested': return 'Return Requested';
-      case 'returnScheduled': return 'Return Scheduled';
-      case 'returned': return 'Returned';
-      case 'refunded': return 'Refunded';
-      case 'deliveryFailed': return 'Delivery Attempted';
-      default: return status.charAt(0).toUpperCase() + status.slice(1);
-    }
-  };
+  // Status wording comes from the shared map (src/lib/orderStatus.ts).
+  const getStatusLabel = (status: string) => getOrderStatus(status, order ?? undefined).label;
 
   // One line about the points this order earned. The server credits them on
   // delivery, freezes them while a return is open and voids them if the order
@@ -364,7 +418,7 @@ const OrderDetailsPage = () => {
       return `${pts} ${n === 1 ? 'was' : 'were'} not credited${why}`;
     }
     const unlockAt = typeof o.pointsUnlockAt?.toDate === 'function' ? o.pointsUnlockAt.toDate() : null;
-    if (unlockAt && unlockAt.getTime() > Date.now()) return `You earned ${pts} · usable from ${formatDate(unlockAt)}`;
+    if (unlockAt && unlockAt.getTime() > Date.now()) return `You earned ${pts} · usable from ${formatDay(unlockAt)}`;
     return `${pts} added to your wallet`;
   };
 
@@ -483,11 +537,13 @@ const OrderDetailsPage = () => {
       
       await new Promise(resolve => setTimeout(resolve, 100));
       
+      // Loaded on demand: html2canvas is large and only needed here.
+      const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(receiptRef.current, {
-        backgroundColor: '#ffffff',
+        backgroundColor: RECEIPT.paper,
         scale: 2,
         useCORS: true,
-        logging: true,
+        logging: false,
         allowTaint: true,
         width: 380,
         height: receiptRef.current.scrollHeight,
@@ -524,7 +580,7 @@ const OrderDetailsPage = () => {
       const imageBlob = await generateReceiptImage(order);
       
       if (!imageBlob) {
-        alert('Failed to generate receipt image. Please try again.');
+        toast.error('Unable to create the receipt image. Try again.');
         setIsGeneratingImage(false);
         return;
       }
@@ -546,15 +602,15 @@ const OrderDetailsPage = () => {
       
       if (platform === 'native' && canShareFiles) {
         await navigator.share({
-          title: `Order Receipt - ORD-${order.orderId}`,
+          title: `Order receipt ORD-${order.orderId}`,
           files: [file],
         });
       } else if (platform === 'download') {
         downloadImage();
-        alert('Receipt image saved to your downloads!');
+        toast.success('Receipt saved to your downloads.');
       } else if (canShareFiles) {
         await navigator.share({
-          title: `Order Receipt - ORD-${order.orderId}`,
+          title: `Order receipt ORD-${order.orderId}`,
           files: [file],
         });
       } else {
@@ -562,13 +618,13 @@ const OrderDetailsPage = () => {
         
         setTimeout(() => {
           if (platform === 'whatsapp') {
-            window.open('https://web.whatsapp.com/', '_blank');
-            alert('Receipt downloaded! Open WhatsApp and attach the image from your Downloads folder.');
+            window.open('https://web.whatsapp.com/', '_blank', 'noopener,noreferrer');
+            toast.success('Receipt downloaded. Open WhatsApp and attach it from your Downloads folder.');
           } else if (platform === 'email') {
-            window.open(`mailto:?subject=Order Receipt - ORD-${order.orderId}`, '_blank');
-            alert('Receipt downloaded! Attach the image from your Downloads folder to the email.');
+            window.open(`mailto:?subject=Order receipt ORD-${order.orderId}`, '_blank', 'noopener,noreferrer');
+            toast.success('Receipt downloaded. Attach it to the email from your Downloads folder.');
           } else {
-            alert('Receipt image downloaded! You can now share it on any platform.');
+            toast.success('Receipt downloaded. You can share it anywhere.');
           }
         }, 500);
       }
@@ -577,49 +633,33 @@ const OrderDetailsPage = () => {
     } catch (error) {
       console.error('Error sharing receipt:', error);
       if ((error as Error).name !== 'AbortError') {
-        alert('Failed to share receipt. Please try the "Save" option to download the image.');
+        toast.error('Unable to share the receipt. Use Save to download it instead.');
       }
     } finally {
       setIsGeneratingImage(false);
     }
   };
 
-  // Download Invoice as PDF — delegated to invoiceService for a clean,
+  // Download Invoice as PDF, delegated to invoiceService for a clean,
   // consistent layout that consumes the saved order pricing snapshot.
+  // jspdf is loaded only when the customer asks for the invoice.
   const downloadInvoice = async () => {
     if (!order) return;
     setIsDownloadingInvoice(true);
     try {
+      const { generateInvoicePDF } = await import('@/services/invoiceService');
       await generateInvoicePDF(order);
     } catch (error) {
       console.error('Error generating invoice PDF:', error);
-      toast.error('Failed to generate invoice. Please try again.');
+      toast.error('Unable to create the invoice. Try again.');
     } finally {
       setIsDownloadingInvoice(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen tx-paper flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!order) {
-    return null;
-  }
-
-  // Price details: points and cashback are listed so the lines add up to
-  // order.total (paid after them). GST inside GST-inclusive prices is already
-  // in the selling price, so it is not counted again as a fee.
-  const rewardsRows = rewardsPaidRows(order);
-  const totalFees = (order.deliveryCharge || 0) + (order.gstInclusive ? 0 : order.taxAmount || 0);
-  const pointsEarnedNote = getPointsEarnedNote(order);
-
-  return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,hsl(var(--highlight)/0.05)_0%,rgba(255,255,255,1)_20%),linear-gradient(135deg,hsl(var(--primary)/0.03)_0%,rgba(255,255,255,1)_55%)] dark:bg-[linear-gradient(180deg,rgba(19,17,15,0.98)_0%,rgba(14,14,15,0.98)_100%)]" style={{ fontFamily: "var(--font-body)" }}>
+  // Page chrome (headers, footer, bottom nav) around any state of the page.
+  const renderShell = (content: React.ReactNode) => (
+    <div className="min-h-dvh tx-paper">
       {/* Desktop Header + Nav */}
       <div className="hidden lg:block">
         <Header />
@@ -630,151 +670,229 @@ const OrderDetailsPage = () => {
         <MobileHeader />
         <MobileSearchBar />
       </div>
-      
+      <main id="main" tabIndex={-1} className="outline-none">
+        {content}
+      </main>
+      <Footer />
+      {/* Mobile bottom navigation: keeps the side menu reachable on phones */}
+      <div className="lg:hidden">
+        <MobileBottomNav />
+      </div>
+    </div>
+  );
+
+  const goBack = () => {
+    if (window.innerWidth >= 1024) { navigate('/account'); return; }
+    navigate('/account/orders');
+  };
+
+  if (loading) {
+    return renderShell(
+      <div className="mx-auto max-w-4xl px-4 pb-24 pt-4">
+        <DetailSkeleton label="Loading your order" />
+      </div>
+    );
+  }
+
+  if (!order) {
+    const failed = loadState === 'error';
+    return renderShell(
+      <div className="mx-auto max-w-4xl px-4 pb-24 pt-4">
+        <div className="panel tx-sheet">
+          <EmptyState
+            as="h1"
+            icon={PackageSearch}
+            title={failed ? 'Unable to load this order' : "We can't find this order"}
+            description={failed ? 'Check your connection and try again.' : 'It may belong to another account.'}
+            action={
+              failed
+                ? { label: 'Try again', onClick: () => setReloadKey((k) => k + 1) }
+                : { label: 'Back to my orders', to: '/account/orders' }
+            }
+            secondaryAction={failed ? { label: 'Back to my orders', to: '/account/orders' } : undefined}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Price details: points and cashback are listed so the lines add up to
+  // order.total (paid after them). GST inside GST-inclusive prices is already
+  // in the selling price, so it is not counted again as a fee.
+  const rewardsRows = rewardsPaidRows(order);
+  const totalFees = (order.deliveryCharge || 0) + (order.gstInclusive ? 0 : order.taxAmount || 0);
+  const pointsEarnedNote = getPointsEarnedNote(order);
+
+  const isReturnPickup = order.status === 'picked' && !!(order as any).returnScheduledAt;
+  const statusDisplay = isReturnPickup
+    ? { label: 'Return pickup', tone: 'returns' as const, icon: Truck }
+    : getOrderStatus(order.status, order);
+  const StatusIcon = statusDisplay.icon;
+
+  const reasonInvalid = !returnReason || (returnReason === 'Other reason' && !customReturnReason.trim());
+
+  const closeReturnSheet = () => {
+    setShowReturnModal(false);
+    setReturnReason('');
+    setCustomReturnReason('');
+    setReturnStep('reason');
+  };
+
+  const sectionHeading = 'font-heading text-[15px] font-semibold tracking-tight text-foreground';
+  const eyebrow = 'text-[11px] font-bold uppercase tracking-[0.18em]';
+  const rowButton =
+    'focus-inset flex min-h-[56px] w-full items-center justify-between gap-3 px-4 py-2 text-left text-sm font-medium text-foreground transition-[background-color] duration-hover ease-out hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-60';
+
+  const productSummary = (
+    <div>
+      <div className="flex gap-3">
+        <div className="tile-img size-16 shrink-0 overflow-hidden">
+          <SmartImage src={order.items[0]?.image} alt="" className="h-full w-full object-cover" preset="thumb" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 text-sm font-semibold text-foreground">{order.items[0]?.name}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">Quantity: {order.items[0]?.quantity}</p>
+          <p className="mt-1 text-base font-semibold text-foreground tabular-nums">{formatINR(order.items[0]?.price)}</p>
+        </div>
+      </div>
+      {order.items.length > 1 && (
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          +{order.items.length - 1} more {order.items.length - 1 === 1 ? 'item' : 'items'} will be included in this return
+        </p>
+      )}
+    </div>
+  );
+
+  // Partner box inside the OTP notices.
+  const partnerBox = (label: string) =>
+    order.delivery_partner_name || order.delivery_boy_name ? (
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-card bg-foreground/[0.04] px-3 py-2">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+          <p className="truncate text-sm font-semibold text-foreground">
+            {order.delivery_partner_name || order.delivery_boy_name}
+          </p>
+        </div>
+        {order.delivery_partner_phone && (
+          <a href={`tel:${order.delivery_partner_phone}`} className="btn-line h-10 shrink-0 px-4 text-foreground">
+            <Phone aria-hidden="true" className="size-4" /> Call
+          </a>
+        )}
+      </div>
+    ) : null;
+
+  return renderShell(
+    <>
       {/* Page Header */}
       <div className="mx-auto max-w-4xl px-4 pt-4">
-        <div className="flex items-center gap-3 rounded-[28px] border border-highlight/15 bg-white/88 px-4 py-4 shadow-[0_30px_80px_-60px_rgba(0,0,0,0.5)] backdrop-blur dark:border-highlight/20 dark:shadow-[0_30px_80px_-60px_rgba(0,0,0,0.9)]">
-          <button
-            onClick={() => {
-              if (window.innerWidth >= 1024) { navigate('/account'); return; }
-              navigate('/account/orders');
-            }}
-            className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-foreground/[0.06]"
-          >
-            <ArrowLeft className="w-5 h-5 text-foreground/80" />
-          </button>
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="h-px w-6 bg-highlight/50" />
-              <span className="text-[10px] uppercase tracking-[0.3em] text-primary font-medium">Order</span>
-            </div>
-            <h2 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>Order Details</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">ORD-{order.orderId}</p>
+        <div className="panel tx-sheet flex items-center gap-2 px-3 py-3 sm:px-4">
+          <IconButton label="Back" onClick={goBack}>
+            <ArrowLeft />
+          </IconButton>
+          <div className="min-w-0">
+            <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground lg:text-2xl">Order details</h1>
+            <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">ORD-{order.orderId}</p>
           </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="mx-auto max-w-4xl space-y-3 px-4 pb-24 pt-4">
-        {/* Tracking ID Banner */}
-        <div className="rounded-[var(--radius-panel)] border border-primary/15 bg-[linear-gradient(135deg,hsl(var(--primary)/0.07)_0%,hsl(var(--highlight)/0.10)_100%)] px-4 py-3 dark:border-primary/20">
-          <p className="text-sm text-primary dark:text-blue-200">
-            Order can be tracked by <span className="font-semibold">ORD-{order.orderId}</span>
-            {order.trackingId && (
-              <span className="mt-1 block text-xs">Tracking ID: {order.trackingId}</span>
-            )}
-          </p>
-        </div>
+        {/* Tracking ID Banner (only when the carrier has given one) */}
+        {order.trackingId && (
+          <Notice tone="info" icon={Truck} role="note">
+            Tracking ID <span className="font-semibold text-primary tabular-nums">{order.trackingId}</span>
+          </Notice>
+        )}
 
         {/* Product Card */}
-        <div className="panel tx-sheet px-4 py-4">
+        <div className="panel tx-sheet p-4">
           <div className="flex gap-4">
-            <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-[10px] border border-highlight/10 bg-foreground/[0.03] dark:bg-zinc-800/70">
-              <SmartImage 
-                src={order.items[0]?.image} 
-                alt={order.items[0]?.name} 
-                className="w-full h-full object-cover" preset="thumb" />
+            <div className="tile-img size-16 shrink-0 overflow-hidden">
+              <SmartImage
+                src={order.items[0]?.image}
+                alt=""
+                className="h-full w-full object-cover" preset="thumb" />
             </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
-                {order.items.length > 1 
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold leading-snug text-foreground">
+                {order.items.length > 1
                   ? `${order.items[0]?.name} +${order.items.length - 1} more`
                   : order.items[0]?.name
                 }
-              </h3>
-              <p className="mt-1 text-base font-bold text-foreground">₹{order.total.toLocaleString()}</p>
+              </p>
+              <p className="mt-1.5 text-xs text-muted-foreground">Order total</p>
+              <p className="text-base font-semibold text-foreground tabular-nums">{formatINR(order.total)}</p>
             </div>
           </div>
         </div>
 
         {/* Order Status Timeline (hidden for returned / refunded orders) */}
         {order.status !== 'returned' && order.status !== 'refunded' && (
-          <div className="panel tx-sheet px-4 py-5">
-            <OrderStatusStepper status={order.status} isReturnPickedState={order.status === 'picked' && !!(order as any).returnScheduledAt} />
+          <div className="panel tx-sheet px-3 py-5 sm:px-4">
+            <OrderStatusStepper status={order.status} isReturnPickedState={isReturnPickup} />
           </div>
         )}
 
         {/* Refund receipt (visible to customer once admin uploads it) */}
         {order.status === 'refunded' && order.refundReceiptUrl && (
-          <div className="rounded-[24px] border border-emerald-300/40 bg-emerald-50/70 px-4 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] backdrop-blur dark:border-emerald-700/40 dark:bg-emerald-900/20">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-                  Refund processed
-                </p>
-                <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">
-                  Your refund receipt is available below.
-                </p>
-              </div>
+          <Notice
+            tone="success"
+            role="note"
+            title="Refund processed"
+            action={
               <a
                 href={order.refundReceiptUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2 rounded-full text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-sm"
+                className="btn-line h-10 px-4 text-foreground"
               >
-                View Receipt
+                View receipt
+                <ExternalLink aria-hidden="true" className="size-3.5" />
               </a>
-            </div>
-          </div>
+            }
+          >
+            <span className="text-muted-foreground">Your refund receipt is ready.</span>
+          </Notice>
         )}
 
         {/* Current Status Card */}
-        <div className="panel tx-sheet px-4 py-4">
+        <div className="panel tx-sheet p-4">
           <div className="flex gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-              order.status === 'delivered' ? 'bg-emerald-100' :
-              order.status === 'cancelled' ? 'bg-red-100' :
-              order.status === 'returnRequested' ? 'bg-highlight/15' :
-              order.status === 'returnScheduled' ? 'bg-emerald-100' :
-              (order.status === 'picked' && !!(order as any).returnScheduledAt) ? 'bg-highlight/15' :
-              order.status === 'returned' ? 'bg-foreground/[0.06]' :
-              order.status === 'refunded' ? 'bg-green-100' :
-              'bg-blue-100'
-            }`}>
-              {order.status === 'delivered' ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              ) : order.status === 'cancelled' ? (
-                <XCircle className="w-5 h-5 text-red-600" />
-              ) : order.status === 'returnRequested' ? (
-                <ReturnIcon className="w-5 h-5 text-highlight" />
-              ) : order.status === 'returnScheduled' ? (
-                <ReturnIcon className="w-5 h-5 text-emerald-600" />
-              ) : (order.status === 'picked' && !!(order as any).returnScheduledAt) ? (
-                <Truck className="w-5 h-5 text-highlight" />
-              ) : order.status === 'returned' ? (
-                <CheckCircle2 className="w-5 h-5 text-muted-foreground" />
-              ) : order.status === 'refunded' ? (
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-              ) : (
-                <Package className="w-5 h-5 text-primary" />
+            <div
+              aria-hidden="true"
+              className={cn(
+                'flex size-10 shrink-0 items-center justify-center rounded-full border',
+                STATUS_TONE_CLASSES[statusDisplay.tone],
               )}
+            >
+              <StatusIcon className="size-5" />
             </div>
-            <div className="flex-1">
-              <h4 className="text-base font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
-                {order.status === 'picked' && !!(order as any).returnScheduledAt ? 'Return Pickup' : getStatusLabel(order.status)}
-              </h4>
+            <div className="min-w-0 flex-1">
+              <h2 className={sectionHeading}>{statusDisplay.label}</h2>
               {order.carrier && (
                 <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="w-3 h-3" />
+                  <MapPin aria-hidden="true" className="size-3.5" />
                   {order.carrier}
                 </p>
               )}
-              <p className="mt-1 text-xs text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>
-                {order.status === 'pending' && 'Your order has been placed successfully'}
-                {order.status === 'processing' && 'Package is being prepared for shipment'}
-                {(order.status === 'packed' || order.status === 'shipped' || order.status === 'assigned') && 'Your order is packed and ready for dispatch'}
-                {order.status === 'outForDelivery' && 'Your order is on the way!'}
-                {order.status === 'picked' && !(order as any).returnScheduledAt && 'Your order is on the way!'}
-                {order.status === 'picked' && !!(order as any).returnScheduledAt && 'Pickup partner has collected the item. Return in progress.'}
-                {order.status === 'delivered' && 'Package has been delivered'}
-                {order.status === 'cancelled' && 'Order has been cancelled'}
+              <p className="mt-1 text-sm text-muted-foreground">
+                {order.status === 'pending' && 'Your order has been placed.'}
+                {order.status === 'processing' && 'We are preparing your package.'}
+                {(order.status === 'packed' || order.status === 'assigned') && 'Packed and ready to dispatch.'}
+                {order.status === 'shipped' && 'Shipped and on its way to you.'}
+                {order.status === 'outForDelivery' && 'On its way to you.'}
+                {order.status === 'picked' && !isReturnPickup && 'On its way to you.'}
+                {isReturnPickup && 'The pickup partner has collected the item. Return in progress.'}
+                {order.status === 'delivered' && 'Your package has been delivered.'}
+                {order.status === 'cancelled' && 'This order has been cancelled.'}
                 {order.status === 'returnRequested' && 'Return request submitted. Waiting for approval.'}
-                {order.status === 'returnScheduled' && 'Return approved! Pickup will be scheduled soon.'}
-                {order.status === 'returned' && 'Item has been picked up and returned successfully.'}
-                {order.status === 'refunded' && 'Your refund has been processed successfully.'}
+                {order.status === 'returnScheduled' && "Return approved. We'll schedule a pickup."}
+                {order.status === 'returned' && 'The item has been picked up and returned.'}
+                {order.status === 'refunded' && 'Your refund has been processed.'}
               </p>
-              <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground/70">
-                <Clock className="w-3 h-3" />
+              <p className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
+                <Clock aria-hidden="true" className="size-3.5" />
                 {formatDate((order.status === 'delivered' && order.deliveredAt) || order.updatedAt || order.createdAt)}
               </p>
             </div>
@@ -783,186 +901,157 @@ const OrderDetailsPage = () => {
 
         {/* OTP Delivery Verification - Shown when out for delivery */}
         {order.status === 'outForDelivery' && order.delivery_otp && (
-          <div className="rounded-[24px] border-2 border-highlight/45 bg-gradient-to-br from-highlight/10 to-primary/10 px-5 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] dark:border-highlight/40 dark:from-highlight/10 dark:to-primary/10">
-            <p className="text-xs font-semibold uppercase tracking-widest text-highlight dark:text-highlight">Delivery OTP</p>
-            <p className="mt-1 text-xs text-highlight dark:text-charcoal-foreground">Share this OTP with your delivery partner at the door</p>
-            <p className="mt-2 font-mono text-3xl font-extrabold tracking-[0.5em] text-highlight dark:text-highlight">{order.delivery_otp}</p>
-            {(order.delivery_partner_name || order.delivery_boy_name) && (
-              <div className="mt-3 flex items-center justify-between rounded-[10px] bg-white/70 px-3 py-2">
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70">Delivery Partner</p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {order.delivery_partner_name || order.delivery_boy_name}
-                  </p>
-                </div>
-                {order.delivery_partner_phone && (
-                  <a
-                    href={`tel:${order.delivery_partner_phone}`}
-                    className="flex items-center gap-1 rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-white"
-                  >
-                    <Truck className="h-3 w-3" /> Call
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
+          <Notice tone="info" role="note">
+            <p className={cn(eyebrow, 'text-status-info-fg')}>Delivery OTP</p>
+            <p className="mt-1 text-sm text-muted-foreground">Share this OTP with your delivery partner at the door.</p>
+            <p className="mt-2 font-mono text-3xl font-semibold tracking-[0.4em] text-foreground tabular-nums">{order.delivery_otp}</p>
+            {partnerBox('Delivery partner')}
+          </Notice>
         )}
 
-        {/* Return Pickup OTP — shown to customer when return is scheduled */}
+        {/* Return Pickup OTP: shown to customer when return is scheduled */}
         {order.status === 'returnScheduled' && (order as any).return_otp && (
-          <div className="rounded-[24px] border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 to-green-50 px-5 py-4 shadow-[0_22px_55px_-40px_rgba(0,0,0,0.45)] dark:border-emerald-500/40 dark:from-emerald-500/10 dark:to-green-500/10">
-            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-300">Return Pickup OTP</p>
-            <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-200">Show this OTP to the pickup partner when they arrive to collect your item</p>
-            <p className="mt-2 font-mono text-3xl font-extrabold tracking-[0.5em] text-emerald-700 dark:text-emerald-300">{(order as any).return_otp}</p>
-            {(order.delivery_partner_name || order.delivery_boy_name) && (
-              <div className="mt-3 flex items-center justify-between rounded-[10px] bg-white/70 px-3 py-2">
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70">Pickup Partner</p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {order.delivery_partner_name || order.delivery_boy_name}
-                  </p>
-                </div>
-                {order.delivery_partner_phone && (
-                  <a
-                    href={`tel:${order.delivery_partner_phone}`}
-                    className="flex items-center gap-1 rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-white"
-                  >
-                    <Truck className="h-3 w-3" /> Call
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
+          <Notice tone="returns" role="note">
+            <p className={cn(eyebrow, 'text-status-returns-fg')}>Return pickup OTP</p>
+            <p className="mt-1 text-sm text-muted-foreground">Show this OTP to the pickup partner when they come to collect your item.</p>
+            <p className="mt-2 font-mono text-3xl font-semibold tracking-[0.4em] text-foreground tabular-nums">{(order as any).return_otp}</p>
+            {partnerBox('Pickup partner')}
+          </Notice>
         )}
 
-        {/* Delivery Window — shown when out for delivery and window is set */}
+        {/* Delivery Window: shown when out for delivery and window is set */}
         {(order.status === 'outForDelivery' || order.status === 'shipped' || order.status === 'assigned' || order.status === 'picked') &&
           (order as any).delivery_window_date && (
-          <div className="rounded-[24px] border border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50 px-5 py-4 shadow-[0_20px_45px_-38px_rgba(0,0,0,0.30)] dark:border-purple-500/30 dark:from-purple-500/10 dark:to-indigo-500/10">
-            <p className="text-xs font-semibold uppercase tracking-widest text-purple-700 dark:text-purple-300">Expected Delivery Window</p>
-            <p className="mt-2 text-base font-semibold text-purple-900 dark:text-purple-100">
+          <Notice tone="info" icon={Clock} role="note">
+            <p className={cn(eyebrow, 'text-status-info-fg')}>Expected delivery window</p>
+            <p className="mt-1.5 text-base font-semibold text-foreground tabular-nums">
               {(() => {
                 const d = new Date((order as any).delivery_window_date + 'T00:00:00');
                 const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-                const fmt = (t: string) => { const [h, m] = t.split(':').map(Number); const p = h >= 12 ? 'PM' : 'AM'; return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${p}`; };
-                return `${dateStr}, between ${fmt((order as any).delivery_window_from)} – ${fmt((order as any).delivery_window_to)}`;
+                const fmt = (t: string) => { const [h, m] = t.split(':').map(Number); const p = h >= 12 ? 'pm' : 'am'; return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${p}`; };
+                return `${dateStr}, between ${fmt((order as any).delivery_window_from)} and ${fmt((order as any).delivery_window_to)}`;
               })()}
             </p>
             {(order as any).delivery_window_note && (
-              <p className="mt-1 text-xs text-purple-700 dark:text-purple-300">{(order as any).delivery_window_note}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{(order as any).delivery_window_note}</p>
             )}
-          </div>
+          </Notice>
         )}
 
         {/* Delivery Failed notice */}
         {order.status === 'deliveryFailed' && (
-          <div className="rounded-[24px] border border-red-200 bg-gradient-to-br from-red-50 to-primary/10 px-5 py-4 shadow-[0_20px_45px_-38px_rgba(0,0,0,0.30)] dark:border-red-500/30 dark:from-red-500/10 dark:to-primary/10">
-            <p className="text-xs font-semibold uppercase tracking-widest text-red-700 dark:text-red-300">Delivery Attempted</p>
-            <p className="mt-2 text-sm font-medium text-red-900 dark:text-red-100">We couldn't reach you for delivery.</p>
-            <p className="mt-1 text-xs text-red-700 dark:text-red-300">Your item is being returned to our store. Our team will contact you to reschedule the delivery.</p>
-          </div>
+          <Notice tone="danger" role="status">
+            <p className="font-semibold text-foreground">We couldn't reach you for delivery.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Your item is coming back to our store. Our team will contact you to reschedule the delivery.</p>
+          </Notice>
         )}
 
-        {/* Delivery Message */}
-        {order.status !== 'delivered' && order.status !== 'cancelled' && 
-         order.status !== 'returnRequested' && order.status !== 'returnScheduled' && 
-         order.status !== 'returned' && order.status !== 'refunded' && order.status !== 'deliveryFailed' && (
-          <div className="rounded-[24px] border border-highlight/12 bg-[linear-gradient(135deg,hsl(var(--highlight-soft)/0.12)_0%,hsl(var(--highlight)/0.08)_100%)] px-4 py-3 shadow-[0_20px_45px_-38px_rgba(0,0,0,0.45)]">
-            <p className="text-sm text-highlight">
-              {(order.status === 'shipped' || order.status === 'outForDelivery' || order.status === 'picked')
-                ? "Yayy! your item is on the way. It will reach you soon."
-                : "Your order is being processed. We'll notify you once it's shipped."
-              }
-            </p>
-          </div>
+        {/* What happens next, before the order ships (once it is on its way,
+            the status card and the delivery window already say so) */}
+        {order.status === 'pending' && (
+          <Notice tone="info" compact role="note" icon={Clock}>
+            We'll confirm your order shortly and let you know when it ships.
+          </Notice>
+        )}
+        {(order.status === 'processing' || order.status === 'packed') && (
+          <Notice tone="info" compact role="note" icon={Clock}>
+            We'll let you know when it ships.
+          </Notice>
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 panel tx-sheet px-4 py-4">
+        <div className="panel tx-sheet flex flex-wrap gap-3 p-4">
           {/* Cancel Button - Only for pending/processing orders */}
           {(order.status === 'pending' || order.status === 'processing') && (
-            <button
+            <Button
+              variant="destructive"
               onClick={() => navigate(`/account/orders/${orderId}/cancel`)}
-              className="flex-1 py-2.5 px-4 bg-destructive/[0.06] border border-destructive/25 rounded-lg text-sm font-medium text-destructive flex items-center justify-center gap-2 hover:bg-destructive/10 active:scale-[0.98] transition-[background-color,transform] duration-150"
+              className="h-11 min-w-[9rem] flex-1 px-4 text-sm font-medium normal-case tracking-normal"
             >
-              <Ban className="w-4 h-4" />
-              Cancel Order
-            </button>
+              <Ban aria-hidden="true" />
+              Cancel order
+            </Button>
           )}
 
-          {/* Cancel Return — only for returnRequested orders, one-time */}
+          {/* Cancel Return: only for returnRequested orders, one-time, asks first */}
           {order.status === 'returnRequested' && !(order as any).returnCancelled && (
-            <button
-              onClick={handleCancelReturn}
+            <Button
+              ref={cancelReturnBtnRef}
+              variant="destructive"
+              onClick={() => setConfirmCancelReturn(true)}
               disabled={cancellingReturn}
-              className="flex-1 py-2.5 px-4 bg-highlight/10 border border-highlight/30 rounded-lg text-sm font-medium text-highlight flex items-center justify-center gap-2 hover:bg-highlight/15 transition-colors disabled:opacity-50"
+              className="h-11 min-w-[9rem] flex-1 px-4 text-sm font-medium normal-case tracking-normal"
             >
-              {cancellingReturn ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
-              Cancel Return
-            </button>
+              {cancellingReturn ? <Spinner /> : <Ban aria-hidden="true" />}
+              Cancel return
+            </Button>
           )}
 
           {/* Return Button - Only for delivered orders within 7 days */}
           {canReturnOrder(order) && (
-            <button
+            <Button
+              ref={returnTriggerRef}
+              variant="outline"
               onClick={() => setShowReturnModal(true)}
-              className="flex-1 py-2.5 px-4 bg-card border border-foreground/[0.14] rounded-lg text-sm font-medium text-foreground flex items-center justify-center gap-2 hover:bg-foreground/[0.04] active:scale-[0.98] transition-[background-color,transform] duration-150"
+              className="h-11 min-w-[9rem] flex-1 px-4 text-sm font-medium normal-case tracking-normal"
             >
-              <ReturnIcon className="w-4 h-4" />
-              Return Items
-            </button>
+              <ReturnIcon aria-hidden="true" />
+              Return items
+            </Button>
           )}
 
           {/* Chat Button - Always show */}
-          <button 
+          <Button
+            variant="outline"
             onClick={focusOrderChat}
-            className="flex-1 py-2.5 px-4 bg-primary/5 border border-primary/25 rounded-lg text-sm font-medium text-primary flex items-center justify-center gap-2 hover:bg-primary/10 active:scale-[0.98] transition-[background-color,transform] duration-150"
+            className="h-11 min-w-[9rem] flex-1 px-4 text-sm font-medium normal-case tracking-normal text-primary"
           >
-            <MessageCircle className="w-4 h-4" />
+            <MessageCircle aria-hidden="true" />
             Open order chat
-          </button>
+          </Button>
         </div>
 
-        <div ref={conversationSectionRef} className="panel tx-sheet p-4">
-          <button
-            onClick={() => setConversationOpen(!conversationOpen)}
-            className="flex w-full items-start justify-between gap-3 text-left"
-          >
-            <div>
-              <h3 className="text-base font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
-                Order conversation
-                {conversationMessages.length > 0 && (
-                  <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">
-                    {conversationMessages.length}
+        <div ref={conversationSectionRef} className="panel tx-sheet scroll-mt-[var(--sticky-top)] p-4">
+          <h2 className={sectionHeading}>
+            <button
+              type="button"
+              onClick={() => setConversationOpen(!conversationOpen)}
+              aria-expanded={conversationOpen}
+              aria-controls="order-conversation"
+              className="flex min-h-[44px] w-full items-start justify-between gap-3 text-left"
+            >
+              <span>
+                <span className="inline-flex items-center">
+                  Order conversation
+                  {conversationMessages.length > 0 && (
+                    <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 font-sans text-[11px] font-bold text-primary-foreground tabular-nums">
+                      {conversationMessages.length}
+                    </span>
+                  )}
+                </span>
+                {!conversationOpen && (
+                  <span className="mt-0.5 block font-sans text-xs font-normal text-muted-foreground">
+                    {conversationMessages.length === 0 ? 'Start a conversation about this order' : `${conversationMessages.length} message${conversationMessages.length > 1 ? 's' : ''}`}
                   </span>
                 )}
-              </h3>
-              {!conversationOpen && (
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {conversationMessages.length === 0 ? 'Tap to start a conversation' : `${conversationMessages.length} message${conversationMessages.length > 1 ? 's' : ''}`}
-                </p>
-              )}
-            </div>
-            <ChevronDown className={`mt-0.5 h-5 w-5 shrink-0 text-muted-foreground/70 transition-transform duration-200 ${conversationOpen ? 'rotate-180' : ''}`} />
-          </button>
+              </span>
+              <ChevronDown aria-hidden="true" className={cn('mt-0.5 size-5 shrink-0 text-muted-foreground transition-transform duration-dropdown ease-out', conversationOpen && 'rotate-180')} />
+            </button>
+          </h2>
 
           {conversationOpen && (
-            <>
-              <p className="mt-2 text-xs text-muted-foreground">Ask about delivery timing, product issues, or any order-specific request. Replies from the admin team stay attached to this order.</p>
-
-              <div className="mt-4 flex items-center justify-end">
-                <button
-                  onClick={() => navigate('/customer-support')}
-                  className="shrink-0 rounded-full border border-highlight/15 bg-cream px-3 py-1.5 text-xs font-medium text-primary hover:bg-cream dark:bg-highlight/5 dark:text-charcoal-foreground dark:hover:bg-highlight/6"
-                >
+            <div id="order-conversation">
+              <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+                <p className="max-w-prose flex-1 text-sm text-muted-foreground">Ask about delivery timing, a product, or anything else about this order. Replies from our team stay with this order.</p>
+                <Button variant="outline" size="sm" onClick={() => navigate('/customer-support')} className="shrink-0">
                   More support
-                </button>
+                </Button>
               </div>
 
-              <div className="mt-3 space-y-3">
+              <div className="mt-4 space-y-3">
                 {conversationMessages.length === 0 ? (
-                  <div className="rounded-[20px] border border-dashed border-highlight/18 bg-cream px-4 py-6 text-center text-sm text-muted-foreground">
-                    No order messages yet. Start the conversation below and the admin team will reply here.
+                  <div className="rounded-card border border-dashed border-foreground/[0.14] bg-foreground/[0.03] px-4 py-6 text-center text-sm text-muted-foreground">
+                    No messages yet. Write below and our team will reply here.
                   </div>
                 ) : (
                   conversationMessages.map((message) => {
@@ -971,22 +1060,23 @@ const OrderDetailsPage = () => {
                     return (
                       <div key={message.id} className={`flex ${isCustomerMessage ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`max-w-[88%] rounded-[22px] px-4 py-3 shadow-sm ${
+                          className={cn(
+                            'max-w-[88%] rounded-card px-4 py-3',
                             isCustomerMessage
-                              ? 'bg-primary text-white'
-                              : 'border border-highlight/12 bg-cream text-foreground dark:bg-highlight/5'
-                          }`}
+                              ? 'bg-primary text-primary-foreground'
+                              : 'border border-foreground/[0.08] bg-muted text-foreground',
+                          )}
                         >
-                          <div className={`flex flex-wrap items-center gap-2 text-[11px] ${isCustomerMessage ? 'text-white/75' : 'text-muted-foreground'}`}>
+                          <div className={cn('flex flex-wrap items-center gap-2 text-[11px]', isCustomerMessage ? 'text-primary-foreground/85' : 'text-muted-foreground')}>
                             <span className="font-semibold">{message.authorName || (isCustomerMessage ? 'You' : 'Support team')}</span>
-                            <span>{formatDate(message.createdAt as any)}</span>
+                            <span className="tabular-nums">{formatDate(message.createdAt)}</span>
                             {message.channel !== 'chat' && (
-                              <span className={`rounded-full px-2 py-0.5 ${isCustomerMessage ? 'bg-white/10 text-white/80' : 'bg-card text-primary'}`}>
+                              <span className={cn('rounded-chip px-1.5 py-0.5', isCustomerMessage ? 'bg-primary-foreground/15' : 'bg-card text-primary')}>
                                 {message.channel}
                               </span>
                             )}
                           </div>
-                          <p className={`mt-2 whitespace-pre-wrap text-sm leading-6 ${isCustomerMessage ? 'text-white' : 'text-foreground/80'}`}>
+                          <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6">
                             {message.message}
                           </p>
                         </div>
@@ -996,791 +1086,659 @@ const OrderDetailsPage = () => {
                 )}
               </div>
 
-              <div className="mt-4 rounded-[22px] border border-highlight/12 bg-cream p-3">
+              <div className="mt-4 rounded-card border border-foreground/[0.08] bg-foreground/[0.03] p-3">
+                <label htmlFor="order-chat-message" className="sr-only">Your message about this order</label>
                 <Textarea
+                  id="order-chat-message"
                   ref={conversationInputRef}
                   value={chatDraft}
                   onChange={(event) => setChatDraft(event.target.value)}
-                  className="min-h-[118px] resize-none border-0 bg-white/80 focus-visible:ring-1 focus-visible:ring-highlight"
-                  placeholder="Write your order-related message here. Mention delivery timing, product questions, or any issue with this order."
+                  className="min-h-[118px] resize-none bg-card"
+                  placeholder="Ask about delivery timing, a product, or anything else about this order."
                 />
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs text-muted-foreground">This chat stays attached to order ORD-{order.orderId} so the admin team sees the full context.</p>
-                  <button
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-muted-foreground">This chat stays with order <span className="tabular-nums">ORD-{order.orderId}</span> so our team sees the full context.</p>
+                  <Button
                     onClick={sendOrderChatMessage}
                     disabled={sendingChatMessage || !chatDraft.trim()}
-                    className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
+                    className="shrink-0"
                   >
-                    {sendingChatMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
-                    {sendingChatMessage ? 'Sending...' : 'Send reply'}
-                  </button>
+                    {sendingChatMessage ? <Spinner /> : <MessageCircle aria-hidden="true" />}
+                    {sendingChatMessage ? 'Sending' : 'Send message'}
+                  </Button>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
 
         {/* Track Package Button */}
         {order.trackingUrl && (
-          <div className="panel tx-sheet px-4 py-3">
+          <div className="panel tx-sheet p-4">
             <a
               href={order.trackingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 bg-primary text-white text-sm font-semibold rounded-[10px]"
+              className="btn-copper h-12 w-full"
             >
-              <Truck className="w-4 h-4" />
-              Track Package
-              <ExternalLink className="w-4 h-4" />
+              <Truck aria-hidden="true" className="size-4" />
+              Track package
+              <ExternalLink aria-hidden="true" className="size-4" />
             </a>
           </div>
         )}
 
         {/* Delivery Details Section */}
-        <div className="overflow-hidden panel tx-sheet">
-          <h3 className="border-b border-highlight/10 px-4 py-3 text-base font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>Delivery details</h3>
-          
+        <section aria-labelledby="delivery-details-heading" className="panel tx-sheet overflow-hidden">
+          <h2 id="delivery-details-heading" className={cn(sectionHeading, 'border-b border-foreground/[0.08] px-4 py-3')}>Delivery details</h2>
+
           {/* Delivery Address */}
-          <div className="px-4 py-3 flex items-center gap-3 border-b border-highlight/10">
-            <div className="w-10 h-10 bg-foreground/[0.06] rounded-full flex items-center justify-center flex-shrink-0">
-              <Home className="w-5 h-5 text-muted-foreground" />
+          <div className="flex items-center gap-3 border-b border-foreground/[0.08] px-4 py-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground/[0.06]">
+              <Home aria-hidden="true" className="size-5 text-muted-foreground" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-primary">Delivery Address</p>
-              <p className="text-xs text-muted-foreground truncate">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Delivery address</p>
+              <p className="mt-0.5 text-sm text-foreground">
                 {order.shippingAddress.address}, {order.shippingAddress.city}
               </p>
             </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground/70 flex-shrink-0" />
           </div>
 
           {/* Customer Info */}
-          <div className="px-4 py-3 flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm font-semibold">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary">
+              <span className="text-sm font-semibold text-primary-foreground">
                 {order.shippingAddress.fullName.charAt(0).toUpperCase()}
               </span>
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-foreground">{order.shippingAddress.fullName}</p>
-              <p className="text-xs text-muted-foreground">ORD-{order.orderId}</p>
+              {order.shippingAddress.mobile && (
+                <p className="text-xs text-muted-foreground tabular-nums">{order.shippingAddress.mobile}</p>
+              )}
             </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground/70 flex-shrink-0" />
           </div>
-        </div>
+        </section>
 
         {/* Rate Delivery Boy - Only for delivered orders with a delivery boy assigned */}
         {order.status === 'delivered' && order.deliveryBoyId && (
-          <div className="panel tx-sheet overflow-hidden">
-            <h3 className="px-4 py-3 text-base font-semibold text-foreground border-b border-highlight/10" style={{ fontFamily: "var(--font-body)" }}>Rate your delivery</h3>
-            <div className="px-4 py-4">
+          <section aria-labelledby="rate-delivery-heading" className="panel tx-sheet overflow-hidden">
+            <h2 id="rate-delivery-heading" className={cn(sectionHeading, 'border-b border-foreground/[0.08] px-4 py-3')}>Rate your delivery</h2>
+            <div className="p-4">
               {hasRated ? (
-                <div className="flex flex-col items-center py-4 gap-2">
-                  <div className="flex items-center gap-1">
-                    {[1,2,3,4,5].map(n => (
-                      <Star key={n} className={`h-6 w-6 ${n <= deliveryRating ? 'text-highlight-soft fill-current' : 'text-gray-200 fill-current'}`} />
+                <div className="flex flex-col items-center gap-2 py-4">
+                  <div className="flex items-center gap-1" aria-hidden="true">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <Star key={n} className={cn('size-6', n <= deliveryRating ? 'fill-highlight-soft text-highlight-soft' : 'fill-transparent text-foreground/25')} />
                     ))}
                   </div>
-                  <p className="text-sm font-medium text-foreground/80">Rating submitted!</p>
-                  <p className="text-xs text-muted-foreground/70">Thank you for your feedback</p>
+                  <p className="text-sm font-medium text-foreground">Rating saved.</p>
+                  <p className="text-xs text-muted-foreground">Thanks for your feedback.</p>
                 </div>
               ) : (
                 <>
-                  <p className="text-sm text-muted-foreground mb-3">How was your delivery experience?</p>
-                  <div className="flex items-center gap-2 mb-3">
-                    {[1,2,3,4,5].map(n => (
-                      <button key={n} onClick={() => setDeliveryRating(n)}>
-                        <Star className={`h-8 w-8 transition-colors ${n <= deliveryRating ? 'text-highlight-soft fill-current' : 'text-gray-200 fill-current hover:text-highlight-soft'}`} />
+                  <p id="rate-delivery-question" className="mb-2 text-sm text-muted-foreground">How was your delivery experience?</p>
+                  <div role="radiogroup" aria-labelledby="rate-delivery-question" className="-ml-1.5 mb-3 flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        role="radio"
+                        aria-checked={deliveryRating === n}
+                        aria-label={`${n} out of 5`}
+                        onClick={() => setDeliveryRating(n)}
+                        className="grid size-11 place-items-center rounded-full transition-transform duration-press ease-out active:scale-[0.97]"
+                      >
+                        <Star aria-hidden="true" className={cn('size-7 transition-[fill,color] duration-hover ease-out', n <= deliveryRating ? 'fill-highlight-soft text-highlight-soft' : 'fill-transparent text-foreground/30')} />
                       </button>
                     ))}
                   </div>
-                  <textarea
+                  <label htmlFor="rate-delivery-comment" className="sr-only">Comment (optional)</label>
+                  <Textarea
+                    id="rate-delivery-comment"
                     value={ratingComment}
                     onChange={e => setRatingComment(e.target.value)}
                     placeholder="Leave a comment (optional)"
                     rows={2}
-                    className="w-full text-sm border border-foreground/[0.08] rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 mb-3"
+                    className="mb-3 min-h-0 resize-none"
                   />
-                  <button
+                  <Button
                     onClick={submitDeliveryRating}
                     disabled={submittingRating || deliveryRating === 0}
-                    className="w-full py-2.5 bg-primary text-white text-sm font-semibold rounded-[10px] hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full"
                   >
-                    {submittingRating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    Submit Rating
-                  </button>
+                    {submittingRating && <Spinner />}
+                    Submit rating
+                  </Button>
                 </>
               )}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Write a Review - for all delivered orders */}
         {order.status === 'delivered' && (
-          <div className="panel tx-sheet overflow-hidden">
-            <h3 className="px-4 py-3 text-base font-semibold text-foreground border-b border-highlight/10" style={{ fontFamily: "var(--font-body)" }}>Rate the product</h3>
-            <div className="px-4 py-4">
+          <section aria-labelledby="rate-product-heading" className="panel tx-sheet overflow-hidden">
+            <h2 id="rate-product-heading" className={cn(sectionHeading, 'border-b border-foreground/[0.08] px-4 py-3')}>Rate the product</h2>
+            <div className="p-4">
               {checkingReview ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-highlight" />
+                <div aria-busy="true" className="flex items-center gap-3 py-2">
+                  <span className="sr-only">Loading</span>
+                  <span className="size-10 shrink-0 rounded-[8px] bg-foreground/[0.06]" />
+                  <span className="h-3.5 w-2/3 rounded-[6px] bg-foreground/[0.06]" />
                 </div>
               ) : hasReviewedProduct ? (
-                <div className="flex flex-col items-center py-4 gap-2">
-                  <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-                  <p className="text-sm font-medium text-foreground/80">Review submitted!</p>
-                  <p className="text-xs text-muted-foreground/70">Thank you for sharing your experience</p>
+                <div className="flex flex-col items-center gap-2 py-4">
+                  <CircleCheck aria-hidden="true" className="size-8 text-status-success-fg" />
+                  <p className="text-sm font-medium text-foreground">Review saved.</p>
+                  <p className="text-xs text-muted-foreground">Thanks for sharing your experience.</p>
                 </div>
               ) : (
                 <>
                   <div className="mb-4 flex items-center gap-3">
                     {order.items[0]?.image && (
-                      <SmartImage src={order.items[0].image} alt={order.items[0].name} className="h-10 w-10 rounded-lg object-cover" preset="thumb" />
+                      <div className="tile-img size-10 shrink-0 overflow-hidden">
+                        <SmartImage src={order.items[0].image} alt="" className="h-full w-full object-cover" preset="thumb" />
+                      </div>
                     )}
                     <p className="text-sm text-muted-foreground">Share your experience with {order.items[0]?.name || 'this product'}</p>
                   </div>
-                  <button
-                    onClick={() => navigate('/write-review', {
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/write-review?productId=${encodeURIComponent(order.items[0]?.productId ?? '')}`, {
                       state: {
                         productId: order.items[0]?.productId,
                         productName: order.items[0]?.name,
                         productImage: order.items[0]?.image,
                       }
                     })}
-                    className="w-full py-2.5 bg-primary text-white text-sm font-semibold rounded-[10px] hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
+                    className="w-full"
                   >
-                    <Star className="h-4 w-4" />
-                    Write a Review
-                  </button>
+                    <Star aria-hidden="true" />
+                    Write a review
+                  </Button>
                 </>
               )}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Price Details Section */}
-        <div className="panel tx-sheet overflow-hidden">
-          <h3 className="px-4 py-3 text-base font-semibold text-foreground border-b border-foreground/[0.06]" style={{ fontFamily: "var(--font-body)" }}>Price details</h3>
-          
-          <div className="px-4 py-3 space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Selling price</span>
-              <span className="text-foreground">₹{order.subtotal.toLocaleString()}</span>
+        <section aria-labelledby="price-details-heading" className="panel tx-sheet overflow-hidden">
+          <h2 id="price-details-heading" className={cn(sectionHeading, 'border-b border-foreground/[0.08] px-4 py-3')}>Price details</h2>
+
+          <dl className="space-y-3 px-4 py-3 text-sm tabular-nums">
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">Selling price</dt>
+              <dd className="text-foreground">{formatINR(order.subtotal)}</dd>
             </div>
             {order.discount > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-green-700 dark:text-green-500">Discount</span>
-                <span className="text-green-700 dark:text-green-500">-₹{order.discount.toLocaleString()}</span>
+              <div className="flex justify-between gap-4 text-status-success-fg">
+                <dt>Discount</dt>
+                <dd>-{formatINR(order.discount)}</dd>
               </div>
             )}
             {rewardsRows.map(([label, amount]) => (
-              <div key={label} className="flex justify-between text-sm">
-                <span className="text-green-700 dark:text-green-500">{label}</span>
-                <span className="text-green-700 dark:text-green-500">-₹{amount.toLocaleString()}</span>
+              <div key={label} className="flex justify-between gap-4 text-status-success-fg">
+                <dt>{label}</dt>
+                <dd>-{formatINR(amount)}</dd>
               </div>
             ))}
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total fees</span>
-              <span className="text-foreground">₹{totalFees.toLocaleString()}</span>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">Total fees</dt>
+              <dd className="text-foreground">{formatINR(totalFees)}</dd>
             </div>
-            <div className="pt-3 border-t border-foreground/[0.08] flex justify-between">
-              <span className="text-base font-semibold text-primary">Total amount</span>
-              <span className="text-base font-bold text-foreground">₹{order.total.toLocaleString()}</span>
+            <div className="flex justify-between gap-4 border-t border-foreground/[0.08] pt-3 text-base font-semibold text-foreground">
+              <dt>Total amount</dt>
+              <dd>{formatINR(order.total)}</dd>
             </div>
-            {pointsEarnedNote && (
-              <p className="flex items-start gap-2 text-xs text-muted-foreground">
-                <Coins className="mt-px h-3.5 w-3.5 flex-shrink-0 text-primary" aria-hidden="true" />
-                <span>{pointsEarnedNote}</span>
-              </p>
-            )}
-          </div>
-        </div>
+          </dl>
+          {pointsEarnedNote && (
+            <p className="flex items-start gap-2 px-4 pb-3 text-xs text-muted-foreground">
+              <Coins className="mt-px size-3.5 shrink-0 text-primary" aria-hidden="true" />
+              <span>{pointsEarnedNote}</span>
+            </p>
+          )}
+        </section>
 
         {/* Share order details + invoice */}
-        <div className="panel tx-sheet overflow-hidden divide-y divide-foreground/[0.06]">
-        <div className="px-4 py-2">
-          <button 
+        <div className="panel tx-sheet divide-y divide-foreground/[0.08] overflow-hidden">
+          <button
+            ref={shareTriggerRef}
+            type="button"
             onClick={() => setShowShareMenu(true)}
-            className="w-full flex items-center justify-between text-sm text-foreground/80 font-medium py-2"
+            onPointerEnter={warmReceipt}
+            onFocus={warmReceipt}
+            className={rowButton}
           >
-            <div className="flex items-center gap-3">
-              <Share2 className="w-5 h-5 text-muted-foreground" />
-              <span>Share Order Details</span>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground/70" />
+            <span className="flex items-center gap-3">
+              <Share2 aria-hidden="true" className="size-5 text-muted-foreground" />
+              <span>Share order details</span>
+            </span>
+            <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
           </button>
-        </div>
 
-        <div className="px-4 py-2">
-          <button 
+          <button
+            type="button"
             onClick={() => downloadInvoice()}
+            onPointerEnter={warmInvoice}
+            onFocus={warmInvoice}
             disabled={isDownloadingInvoice}
-            className="w-full flex items-center justify-between text-sm text-foreground/80 font-medium py-2 disabled:opacity-50"
+            className={rowButton}
           >
-            <div className="flex items-center gap-3">
-              <Download className="w-5 h-5 text-muted-foreground" />
-              <div className="text-left">
-                <span className="block">Download Invoice</span>
-                <span className="text-xs text-muted-foreground/70">Order ID: {order.orderId}</span>
-              </div>
-            </div>
+            <span className="flex items-center gap-3">
+              <Download aria-hidden="true" className="size-5 text-muted-foreground" />
+              <span className="text-left">
+                <span className="block">Download invoice</span>
+                <span className="block text-xs font-normal text-muted-foreground tabular-nums">Order ORD-{order.orderId}</span>
+              </span>
+            </span>
             {isDownloadingInvoice ? (
-              <Loader2 className="w-4 h-4 text-muted-foreground/70 animate-spin" />
+              <Spinner label="Creating your invoice" className="text-muted-foreground" />
             ) : (
-              <ChevronRight className="w-4 h-4 text-muted-foreground/70" />
+              <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
             )}
           </button>
-        </div>
         </div>
 
       </div>
 
-      {/* Hidden Receipt Component for Image Generation */}
+      {/* Hidden Receipt Component for Image Generation (fixed colours: it becomes a picture) */}
       {order && (
-        <div style={{ 
-          position: 'fixed', 
-          left: 0, 
-          top: 0, 
-          zIndex: -9999,
-          opacity: 0,
-          pointerEvents: 'none',
-          overflow: 'hidden',
-        }}>
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            zIndex: -9999,
+            opacity: 0,
+            pointerEvents: 'none',
+            overflow: 'hidden',
+          }}
+        >
           <div
             ref={receiptRef}
             style={{
               width: '380px',
               padding: '24px',
-              backgroundColor: '#ffffff',
+              backgroundColor: RECEIPT.paper,
+              color: RECEIPT.text,
               fontFamily: "var(--font-body)",
             }}
           >
             {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: '20px', borderBottom: '2px solid #A4532C', paddingBottom: '16px' }}>
-              <h1 style={{ fontSize: '22px', fontWeight: 'bold', color: '#A4532C', margin: 0 }}>ISHAPUTRA BOTANICALS</h1>
-              <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0 0' }}>{BRAND.tagline}</p>
+            <div style={{ textAlign: 'center', marginBottom: '20px', borderBottom: `2px solid ${RECEIPT.accent}`, paddingBottom: '16px' }}>
+              <p style={{ fontSize: '22px', fontWeight: 'bold', color: RECEIPT.accent, margin: 0, fontFamily: 'var(--font-heading)' }}>ISHAPUTRA BOTANICALS</p>
+              <p style={{ fontSize: '11px', color: RECEIPT.muted, margin: '4px 0 0 0' }}>{BRAND.tagline}</p>
             </div>
 
             {/* Receipt Title */}
             <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937', margin: 0 }}>ORDER RECEIPT</h2>
+              <p style={{ fontSize: '14px', fontWeight: '600', letterSpacing: '0.18em', color: RECEIPT.text, margin: 0 }}>ORDER RECEIPT</p>
             </div>
 
             {/* Order Info */}
-            <div style={{ backgroundColor: '#fff7ed', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+            <div style={{ backgroundColor: RECEIPT.panel, padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ fontSize: '12px', color: '#6b7280' }}>Order ID:</span>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#1f2937' }}>ORD-{order.orderId}</span>
+                <span style={{ fontSize: '12px', color: RECEIPT.muted }}>Order ID</span>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: RECEIPT.text }}>ORD-{order.orderId}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ fontSize: '12px', color: '#6b7280' }}>Date:</span>
-                <span style={{ fontSize: '12px', color: '#1f2937' }}>{formatDate(order.createdAt)}</span>
+                <span style={{ fontSize: '12px', color: RECEIPT.muted }}>Date</span>
+                <span style={{ fontSize: '12px', color: RECEIPT.text }}>{formatDate(order.createdAt)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '12px', color: '#6b7280' }}>Status:</span>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#f97316' }}>{getStatusLabel(order.status)}</span>
+                <span style={{ fontSize: '12px', color: RECEIPT.muted }}>Status</span>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: RECEIPT.accent }}>{getStatusLabel(order.status)}</span>
               </div>
             </div>
 
             {/* Items */}
             <div style={{ marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '10px', borderBottom: '1px solid #e5e7eb', paddingBottom: '6px' }}>Items Ordered</h3>
+              <p style={{ fontSize: '13px', fontWeight: '600', color: RECEIPT.text, margin: '0 0 10px', borderBottom: `1px solid ${RECEIPT.rule}`, paddingBottom: '6px' }}>Items ordered</p>
               {order.items.map((item, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', paddingBottom: '10px', borderBottom: idx < order.items.length - 1 ? '1px dashed #e5e7eb' : 'none' }}>
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', paddingBottom: '10px', borderBottom: idx < order.items.length - 1 ? `1px dashed ${RECEIPT.rule}` : 'none' }}>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '12px', fontWeight: '500', color: '#1f2937', margin: 0 }}>{item.name}</p>
-                    <p style={{ fontSize: '11px', color: '#6b7280', margin: '2px 0 0 0' }}>Qty: {item.quantity} × ₹{item.price.toLocaleString('en-IN')}</p>
+                    <p style={{ fontSize: '12px', fontWeight: '500', color: RECEIPT.text, margin: 0 }}>{item.name}</p>
+                    <p style={{ fontSize: '11px', color: RECEIPT.muted, margin: '2px 0 0 0' }}>Qty {item.quantity} × {formatINR(item.price)}</p>
                   </div>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#1f2937' }}>₹{(item.quantity * item.price).toLocaleString('en-IN')}</span>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: RECEIPT.text }}>{formatINR(item.quantity * item.price)}</span>
                 </div>
               ))}
             </div>
 
             {/* Price Details */}
-            <div style={{ backgroundColor: '#f9fafb', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '10px' }}>Price Details</h3>
+            <div style={{ backgroundColor: RECEIPT.panel, padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+              <p style={{ fontSize: '13px', fontWeight: '600', color: RECEIPT.text, margin: '0 0 10px' }}>Price details</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ fontSize: '12px', color: '#6b7280' }}>Selling Price</span>
-                <span style={{ fontSize: '12px', color: '#1f2937' }}>₹{order.subtotal.toLocaleString('en-IN')}</span>
+                <span style={{ fontSize: '12px', color: RECEIPT.muted }}>Selling price</span>
+                <span style={{ fontSize: '12px', color: RECEIPT.text }}>{formatINR(order.subtotal)}</span>
               </div>
               {order.discount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '12px', color: '#16a34a' }}>Discount</span>
-                  <span style={{ fontSize: '12px', color: '#16a34a' }}>-₹{order.discount.toLocaleString('en-IN')}</span>
+                  <span style={{ fontSize: '12px', color: RECEIPT.discount }}>Discount</span>
+                  <span style={{ fontSize: '12px', color: RECEIPT.discount }}>-{formatINR(order.discount)}</span>
                 </div>
               )}
               {rewardsRows.map(([label, amount]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '12px', color: '#16a34a' }}>{label}</span>
-                  <span style={{ fontSize: '12px', color: '#16a34a' }}>-₹{amount.toLocaleString('en-IN')}</span>
+                  <span style={{ fontSize: '12px', color: RECEIPT.discount }}>{label}</span>
+                  <span style={{ fontSize: '12px', color: RECEIPT.discount }}>-{formatINR(amount)}</span>
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <span style={{ fontSize: '12px', color: '#6b7280' }}>Total Fees</span>
-                <span style={{ fontSize: '12px', color: '#1f2937' }}>₹{totalFees.toLocaleString('en-IN')}</span>
+                <span style={{ fontSize: '12px', color: RECEIPT.muted }}>Total fees</span>
+                <span style={{ fontSize: '12px', color: RECEIPT.text }}>{formatINR(totalFees)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: '2px solid #f97316' }}>
-                <span style={{ fontSize: '14px', fontWeight: '700', color: '#f97316' }}>Total Amount</span>
-                <span style={{ fontSize: '14px', fontWeight: '700', color: '#1f2937' }}>₹{order.total.toLocaleString('en-IN')}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0', borderTop: `2px solid ${RECEIPT.accent}` }}>
+                <span style={{ fontSize: '14px', fontWeight: '700', color: RECEIPT.accent }}>Total amount</span>
+                <span style={{ fontSize: '14px', fontWeight: '700', color: RECEIPT.text }}>{formatINR(order.total)}</span>
               </div>
             </div>
 
             {/* Payment & Delivery */}
             <div style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', color: '#6b7280' }}>Payment:</span>
-                <span style={{ fontSize: '12px', fontWeight: '500', color: '#1f2937' }}>{formatPaymentMethod(order.paymentMethod)}</span>
+                <span style={{ fontSize: '12px', color: RECEIPT.muted }}>Payment</span>
+                <span style={{ fontSize: '12px', fontWeight: '500', color: RECEIPT.text }}>{formatPaymentMethod(order.paymentMethod)}</span>
               </div>
               <div style={{ marginTop: '10px' }}>
-                <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0' }}>Delivery Address:</p>
-                <p style={{ fontSize: '12px', color: '#1f2937', margin: 0, lineHeight: '1.4' }}>
+                <p style={{ fontSize: '12px', color: RECEIPT.muted, margin: '0 0 4px 0' }}>Delivery address</p>
+                <p style={{ fontSize: '12px', color: RECEIPT.text, margin: 0, lineHeight: '1.4' }}>
                   {order.shippingAddress.fullName}<br />
                   {order.shippingAddress.address}<br />
                   {order.shippingAddress.city}, {order.shippingAddress.state}<br />
-                  PIN: {order.shippingAddress.pincode}<br />
-                  Mobile: {order.shippingAddress.mobile}
+                  PIN {order.shippingAddress.pincode}<br />
+                  Mobile {order.shippingAddress.mobile}
                 </p>
               </div>
             </div>
 
             {/* Tracking Info */}
             {(order.trackingId || order.carrier) && (
-              <div style={{ backgroundColor: '#eff6ff', padding: '10px', borderRadius: '8px', marginBottom: '16px' }}>
-                <p style={{ fontSize: '12px', fontWeight: '600', color: '#1d4ed8', marginBottom: '6px' }}>Tracking Information</p>
-                {order.trackingId && <p style={{ fontSize: '11px', color: '#4b5563', margin: '0 0 4px 0' }}>ID: {order.trackingId}</p>}
-                {order.carrier && <p style={{ fontSize: '11px', color: '#4b5563', margin: 0 }}>Carrier: {order.carrier}</p>}
+              <div style={{ backgroundColor: RECEIPT.panel, padding: '10px', borderRadius: '8px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '12px', fontWeight: '600', color: RECEIPT.accent, margin: '0 0 6px' }}>Tracking information</p>
+                {order.trackingId && <p style={{ fontSize: '11px', color: RECEIPT.muted, margin: '0 0 4px 0' }}>ID {order.trackingId}</p>}
+                {order.carrier && <p style={{ fontSize: '11px', color: RECEIPT.muted, margin: 0 }}>Carrier {order.carrier}</p>}
               </div>
             )}
 
             {/* Footer */}
-            <div style={{ textAlign: 'center', borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
-              <p style={{ fontSize: '12px', fontWeight: '500', color: '#1f2937', margin: '0 0 4px 0' }}>Thank you for shopping with us! 🎉</p>
-              <p style={{ fontSize: '11px', color: '#6b7280', margin: '0 0 8px 0' }}>For support: {BRAND.phones[0] || BRAND.email}</p>
-              <p style={{ fontSize: '10px', color: '#9ca3af', margin: 0 }}>{SITE_HOST}</p>
+            <div style={{ textAlign: 'center', borderTop: `1px solid ${RECEIPT.rule}`, paddingTop: '16px' }}>
+              <p style={{ fontSize: '12px', fontWeight: '500', color: RECEIPT.text, margin: '0 0 4px 0' }}>Thank you for shopping with Ishaputra.</p>
+              <p style={{ fontSize: '11px', color: RECEIPT.muted, margin: '0 0 8px 0' }}>For support: {BRAND.phones[0] || BRAND.email}</p>
+              <p style={{ fontSize: '10px', color: RECEIPT.muted, margin: 0 }}>{SITE_HOST}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Share Menu Modal */}
-      <AnimatePresence>
-        {showShareMenu && order && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-[60] flex items-end"
-            onClick={() => setShowShareMenu(false)}
-          >
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="bg-card w-full rounded-t-[var(--radius-panel)] p-6 pb-8"
-              style={{ fontFamily: "var(--font-body)" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-foreground">Share Order Details</h3>
-                <button
-                  onClick={() => setShowShareMenu(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-foreground/[0.06]"
-                >
-                  <X className="w-5 h-5 text-muted-foreground" />
-                </button>
-              </div>
+      {/* Share sheet */}
+      <Sheet open={showShareMenu} onOpenChange={setShowShareMenu}>
+        <SheetContent
+          side="bottom"
+          className="tx-sheet mx-auto max-w-xl border-foreground/[0.08] px-5 pt-6 sm:px-6"
+          onCloseAutoFocus={(e) => { e.preventDefault(); shareTriggerRef.current?.focus(); }}
+        >
+          <div className="mb-5 pr-10">
+            <SheetTitle>Share order details</SheetTitle>
+            <SheetDescription className="mt-1">Send a picture of your receipt.</SheetDescription>
+          </div>
 
-              {/* Generating Image Indicator */}
-              {isGeneratingImage && (
-                <div className="flex items-center justify-center py-4 mb-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500 mr-3"></div>
-                  <span className="text-sm text-muted-foreground">Generating receipt image...</span>
-                </div>
-              )}
-
-              {/* Share Options Grid */}
-              <div className="grid grid-cols-4 gap-4">
-                {/* WhatsApp */}
-                <button
-                  onClick={() => shareReceiptImage('whatsapp')}
-                  disabled={isGeneratingImage}
-                  className="flex flex-col items-center gap-2 disabled:opacity-50"
-                >
-                  <div className="w-14 h-14 bg-green-100 rounded-[var(--radius-card)] flex items-center justify-center">
-                    <MessageCircle className="w-7 h-7 text-green-600" />
-                  </div>
-                  <span className="text-xs text-foreground/80">WhatsApp</span>
-                </button>
-
-                {/* Gmail */}
-                <button
-                  onClick={() => shareReceiptImage('email')}
-                  disabled={isGeneratingImage}
-                  className="flex flex-col items-center gap-2 disabled:opacity-50"
-                >
-                  <div className="w-14 h-14 bg-red-100 rounded-[var(--radius-card)] flex items-center justify-center">
-                    <Mail className="w-7 h-7 text-red-600" />
-                  </div>
-                  <span className="text-xs text-foreground/80">Gmail</span>
-                </button>
-
-                {/* Instagram */}
-                <button
-                  onClick={() => shareReceiptImage('native')}
-                  disabled={isGeneratingImage}
-                  className="flex flex-col items-center gap-2 disabled:opacity-50"
-                >
-                  <div className="w-14 h-14 bg-pink-100 rounded-[var(--radius-card)] flex items-center justify-center">
-                    <Share2 className="w-7 h-7 text-pink-600" />
-                  </div>
-                  <span className="text-xs text-foreground/80">Instagram</span>
-                </button>
-
-                {/* Download Image */}
-                <button
-                  onClick={() => shareReceiptImage('download')}
-                  disabled={isGeneratingImage}
-                  className="flex flex-col items-center gap-2 disabled:opacity-50"
-                >
-                  <div className="w-14 h-14 bg-foreground/[0.06] rounded-[var(--radius-card)] flex items-center justify-center">
-                    <Download className="w-7 h-7 text-muted-foreground" />
-                  </div>
-                  <span className="text-xs text-foreground/80">Save</span>
-                </button>
-
-                {/* Facebook Messenger */}
-                <button
-                  onClick={() => shareReceiptImage('native')}
-                  disabled={isGeneratingImage}
-                  className="flex flex-col items-center gap-2 disabled:opacity-50"
-                >
-                  <div className="w-14 h-14 bg-blue-100 rounded-[var(--radius-card)] flex items-center justify-center">
-                    <MessageCircle className="w-7 h-7 text-primary" />
-                  </div>
-                  <span className="text-xs text-foreground/80">Messenger</span>
-                </button>
-
-                {/* SMS */}
-                <button
-                  onClick={() => shareReceiptImage('native')}
-                  disabled={isGeneratingImage}
-                  className="flex flex-col items-center gap-2 disabled:opacity-50"
-                >
-                  <div className="w-14 h-14 bg-green-100 rounded-[var(--radius-card)] flex items-center justify-center">
-                    <MessageCircle className="w-7 h-7 text-green-700" />
-                  </div>
-                  <span className="text-xs text-foreground/80">SMS</span>
-                </button>
-
-                {/* Telegram */}
-                <button
-                  onClick={() => shareReceiptImage('native')}
-                  disabled={isGeneratingImage}
-                  className="flex flex-col items-center gap-2 disabled:opacity-50"
-                >
-                  <div className="w-14 h-14 bg-sky-100 rounded-[var(--radius-card)] flex items-center justify-center">
-                    <Share2 className="w-7 h-7 text-sky-600" />
-                  </div>
-                  <span className="text-xs text-foreground/80">Telegram</span>
-                </button>
-
-                {/* More (Native Share) */}
-                <button
-                  onClick={() => shareReceiptImage('native')}
-                  disabled={isGeneratingImage}
-                  className="flex flex-col items-center gap-2 disabled:opacity-50"
-                >
-                  <div className="w-14 h-14 bg-foreground/[0.06] rounded-[var(--radius-card)] flex items-center justify-center">
-                    <Share2 className="w-7 h-7 text-muted-foreground" />
-                  </div>
-                  <span className="text-xs text-foreground/80">More</span>
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Return Request Modal - Full Page */}
-      <AnimatePresence>
-        {showReturnModal && order && (
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 bg-card z-[99999] flex flex-col"
-          >
-            {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-4 border-b border-foreground/[0.06]">
-              <button
-                onClick={() => {
-                  if (returnStep === 'details') {
-                    setReturnStep('reason');
-                  } else {
-                    setShowReturnModal(false);
-                    setReturnReason('');
-                    setCustomReturnReason('');
-                    setReturnStep('reason');
-                  }
-                }}
-                className="w-8 h-8 flex items-center justify-center"
-              >
-                <ArrowLeft className="w-5 h-5 text-foreground/80" />
-              </button>
-              <h3 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>Request Return</h3>
+          {/* Generating Image Indicator */}
+          {isGeneratingImage && (
+            <div role="status" className="mb-4 flex items-center justify-center gap-3 py-2 text-sm text-muted-foreground">
+              <Spinner className="text-primary" />
+              Creating your receipt image
             </div>
+          )}
 
-            {/* Return Reasons Grid - Step 1 */}
-            {returnStep === 'reason' && (
-              <>
-                <div className="flex-1 overflow-y-auto px-4 py-4">
-              
-              {/* Product Info */}
-              <div className="mb-4">
-                <div className="flex gap-3">
-                  <div className="w-16 h-16 bg-foreground/[0.06] rounded-lg overflow-hidden flex-shrink-0">
-                    <SmartImage 
-                      src={order.items[0]?.image} 
-                      alt={order.items[0]?.name}
-                      className="w-full h-full object-cover" preset="thumb" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-foreground line-clamp-2" style={{ fontFamily: "var(--font-body)" }}>
-                      {order.items[0]?.name}
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: "var(--font-body)" }}>
-                      Quantity: {order.items[0]?.quantity}
-                    </p>
-                    <p className="text-base font-bold text-foreground mt-1" style={{ fontFamily: "var(--font-body)" }}>
-                      ₹{order.items[0]?.price?.toLocaleString()}
-                    </p>
-                  </div>
+          {/* Share Options Grid */}
+          <div className="grid grid-cols-4 gap-x-2 gap-y-4">
+            {([
+              { label: 'WhatsApp', icon: MessageCircle, platform: 'whatsapp' },
+              { label: 'Gmail', icon: Mail, platform: 'email' },
+              { label: 'Instagram', icon: Share2, platform: 'native' },
+              { label: 'Save', icon: Download, platform: 'download' },
+              { label: 'Messenger', icon: MessageCircle, platform: 'native' },
+              { label: 'SMS', icon: MessageCircle, platform: 'native' },
+              { label: 'Telegram', icon: Share2, platform: 'native' },
+              { label: 'More', icon: Share2, platform: 'native' },
+            ] as const).map(({ label, icon: Icon, platform }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => shareReceiptImage(platform)}
+                disabled={isGeneratingImage}
+                className="group flex flex-col items-center gap-2 rounded-card py-1 transition-transform duration-press ease-out active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span className="tx-slate grid size-14 place-items-center rounded-card transition-[box-shadow] duration-hover ease-out group-hover:shadow-[var(--shadow-card-hover)]">
+                  <Icon aria-hidden="true" className="size-6 text-highlight-soft" />
+                </span>
+                <span className="text-xs text-foreground">{label}</span>
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Return request sheet */}
+      <Sheet open={showReturnModal} onOpenChange={(open) => { if (!open) closeReturnSheet(); }}>
+        <SheetContent
+          side="right"
+          hideClose
+          className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
+          onCloseAutoFocus={(e) => { e.preventDefault(); returnTriggerRef.current?.focus(); }}
+        >
+          {/* Header */}
+          <div className="flex items-center gap-2 border-b border-foreground/[0.08] px-3 py-3">
+            {returnStep === 'details' ? (
+              <IconButton label="Back" onClick={() => setReturnStep('reason')}>
+                <ArrowLeft />
+              </IconButton>
+            ) : (
+              <IconButton label="Close" onClick={closeReturnSheet}>
+                <ArrowLeft />
+              </IconButton>
+            )}
+            <SheetTitle>Request a return</SheetTitle>
+            <SheetDescription className="sr-only">
+              {returnStep === 'reason' ? 'Step 1 of 2: choose a reason.' : 'Step 2 of 2: check the pickup details and send the request.'}
+            </SheetDescription>
+          </div>
+
+          {/* Return Reasons Grid - Step 1 */}
+          {returnStep === 'reason' && (
+            <>
+              <div className="flex-1 overflow-y-auto px-4 py-5">
+                {productSummary}
+
+                <h3 id="return-reason-heading" className={cn(sectionHeading, 'mb-3 mt-6')}>Reason for return</h3>
+
+                <div role="group" aria-labelledby="return-reason-heading" className="grid grid-cols-2 gap-3">
+                  {RETURN_REASONS.map((item) => {
+                    const selected = returnReason === item.reason;
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.reason}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => {
+                          setReturnReason(item.reason);
+                          setCustomReturnReason('');
+                        }}
+                        className={cn(
+                          'relative flex flex-col items-center gap-3 rounded-card border p-4 text-center transition-[border-color,background-color,box-shadow,transform] duration-press ease-out active:scale-[0.97]',
+                          selected
+                            ? 'border-primary bg-primary/[0.06] ring-1 ring-primary'
+                            : 'border-foreground/[0.1] bg-card hover:border-foreground/25',
+                        )}
+                      >
+                        {selected && (
+                          <span aria-hidden="true" className="absolute right-2 top-2 grid size-5 place-items-center rounded-full bg-primary text-primary-foreground">
+                            <Check className="size-3 [stroke-width:2.5]" />
+                          </span>
+                        )}
+                        <span aria-hidden="true" className="tx-slate grid size-11 place-items-center rounded-[8px]">
+                          <Icon className="size-5 text-highlight-soft" />
+                        </span>
+                        <span className={cn('text-xs leading-snug', selected ? 'font-semibold text-foreground' : 'text-muted-foreground')}>
+                          {item.label}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-                {order.items.length > 1 && (
-                  <p className="text-xs text-muted-foreground mt-2 text-center" style={{ fontFamily: "var(--font-body)" }}>
-                    +{order.items.length - 1} more items will be included in this return
-                  </p>
+
+                {/* Other Reason Option */}
+                <button
+                  type="button"
+                  aria-pressed={returnReason === 'Other reason'}
+                  onClick={() => setReturnReason('Other reason')}
+                  className={cn(
+                    'relative mt-3 flex w-full items-center gap-3 rounded-card border p-3 text-left transition-[border-color,background-color,box-shadow,transform] duration-press ease-out active:scale-[0.97]',
+                    returnReason === 'Other reason'
+                      ? 'border-primary bg-primary/[0.06] ring-1 ring-primary'
+                      : 'border-foreground/[0.1] bg-card hover:border-foreground/25',
+                  )}
+                >
+                  <span aria-hidden="true" className="tx-slate grid size-11 shrink-0 place-items-center rounded-[8px]">
+                    <PenLine className="size-5 text-highlight-soft" />
+                  </span>
+                  <span className={cn('flex-1 text-sm', returnReason === 'Other reason' ? 'font-semibold text-foreground' : 'text-muted-foreground')}>
+                    Other reason
+                  </span>
+                  {returnReason === 'Other reason' && (
+                    <span aria-hidden="true" className="grid size-5 place-items-center rounded-full bg-primary text-primary-foreground">
+                      <Check className="size-3 [stroke-width:2.5]" />
+                    </span>
+                  )}
+                </button>
+
+                {/* Custom Reason Input - Shows when "Other reason" is selected */}
+                {returnReason === 'Other reason' && (
+                  <div className="mt-3">
+                    <label htmlFor="return-other-reason" className="sr-only">Your reason for the return</label>
+                    <Textarea
+                      id="return-other-reason"
+                      value={customReturnReason}
+                      onChange={(e) => setCustomReturnReason(e.target.value)}
+                      placeholder="Tell us why you are returning it"
+                      rows={4}
+                      maxLength={200}
+                      aria-describedby="return-other-count"
+                      className="resize-none"
+                      autoFocus
+                    />
+                    <p id="return-other-count" className="ml-1 mt-1 text-xs text-muted-foreground tabular-nums">
+                      {customReturnReason.length}/200 characters
+                    </p>
+                  </div>
                 )}
               </div>
 
-              <h4 className="text-base font-semibold text-foreground mb-4" style={{ fontFamily: "var(--font-body)" }}>Reason for return</h4>
-              
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { 
-                    reason: 'Quality not as expected', 
-                    image: 'https://i.ibb.co/4R89tnfN/IMG-20260303-223842.webp',
-                    description: 'Quality of the product not as expected'
-                  },
-                  { 
-                    reason: 'Received wrong item', 
-                    image: 'https://i.ibb.co/n8gYFKdG/IMG-20260303-223851.webp',
-                    description: 'Received wrong item'
-                  },
-                  { 
-                    reason: "Don't want anymore", 
-                    image: 'https://i.ibb.co/Gv310qKb/IMG-20260303-223900.webp',
-                    description: "Don't want the product anymore"
-                  },
-                  { 
-                    reason: 'Missing in package', 
-                    image: 'https://i.ibb.co/BSzmq7H/IMG-20260303-223908.webp',
-                    description: 'Product is missing in the package'
-                  },
-                  { 
-                    reason: 'Damaged/Broken item', 
-                    image: 'https://i.ibb.co/XxBg8Bcy/IMG-20260303-223921.webp',
-                    description: 'Received a broken/damaged item'
-                  },
-                  { 
-                    reason: "Size/Fit issue", 
-                    image: 'https://i.ibb.co/yndkCNM1/IMG-20260303-223832.webp',
-                    description: "Don't like the size/fit of the product"
-                  },
-                ].map((item) => (
-                  <button
-                    key={item.reason}
-                    onClick={() => {
-                      setReturnReason(item.reason);
-                      setCustomReturnReason('');
-                    }}
-                    className={`flex flex-col items-center p-4 rounded-[10px] border-2 transition-all ${
-                      returnReason === item.reason
-                        ? 'border-gray-900 bg-foreground/[0.03]'
-                        : 'border-foreground/[0.08] bg-card hover:border-foreground/25'
-                    }`}
-                  >
-                    <SmartImage src={item.image} alt={item.description} className="w-16 h-16 mb-2 object-contain dark:brightness-75 dark:opacity-80" preset="thumb" />
-                    <span className={`text-xs text-center leading-tight ${
-                      returnReason === item.reason ? 'text-foreground font-medium' : 'text-muted-foreground'
-                    }`} style={{ fontFamily: "var(--font-body)" }}>
-                      {item.description}
-                    </span>
-                  </button>
-                ))}
+              {/* Bottom Button - Step 1 */}
+              <div className="border-t border-foreground/[0.08] bg-card px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                <button
+                  type="button"
+                  onClick={() => setReturnStep('details')}
+                  disabled={reasonInvalid}
+                  className={
+                    reasonInvalid
+                      ? 'h-12 w-full cursor-not-allowed rounded-control bg-foreground/[0.06] text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground'
+                      : 'btn-copper h-12 w-full justify-center'
+                  }
+                >
+                  Continue
+                </button>
               </div>
+            </>
+          )}
 
-              {/* Other Reason Option */}
-              <button
-                onClick={() => setReturnReason('Other reason')}
-                className={`w-full mt-3 p-4 rounded-[10px] border-2 transition-all flex items-center gap-3 ${
-                  returnReason === 'Other reason'
-                    ? 'border-gray-900 bg-foreground/[0.03]'
-                    : 'border-foreground/[0.08] bg-card hover:border-foreground/25'
-                }`}
-              >
-                <span className="text-2xl">✏️</span>
-                <span className={`text-sm ${
-                  returnReason === 'Other reason' ? 'text-foreground font-medium' : 'text-muted-foreground'
-                }`} style={{ fontFamily: "var(--font-body)" }}>
-                  Other reason
-                </span>
-              </button>
+          {/* Return Details - Step 2 */}
+          {returnStep === 'details' && (
+            <>
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="space-y-6 px-4 py-5">
+                  {productSummary}
 
-              {/* Custom Reason Input - Shows when "Other reason" is selected */}
-              {returnReason === 'Other reason' && (
-                <div className="mt-3">
-                  <textarea
-                    value={customReturnReason}
-                    onChange={(e) => setCustomReturnReason(e.target.value)}
-                    placeholder="Please describe your reason for return..."
-                    rows={4}
-                    maxLength={200}
-                    className="w-full px-4 py-3 border-2 border-foreground/15 rounded-[10px] focus:outline-none focus:border-gray-900 bg-foreground/[0.03] text-foreground placeholder-gray-500 resize-none"
-                    style={{ fontFamily: "var(--font-body)" }}
-                    autoFocus
-                  />
-                  <p className="text-xs text-foreground/80 mt-1 ml-1" style={{ fontFamily: "var(--font-body)" }}>
-                    {customReturnReason.length}/200 characters
-                  </p>
-                </div>
-              )}
-            </div>
+                  <div className="h-px bg-foreground/[0.08]" />
 
-            {/* Bottom Button - Step 1 */}
-            <div className="px-4 py-4 border-t border-foreground/[0.06] bg-card">
-              <button
-                onClick={() => setReturnStep('details')}
-                disabled={!returnReason || (returnReason === 'Other reason' && !customReturnReason.trim())}
-                className={`w-full py-4 rounded-full font-semibold text-base transition-all ${
-                  !returnReason || (returnReason === 'Other reason' && !customReturnReason.trim())
-                    ? 'bg-foreground/[0.06] text-muted-foreground/70 cursor-not-allowed'
-                    : 'bg-gray-900 dark:bg-zinc-100 text-white hover:bg-gray-800 dark:bg-zinc-100'
-                }`}
-                style={{ fontFamily: "var(--font-body)" }}
-              >
-                Continue
-              </button>
-            </div>
-              </>
-            )}
+                  {/* Replacement Info */}
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold text-foreground">Return type</h3>
+                    <div className="rounded-card border border-primary/25 bg-primary/[0.05] p-4">
+                      <p className="text-sm font-semibold text-foreground">Product replacement</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Your product will be replaced with the same item after quality check
+                      </p>
+                    </div>
+                  </div>
 
-            {/* Return Details - Step 2 */}
-            {returnStep === 'details' && (
-              <>
-                {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto">
-                  <div className="px-4 py-6 space-y-6">
-                    {/* Product Info */}
-                    <div>
-                      <div className="flex gap-3">
-                        <div className="w-16 h-16 bg-foreground/[0.06] rounded-lg overflow-hidden flex-shrink-0">
-                          <SmartImage 
-                            src={order.items[0]?.image} 
-                            alt={order.items[0]?.name}
-                            className="w-full h-full object-cover" preset="thumb" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-foreground line-clamp-2" style={{ fontFamily: "var(--font-body)" }}>
-                            {order.items[0]?.name}
-                          </h4>
-                          <p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: "var(--font-body)" }}>
-                            Quantity: {order.items[0]?.quantity}
-                          </p>
-                          <p className="text-base font-bold text-foreground mt-1" style={{ fontFamily: "var(--font-body)" }}>
-                            ₹{order.items[0]?.price?.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      {order.items.length > 1 && (
-                        <p className="text-xs text-muted-foreground mt-2 text-center" style={{ fontFamily: "var(--font-body)" }}>
-                          +{order.items.length - 1} more items will be included in this return
+                  <div className="h-px bg-foreground/[0.08]" />
+
+                  {/* Pick up and delivery */}
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold text-foreground">Pickup and delivery</h3>
+                    <div className="rounded-card bg-foreground/[0.04] p-4">
+                      <p className="text-sm font-medium text-foreground">
+                        {order.shippingAddress?.fullName || 'Not available'}
+                      </p>
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+                        <Phone aria-hidden="true" className="size-3.5" />
+                        {order.shippingAddress?.mobile || 'Not available'}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {order.shippingAddress?.address}, {order.shippingAddress?.locality && `${order.shippingAddress.locality}, `}{order.shippingAddress?.city}, {order.shippingAddress?.state} {order.shippingAddress?.pincode}
+                      </p>
+                      {order.shippingAddress?.landmark && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Landmark: {order.shippingAddress.landmark}
                         </p>
                       )}
                     </div>
-
-                    <div className="h-px bg-foreground/10" />
-
-                    {/* Replacement Info */}
-                    <div>
-                      <h4 className="text-base font-medium text-foreground mb-3" style={{ fontFamily: "var(--font-body)" }}>
-                        Return Type
-                      </h4>
-                      <div className="p-4 bg-primary/5 rounded-lg border-2 border-primary/25">
-                        <p className="text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-body)" }}>
-                          Product Replacement
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1" style={{ fontFamily: "var(--font-body)" }}>
-                          Your product will be replaced with the same item after quality check
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="h-px bg-foreground/10" />
-
-                    {/* Pick up and delivery */}
-                    <div>
-                      <h4 className="text-sm font-medium text-foreground mb-3" style={{ fontFamily: "var(--font-body)" }}>
-                        Pick up and delivery
-                      </h4>
-                      <div className="p-4 bg-foreground/[0.03] rounded-lg">
-                        <p className="text-sm font-medium text-foreground" style={{ fontFamily: "var(--font-body)" }}>
-                          {order.shippingAddress?.fullName || 'N/A'}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1" style={{ fontFamily: "var(--font-body)" }}>
-                          📱 {order.shippingAddress?.mobile || 'N/A'}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1" style={{ fontFamily: "var(--font-body)" }}>
-                          {order.shippingAddress?.address}, { order.shippingAddress?.locality && `${order.shippingAddress.locality}, `}{order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.pincode}
-                        </p>
-                        {order.shippingAddress?.landmark && (
-                          <p className="text-xs text-muted-foreground mt-1" style={{ fontFamily: "var(--font-body)" }}>
-                            Landmark: {order.shippingAddress.landmark}
-                          </p>
-                        )}
-                      </div>
-                    </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Bottom Button - Step 2 */}
-                <div className="px-4 py-4 border-t border-foreground/[0.06] bg-card">
-                  <button
-                    onClick={handleRequestReturn}
-                    disabled={isSubmitting}
-                    className={`w-full py-4 rounded-full font-semibold text-base transition-all ${
-                      isSubmitting
-                        ? 'bg-foreground/[0.06] text-muted-foreground/70 cursor-not-allowed'
-                        : 'bg-gray-900 dark:bg-zinc-100 text-white hover:bg-gray-800 dark:bg-zinc-100'
-                    }`}
-                    style={{ fontFamily: "var(--font-body)" }}
-                  >
-                    {isSubmitting ? 'Submitting...' : 'Submit Return Request'}
-                  </button>
-                </div>
-              </>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <Footer />
-      {/* Mobile bottom navigation — ensures the side menu is reachable on phones */}
-      <div className="lg:hidden">
-        <MobileBottomNav />
-      </div>
-    </div>
+              {/* Bottom Button - Step 2 */}
+              <div className="border-t border-foreground/[0.08] bg-card px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                <button
+                  type="button"
+                  onClick={handleRequestReturn}
+                  disabled={isSubmitting}
+                  className={
+                    isSubmitting
+                      ? 'inline-flex h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-control bg-foreground/[0.06] text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground'
+                      : 'btn-copper h-12 w-full justify-center'
+                  }
+                >
+                  {isSubmitting && <Spinner />}
+                  {isSubmitting ? 'Sending request' : 'Request return'}
+                </button>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Cancel return confirmation */}
+      <ConfirmDialog
+        open={confirmCancelReturn}
+        onOpenChange={setConfirmCancelReturn}
+        title="Cancel this return?"
+        description="You won't be able to request a return for this order again."
+        confirmLabel="Cancel return"
+        cancelLabel="Keep return"
+        tone="danger"
+        onConfirm={handleCancelReturn}
+        returnFocusRef={cancelReturnBtnRef}
+      />
+    </>
   );
 };
 

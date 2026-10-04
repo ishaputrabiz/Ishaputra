@@ -1,5 +1,5 @@
-/* Fonts: Archivo (headings, set wide via --font-heading-stretch) + Manrope (body) */
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&family=Manrope:wght@300..800&display=swap');
+/* Fonts: Archivo (headings, set wide via --font-heading-stretch) + Manrope (body).
+   Loaded by a <link rel="stylesheet"> in index.html, after the preconnects. */
 
 @tailwind base;
 @tailwind components;
@@ -10,6 +10,7 @@
  * Rust copper is the signature colour (primary), bronze from the logo is the
  * highlight, and surfaces are warm cream (light) or near-black charcoal (dark).
  * Every colour below is HSL without hsl(), so Tailwind opacity modifiers work.
+ * docs/ui-system.md is the practical guide to these tokens.
  */
 @layer base {
   :root {
@@ -37,8 +38,9 @@
     --muted: 37 30% 89%;
     --muted-foreground: 30 7% 37%;
 
-    --accent: 20 58% 41%;
-    --accent-foreground: 0 0% 100%;
+    /* Soft paper tone for menu highlights and ghost hovers. Copper lives only on --primary. */
+    --accent: 37 32% 90%;
+    --accent-foreground: 30 10% 8%;
 
     /* Bronze from the logo - replaces the old gold. Deep enough for small text on cream. */
     --highlight: 36 46% 38%;
@@ -50,11 +52,13 @@
     --charcoal: 40 6% 10%;
     --charcoal-foreground: 39 35% 92%;
 
-    --destructive: 0 72% 48%;
-    --destructive-foreground: 0 0% 100%;
+    /* #A8281E: 6.2:1 on cream, 6.6:1 under its foreground */
+    --destructive: 4 70% 39%;
+    --destructive-foreground: 39 35% 97%;
 
     --border: 37 25% 84%;
-    --input: 37 25% 84%;
+    /* Form control borders: 3.2:1 on cream (WCAG 1.4.11 non-text contrast) */
+    --input: 33 12% 52%;
     --ring: 20 58% 41%;
 
     --radius: 0.75rem;
@@ -112,8 +116,8 @@
     --muted: 36 7% 14%;
     --muted-foreground: 35 9% 62%;
 
-    --accent: 23 56% 52%;
-    --accent-foreground: 30 8% 5%;
+    --accent: 30 7% 14%;
+    --accent-foreground: 39 35% 92%;
 
     --highlight: 36 48% 59%;
     --highlight-foreground: 30 8% 5%;
@@ -122,11 +126,12 @@
     --charcoal: 40 6% 10%;
     --charcoal-foreground: 39 35% 92%;
 
-    --destructive: 0 62% 45%;
-    --destructive-foreground: 39 35% 92%;
+    /* 5.4:1 on the dark page, 5.4:1 under its dark foreground */
+    --destructive: 0 70% 62%;
+    --destructive-foreground: 30 8% 5%;
 
     --border: 30 7% 16%;
-    --input: 30 7% 16%;
+    --input: 30 7% 42%;
     --ring: 23 56% 52%;
 
     --shadow-gold: 0 4px 18px hsl(23 56% 52% / 0.18);
@@ -150,6 +155,14 @@
     @apply border-border;
   }
 
+  /* Native controls, scrollbars and form autofill follow the theme. */
+  :root {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+
   /*
    * Smooth scrolling across the whole site.
    *
@@ -159,12 +172,16 @@
    * html, body and every scrollable box keeps anchor links, "back to top",
    * `scrollIntoView` and carousel/scroll-into-view calls animated everywhere.
    *
-   * Route changes deliberately opt out with `behavior: 'auto'` in
+   * Route changes deliberately opt out with `behavior: 'instant'` in
    * ScrollToTop.tsx - restoring a saved position must be instant, not a visible
-   * animated sweep down the page.
+   * animated sweep down the page. ('auto' would inherit the smooth value below.)
+   *
+   * scroll-padding-top keeps anything scrolled into view (Tab focus, anchors,
+   * scrollIntoView) clear of the sticky header and category bar (WCAG 2.4.11).
    */
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 7.5rem;
     overflow-x: clip;
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--border)) transparent;
@@ -172,6 +189,12 @@
 
   body {
     scroll-behavior: smooth;
+  }
+
+  @media (min-width: 1024px) {
+    html {
+      scroll-padding-top: 8rem;
+    }
   }
 
   /* Inner scroll areas: smooth programmatic scrolling + iOS momentum. */
@@ -223,17 +246,6 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Mobile Image Optimization */
-  @media (max-width: 1024px) {
-    img {
-      -webkit-transform: translateZ(0);
-      transform: translateZ(0);
-      -webkit-backface-visibility: hidden;
-      backface-visibility: hidden;
-      image-rendering: -webkit-optimize-contrast;
-    }
-  }
-
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     font-stretch: var(--font-heading-stretch);
@@ -245,7 +257,7 @@
     content: '';
     position: fixed;
     inset: 0;
-    z-index: 60;
+    z-index: var(--z-grain);
     pointer-events: none;
     opacity: var(--grain-opacity);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -255,25 +267,37 @@
   .font-heading, .font-serif {
     font-stretch: var(--font-heading-stretch);
   }
+
+  /*
+   * Keyboard focus, everywhere. Copper ring 2px outside the element
+   * (4.8:1 on cream, 5.6:1 on the dark page). Zero-specificity selector list,
+   * so a component that draws its own ring (inputs) can still opt out with
+   * focus-visible:outline-none - never remove it without a replacement.
+   */
+  :where(a, button, input, select, textarea, summary, [role='button'], [tabindex]:not([tabindex='-1'])):focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+  /* On charcoal (bands, footer) the ring turns light bronze: 7.2:1. */
+  .tx-slate :where(a, button, input, select, textarea, summary, [role='button'], [tabindex]:not([tabindex='-1'])):focus-visible,
+  .bg-charcoal :where(a, button, input, select, textarea, summary, [role='button'], [tabindex]:not([tabindex='-1'])):focus-visible,
+  footer :where(a, button, input, select, textarea, summary, [role='button'], [tabindex]:not([tabindex='-1'])):focus-visible {
+    outline-color: hsl(var(--highlight-soft));
+  }
+  /* Rows inside overflow-hidden panels: draw the ring inside so it is not clipped. */
+  .focus-inset:focus-visible {
+    outline-offset: -2px;
+  }
+  /* Programmatic focus targets (<main id="main" tabIndex={-1}>, dialog content) are
+     not in the list above, so they never show a ring. */
+
+  /* One icon stroke everywhere (lucide). Zero specificity: [stroke-width:2.5] still overrides. */
+  :where(svg.lucide) {
+    stroke-width: 1.5;
+  }
 }
 
 @layer components {
-  /* Button Variants */
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-8 py-4 bg-foreground text-background font-medium text-sm tracking-wider uppercase rounded-full transition-all duration-300;
-    @apply hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0;
-  }
-
-  .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-8 py-4 bg-transparent text-foreground font-medium text-sm tracking-wider uppercase rounded-full transition-all duration-300;
-    @apply border-2 border-primary hover:bg-primary hover:text-primary-foreground;
-  }
-
-  .btn-outline-gold {
-    @apply inline-flex items-center justify-center gap-2 px-8 py-4 bg-transparent font-medium text-sm tracking-wider uppercase rounded-full transition-all duration-300;
-    @apply border-[1.5px] border-primary text-foreground hover:bg-primary hover:text-primary-foreground;
-  }
-
   /* Section Styles */
   .section-padding {
     @apply py-16 md:py-24 lg:py-32;
@@ -312,74 +336,6 @@
     @apply text-sm md:text-base text-muted-foreground leading-relaxed;
   }
 
-  /* Card Styles */
-  .card-luxury {
-    @apply bg-card rounded-xl shadow-[var(--shadow-md)] overflow-hidden transition-all duration-300;
-    @apply hover:shadow-[var(--shadow-lg)] hover:-translate-y-1;
-  }
-
-  /* Gold Shimmer Effect */
-  .gold-shimmer {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .gold-shimmer::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: var(--gradient-gold-shine);
-    animation: shimmer 6s infinite;
-  }
-
-  @keyframes shimmer {
-    0%, 100% {
-      left: -100%;
-    }
-    50% {
-      left: 100%;
-    }
-  }
-
-  /* Scroll Animations */
-  .reveal {
-    opacity: 0;
-    transform: translateY(24px);
-    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .reveal.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  /* Stagger children */
-  .stagger-children > * {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-
-  .stagger-children.visible > *:nth-child(1) { animation: fadeInUp 0.6s ease forwards 0s; }
-  .stagger-children.visible > *:nth-child(2) { animation: fadeInUp 0.6s ease forwards 0.08s; }
-  .stagger-children.visible > *:nth-child(3) { animation: fadeInUp 0.6s ease forwards 0.16s; }
-  .stagger-children.visible > *:nth-child(4) { animation: fadeInUp 0.6s ease forwards 0.24s; }
-  .stagger-children.visible > *:nth-child(5) { animation: fadeInUp 0.6s ease forwards 0.32s; }
-  .stagger-children.visible > *:nth-child(6) { animation: fadeInUp 0.6s ease forwards 0.4s; }
-
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(16px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
   /* Gold Text Gradient */
   .text-gold-gradient {
     background: var(--gradient-gold);
@@ -401,54 +357,6 @@
       transform: translateX(-50%);
     }
   }
-
-  /* Product Card Hover Effects */
-  .product-card-image {
-    @apply relative overflow-hidden rounded-xl;
-  }
-
-  .product-card-image img {
-    @apply transition-transform duration-500 ease-out;
-  }
-
-  .product-card:hover .product-card-image img {
-    @apply scale-105;
-  }
-
-  .product-card-actions {
-    @apply absolute inset-0 flex items-center justify-center gap-3 opacity-0 transition-all duration-300;
-    background: rgba(0, 0, 0, 0.2);
-  }
-
-  .product-card:hover .product-card-actions,
-  .product-card:active .product-card-actions {
-    @apply opacity-100;
-  }
-
-  @media (pointer: coarse) {
-    .product-card-actions {
-      @apply opacity-100;
-    }
-  }
-
-  /* Underline Animation */
-  .link-underline {
-    @apply relative inline-block;
-  }
-
-  .link-underline::after {
-    content: '';
-    @apply absolute bottom-0 left-0 w-full h-0.5 bg-primary origin-right transition-transform duration-300 scale-x-0;
-  }
-
-  .link-underline:hover::after {
-    @apply origin-left scale-x-100;
-  }
-
-  /* Focus States */
-  .focus-gold:focus-visible {
-    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
-  }
 }
 
 @layer utilities {
@@ -467,15 +375,6 @@
     transform: translateZ(0);
   }
 
-  /* Reduced Motion */
-  @media (prefers-reduced-motion: reduce) {
-    *, ::before, ::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-    }
-  }
-
   /* Hide scrollbar */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -485,163 +384,94 @@
     scrollbar-width: none;
   }
 
-  /* Custom Range Slider Styles */
+  /* Native range inputs (price filter, image crop zoom): one style, on tokens. */
   input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
     background: transparent;
     cursor: pointer;
   }
-
-  /* Webkit browsers (Chrome, Safari, Edge) */
-  input[type="range"]::-webkit-slider-track {
-    background: #e5e7eb;
-    height: 8px;
-    border-radius: 4px;
-  }
-
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: white;
-    border: 2px solid #111827;
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  input[type="range"]::-webkit-slider-thumb:hover {
-    background: #f9fafb;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-  }
-
-  /* Firefox */
-  input[type="range"]::-moz-range-track {
-    background: #e5e7eb;
-    height: 8px;
-    border-radius: 4px;
-  }
-
-  input[type="range"]::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: white;
-    border: 2px solid #111827;
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  input[type="range"]::-moz-range-thumb:hover {
-    background: #f9fafb;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-  }
-
-  /* Crop zoom slider specific styles */
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: white;
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    border: 3px solid #3B82F6;
-  }
-
   input[type="range"]::-webkit-slider-runnable-track {
-    width: 100%;
-    height: 6px;
-    border-radius: 3px;
+    height: 4px;
+    border-radius: 999px;
+    background: hsl(var(--muted));
   }
-
+  input[type="range"]::-moz-range-track {
+    height: 4px;
+    border-radius: 999px;
+    background: hsl(var(--muted));
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    margin-top: -7px;
+    border-radius: 50%;
+    background: hsl(var(--card));
+    border: 2px solid hsl(var(--primary));
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: transform var(--dur-press) var(--ease-out);
+  }
   input[type="range"]::-moz-range-thumb {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: white;
+    background: hsl(var(--card));
+    border: 2px solid hsl(var(--primary));
+    box-shadow: var(--shadow-sm);
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    border: 3px solid #3B82F6;
   }
-
-  input[type="range"]::-moz-range-track {
-    width: 100%;
-    height: 6px;
-    border-radius: 3px;
+  input[type="range"]:active::-webkit-slider-thumb {
+    transform: scale(1.1);
   }
 }
 
-/* ============================================================
-   Admin dark-mode overrides
-   Inner admin pages use light-only utility classes
-   (bg-white, text-gray-900, border-gray-100, from-amber-50, etc.).
-   Remap them inside .dark .admin-panel so the whole admin UI
-   adapts to the selected theme without editing every page.
-   ============================================================ */
-.dark .admin-panel {
-  color: rgb(229 231 235); /* gray-200 */
+/*
+ * Reduced motion. Outside every @layer so it wins over components and
+ * utilities. Movement stops; colour, opacity and focus feedback stay.
+ * Radix/tailwindcss-animate enter and exit keep their fade but lose the
+ * slide and zoom.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-property: color, background-color, border-color, outline-color, opacity, box-shadow !important;
+    transition-duration: 150ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-in,
+  .animate-out {
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 0 !important;
+    --tw-enter-scale: 1 !important;
+    --tw-enter-rotate: 0 !important;
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 0 !important;
+    --tw-exit-scale: 1 !important;
+    --tw-exit-rotate: 0 !important;
+  }
+  .marquee,
+  .btn-copper::after,
+  .offer-ticket__foil,
+  .animate-ping,
+  .animate-pulse,
+  .animate-bounce {
+    animation: none !important;
+  }
+  .animate-spin {
+    animation-duration: 1.4s !important;
+  }
 }
 
-/* Surface backgrounds */
-.dark .admin-panel .bg-white { background-color: rgb(17 24 39) !important; } /* gray-900 */
-.dark .admin-panel .bg-gray-50 { background-color: rgb(17 24 39) !important; }
-.dark .admin-panel .bg-gray-100 { background-color: rgb(31 41 55) !important; } /* gray-800 */
-.dark .admin-panel .bg-gray-200 { background-color: rgb(55 65 81) !important; } /* gray-700 */
-
-/* Warm amber gradient header panels -> dark amber tint */
-.dark .admin-panel .from-amber-50 { --tw-gradient-from: rgb(120 53 15 / 0.25) var(--tw-gradient-from-position) !important; --tw-gradient-to: rgb(120 53 15 / 0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
-.dark .admin-panel .via-white { --tw-gradient-to: rgb(17 24 39 / 0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), rgb(17 24 39) var(--tw-gradient-via-position), var(--tw-gradient-to) !important; }
-.dark .admin-panel .to-orange-50\/30 { --tw-gradient-to: rgb(124 45 18 / 0.2) !important; }
-.dark .admin-panel .bg-amber-50 { background-color: rgb(120 53 15 / 0.4) !important; }
-.dark .admin-panel .bg-amber-100 { background-color: rgb(120 53 15 / 0.5) !important; }
-
-/* Borders */
-.dark .admin-panel .border-gray-100 { border-color: rgb(31 41 55) !important; }
-.dark .admin-panel .border-gray-200 { border-color: rgb(55 65 81) !important; }
-.dark .admin-panel .border-gray-300 { border-color: rgb(75 85 99) !important; }
-.dark .admin-panel .border-amber-200\/40 { border-color: rgb(180 83 9 / 0.35) !important; }
-.dark .admin-panel .border-\[\#F5EFE6\] { border-color: rgb(31 41 55) !important; }
-
-/* Text */
-.dark .admin-panel .text-gray-900 { color: rgb(243 244 246) !important; } /* gray-100 */
-.dark .admin-panel .text-gray-800 { color: rgb(229 231 235) !important; }
-.dark .admin-panel .text-gray-700 { color: rgb(209 213 219) !important; } /* gray-300 */
-.dark .admin-panel .text-gray-600 { color: rgb(156 163 175) !important; } /* gray-400 */
-.dark .admin-panel .text-gray-500 { color: rgb(156 163 175) !important; }
-.dark .admin-panel .text-amber-700 { color: rgb(252 211 77) !important; } /* amber-300 */
-.dark .admin-panel .text-amber-800 { color: rgb(253 224 71) !important; }
-
-/* Hover states */
-.dark .admin-panel .hover\:bg-gray-50:hover { background-color: rgb(31 41 55) !important; }
-.dark .admin-panel .hover\:bg-gray-100:hover { background-color: rgb(55 65 81) !important; }
-.dark .admin-panel .hover\:bg-amber-50:hover { background-color: rgb(120 53 15 / 0.3) !important; }
-.dark .admin-panel .hover\:text-gray-900:hover { color: rgb(243 244 246) !important; }
-
-/* Form inputs */
-.dark .admin-panel input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
-.dark .admin-panel textarea,
-.dark .admin-panel select {
-  background-color: rgb(17 24 39);
-  border-color: rgb(55 65 81);
-  color: rgb(243 244 246);
-}
-.dark .admin-panel input::placeholder,
-.dark .admin-panel textarea::placeholder { color: rgb(107 114 128); }
-
-/* Tables */
-.dark .admin-panel thead { background-color: rgb(17 24 39); }
-.dark .admin-panel tbody tr { border-color: rgb(31 41 55); }
-.dark .admin-panel tbody tr:hover { background-color: rgb(31 41 55 / 0.6); }
-
-/* Modal/dialog backdrops keep their look but ensure cards above stay readable */
+/* Admin, dark mode: raised surfaces keep one soft brand shadow. (The interim
+   class remapping that lived here was removed once every admin page used tokens.) */
 .dark .admin-panel .shadow-sm,
 .dark .admin-panel .shadow,
 .dark .admin-panel .shadow-md,
-.dark .admin-panel .shadow-lg { box-shadow: 0 4px 16px -4px rgb(0 0 0 / 0.5); }
+.dark .admin-panel .shadow-lg { box-shadow: var(--shadow-panel); }
 
 
 /* ── Offer ribbon (src/components/offers/OfferRibbon.tsx) ─────────────────────
@@ -707,11 +537,115 @@
   --tx-slate-mottle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640'%3E%3Cfilter id='s' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.0065' numOctaves='4' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.95 0 0 0 0 0.9 0 0 0 0 0.84 0 0 0 0.16 -0.05'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
   --tx-slate-grit: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='5' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.09 -0.03'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   --contour-ink: hsl(var(--primary) / 0.14);
+
+  /* Motion. Tailwind: ease-out / ease-in-out / ease-drawer, duration-press ... duration-reveal.
+     JS twins live in src/lib/motion.ts. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-press: 140ms;
+  --dur-hover: 150ms;
+  --dur-tooltip: 160ms;
+  --dur-dropdown: 200ms;
+  --dur-modal: 240ms;
+  --dur-drawer: 300ms;
+  --dur-exit: 180ms;
+  --dur-reveal: 320ms;
+  --stagger: 40ms;
+
+  /* Layers. Tailwind: z-raised ... z-grain. */
+  --z-raised: 10;
+  --z-sticky: 30;
+  --z-header: 40;
+  --z-overlay: 50;
+  --z-drawer: 60;
+  --z-popover: 70;
+  --z-toast: 80;
+  --z-loader: 90;
+  --z-grain: 100;
+
+  /* Sticky sidebars sit under the header: top-[var(--sticky-top)] */
+  --sticky-top: 80px;
+
+  /* Status tones (fg on bg measures 5.2 to 7.1:1). Tailwind: text-status-success-fg,
+     bg-status-success-bg, border-status-success-line. Order map: src/lib/orderStatus.ts */
+  --status-success-fg: 136 39% 30%;
+  --status-success-bg: 109 24% 91%;
+  --status-success-line: 112 21% 78%;
+  --status-danger-fg: 4 70% 39%;
+  --status-danger-bg: 10 60% 92%;
+  --status-danger-line: 8 52% 81%;
+  --status-warning-fg: 39 86% 28%;
+  --status-warning-bg: 41 64% 90%;
+  --status-warning-line: 41 53% 76%;
+  --status-info-fg: 206 45% 32%;
+  --status-info-bg: 204 37% 92%;
+  --status-info-line: 205 34% 80%;
+  --status-returns-fg: 304 30% 32%;
+  --status-returns-bg: 311 28% 92%;
+  --status-returns-line: 310 24% 80%;
+  --status-neutral-fg: 30 8% 33%;
+  --status-neutral-bg: 37 25% 90%;
+  --status-neutral-line: 36 20% 80%;
+}
+@media (min-width: 1024px) {
+  :root {
+    --sticky-top: 136px;
+  }
 }
 .dark {
   --shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.03), 0 30px 60px -42px rgba(0, 0, 0, 0.8);
   --shadow-card-hover: 0 24px 44px -26px rgba(0, 0, 0, 0.85);
   --contour-ink: hsl(var(--highlight) / 0.12);
+
+  /* Status tones, dark (fg on bg measures 7.5 to 8.6:1) */
+  --status-success-fg: 134 38% 67%;
+  --status-success-bg: 138 23% 11%;
+  --status-success-line: 136 24% 22%;
+  --status-danger-fg: 9 82% 72%;
+  --status-danger-bg: 8 40% 12%;
+  --status-danger-line: 8 44% 25%;
+  --status-warning-fg: 39 73% 64%;
+  --status-warning-bg: 38 40% 12%;
+  --status-warning-line: 37 45% 24%;
+  --status-info-fg: 207 52% 72%;
+  --status-info-bg: 207 35% 12%;
+  --status-info-line: 207 35% 25%;
+  --status-returns-fg: 305 34% 74%;
+  --status-returns-bg: 304 23% 12%;
+  --status-returns-line: 309 22% 25%;
+  --status-neutral-fg: 33 11% 67%;
+  --status-neutral-bg: 36 9% 11%;
+  --status-neutral-line: 33 9% 20%;
+}
+
+/* Page entry: opacity only. A transform here would become the containing block
+   for every position:fixed header, drawer and sticky bar inside the page. */
+.route-enter {
+  animation: route-in 200ms var(--ease-out);
+}
+@keyframes route-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Route skeleton: appears only if the chunk takes longer than 150ms. */
+.route-skeleton {
+  animation: route-in 200ms var(--ease-out) 150ms both;
+}
+
+/* Theme swap: every transition off for one frame so the page snaps, not smears. */
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}
+
+/* Google Maps embed in dark mode: inverted and calmed to sit on slate. */
+.dark .map-embed {
+  filter: invert(0.92) hue-rotate(180deg) saturate(0.55) brightness(0.92);
 }
 
 @layer components {
@@ -774,17 +708,22 @@
     box-shadow: var(--shadow-panel);
   }
 
-  /* Product card */
+  /* Product card: lifts and gains a copper edge on hover (pointer devices only). */
   .card-product {
     border-radius: var(--radius-card);
     background-color: hsl(var(--card));
     border: 1px solid hsl(var(--foreground) / 0.07);
-    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease, border-color 0.4s ease;
+    transition:
+      transform 220ms var(--ease-out),
+      box-shadow 220ms var(--ease-out),
+      border-color var(--dur-hover) ease;
   }
-  .card-product:hover {
-    transform: translateY(-3px);
-    border-color: hsl(var(--primary) / 0.35);
-    box-shadow: var(--shadow-card-hover);
+  @media (hover: hover) and (pointer: fine) {
+    .card-product:hover {
+      transform: translateY(-3px);
+      border-color: hsl(var(--primary) / 0.35);
+      box-shadow: var(--shadow-card-hover);
+    }
   }
 
   /* Image well inside cards: a lit stone plinth so mixed photo backgrounds sit together. */
@@ -794,7 +733,7 @@
     box-shadow: inset 0 0 0 1px hsl(var(--foreground) / 0.05);
   }
 
-  /* Numbered eyebrow: "No. 01 — Top Deals" */
+  /* Eyebrow: words only ("Top deals"). Numbers were removed from every eyebrow. */
   .eyebrow-no {
     display: inline-flex;
     align-items: center;
@@ -830,14 +769,20 @@
     background: hsl(var(--card) / 0.7);
     color: hsl(var(--foreground) / 0.75);
     backdrop-filter: blur(6px);
-    transition: border-color 0.25s ease, color 0.25s ease, background 0.25s ease, transform 0.2s ease;
+    transition:
+      border-color var(--dur-hover) ease,
+      color var(--dur-hover) ease,
+      background-color var(--dur-hover) ease,
+      transform var(--dur-press) var(--ease-out);
   }
-  .btn-round:hover:not(:disabled) {
-    border-color: hsl(var(--primary));
-    color: hsl(var(--primary));
+  @media (hover: hover) and (pointer: fine) {
+    .btn-round:hover:not(:disabled) {
+      border-color: hsl(var(--primary));
+      color: hsl(var(--primary));
+    }
   }
-  .btn-round:active:not(:disabled) { transform: scale(0.95); }
-  .btn-round:disabled { opacity: 0.35; cursor: default; }
+  .btn-round:active:not(:disabled) { transform: scale(0.97); }
+  .btn-round:disabled { opacity: 0.35; cursor: not-allowed; }
 
   /* Primary CTA: copper, squared-off, tracked caps, foil sweep on hover */
   .btn-copper {
@@ -855,20 +800,31 @@
     font-weight: 700;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    transition: background 0.3s ease, transform 0.2s ease;
+    white-space: nowrap;
+    transition:
+      background-color var(--dur-hover) ease,
+      transform var(--dur-press) var(--ease-out);
   }
   .btn-copper::after {
     content: '';
     position: absolute;
     inset: 0;
+    pointer-events: none;
     background: linear-gradient(105deg, transparent 35%, rgba(255, 236, 214, 0.35) 50%, transparent 65%);
     transform: translateX(-120%);
-    transition: transform 0.7s ease;
+    transition: transform 450ms var(--ease-out);
   }
-  .btn-copper:hover { background: hsl(var(--primary-dark)); }
-  .dark .btn-copper:hover { background: hsl(var(--primary-light)); }
-  .btn-copper:hover::after { transform: translateX(120%); }
-  .btn-copper:active { transform: translateY(1px); }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-copper:hover:not(:disabled) { background: hsl(var(--primary-dark)); }
+    .dark .btn-copper:hover:not(:disabled) { background: hsl(var(--primary-light)); }
+    .btn-copper:hover:not(:disabled)::after { transform: translateX(120%); }
+  }
+  .btn-copper:active:not(:disabled) { transform: scale(0.97); }
+  .btn-copper:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+  .btn-copper:disabled { opacity: 0.6; cursor: not-allowed; }
 
   /* Outline twin of btn-copper, for light-on-image and secondary actions */
   .btn-line {
@@ -883,8 +839,17 @@
     font-weight: 700;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    transition: background 0.3s ease, color 0.3s ease;
+    white-space: nowrap;
+    transition:
+      background-color var(--dur-hover) ease,
+      color var(--dur-hover) ease,
+      transform var(--dur-press) var(--ease-out);
   }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-line:hover:not(:disabled) { background-color: color-mix(in srgb, currentColor 8%, transparent); }
+  }
+  .btn-line:active:not(:disabled) { transform: scale(0.97); }
+  .btn-line:disabled { opacity: 0.6; cursor: not-allowed; }
 
   /* "View all" style link with a travelling arrow */
   .link-arrow {
@@ -899,9 +864,15 @@
     border-bottom: 1px solid hsl(var(--primary) / 0.5);
     padding-bottom: 2px;
     white-space: nowrap;
-    transition: color 0.25s ease, border-color 0.25s ease, gap 0.25s ease;
+    transition: color var(--dur-hover) ease, border-color var(--dur-hover) ease;
   }
-  .link-arrow:hover { color: hsl(var(--primary)); border-color: hsl(var(--primary)); gap: 0.6rem; }
+  .link-arrow svg {
+    transition: transform var(--dur-hover) var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .link-arrow:hover { color: hsl(var(--primary)); border-color: hsl(var(--primary)); }
+    .link-arrow:hover svg { transform: translateX(3px); }
+  }
 
   /* Prices */
   .price-now { font-weight: 700; color: hsl(var(--foreground)); font-variant-numeric: tabular-nums; }
@@ -911,12 +882,24 @@
     align-items: center;
     border: 1px solid hsl(var(--primary) / 0.45);
     color: hsl(var(--primary));
-    border-radius: 999px;
+    border-radius: 4px;
     padding: 0 0.45rem;
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.04em;
     line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Text on photos: a charcoal scrim from the bottom plus a soft text shadow. */
+  .photo-scrim {
+    background-image: linear-gradient(to top, hsl(40 6% 10% / 0.9), hsl(40 6% 10% / 0.5) 45%, transparent);
+  }
+  .photo-scrim-side {
+    background-image: linear-gradient(to right, hsl(40 6% 10% / 0.8), hsl(40 6% 10% / 0.35) 50%, transparent);
+  }
+  .on-photo {
+    text-shadow: 0 1px 12px hsl(40 6% 10% / 0.45);
   }
 }
 
@@ -931,7 +914,7 @@
   }
 
   /* Eyebrow on charcoal or on a photo. */
-  .eyebrow-no.on-dark { color: rgb(255 255 255 / 0.7); }
+  .eyebrow-no.on-dark { color: hsl(var(--charcoal-foreground) / 0.75); }
   .eyebrow-no.on-dark b { color: hsl(var(--highlight-soft)); }
   .eyebrow-no.on-dark::after,
   .eyebrow-no.on-dark::before { background: linear-gradient(90deg, hsl(var(--highlight-soft) / 0.8), transparent); }
@@ -952,15 +935,15 @@
     -webkit-text-stroke: 1px hsl(var(--highlight-soft) / 0.9);
   }
 
-  /* Square label sitting on a photo: "No. 02", "New", "Featured". */
+  /* Square label sitting on a photo: "New", "Featured", a rank. One per card. */
   .tag-dark {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
     border-radius: 4px;
-    background: hsl(var(--charcoal) / 0.8);
+    background: hsl(var(--charcoal) / 0.9);
     padding: 0.25rem 0.5rem;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.2em;
     text-transform: uppercase;

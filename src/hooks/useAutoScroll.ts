@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 
 export interface UseAutoScrollOptions {
   /** Pixels per frame; ~0.5 is a slow drift, ~1.4 a brisker glide. */
@@ -15,7 +16,7 @@ export interface UseAutoScrollOptions {
   loopItemCount?: number;
   /** Pixels to advance when the consumer calls scrollByPage() with a card width fallback. */
   pageStep?: number;
-  /** Disable the loop entirely (e.g. when prefers-reduced-motion is on). */
+  /** Disable the loop entirely. Reduced motion, an off-screen row and a hidden tab also stop it. */
   enabled?: boolean;
 }
 
@@ -34,6 +35,10 @@ export interface UseAutoScrollReturn {
  * - Ping-pongs at edges so a short list still feels alive.
  * - Exposes prev/next handlers wired to the same pause logic so arrow buttons
  *   feel natural alongside the auto motion.
+ * - The drift only runs while it can be seen: never under prefers-reduced-motion,
+ *   and the frame loop stops while the row is off screen or the tab is hidden.
+ *   Arrows (scrollByPage) keep working in every case.
+ * - Keyboard focus inside the row pauses it until focus leaves.
  */
 export function useAutoScroll(opts: UseAutoScrollOptions = {}): UseAutoScrollReturn {
   const {
@@ -71,6 +76,15 @@ export function useAutoScroll(opts: UseAutoScrollOptions = {}): UseAutoScrollRet
   const [canScroll, setCanScroll] = useState(false);
   /** Mirror of `canScroll` for the animation loop, which must not re-bind. */
   const canScrollRef = useRef(false);
+  /** Set when the user (or an arrow) may have moved the row; the loop re-reads scrollLeft once. */
+  const needsSyncRef = useRef(true);
+  const reduceMotion = useReducedMotion();
+  const [inView, setInView] = useState(false);
+  const [pageVisible, setPageVisible] = useState(() =>
+    typeof document === "undefined" ? true : document.visibilityState !== "hidden"
+  );
+  /** The drift runs only when all of these hold. Measuring and arrows do not depend on it. */
+  const autoplay = enabled && !reduceMotion && inView && pageVisible;
 
   const getScrollMetrics = useCallback(
     (el: HTMLDivElement) => {
@@ -105,6 +119,7 @@ export function useAutoScroll(opts: UseAutoScrollOptions = {}): UseAutoScrollRet
   const resume = useCallback(() => {
     clearResumeTimer();
     resumeTimerRef.current = window.setTimeout(() => {
+      needsSyncRef.current = true;
       pausedRef.current = false;
       setIsPaused(false);
     }, resumeDelay);
@@ -138,8 +153,12 @@ export function useAutoScroll(opts: UseAutoScrollOptions = {}): UseAutoScrollRet
     return nextCanScroll;
   }, [direction, enabled, getScrollMetrics]);
 
+  /** One measure per frame at most, however many observers fire. */
+  const measureFrameRef = useRef<number | null>(null);
   const scheduleMeasure = useCallback(() => {
-    window.requestAnimationFrame(() => {
+    if (measureFrameRef.current !== null) return;
+    measureFrameRef.current = window.requestAnimationFrame(() => {
+      measureFrameRef.current = null;
       measureScrollability();
     });
   }, [measureScrollability]);
@@ -177,6 +196,7 @@ export function useAutoScroll(opts: UseAutoScrollOptions = {}): UseAutoScrollRet
       } else {
         el.scrollBy({ left: dir === "next" ? step : -step, behavior: "smooth" });
       }
+      needsSyncRef.current = true;
       pause();
       resume();
     },
@@ -218,25 +238,107 @@ export function useAutoScroll(opts: UseAutoScrollOptions = {}): UseAutoScrollRet
     });
     resizeObserver.observe(el);
 
+    // Cards added or removed. Direct children only: image loads and badge
+    // changes deeper down never change the row's scroll width.
     const mutationObserver = new MutationObserver(() => {
       scheduleMeasure();
     });
-    mutationObserver.observe(el, { childList: true, subtree: true });
+    mutationObserver.observe(el, { childList: true });
 
     const handleWindowResize = () => {
       scheduleMeasure();
     };
     window.addEventListener("resize", handleWindowResize);
 
+    // Run the drift only while the row is (nearly) on screen.
+    let intersectionObserver: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== "undefined") {
+      intersectionObserver = new IntersectionObserver(
+        (entries) => setInView(entries.some((entry) => entry.isIntersecting)),
+        { rootMargin: "100px" }
+      );
+      intersectionObserver.observe(el);
+    } else {
+      setInView(true);
+    }
+
     return () => {
       resizeObserver.disconnect();
       mutationObserver.disconnect();
+      intersectionObserver?.disconnect();
       window.removeEventListener("resize", handleWindowResize);
+      if (measureFrameRef.current !== null) {
+        cancelAnimationFrame(measureFrameRef.current);
+        measureFrameRef.current = null;
+      }
     };
   }, [measureScrollability, scheduleMeasure, scrollerEl]);
 
+  // A hidden tab never animates.
+  useEffect(() => {
+    const handleVisibility = () => setPageVisible(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
+
+  // Pause on touch, pointer, hover and keyboard focus; the loop re-reads the
+  // position once afterwards instead of reading scrollLeft every frame.
   useEffect(() => {
     if (!enabled || !scrollerEl) return;
+
+    const markUserScroll = () => {
+      needsSyncRef.current = true;
+    };
+    const handlePointerDown = () => {
+      needsSyncRef.current = true;
+      pause();
+    };
+    const handlePointerUp = () => {
+      resume();
+    };
+    const handleMouseEnter = () => {
+      pause();
+    };
+    const handleMouseLeave = () => {
+      resume();
+    };
+    const handleFocusIn = () => {
+      needsSyncRef.current = true;
+      pause();
+    };
+    const handleFocusOut = (event: FocusEvent) => {
+      if (event.relatedTarget instanceof Node && scrollerEl.contains(event.relatedTarget)) return;
+      resume();
+    };
+
+    scrollerEl.addEventListener("pointerdown", handlePointerDown, { passive: true });
+    scrollerEl.addEventListener("pointerup", handlePointerUp, { passive: true });
+    scrollerEl.addEventListener("pointercancel", handlePointerUp, { passive: true });
+    scrollerEl.addEventListener("touchstart", handlePointerDown, { passive: true });
+    scrollerEl.addEventListener("touchend", handlePointerUp, { passive: true });
+    scrollerEl.addEventListener("wheel", markUserScroll, { passive: true });
+    scrollerEl.addEventListener("mouseenter", handleMouseEnter);
+    scrollerEl.addEventListener("mouseleave", handleMouseLeave);
+    scrollerEl.addEventListener("focusin", handleFocusIn);
+    scrollerEl.addEventListener("focusout", handleFocusOut);
+
+    return () => {
+      clearResumeTimer();
+      scrollerEl.removeEventListener("pointerdown", handlePointerDown);
+      scrollerEl.removeEventListener("pointerup", handlePointerUp);
+      scrollerEl.removeEventListener("pointercancel", handlePointerUp);
+      scrollerEl.removeEventListener("touchstart", handlePointerDown);
+      scrollerEl.removeEventListener("touchend", handlePointerUp);
+      scrollerEl.removeEventListener("wheel", markUserScroll);
+      scrollerEl.removeEventListener("mouseenter", handleMouseEnter);
+      scrollerEl.removeEventListener("mouseleave", handleMouseLeave);
+      scrollerEl.removeEventListener("focusin", handleFocusIn);
+      scrollerEl.removeEventListener("focusout", handleFocusOut);
+    };
+  }, [enabled, pause, resume, scrollerEl]);
+
+  useEffect(() => {
+    if (!autoplay || !scrollerEl) return;
 
     /**
      * Re-measure only when the layout could actually have changed.
@@ -245,12 +347,11 @@ export function useAutoScroll(opts: UseAutoScrollOptions = {}): UseAutoScrollRet
      * `clientWidth` - two forced synchronous layouts per frame, on top of the
      * one the scroll write already costs. The ResizeObserver and
      * MutationObserver above already tell us when the row changes, so the loop
-     * can just read the cached numbers.
+     * can just read the cached numbers. scrollLeft is read back only after the
+     * user or an arrow moved the row (needsSyncRef).
      */
     let lastTs = performance.now();
-    dirRef.current = direction;
-    posRef.current = scrollerEl.scrollLeft;
-    appliedRef.current = scrollerEl.scrollLeft;
+    needsSyncRef.current = true;
 
     const tick = (ts: number) => {
       const el = scrollerEl;
@@ -258,10 +359,11 @@ export function useAutoScroll(opts: UseAutoScrollOptions = {}): UseAutoScrollRet
       lastTs = ts;
 
       if (!pausedRef.current && canScrollRef.current) {
-        // The user (wheel, touch, a smooth scrollByPage) moved it since our
-        // last write, so follow them rather than yanking it back.
-        if (Math.abs(el.scrollLeft - appliedRef.current) > 1.5) {
+        // The user (wheel, touch, a smooth scrollByPage) may have moved it
+        // since our last write, so follow them rather than yanking it back.
+        if (needsSyncRef.current) {
           posRef.current = el.scrollLeft;
+          needsSyncRef.current = false;
         }
 
         // ~60fps baseline, scaled by elapsed time so motion stays steady.
@@ -293,46 +395,27 @@ export function useAutoScroll(opts: UseAutoScrollOptions = {}): UseAutoScrollRet
           posRef.current = 0;
         }
 
+        // Kept as the original write. The rows carry scroll-behavior: smooth
+        // (index.css), which swallows it, so on screen the rows stay still, as
+        // they always have. The owner kept today's behaviour (2026-10-04); a
+        // visible drift would need behavior: 'instant' here and their OK.
         el.scrollLeft = posRef.current;
-        appliedRef.current = el.scrollLeft;
+        appliedRef.current = posRef.current;
       }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
 
-    const handlePointerDown = () => {
-      pause();
-    };
-    const handlePointerUp = () => {
-      resume();
-    };
-    const handleMouseEnter = () => {
-      pause();
-    };
-    const handleMouseLeave = () => {
-      resume();
-    };
-
-    scrollerEl.addEventListener("pointerdown", handlePointerDown, { passive: true });
-    scrollerEl.addEventListener("pointerup", handlePointerUp, { passive: true });
-    scrollerEl.addEventListener("pointercancel", handlePointerUp, { passive: true });
-    scrollerEl.addEventListener("touchstart", handlePointerDown, { passive: true });
-    scrollerEl.addEventListener("touchend", handlePointerUp, { passive: true });
-    scrollerEl.addEventListener("mouseenter", handleMouseEnter);
-    scrollerEl.addEventListener("mouseleave", handleMouseLeave);
-
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      clearResumeTimer();
-      scrollerEl.removeEventListener("pointerdown", handlePointerDown);
-      scrollerEl.removeEventListener("pointerup", handlePointerUp);
-      scrollerEl.removeEventListener("pointercancel", handlePointerUp);
-      scrollerEl.removeEventListener("touchstart", handlePointerDown);
-      scrollerEl.removeEventListener("touchend", handlePointerUp);
-      scrollerEl.removeEventListener("mouseenter", handleMouseEnter);
-      scrollerEl.removeEventListener("mouseleave", handleMouseLeave);
+      rafRef.current = null;
     };
-  }, [direction, enabled, loop, pause, resume, scrollerEl, speed, pingPong]);
+  }, [autoplay, loop, scrollerEl, speed, pingPong]);
+
+  // Direction resets only when the caller changes it, not every time the loop restarts.
+  useEffect(() => {
+    dirRef.current = direction;
+  }, [direction]);
 
   return { scrollerRef, pause, resume, scrollByPage, isPaused, canScroll };
 }

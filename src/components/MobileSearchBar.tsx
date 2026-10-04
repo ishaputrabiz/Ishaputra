@@ -1,75 +1,95 @@
-import { Search, Gift } from "lucide-react";
+import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { EASE_OUT } from "@/lib/motion";
+
+const CATEGORIES = [
+  "shilajit",
+  "ashwagandha",
+  "hair oil",
+  "hair serum",
+  "face wash",
+  "face serum",
+  "beard oil",
+  "body wash",
+  "deodorant",
+  "herbal tea",
+];
+
+const STATIC_PLACEHOLDER = "Search shilajit, hair oil and more";
 
 const MobileSearchBar = () => {
   const navigate = useNavigate();
-  
-  const categories = [
-    "shilajit",
-    "ashwagandha",
-    "hair oil",
-    "hair serum",
-    "face wash",
-    "face serum",
-    "beard oil",
-    "body wash",
-    "deodorant",
-    "herbal tea"
-  ];
-  
+  const reduceMotion = useReducedMotion();
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  
+  const [onScreen, setOnScreen] = useState(true);
+  const [pageVisible, setPageVisible] = useState(
+    () => typeof document === "undefined" || !document.hidden,
+  );
+
+  // The word ticker is a loop: pause it off screen and in a background tab.
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % categories.length);
-    }, 2500);
-    
-    return () => clearInterval(interval);
+    const onVisibility = () => setPageVisible(!document.hidden);
+    document.addEventListener("visibilitychange", onVisibility);
+    const el = buttonRef.current;
+    let io: IntersectionObserver | undefined;
+    if (el && "IntersectionObserver" in window) {
+      io = new IntersectionObserver(([entry]) => setOnScreen(entry.isIntersecting));
+      io.observe(el);
+    }
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      io?.disconnect();
+    };
   }, []);
 
+  const ticking = !reduceMotion && pageVisible && onScreen;
+
+  useEffect(() => {
+    if (!ticking) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % CATEGORIES.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [ticking]);
+
   return (
-    <div className="lg:hidden bg-background px-4 pt-1 pb-2 z-40">
-      <div className="w-full relative flex items-center bg-muted rounded-full overflow-hidden h-[46px]">
-        {/* Search Icon + Placeholder — takes remaining space, shrinks if needed */}
-        <button 
-          onClick={() => navigate("/search")}
-          className="pl-4 pr-2 flex items-center h-full flex-1 min-w-0"
-        >
-          <Search className="w-[20px] h-[20px] text-foreground/80 flex-shrink-0" strokeWidth={1} />
-        
-          {/* Placeholder Text */}
-          <div className="flex-1 min-w-0 text-[13px] text-muted-foreground text-left flex items-center overflow-hidden ml-2">
-            <span className="mr-1 whitespace-nowrap flex-shrink-0">Search for</span>
-            <div className="relative min-w-0 w-[90px] h-[20px] overflow-hidden">
-              <AnimatePresence mode="wait">
+    <div className="lg:hidden bg-background px-4 pt-1 pb-2">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => navigate("/search")}
+        aria-label="Search products"
+        className="flex h-[46px] w-full items-center gap-2.5 rounded-control bg-muted px-4 text-left transition-[transform,background-color] duration-press ease-out hover:bg-foreground/[0.07] active:scale-[0.97]"
+      >
+        <Search aria-hidden="true" className="size-5 flex-shrink-0 text-foreground/80" />
+
+        {reduceMotion ? (
+          <span aria-hidden="true" className="min-w-0 truncate text-sm text-foreground/70">
+            {STATIC_PLACEHOLDER}
+          </span>
+        ) : (
+          <span aria-hidden="true" className="flex min-w-0 flex-1 items-center text-sm text-foreground/70">
+            <span className="mr-1 flex-shrink-0 whitespace-nowrap">Search for</span>
+            <span className="relative h-5 min-w-0 flex-1 overflow-hidden">
+              <AnimatePresence mode="popLayout" initial={false}>
                 <motion.span
                   key={currentIndex}
-                  initial={{ y: -20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 20, opacity: 0 }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
-                  className="absolute left-0 top-0 whitespace-nowrap"
+                  initial={{ opacity: 0, transform: "translateY(6px)" }}
+                  animate={{ opacity: 1, transform: "translateY(0px)" }}
+                  exit={{ opacity: 0, transform: "translateY(-6px)" }}
+                  transition={{ duration: 0.22, ease: EASE_OUT }}
+                  className="absolute left-0 top-0 whitespace-nowrap leading-5"
                 >
-                  {categories[currentIndex]}
+                  {CATEGORIES[currentIndex]}
                 </motion.span>
               </AnimatePresence>
-            </div>
-          </div>
-        </button>
-        
-        {/* Voice search lives only on the mobile /search page. */}
-        <div className="flex items-center gap-0 pr-2.5 flex-shrink-0">
-          <button 
-            onClick={(e) => { e.stopPropagation(); navigate('/category/articles?sub=gifting'); }}
-            className="p-1.5 hover:bg-background/60 rounded-full transition-colors" 
-            aria-label="Gift articles"
-          >
-            <Gift className="w-[20px] h-[20px] text-foreground/80" strokeWidth={1} />
-          </button>
-        </div>
-      </div>
+            </span>
+          </span>
+        )}
+      </button>
     </div>
   );
 };

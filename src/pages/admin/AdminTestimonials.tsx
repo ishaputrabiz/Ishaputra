@@ -1,7 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Loader2, ArrowLeft, Star } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, ArrowLeft, Star, ImageOff, Quote, FlaskConical } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Spinner } from '@/components/ui/spinner';
+import { IconButton } from '@/components/ui/icon-button';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Notice } from '@/components/ui/notice';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { useInlineFormFocus } from '@/components/admin/useInlineFormFocus';
+import { EmptyState } from '@/components/EmptyState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ListSkeleton } from '@/components/skeletons';
+import { fadeUp, staggerDelay } from '@/lib/motion';
+import { plural } from '@/lib/format';
 import { useAuth } from '@/contexts/AuthContext';
 import ImageUploader from '@/components/ImageUploader';
 import {
@@ -14,39 +31,7 @@ import {
 } from '@/services/testimonialService';
 import { toast } from 'sonner';
 
-// Built-in avatar options
-import avatar1 from '@/assets/avatars/avatar-1.jpg';
-import avatar2 from '@/assets/avatars/avatar-2.jpg';
-import avatar3 from '@/assets/avatars/avatar-3.jpg';
 import { SmartImage } from "@/components/ui/smart-image";
-
-const BUILT_IN_AVATARS = [
-  // Real photos
-  { key: 'avatar-1', label: 'Woman 1', src: avatar1 },
-  { key: 'avatar-2', label: 'Woman 2', src: avatar2 },
-  { key: 'avatar-3', label: 'Woman 3', src: avatar3 },
-  { key: 'real-1', label: 'Woman 4', src: 'https://randomuser.me/api/portraits/women/44.jpg' },
-  { key: 'real-2', label: 'Woman 5', src: 'https://randomuser.me/api/portraits/women/68.jpg' },
-  { key: 'real-3', label: 'Man 1', src: 'https://randomuser.me/api/portraits/men/32.jpg' },
-  { key: 'real-4', label: 'Woman 6', src: 'https://randomuser.me/api/portraits/women/90.jpg' },
-  { key: 'real-5', label: 'Man 2', src: 'https://randomuser.me/api/portraits/men/75.jpg' },
-  { key: 'real-6', label: 'Woman 7', src: 'https://randomuser.me/api/portraits/women/21.jpg' },
-  // Animated people
-  { key: 'anim-1', label: 'Animated 1', src: 'https://api.dicebear.com/9.x/lorelei/svg?seed=Priya&backgroundColor=ffd5dc' },
-  { key: 'anim-2', label: 'Animated 2', src: 'https://api.dicebear.com/9.x/lorelei/svg?seed=Ananya&backgroundColor=d1f4e0' },
-  { key: 'anim-3', label: 'Animated 3', src: 'https://api.dicebear.com/9.x/lorelei/svg?seed=Ravi&backgroundColor=dbeafe' },
-  { key: 'anim-4', label: 'Animated 4', src: 'https://api.dicebear.com/9.x/lorelei/svg?seed=Meera&backgroundColor=fef9c3' },
-  { key: 'anim-5', label: 'Animated 5', src: 'https://api.dicebear.com/9.x/notionists/svg?seed=Diya&backgroundColor=ede9fe' },
-  { key: 'anim-6', label: 'Animated 6', src: 'https://api.dicebear.com/9.x/notionists/svg?seed=Arjun&backgroundColor=fce7f3' },
-];
-
-// Resolve avatar src for display
-const resolveAvatar = (t: Testimonial): string => {
-  if (t.avatarType === 'avatar') {
-    return BUILT_IN_AVATARS.find((a) => a.key === t.avatarUrl)?.src || avatar1;
-  }
-  return t.avatarUrl;
-};
 
 type AvatarMethod = 'upload' | 'url' | 'avatar';
 
@@ -64,9 +49,12 @@ const AdminTestimonials = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const confirmReturnRef = useRef<HTMLElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Testimonial | null>(null);
+  // Focus moves to the form when it opens and back to the opener when it closes.
+  const { headingRef: formHeadingRef, addButtonRef, rememberOpener } = useInlineFormFocus(showForm, editing?.id);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
@@ -76,6 +64,7 @@ const AdminTestimonials = () => {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('avatar-1');
   const [urlError, setUrlError] = useState(false);
+  const [toDelete, setToDelete] = useState<Testimonial | null>(null);
 
   useEffect(() => {
     if (!user) { navigate('/'); return; }
@@ -87,7 +76,7 @@ const AdminTestimonials = () => {
       setLoading(true);
       setTestimonials(await getAllTestimonials());
     } catch {
-      toast.error('Failed to load testimonials');
+      toast.error('Could not load testimonials');
     } finally {
       setLoading(false);
     }
@@ -104,15 +93,15 @@ const AdminTestimonials = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.quote || !formData.author) {
-      toast.error('Please fill all required fields');
+      toast.error('Fill in the title, review and customer name');
       return;
     }
     if (avatarMethod === 'upload' && !selectedFile && !editing) {
-      toast.error('Please select a profile image');
+      toast.error('Choose a profile picture');
       return;
     }
     if (avatarMethod === 'url' && !avatarUrl && !editing) {
-      toast.error('Please enter avatar URL');
+      toast.error('Paste the profile picture URL');
       return;
     }
 
@@ -121,9 +110,9 @@ const AdminTestimonials = () => {
       let finalAvatarUrl = editing?.avatarUrl || selectedAvatar;
 
       if (avatarMethod === 'upload' && selectedFile) {
-        toast.loading('Uploading image...', { id: 'avatar-upload' });
+        toast.loading('Uploading the picture', { id: 'avatar-upload' });
         finalAvatarUrl = await uploadTestimonialAvatar(selectedFile);
-        toast.success('Image uploaded!', { id: 'avatar-upload' });
+        toast.success('Picture uploaded', { id: 'avatar-upload' });
       } else if (avatarMethod === 'url' && avatarUrl) {
         finalAvatarUrl = avatarUrl;
       } else if (avatarMethod === 'avatar') {
@@ -138,21 +127,22 @@ const AdminTestimonials = () => {
 
       if (editing) {
         await updateTestimonial(editing.id!, payload);
-        toast.success('Testimonial updated!');
+        toast.success('Testimonial saved');
       } else {
         await createTestimonial(payload);
-        toast.success('Testimonial created!');
+        toast.success('Testimonial created');
       }
       resetForm();
       await loadData();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save testimonial');
+      toast.error(err.message || 'Could not save testimonial');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleEdit = (t: Testimonial) => {
+    rememberOpener();
     setEditing(t);
     setFormData({
       title: t.title,
@@ -171,14 +161,13 @@ const AdminTestimonials = () => {
   };
 
   const handleDelete = async (t: Testimonial) => {
-    if (!confirm('Delete this testimonial?')) return;
     try {
-      toast.loading('Deleting...', { id: 'del' });
+      toast.loading('Deleting the testimonial', { id: 'del' });
       await deleteTestimonial(t.id!);
-      toast.success('Deleted!', { id: 'del' });
+      toast.success('Testimonial deleted', { id: 'del' });
       await loadData();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to delete', { id: 'del' });
+      toast.error(err.message || 'Could not delete the testimonial', { id: 'del' });
     }
   };
 
@@ -193,373 +182,376 @@ const AdminTestimonials = () => {
     setShowForm(false);
   };
 
+  const header = (
+    <AdminPageHeader
+      title="Testimonials"
+      description="The customer reviews section on the home page."
+      leading={
+        <IconButton label="Back to dashboard" tooltip onClick={() => navigate('/admin')}>
+          <ArrowLeft />
+        </IconButton>
+      }
+      actions={
+        !showForm && (
+          <Button ref={addButtonRef} onClick={() => setShowForm(true)}>
+            <Plus aria-hidden="true" />
+            Add testimonial
+          </Button>
+        )
+      }
+    />
+  );
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="mx-auto max-w-6xl">
+        {header}
+        <ListSkeleton rows={3} thumb label="Loading testimonials" />
       </div>
     );
   }
 
+  const METHOD_LABEL: Record<AvatarMethod, string> = { avatar: 'Initial', upload: 'Upload', url: 'Image URL' };
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container-custom max-w-6xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/admin')}
-              className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors flex-shrink-0"
-            >
-              <ArrowLeft className="w-4 h-4 md:w-5 md:h-5" />
-            </button>
+    <div className="mx-auto max-w-6xl">
+      {header}
+
+      {/* Form */}
+      {showForm && (
+        <motion.section
+          {...fadeUp}
+          aria-labelledby="testimonial-form-title"
+          className="mb-8 rounded-card border border-border bg-card p-4 shadow-sm sm:p-6"
+        >
+          <h2 ref={formHeadingRef} tabIndex={-1} id="testimonial-form-title" className="mb-6 text-lg font-semibold text-foreground">
+            {editing ? 'Edit testimonial' : 'Add testimonial'}
+          </h2>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Profile image */}
             <div>
-              <h1 className="text-base md:text-3xl font-bold text-gray-900 whitespace-nowrap">Testimonials</h1>
-              <p className="hidden md:block text-gray-600 mt-1">Manage "What Our Clients Say" section</p>
+              <p className="mb-2 block text-sm font-medium text-foreground/80">
+                Profile picture
+              </p>
+              <ToggleGroup
+                type="single"
+                value={avatarMethod}
+                onValueChange={(v) => v && setAvatarMethod(v as AvatarMethod)}
+                aria-label="Profile picture source"
+                className="mb-4"
+              >
+                {(['avatar', 'upload', 'url'] as AvatarMethod[]).map((m) => (
+                  <ToggleGroupItem key={m} value={m} size="sm">{METHOD_LABEL[m]}</ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+
+              {/* Initial monogram */}
+              {avatarMethod === 'avatar' && (
+                <div className="flex items-center gap-3">
+                  <Monogram name={formData.author} className="h-14 w-14 text-lg" />
+                  <p className="text-xs text-muted-foreground">Shows the first letter of the customer&rsquo;s name. No photo needed.</p>
+                </div>
+              )}
+
+              {/* Upload */}
+              {avatarMethod === 'upload' && (
+                <ImageUploader
+                  key={editing?.id || 'new-avatar'}
+                  onImageSelected={setSelectedFile}
+                  existingImageUrl={editing?.avatarType === 'upload' ? editing.avatarUrl : undefined}
+                  onRemove={() => setSelectedFile(null)}
+                  isUploading={isSubmitting}
+                />
+              )}
+
+              {/* URL */}
+              {avatarMethod === 'url' && (
+                <div>
+                  <Input
+                    type="text"
+                    aria-label="Profile picture URL"
+                    value={avatarUrl}
+                    onChange={(e) => { setAvatarUrl(e.target.value); setUrlError(false); }}
+                    placeholder="https://example.com/profile.jpg"
+                  />
+                  {avatarUrl && (
+                    <div className="mt-3 flex items-center gap-3">
+                      {!urlError ? (
+                        <SmartImage
+                          src={avatarUrl}
+                          alt="Preview"
+                          className="h-14 w-14 rounded-full border border-border object-cover"
+                          onError={() => setUrlError(true)} preset="thumb" />
+                      ) : (
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-status-danger-line bg-status-danger-bg text-status-danger-fg">
+                          <ImageOff aria-hidden="true" className="h-5 w-5" />
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground">{urlError ? 'This image did not load. Check the link.' : 'Preview'}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-          {!showForm && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-1 px-3 py-2 md:px-6 md:py-3 bg-transparent md:bg-blue-600 border border-blue-600 text-blue-600 md:text-white rounded-lg hover:bg-blue-50 md:hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="hidden md:inline text-sm font-medium">Add Testimonial</span>
-            </button>
-          )}
+
+            {/* Star rating */}
+            <fieldset>
+              <legend className="mb-2 block text-sm font-medium text-foreground/80">
+                Rating <span aria-hidden="true" className="text-status-danger-fg">*</span>
+              </legend>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    aria-pressed={formData.rating === star}
+                    aria-label={plural(star, 'star')}
+                    onClick={() => setFormData({ ...formData, rating: star })}
+                    className="rounded-control p-1 transition-transform duration-press ease-out active:scale-[0.97]"
+                  >
+                    <Star
+                      aria-hidden="true"
+                      className={`h-7 w-7 transition-colors duration-hover ${
+                        star <= formData.rating
+                          ? 'fill-primary text-primary'
+                          : 'fill-muted text-muted-foreground'
+                      }`}
+                    />
+                  </button>
+                ))}
+                <span className="ml-2 text-sm font-medium tabular-nums text-foreground/80">{formData.rating} / 5</span>
+              </div>
+            </fieldset>
+
+            {/* Title */}
+            <div>
+              <Label htmlFor="tm-title" className="mb-2 block text-sm font-medium text-foreground/80">
+                Title <span aria-hidden="true" className="text-status-danger-fg">*</span>
+              </Label>
+              <Input
+                id="tm-title"
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="e.g., “Real energy, no crash”"
+                required
+              />
+            </div>
+
+            {/* Quote */}
+            <div>
+              <Label htmlFor="tm-quote" className="mb-2 block text-sm font-medium text-foreground/80">
+                Review <span aria-hidden="true" className="text-status-danger-fg">*</span>
+              </Label>
+              <Textarea
+                id="tm-quote"
+                value={formData.quote}
+                onChange={(e) => setFormData({ ...formData, quote: e.target.value })}
+                placeholder="What the customer said, in their words"
+                rows={3}
+                required
+              />
+            </div>
+
+            {/* Author and role */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="tm-author" className="mb-2 block text-sm font-medium text-foreground/80">
+                  Customer name <span aria-hidden="true" className="text-status-danger-fg">*</span>
+                </Label>
+                <Input
+                  id="tm-author"
+                  type="text"
+                  autoComplete="off"
+                  value={formData.author}
+                  onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                  placeholder="e.g., Arjun M."
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="tm-role" className="mb-2 block text-sm font-medium text-foreground/80">Role or label</Label>
+                <Input
+                  id="tm-role"
+                  type="text"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  placeholder="e.g., Verified buyer"
+                />
+              </div>
+            </div>
+
+            {/* Order and status */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="tm-order" className="mb-2 block text-sm font-medium text-foreground/80">Display order</Label>
+                <Input
+                  id="tm-order"
+                  type="number"
+                  inputMode="numeric"
+                  value={formData.order}
+                  onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 1 })}
+                  min="1"
+                  className="tabular-nums"
+                />
+              </div>
+              <div>
+                <Label htmlFor="tm-status" className="mb-2 block text-sm font-medium text-foreground/80">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(v) => setFormData({ ...formData, status: v as 'active' | 'inactive' })}
+                >
+                  <SelectTrigger id="tm-status"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Live</SelectItem>
+                    <SelectItem value="inactive">Hidden</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Preview card */}
+            <div>
+              <p className="mb-2 block text-sm font-medium text-foreground/80">Preview</p>
+              <div className="max-w-sm rounded-card border border-border bg-background p-6 shadow-sm">
+                <div className="mb-3 flex items-center gap-1" aria-label={`${formData.rating} out of 5 stars`} role="img">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Star key={i} aria-hidden="true" className={`h-4 w-4 ${i <= formData.rating ? 'fill-primary text-primary' : 'fill-muted text-muted-foreground'}`} />
+                  ))}
+                </div>
+                <h3 className="mb-2 text-base font-semibold text-foreground">
+                  {formData.title ? `“${formData.title}”` : '“Card title”'}
+                </h3>
+                <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
+                  {formData.quote || 'The review appears here.'}
+                </p>
+                <div className="flex items-center gap-3">
+                  {avatarMethod === 'url' && avatarUrl && !urlError ? (
+                    <SmartImage src={avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" preset="thumb" />
+                  ) : (
+                    <Monogram name={formData.author} className="h-10 w-10 text-sm" />
+                  )}
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{formData.author || 'Customer name'}</p>
+                    <p className="text-xs text-muted-foreground">{formData.role || 'Role'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 border-t border-border pt-4">
+              <Button type="button" variant="outline" onClick={resetForm} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Spinner />}
+                {isSubmitting
+                  ? editing ? 'Saving' : 'Creating'
+                  : editing ? 'Save testimonial' : 'Create testimonial'}
+              </Button>
+            </div>
+          </form>
+        </motion.section>
+      )}
+
+      {/* List */}
+      <section aria-labelledby="testimonial-list-title" className="overflow-hidden rounded-card border border-border bg-card shadow-sm">
+        <div className="border-b border-border px-4 py-4 sm:px-6">
+          <h2 id="testimonial-list-title" className="text-base font-semibold text-foreground">
+            All testimonials <span className="font-normal tabular-nums text-muted-foreground">({testimonials.length})</span>
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">These appear in the customer reviews section on the home page.</p>
         </div>
 
-        {/* Form */}
-        {showForm && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8"
-          >
-            <h2 className="text-xl font-bold text-gray-900 mb-6">
-              {editing ? 'Edit Testimonial' : 'Add New Testimonial'}
-            </h2>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Profile Image */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Profile Image <span className="text-red-500">*</span>
-                </label>
-                {/* Tabs */}
-                <div className="flex gap-2 mb-4">
-                  {(['avatar', 'upload', 'url'] as AvatarMethod[]).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setAvatarMethod(m)}
-                      className={`px-4 py-2 text-sm font-medium rounded-lg capitalize transition-colors ${
-                        avatarMethod === m
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {m === 'avatar' ? 'Choose Avatar' : m === 'upload' ? 'Upload' : 'Image URL'}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Avatar picker */}
-                {avatarMethod === 'avatar' && (
-                  <div className="flex gap-4 flex-wrap">
-                    {BUILT_IN_AVATARS.map((av) => (
-                      <button
-                        key={av.key}
-                        type="button"
-                        onClick={() => setSelectedAvatar(av.key)}
-                        className={`relative rounded-full overflow-hidden transition-all ${
-                          selectedAvatar === av.key
-                            ? 'ring-4 ring-blue-500 ring-offset-2 scale-110'
-                            : 'ring-2 ring-gray-200 hover:ring-blue-300'
-                        }`}
-                      >
-                        <img src={av.src} alt={av.label} className="w-16 h-16 object-cover rounded-full" />
-                        {selectedAvatar === av.key && (
-                          <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center rounded-full">
-                            <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
-                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                            </div>
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Upload */}
-                {avatarMethod === 'upload' && (
-                  <ImageUploader
-                    key={editing?.id || 'new-avatar'}
-                    onImageSelected={setSelectedFile}
-                    existingImageUrl={editing?.avatarType === 'upload' ? editing.avatarUrl : undefined}
-                    onRemove={() => setSelectedFile(null)}
-                    isUploading={isSubmitting}
-                  />
-                )}
-
-                {/* URL */}
-                {avatarMethod === 'url' && (
-                  <div>
-                    <input
-                      type="text"
-                      value={avatarUrl}
-                      onChange={(e) => { setAvatarUrl(e.target.value); setUrlError(false); }}
-                      placeholder="https://example.com/profile.jpg"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    {avatarUrl && (
-                      <div className="mt-3 flex items-center gap-3">
-                        {!urlError ? (
-                          <SmartImage
-                            src={avatarUrl}
-                            alt="Preview"
-                            className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
-                            onError={() => setUrlError(true)} preset="thumb" />
-                        ) : (
-                          <div className="w-14 h-14 rounded-full bg-red-50 border-2 border-red-200 flex items-center justify-center text-red-400 text-xs text-center leading-tight px-1">
-                            Invalid URL
-                          </div>
-                        )}
-                        <p className="text-xs text-gray-500">{urlError ? 'Could not load image from this URL.' : 'Preview'}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Star Rating */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rating <span className="text-red-500">*</span>
-                </label>
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, rating: star })}
-                      className="transition-transform hover:scale-110"
-                    >
-                      <Star
-                        className={`w-8 h-8 transition-colors ${
-                          star <= formData.rating
-                            ? 'fill-orange-400 text-orange-400'
-                            : 'fill-gray-200 text-gray-200'
-                        }`}
-                      />
-                    </button>
-                  ))}
-                  <span className="ml-2 text-sm text-gray-600 font-medium">{formData.rating} / 5</span>
-                </div>
-              </div>
-
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Title <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder='e.g., "Charming Golden Jewellery"'
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              {/* Quote / Review */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Review / Bio <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={formData.quote}
-                  onChange={(e) => setFormData({ ...formData, quote: e.target.value })}
-                  placeholder="Customer review text..."
-                  rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              {/* Author & Role */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Customer Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.author}
-                    onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                    placeholder="e.g., Saanvi Iyer"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Role / Label</label>
-                  <input
-                    type="text"
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    placeholder="e.g., Verified Buyer"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Order & Status */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Display Order</label>
-                  <input
-                    type="number"
-                    value={formData.order}
-                    onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 1 })}
-                    min="1"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Preview Card */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Preview</label>
-                <div className="bg-white rounded-2xl p-6 shadow-md border border-border/30 max-w-sm" style={{ fontFamily: "var(--font-body)" }}>
-                  <div className="flex items-center gap-1 mb-3">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Star key={i} className={`w-4 h-4 ${i <= formData.rating ? 'fill-orange-400 text-orange-400' : 'fill-gray-200 text-gray-200'}`} />
-                    ))}
-                  </div>
-                  <h4 className="text-base font-semibold mb-2 text-gray-900">
-                    {formData.title ? `" ${formData.title} "` : '" Card Title "'}
-                  </h4>
-                  <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                    {formData.quote || 'Customer review will appear here...'}
-                  </p>
-                  <div className="flex items-center gap-3">
-                    {avatarMethod === 'avatar' ? (
-                      <img src={BUILT_IN_AVATARS.find(a => a.key === selectedAvatar)?.src || avatar1} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
-                    ) : avatarMethod === 'url' && avatarUrl && !urlError ? (
-                      <SmartImage src={avatarUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover" preset="thumb" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs font-bold">
-                        {formData.author ? formData.author[0].toUpperCase() : '?'}
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-semibold text-sm text-gray-900">{formData.author || 'Customer Name'}</p>
-                      <p className="text-xs text-gray-500">{formData.role || 'Role'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-4">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      {editing ? 'Updating...' : 'Creating...'}
-                    </span>
-                  ) : editing ? 'Update Testimonial' : 'Create Testimonial'}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  disabled={isSubmitting}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 font-medium"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </motion.div>
+        {testimonials.some((t) => t.demo) && (
+          <Notice tone="warning" className="m-4 sm:mx-6" role="note">
+            Testimonials marked Demo are placeholders from the preview store. Replace them with real customer reviews, or switch them off, before launch.
+          </Notice>
         )}
 
-        {/* List */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-bold text-gray-900">All Testimonials ({testimonials.length})</h2>
-            <p className="text-sm text-gray-500 mt-1">These appear in the "What Our Clients Say" section</p>
+        {testimonials.length === 0 ? (
+          <div className="m-4 rounded-card border border-dashed border-border px-4 py-12 sm:m-6">
+            <EmptyState
+              icon={Quote}
+              title="No testimonials yet"
+              description="Add a real customer review with Add testimonial."
+            />
           </div>
-
-          {testimonials.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">No testimonials yet. Add your first one!</div>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {testimonials.map((t, index) => (
-                <motion.div
-                  key={t.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.04 }}
-                  className="p-5 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex gap-4 items-start">
+        ) : (
+          <ul className="divide-y divide-border">
+            {testimonials.map((t, index) => (
+              <motion.li
+                key={t.id}
+                {...fadeUp}
+                transition={{ ...fadeUp.transition, delay: staggerDelay(index) }}
+                className="p-4 sm:p-5"
+              >
+                <div className="flex items-start gap-4">
+                  {t.avatarType === 'avatar' ? (
+                    <Monogram name={t.author} className="h-12 w-12 shrink-0 text-base" />
+                  ) : (
                     <SmartImage
-                      src={resolveAvatar(t)}
-                      alt={t.author}
-                      className="w-12 h-12 rounded-full object-cover flex-shrink-0" preset="thumb" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="font-semibold text-sm text-gray-900 truncate">"{t.title}"</h3>
-                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${t.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                          {t.status === 'active' ? <span className="flex items-center gap-1"><Eye className="w-3 h-3" />Active</span> : <span className="flex items-center gap-1"><EyeOff className="w-3 h-3" />Inactive</span>}
-                        </span>
-                        <span className="text-xs text-gray-400">Order: {t.order}</span>
-                      </div>
-                      {/* Stars */}
-                      <div className="flex gap-0.5 mb-1">
-                        {[1,2,3,4,5].map((i) => (
-                          <Star key={i} className={`w-3 h-3 ${i <= t.rating ? 'fill-orange-400 text-orange-400' : 'fill-gray-200 text-gray-200'}`} />
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-600 font-medium">{t.author} · {t.role}</p>
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">{t.quote}</p>
+                      src={t.avatarUrl}
+                      alt=""
+                      className="h-12 w-12 shrink-0 rounded-full object-cover" preset="thumb" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      <h3 className="truncate text-sm font-semibold text-foreground">“{t.title}”</h3>
+                      {t.status === 'active'
+                        ? <StatusBadge tone="success" icon={Eye} label="Live" />
+                        : <StatusBadge tone="neutral" icon={EyeOff} label="Hidden" />}
+                      {t.demo && <StatusBadge tone="neutral" icon={FlaskConical} label="Demo" title="Placeholder from the preview store" />}
+                      <span className="text-xs tabular-nums text-muted-foreground">Position {index + 1}</span>
                     </div>
-                    <div className="flex gap-2 flex-shrink-0">
-                      <button onClick={() => handleEdit(t)} className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-blue-50 hover:border-blue-300 transition-colors">
-                        <Edit2 className="w-4 h-4 text-blue-600" />
-                      </button>
-                      <button onClick={() => handleDelete(t)} className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:border-red-300 transition-colors">
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </button>
+                    {/* Stars */}
+                    <div className="mb-1 flex gap-0.5" role="img" aria-label={`${t.rating} out of 5 stars`}>
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <Star key={i} aria-hidden="true" className={`h-3 w-3 ${i <= t.rating ? 'fill-primary text-primary' : 'fill-muted text-muted-foreground'}`} />
+                      ))}
                     </div>
+                    <p className="text-xs font-medium text-foreground/80">{t.author}{t.role ? ` · ${t.role}` : ''}</p>
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{t.quote}</p>
                   </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+                  <div className="flex shrink-0 gap-1">
+                    <IconButton label={`Edit testimonial from ${t.author}`} tooltip="Edit" size="sm" onClick={() => handleEdit(t)} className="text-foreground/70">
+                      <Edit2 />
+                    </IconButton>
+                    <IconButton label={`Delete testimonial from ${t.author}`} tooltip="Delete" size="sm" onClick={(e) => { confirmReturnRef.current = e.currentTarget; setToDelete(t); }} className="text-muted-foreground hover:text-status-danger-fg">
+                      <Trash2 />
+                    </IconButton>
+                  </div>
+                </div>
+              </motion.li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <ConfirmDialog
+        returnFocusRef={confirmReturnRef}
+        open={!!toDelete}
+        onOpenChange={(open) => !open && setToDelete(null)}
+        title={`Delete the testimonial from ${toDelete?.author ?? 'this customer'}?`}
+        description="It is removed from the home page. This cannot be undone."
+        confirmLabel="Delete"
+        tone="danger"
+        onConfirm={() => (toDelete ? handleDelete(toDelete) : undefined)}
+      />
     </div>
   );
 };
+
+/** A round initial in place of a stock photo. */
+const Monogram = ({ name, className = '' }: { name?: string; className?: string }) => (
+  <span
+    aria-hidden="true"
+    className={`inline-flex items-center justify-center rounded-full bg-muted font-semibold text-foreground ${className}`}
+  >
+    {(name || '?').trim().charAt(0).toUpperCase() || '?'}
+  </span>
+);
 
 export default AdminTestimonials;

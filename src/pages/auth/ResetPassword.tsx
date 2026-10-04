@@ -4,25 +4,24 @@
 // Production-grade security for eCommerce
 // ============================================
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
 import { auth } from '@/config/firebase';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2, Lock, Eye, EyeOff, CheckCircle, AlertCircle, Shield, Info } from 'lucide-react';
+import { Notice } from '@/components/ui/notice';
+import { Spinner } from '@/components/ui/spinner';
+import { AUTH_MAIN_CLASS, AuthCard } from '@/components/auth/AuthCard';
+import { AuthField } from '@/components/auth/AuthField';
+import { AuthCardSkeleton } from '@/components/skeletons';
+import { Info, Link2Off, ShieldCheck } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import {
-  calculatePasswordStrength,
-  validatePassword,
-  getStrengthColorClass,
-  getStrengthTextColorClass,
-  getPasswordRequirementsText,
-} from '@/lib/passwordValidation';
+import { usePageMeta } from '@/hooks/usePageMeta';
+import { calculatePasswordStrength, validatePassword } from '@/lib/passwordValidation';
 import type { PasswordStrengthResult } from '@/lib/passwordValidation';
 import { toast } from 'sonner';
+import PasswordStrengthMeter from './PasswordStrengthMeter';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -36,8 +35,6 @@ const ResetPassword = () => {
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true);
   const [error, setError] = useState('');
@@ -45,11 +42,25 @@ const ResetPassword = () => {
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrengthResult | null>(null);
   const [validToken, setValidToken] = useState(false);
 
+  usePageMeta({ title: 'Reset password', noindex: true });
+
+  // After a reset the visitor is signed out, so sign-in is the next step.
+  const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const goToSignIn = () => {
+    if (redirectTimer.current) clearTimeout(redirectTimer.current);
+    navigate('/login', {
+      state: { passwordUpdated: true, message: 'Password updated. Sign in with your new password.', type: 'success' },
+    });
+  };
+  useEffect(() => () => {
+    if (redirectTimer.current) clearTimeout(redirectTimer.current);
+  }, []);
+
   // Verify the reset code on mount
   useEffect(() => {
     const verifyCode = async () => {
       if (!oobCode || mode !== 'resetPassword') {
-        setError('Invalid or missing reset link. Please request a new password reset.');
+        setError('This reset link is incomplete. Request a new one.');
         setVerifying(false);
         return;
       }
@@ -63,11 +74,11 @@ const ResetPassword = () => {
         console.error('Verify code error:', err);
         
         if (err.code === 'auth/expired-action-code') {
-          setError('This password reset link has expired. Please request a new one.');
+          setError('This reset link has expired. Request a new one.');
         } else if (err.code === 'auth/invalid-action-code') {
-          setError('This password reset link is invalid or has already been used.');
+          setError('This reset link is not valid or has already been used. Request a new one.');
         } else {
-          setError('Unable to verify reset link. Please request a new password reset.');
+          setError('Unable to check this reset link. Request a new one.');
         }
       } finally {
         setVerifying(false);
@@ -100,24 +111,24 @@ const ResetPassword = () => {
     // Validate password strength
     const validation = validatePassword(newPassword);
     if (!validation.valid) {
-      setError(validation.errors[0]);
+      setError(`${validation.errors[0]}.`);
       return;
     }
 
     // Security: Prevent weak passwords
     if (passwordStrength && passwordStrength.score < 2) {
-      setError('Password is too weak. Please choose a stronger password.');
+      setError('This password is too easy to guess. Choose a stronger one.');
       return;
     }
 
     // Prevent password containing email
     if (newPassword.toLowerCase().includes(email.split('@')[0].toLowerCase())) {
-      setError('Password should not contain your email address.');
+      setError('Choose a password that does not contain your email address.');
       return;
     }
 
     if (!oobCode) {
-      setError('Missing reset code. Please request a new password reset.');
+      setError('This reset link is incomplete. Request a new one.');
       return;
     }
 
@@ -128,45 +139,35 @@ const ResetPassword = () => {
       await confirmPasswordReset(auth, oobCode, newPassword);
       
       setSuccess(true);
-      toast.success('Password reset successful!');
+      toast.success('Password updated');
 
-      // Navigate to security page after 3 seconds
-      setTimeout(() => {
-        navigate('/security', { 
-          state: { 
-            message: 'Password changed successfully! Your account is now secure.',
-            type: 'success'
-          } 
-        });
-      }, 3000);
+      // Take the visitor to sign in after 3 seconds (owner decision: /login, not /security)
+      redirectTimer.current = setTimeout(goToSignIn, 3000);
     } catch (err: any) {
       console.error('Reset password error:', err);
       
       if (err.code === 'auth/expired-action-code') {
-        setError('This password reset link has expired. Please request a new one.');
+        setError('This reset link has expired. Request a new one.');
       } else if (err.code === 'auth/invalid-action-code') {
-        setError('This password reset link is invalid or has already been used.');
+        setError('This reset link is not valid or has already been used. Request a new one.');
       } else if (err.code === 'auth/weak-password') {
-        setError('Password is too weak. Please choose a stronger password.');
+        setError('This password is too easy to guess. Choose a stronger one.');
       } else {
-        setError('Failed to reset password. Please try again or request a new reset link.');
+        setError('Unable to reset your password. Try again, or request a new link.');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // Loading state
+  // Loading state: the card's shape while the link is checked
   if (verifying) {
     return (
-      <div className="min-h-screen tx-paper">
+      <div className="flex min-h-screen flex-col tx-paper">
         <Header />
-        <div className="flex items-center justify-center py-20 px-4">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin text-highlight mx-auto mb-4" />
-            <p className="text-muted-foreground">Verifying reset link...</p>
-          </div>
-        </div>
+        <main id="main" tabIndex={-1} className={AUTH_MAIN_CLASS}>
+          <AuthCardSkeleton label="Checking your reset link" />
+        </main>
         <Footer />
       </div>
     );
@@ -175,25 +176,24 @@ const ResetPassword = () => {
   // Invalid token state
   if (!validToken && !verifying) {
     return (
-      <div className="min-h-screen tx-paper">
+      <div className="flex min-h-screen flex-col tx-paper">
         <Header />
-        <div className="flex items-center justify-center py-20 px-4">
-          <div className="w-full max-w-md">
-            <div className="bg-card rounded-[var(--radius-card)] shadow-xl p-8 text-center">
-              <div className="bg-red-100 rounded-full p-4 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                <AlertCircle className="h-10 w-10 text-red-600" />
-              </div>
-              <h1 className="text-2xl font-semibold text-foreground mb-4" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Invalid Reset Link</h1>
-              <p className="text-muted-foreground mb-6">{error}</p>
-              <Button
-                onClick={() => navigate('/forgot-password')}
-                className="btn-copper w-full h-12 text-[12px] font-bold rounded-[6px]"
-              >
-                Request New Reset Link
-              </Button>
+        <main id="main" tabIndex={-1} className={AUTH_MAIN_CLASS}>
+          <div className="panel tx-sheet tx-contour mx-auto w-full max-w-md p-6 text-center sm:p-9">
+            <div className="tx-slate mx-auto mb-5 grid h-14 w-14 place-items-center rounded-card text-highlight-soft">
+              <Link2Off aria-hidden="true" className="size-6" />
             </div>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground [text-wrap:balance]">
+              This link can&rsquo;t be used
+            </h1>
+            <p role="alert" className="mt-2 text-sm leading-relaxed text-muted-foreground [text-wrap:pretty]">
+              {error}
+            </p>
+            <Button asChild size="lg" className="mt-6 w-full">
+              <Link to="/forgot-password">Request new link</Link>
+            </Button>
           </div>
-        </div>
+        </main>
         <Footer />
       </div>
     );
@@ -202,43 +202,31 @@ const ResetPassword = () => {
   // Success state
   if (success) {
     return (
-      <div className="min-h-screen tx-paper">
+      <div className="flex min-h-screen flex-col tx-paper">
         <Header />
-        <div className="flex items-center justify-center py-20 px-4">
-          <div className="w-full max-w-md">
-            <div className="bg-card rounded-[var(--radius-card)] shadow-xl p-8 text-center">
-              <div className="bg-primary/10 rounded-full p-4 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                <CheckCircle className="h-10 w-10 text-primary" />
-              </div>
-              <h1 className="text-2xl font-semibold text-foreground mb-4" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Password Reset Successful!</h1>
-              <p className="text-muted-foreground mb-6">
-                Your password has been updated successfully. You can now sign in with your new password.
-              </p>
-              <div className="bg-primary/5 border border-primary/25 rounded-lg p-4 mb-6 text-left">
-                <div className="flex gap-3">
-                  <Shield className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-foreground/80">
-                    <p className="font-semibold mb-1">Security Notice:</p>
-                    <ul className="space-y-1 text-xs">
-                      <li>• All previous sessions have been logged out for security</li>
-                      <li>• A confirmation email has been sent to you</li>
-                      <li>• If you didn't make this change, contact support immediately</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground mb-4">
-                Redirecting to sign in page...
-              </p>
-              <Button
-                onClick={() => navigate('/account')}
-                className="btn-copper w-full h-12 text-[12px] font-bold rounded-[6px]"
-              >
-                Sign In Now
-              </Button>
+        <main id="main" tabIndex={-1} className={AUTH_MAIN_CLASS}>
+          <div className="panel tx-sheet tx-contour mx-auto w-full max-w-md p-6 text-center sm:p-9">
+            <div className="tx-slate mx-auto mb-5 grid h-14 w-14 place-items-center rounded-card text-highlight-soft">
+              <ShieldCheck aria-hidden="true" className="size-6" />
             </div>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground [text-wrap:balance]">
+              Password updated
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground [text-wrap:pretty]">
+              You can now sign in with your new password.
+            </p>
+            <ul className="mt-5 list-disc space-y-1.5 border-t border-foreground/[0.08] pl-5 pt-5 text-left text-sm leading-relaxed text-muted-foreground marker:text-primary">
+              <li>You&rsquo;ve been signed out on your other devices.</li>
+              <li>If you didn&rsquo;t make this change, contact support right away.</li>
+            </ul>
+            <p role="status" className="mt-6 text-sm text-muted-foreground">
+              Taking you to sign in&hellip;
+            </p>
+            <Button onClick={goToSignIn} size="lg" className="mt-3 w-full">
+              Sign in now
+            </Button>
           </div>
-        </div>
+        </main>
         <Footer />
       </div>
     );
@@ -246,147 +234,78 @@ const ResetPassword = () => {
 
   // Reset form
   return (
-    <div className="min-h-screen tx-paper">
+    <div className="flex min-h-screen flex-col tx-paper">
       <Header />
-      <div className="flex items-center justify-center py-20 px-4">
-        <div className="w-full max-w-md">
-          <div className="bg-card rounded-[var(--radius-card)] shadow-xl p-8">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <div className="bg-highlight/15 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-                <Lock className="h-10 w-10 text-highlight" />
-              </div>
-              <h1 className="text-3xl font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Reset Your Password</h1>
-              <p className="text-muted-foreground">
-                Enter a new strong password for <strong className="text-primary">{email}</strong>
-              </p>
+      <main id="main" tabIndex={-1} className={AUTH_MAIN_CLASS}>
+        <AuthCard
+          title="Reset your password"
+          description={
+            <>
+              Choose a new password for <strong className="[overflow-wrap:anywhere] font-semibold text-foreground">{email}</strong>.
+            </>
+          }
+          footer={
+            <p className="flex items-start justify-center gap-2 text-left text-xs leading-relaxed">
+              <Info aria-hidden="true" className="mt-px size-4 shrink-0" />
+              <span>After you reset it, you&rsquo;ll be signed out on all your devices.</span>
+            </p>
+          }
+        >
+          {error && (
+            <Notice tone="danger" compact className="mb-5">
+              {error}
+            </Notice>
+          )}
+
+          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+            <div className="flex flex-col gap-3">
+              <AuthField
+                id="reset-new-password"
+                label="New password"
+                type="password"
+                name="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Create a password"
+                required
+                disabled={loading}
+                autoComplete="new-password"
+                aria-describedby="reset-password-rules"
+              />
+              <PasswordStrengthMeter password={newPassword} strength={passwordStrength} rulesId="reset-password-rules" />
             </div>
 
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex gap-3">
-                <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                <span className="text-sm">{error}</span>
-              </div>
-            )}
+            <AuthField
+              id="reset-confirm-password"
+              label="Confirm password"
+              type="password"
+              name="confirm-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Type it again"
+              required
+              disabled={loading}
+              autoComplete="new-password"
+            />
 
-            {/* Reset Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* New Password */}
-              <div>
-                <Label htmlFor="newPassword" className="text-foreground/80 font-medium">New Password</Label>
-                <div className="relative mt-2">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/70" />
-                  <Input
-                    id="newPassword"
-                    type={showPassword ? 'text' : 'password'}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    className="pl-10 pr-10 h-12"
-                    required
-                    disabled={loading}
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground"
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-
-                {/* Password Strength Meter */}
-                {passwordStrength && (
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">Password strength:</span>
-                      <span className={`text-xs font-semibold ${getStrengthTextColorClass(passwordStrength.strength)}`}>
-                        {passwordStrength.strength.replace('-', ' ').toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-foreground/10 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${getStrengthColorClass(passwordStrength.strength)} transition-all duration-300`}
-                        style={{ width: `${passwordStrength.percentage}%` }}
-                      />
-                    </div>
-                    {passwordStrength.feedback.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-2">{passwordStrength.feedback[0]}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <Label htmlFor="confirmPassword" className="text-foreground/80 font-medium">Confirm Password</Label>
-                <div className="relative mt-2">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/70" />
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                    className="pl-10 pr-10 h-12"
-                    required
-                    disabled={loading}
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground"
-                  >
-                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Password Requirements */}
-              <div className="bg-foreground/[0.03] border border-foreground/[0.08] rounded-lg p-4">
-                <p className="text-xs font-semibold text-foreground/80 mb-2">Password must contain:</p>
-                <ul className="space-y-1">
-                  {getPasswordRequirementsText().map((req, idx) => (
-                    <li key={idx} className="text-xs text-muted-foreground flex items-center gap-2">
-                      <span className="w-1 h-1 bg-gray-400 rounded-full" />
-                      {req}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                className="btn-copper w-full h-12 text-[12px] font-bold rounded-[6px]"
-                disabled={loading || !passwordStrength || !passwordStrength.meetsMinimum}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Resetting Password...
-                  </>
-                ) : (
-                  'Reset Password'
-                )}
-              </Button>
-            </form>
-
-            {/* Security Notice */}
-            <div className="mt-6 p-3 bg-primary/5 border border-primary/20 rounded-[8px]">
-              <p className="text-xs text-foreground/75 flex items-start gap-2">
-                <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <span>
-                  After resetting your password, you'll be logged out from all devices for security purposes.
-                </span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={loading || !passwordStrength || !passwordStrength.meetsMinimum}
+            >
+              {loading ? (
+                <>
+                  <Spinner />
+                  Resetting&hellip;
+                </>
+              ) : (
+                'Reset password'
+              )}
+            </Button>
+          </form>
+        </AuthCard>
+      </main>
       <Footer />
     </div>
   );

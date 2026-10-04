@@ -1,7 +1,7 @@
 import { FirebaseOptions, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, type Auth } from "firebase/auth";
 import { initializeFirestore } from "firebase/firestore";
-import { getAnalytics } from "firebase/analytics";
+import type { Analytics } from "firebase/analytics";
 import { getStorage } from "firebase/storage";
 
 const getRequiredEnv = (key: keyof ImportMetaEnv) => {
@@ -25,12 +25,21 @@ export const firebaseConfig: FirebaseOptions = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize a secondary app for creating users without affecting current session
-const secondaryApp = initializeApp(firebaseConfig, 'secondary');
-
 // Initialize services
 export const auth = getAuth(app);
-export const secondaryAuth = getAuth(secondaryApp); // For creating users without signing out admin
+
+/**
+ * A second Auth instance for creating users without signing the admin out.
+ * Created on first use only, so shoppers never load it.
+ */
+let secondaryAuthInstance: Auth | null = null;
+export const getSecondaryAuth = (): Auth => {
+  if (!secondaryAuthInstance) {
+    const secondaryApp = initializeApp(firebaseConfig, 'secondary');
+    secondaryAuthInstance = getAuth(secondaryApp);
+  }
+  return secondaryAuthInstance;
+};
 /**
  * `ignoreUndefinedProperties` makes Firestore skip `undefined` fields instead of
  * throwing "Unsupported field value: undefined".
@@ -45,13 +54,29 @@ export const secondaryAuth = getAuth(secondaryApp); // For creating users withou
  */
 export const db = initializeFirestore(app, { ignoreUndefinedProperties: true });
 export const storage = getStorage(app);
-export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
-
-// Verify Firebase configuration
-if (typeof window !== 'undefined') {
-  console.log('[Firebase] Configuration loaded successfully');
-  console.log('[Firebase] Project ID:', firebaseConfig.projectId);
-  console.log('[Firebase] Auth Domain:', firebaseConfig.authDomain);
-}
+/**
+ * Google Analytics, loaded after the page is interactive (App.tsx calls
+ * loadAnalytics() in an idle callback after window load). Same data, but the
+ * ~150 kB tag no longer competes with the first render. `analytics` is null
+ * until it has loaded.
+ */
+export let analytics: Analytics | null = null;
+let analyticsPromise: Promise<Analytics | null> | null = null;
+export const loadAnalytics = (): Promise<Analytics | null> => {
+  if (typeof window === 'undefined') return Promise.resolve(null);
+  if (!analyticsPromise) {
+    analyticsPromise = import('firebase/analytics')
+      .then(async ({ getAnalytics, isSupported }) => {
+        if (!(await isSupported())) return null;
+        analytics = getAnalytics(app);
+        return analytics;
+      })
+      .catch((error) => {
+        console.warn('[Firebase] Analytics did not load', error);
+        return null;
+      });
+  }
+  return analyticsPromise;
+};
 
 export default app;

@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
-import { Upload, Image as ImageIcon, Video, Trash2, Copy, Check, Loader2, LayoutGrid, List } from 'lucide-react';
+import { Upload, Image as ImageIcon, Video, Trash2, Copy, Check, LayoutGrid, List } from 'lucide-react';
+import { IconButton } from '@/components/ui/icon-button';
+import { Spinner } from '@/components/ui/spinner';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { uploadImage, describeUploadError, IMAGE_ACCEPT } from '@/services/mediaStorage';
 import { SmartImage } from "@/components/ui/smart-image";
@@ -51,8 +56,7 @@ const Media = () => {
 
       if (newItems.length > 0) {
         toast({
-          title: 'Success',
-          description: `${newItems.length} file(s) uploaded successfully`,
+          title: newItems.length === 1 ? 'Image uploaded' : `${newItems.length} images uploaded`,
         });
       }
     } finally {
@@ -66,70 +70,59 @@ const Media = () => {
       await navigator.clipboard.writeText(url);
       setCopiedUrl(url);
       setTimeout(() => setCopiedUrl(null), 2000);
-      toast({
-        title: 'Copied',
-        description: 'URL copied to clipboard',
-      });
+      toast({ title: 'Link copied' });
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to copy URL',
-        variant: 'destructive',
-      });
+      toast({ title: 'Could not copy the link', variant: 'destructive' });
     }
   };
 
   const handleDelete = (url: string) => {
     setMediaItems((prev) => prev.filter((item) => item.url !== url));
-    toast({
-      title: 'Removed',
-      description: 'Media removed from library',
-    });
+    toast({ title: 'Removed from this list' });
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Media Library</h1>
-        <p className="text-gray-600 mt-1">Upload and manage your media files</p>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <AdminPageHeader
+        title="Media library"
+        description="Upload images and copy their links for products, banners and pages."
+        className="pb-0"
+      />
 
-      {/* Upload Section */}
-      <Card className="bg-white border-gray-200">
+      {/* Upload */}
+      <Card>
         <CardHeader>
-          <CardTitle className="text-gray-900">Upload Media</CardTitle>
+          <h2 className="text-base font-semibold text-foreground leading-tight tracking-tight">Upload media</h2>
         </CardHeader>
         <CardContent>
-          <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:border-highlight transition-colors">
-            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-              {uploading ? (
-                <>
-                  <Loader2 className="h-12 w-12 animate-spin text-highlight mb-4" />
-                  <p className="text-lg text-gray-700">Uploading... {uploadProgress}%</p>
-                  <div className="w-64 h-2 bg-gray-100 rounded-full mt-4">
-                    <div
-                      className="h-full bg-highlight rounded-full transition-all"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Upload className="h-12 w-12 text-gray-600 mb-4" />
-                  <p className="text-lg text-gray-700 mb-2">
-                    Click to upload or drag and drop
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Images (JPG, PNG, WebP) up to 500 KB
-                  </p>
-                  <p className="text-sm text-gray-500">For videos, use a YouTube link</p>
-                </>
-              )}
-            </div>
+          <label className="flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-card border-2 border-dashed border-input bg-muted/30 px-4 text-center transition-colors duration-hover hover:border-primary has-[input:focus-visible]:border-primary has-[input:focus-visible]:outline has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring">
+            {uploading ? (
+              <>
+                <Spinner size={32} className="mb-4 text-primary" />
+                <p className="text-base tabular-nums text-foreground/80" aria-live="polite">Uploading {uploadProgress}%</p>
+                <div className="mt-4 h-2 w-64 max-w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Upload progress" aria-valuenow={uploadProgress} aria-valuemin={0} aria-valuemax={100}>
+                  <div
+                    className="h-full rounded-full bg-primary"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <Upload aria-hidden="true" className="mb-4 h-10 w-10 text-muted-foreground" />
+                <p className="mb-2 text-base text-foreground/80">
+                  Click to upload or drag and drop
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Images (JPG, PNG, WebP) up to 500 KB
+                </p>
+                <p className="text-sm text-muted-foreground">For videos, use a YouTube link</p>
+              </>
+            )}
             <input
               type="file"
-              className="hidden"
+              className="sr-only"
+              aria-label="Upload images"
               accept={IMAGE_ACCEPT}
               multiple
               onChange={handleFileUpload}
@@ -139,112 +132,103 @@ const Media = () => {
         </CardContent>
       </Card>
 
-      {/* Media Grid */}
-      <Card className="bg-white border-gray-200">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-gray-900">
-            Uploaded Media ({mediaItems.length})
-          </CardTitle>
-          <div className="flex border border-gray-200 rounded-md overflow-hidden">
-            <button onClick={() => setViewMode('grid')} className={`p-2 ${viewMode === 'grid' ? 'bg-highlight text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button onClick={() => setViewMode('table')} className={`p-2 ${viewMode === 'table' ? 'bg-highlight text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-              <List className="h-4 w-4" />
-            </button>
-          </div>
+      {/* Media grid */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+          <h2 className="text-base font-semibold text-foreground leading-tight tracking-tight">
+            Uploaded media <span className="font-normal tabular-nums text-muted-foreground">({mediaItems.length})</span>
+          </h2>
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={(v) => v && setViewMode(v as 'grid' | 'table')}
+            aria-label="Media view"
+          >
+            <ToggleGroupItem value="grid" aria-label="Grid view" size="sm" className="w-9 px-0">
+              <LayoutGrid aria-hidden="true" className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="table" aria-label="List view" size="sm" className="w-9 px-0">
+              <List aria-hidden="true" className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
         </CardHeader>
         <CardContent>
           {mediaItems.length > 0 ? (
             viewMode === 'grid' ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <ul className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {mediaItems.map((item, index) => (
-                <div
+                <li
                   key={index}
-                  className="relative group rounded-lg overflow-hidden bg-gray-100"
+                  className="group relative overflow-hidden rounded-card bg-muted"
                 >
                   {item.type === 'image' ? (
                     <SmartImage
                       src={item.url}
                       alt={`Media ${index + 1}`}
-                      className="w-full h-32 object-cover" preset="tile" />
+                      className="h-32 w-full object-cover" preset="tile" />
                   ) : (
-                    <div className="w-full h-32 flex items-center justify-center bg-gray-100">
-                      <Video className="h-12 w-12 text-gray-400" />
+                    <div className="flex h-32 w-full items-center justify-center bg-muted">
+                      <Video aria-hidden="true" className="h-10 w-10 text-muted-foreground" />
                     </div>
                   )}
 
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <button
-                      onClick={() => handleCopyUrl(item.url)}
-                      className="p-2 bg-highlight rounded-lg text-white hover:bg-highlight transition-colors"
-                      title="Copy URL"
-                    >
-                      {copiedUrl === item.url ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.url)}
-                      className="p-2 bg-red-500 rounded-lg text-white hover:bg-red-600 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                  {/* Actions: always on touch, on hover or focus with a mouse */}
+                  <div className="absolute bottom-1.5 right-1.5 flex gap-1 opacity-100 transition-opacity duration-hover lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+                    <IconButton label={copiedUrl === item.url ? 'Copied' : `Copy link to media ${index + 1}`} variant="onPhoto" size="sm" onClick={() => handleCopyUrl(item.url)}>
+                      {copiedUrl === item.url ? <Check /> : <Copy />}
+                    </IconButton>
+                    <IconButton label={`Remove media ${index + 1} from this list`} variant="onPhoto" size="sm" onClick={() => handleDelete(item.url)}>
+                      <Trash2 />
+                    </IconButton>
                   </div>
 
-                  {/* Type Badge */}
-                  <div className="absolute top-2 left-2">
-                    <span className="bg-black/60 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-                      {item.type === 'image' ? (
-                        <ImageIcon className="h-3 w-3" />
-                      ) : (
-                        <Video className="h-3 w-3" />
-                      )}
-                      {item.type}
-                    </span>
-                  </div>
-                </div>
+                  {/* Type badge */}
+                  <span className="tag-dark absolute left-2 top-2 inline-flex items-center gap-1 capitalize">
+                    {item.type === 'image' ? (
+                      <ImageIcon aria-hidden="true" className="h-3 w-3" />
+                    ) : (
+                      <Video aria-hidden="true" className="h-3 w-3" />
+                    )}
+                    {item.type}
+                  </span>
+                </li>
               ))}
-            </div>
+            </ul>
             ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">Preview</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">Type</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-700">URL</th>
-                    <th className="text-right px-4 py-3 text-sm font-medium text-gray-700">Actions</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Preview</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Type</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">URL</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-border">
                   {mediaItems.map((item, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
+                    <tr key={index} className="hover:bg-muted/60">
                       <td className="px-4 py-3">
                         {item.type === 'image' ? (
-                          <SmartImage src={item.url} alt="" className="w-12 h-12 object-cover rounded" preset="tile" />
+                          <SmartImage src={item.url} alt="" className="h-12 w-12 rounded-control object-cover" preset="tile" />
                         ) : (
-                          <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center"><Video className="h-5 w-5 text-gray-400" /></div>
+                          <div className="flex h-12 w-12 items-center justify-center rounded-control bg-muted"><Video aria-hidden="true" className="h-5 w-5 text-muted-foreground" /></div>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded capitalize">
-                          {item.type === 'image' ? <ImageIcon className="h-3 w-3" /> : <Video className="h-3 w-3" />} {item.type}
+                        <span className="inline-flex items-center gap-1 rounded-chip bg-muted px-2 py-1 text-xs capitalize text-foreground/70">
+                          {item.type === 'image' ? <ImageIcon aria-hidden="true" className="h-3 w-3" /> : <Video aria-hidden="true" className="h-3 w-3" />} {item.type}
                         </span>
                       </td>
-                      <td className="px-4 py-3"><span className="text-xs text-gray-500 font-mono truncate max-w-xs block">{item.url}</span></td>
+                      <td className="px-4 py-3"><span className="block max-w-xs truncate font-mono text-xs text-muted-foreground" title={item.url}>{item.url}</span></td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center gap-2 justify-end">
-                          <button onClick={() => handleCopyUrl(item.url)} className="p-1.5 text-highlight hover:bg-highlight/10 rounded" title="Copy URL">
-                            {copiedUrl === item.url ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                          </button>
-                          <button onClick={() => handleDelete(item.url)} className="p-1.5 text-red-500 hover:bg-red-50 rounded" title="Delete">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <IconButton label={copiedUrl === item.url ? 'Copied' : `Copy link to media ${index + 1}`} size="sm" onClick={() => handleCopyUrl(item.url)}>
+                            {copiedUrl === item.url ? <Check /> : <Copy />}
+                          </IconButton>
+                          <IconButton label={`Remove media ${index + 1} from this list`} size="sm" className="text-muted-foreground hover:text-status-danger-fg" onClick={() => handleDelete(item.url)}>
+                            <Trash2 />
+                          </IconButton>
                         </div>
                       </td>
                     </tr>
@@ -254,16 +238,18 @@ const Media = () => {
             </div>
             )
           ) : (
-            <div className="text-center py-12">
-              <ImageIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No media uploaded</h3>
-              <p className="text-gray-600">Upload images and videos to get started</p>
-            </div>
+            <EmptyState
+              icon={ImageIcon}
+              title="No media uploaded"
+              description="Upload product and banner photos"
+              as="h3"
+              className="py-8"
+            />
           )}
         </CardContent>
       </Card>
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-muted-foreground">
         Files are stored on Cloudflare R2. Free-plan usage is shown on the Storage page.
       </p>
     </div>

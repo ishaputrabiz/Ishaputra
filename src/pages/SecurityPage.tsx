@@ -1,5 +1,5 @@
 // ============================================
-// LOGIN & SECURITY PAGE — Enterprise-Grade
+// LOGIN & SECURITY PAGE: enterprise-grade
 // Password, email, sessions, devices, login history,
 // account deletion, 2FA preparation
 // ============================================
@@ -7,20 +7,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
+import { Notice } from '@/components/ui/notice';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { AuthField } from '@/components/auth/AuthField';
+import { ListSkeleton, PanelSkeleton } from '@/components/skeletons';
+import { EmptyState } from '@/components/EmptyState';
+import { formatDateTime } from '@/lib/format';
+import { DUR, EASE_OUT } from '@/lib/motion';
 import useWhatsAppOtpVerification from '@/hooks/useWhatsAppOtpVerification';
 import { normalizePhoneNumber } from '@/services/whatsappService';
 import {
-  ArrowLeft, Shield, Lock, Mail, Eye, EyeOff, Loader2, Check, X, AlertTriangle,
-  Smartphone, Monitor, Globe, Clock, LogOut, Trash2, ChevronRight, Key, Fingerprint,
-  AlertCircle, CheckCircle2, XCircle, MapPin, RefreshCcw, Settings, UserX,
-  ShieldCheck, ShieldAlert, Laptop, Info, ChevronDown,
+  ArrowLeft, Shield, Mail, Check, X, AlertTriangle,
+  Smartphone, Monitor, Globe, Clock, Trash2, ChevronRight, Key, Fingerprint,
+  AlertCircle, CheckCircle2, CircleCheck, XCircle, MapPin, Settings, UserX,
+  ShieldCheck, ChevronDown,
 } from 'lucide-react';
 import {
   getSecuritySettings,
@@ -58,6 +68,22 @@ const SecurityPage: React.FC = () => {
   // Tab & UI
   const [activeTab, setActiveTab] = useState<SecurityTab>('overview');
   const [isMobile, setIsMobile] = useState(false);
+
+  // Keyboard and screen-reader users keep their place across sub-views: opening one moves
+  // focus to its heading, going back returns focus to the row that opened it.
+  const sectionHeadingRef = useRef<HTMLHeadingElement>(null);
+  const openedFromRef = useRef<SecurityTab | null>(null);
+  const tabChangedRef = useRef(false);
+  useEffect(() => {
+    if (!tabChangedRef.current) { tabChangedRef.current = true; return; }
+    if (activeTab === 'overview') {
+      const id = openedFromRef.current;
+      const row = id ? document.querySelector<HTMLElement>(`[data-security-row="${id}"]`) : null;
+      (row ?? sectionHeadingRef.current)?.focus();
+    } else {
+      sectionHeadingRef.current?.focus();
+    }
+  }, [activeTab]);
 
   // Show success message if redirected from password reset
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
@@ -137,18 +163,18 @@ const SecurityPage: React.FC = () => {
   const handleChangePhone = async () => {
     if (!user) return;
     if (!changePhoneOtp.isVerified) {
-      showMessage('error', 'Please verify the OTP before saving.');
+      showMessage('error', 'Verify the code before saving.');
       return;
     }
     setActionLoading('change-phone');
     try {
       const fullPhone = normalizePhoneNumber(newPhoneInput);
       await updateUserProfile({ whatsappNumber: fullPhone, phone: fullPhone });
-      showMessage('success', 'Phone number updated successfully.');
+      showMessage('success', 'Phone number updated.');
       setChangePhoneOpen(false);
       setNewPhoneInput('');
     } catch {
-      showMessage('error', 'Failed to update phone number.');
+      showMessage('error', 'Unable to update your phone number. Try again.');
     } finally {
       setActionLoading(null);
     }
@@ -157,7 +183,7 @@ const SecurityPage: React.FC = () => {
   const handleEnable2FA = async () => {
     if (!user) return;
     if (!canEnable2FA) {
-      showMessage('error', 'Verify the WhatsApp code before enabling 2FA.');
+      showMessage('error', 'Verify the WhatsApp code before turning on 2-step verification.');
       return;
     }
     setActionLoading('enable-2fa');
@@ -191,10 +217,10 @@ const SecurityPage: React.FC = () => {
         twoFactorMethod: 'sms',
         phoneVerified: true,
       } : prev);
-      showMessage('success', `2FA enabled. Codes will be sent on WhatsApp to +${fullPhone}.`);
+      showMessage('success', `2-step verification is on. Codes go to WhatsApp on +${fullPhone}.`);
       setTwoFaPanelOpen(false);
     } catch (err: any) {
-      showMessage('error', err.message || 'Failed to enable 2FA');
+      showMessage('error', err.message || 'Unable to turn on 2-step verification. Try again.');
     } finally {
       setActionLoading(null);
     }
@@ -211,9 +237,9 @@ const SecurityPage: React.FC = () => {
       setSettings((prev) => prev ? { ...prev, twoFactorEnabled: false, twoFactorMethod: undefined } : prev);
       setTwoFaPanelOpen(false);
       setTwoFaPhone('');
-      showMessage('success', 'Two-factor authentication disabled.');
+      showMessage('success', '2-step verification is off.');
     } catch (err: any) {
-      showMessage('error', err.message || 'Failed to disable 2FA');
+      showMessage('error', err.message || 'Unable to turn off 2-step verification. Try again.');
     } finally {
       setActionLoading(null);
     }
@@ -291,16 +317,16 @@ const SecurityPage: React.FC = () => {
 
   const handleSendResetEmail = async () => {
     if (!resetEmail) {
-      showMessage('error', 'Please enter your email address');
+      showMessage('error', 'Enter your email address.');
       return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(resetEmail)) {
-      showMessage('error', 'Please enter a valid email address');
+      showMessage('error', 'Enter a valid email address, like name@example.com.');
       return;
     }
     if (resetAttempts.current >= 3) {
-      showMessage('error', 'Too many attempts. Please try again later.');
+      showMessage('error', 'Too many attempts. Try again later.');
       return;
     }
     setSendingReset(true);
@@ -316,7 +342,7 @@ const SecurityPage: React.FC = () => {
     } catch (err: any) {
       console.error('Send reset email error:', err);
       if (err.code === 'auth/too-many-requests') {
-        showMessage('error', 'Too many requests. Please try again later.');
+        showMessage('error', 'Too many attempts. Try again later.');
       } else {
         // For security, always show success (prevents email enumeration)
         setResetEmailSent(true);
@@ -346,17 +372,17 @@ const SecurityPage: React.FC = () => {
 
   const handleChangeEmail = async () => {
     if (!newEmail || !emailPassword) {
-      showMessage('error', 'Please fill all fields');
+      showMessage('error', 'Fill in both fields.');
       return;
     }
     setChangingEmail(true);
     try {
       await changeEmail(emailPassword, newEmail);
-      showMessage('success', 'Email updated. Please verify your new email address.');
+      showMessage('success', 'Email updated. Check your inbox to verify it.');
       setNewEmail('');
       setEmailPassword('');
     } catch (err: any) {
-      showMessage('error', err.message || 'Failed to update email');
+      showMessage('error', err.message || 'Unable to update your email. Try again.');
     } finally {
       setChangingEmail(false);
     }
@@ -368,7 +394,7 @@ const SecurityPage: React.FC = () => {
     try {
       await terminateSession(user.uid, sessionId);
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      showMessage('success', 'Session terminated');
+      showMessage('success', 'Session ended.');
     } catch (err: any) {
       showMessage('error', err.message);
     } finally {
@@ -381,7 +407,7 @@ const SecurityPage: React.FC = () => {
     setActionLoading('all-sessions');
     try {
       const count = await terminateAllSessions(user.uid);
-      showMessage('success', `Logged out from ${count} device(s)`);
+      showMessage('success', `Signed out of ${count} ${count === 1 ? 'device' : 'devices'}.`);
       await logout();
     } catch (err: any) {
       showMessage('error', err.message);
@@ -396,7 +422,7 @@ const SecurityPage: React.FC = () => {
     try {
       await removeTrustedDevice(user.uid, deviceId);
       setDevices((prev) => prev.filter((d) => d.id !== deviceId));
-      showMessage('success', 'Device removed');
+      showMessage('success', 'Device removed.');
     } catch (err: any) {
       showMessage('error', err.message);
     } finally {
@@ -410,7 +436,7 @@ const SecurityPage: React.FC = () => {
     try {
       const device = await trustCurrentDevice(user.uid);
       setDevices((prev) => [device, ...prev]);
-      showMessage('success', 'This device is now trusted');
+      showMessage('success', 'This device is now trusted.');
     } catch (err: any) {
       showMessage('error', err.message);
     } finally {
@@ -433,13 +459,34 @@ const SecurityPage: React.FC = () => {
     }
   };
 
+  const [verifyLinkSent, setVerifyLinkSent] = useState(false);
+  const handleSendVerifyLink = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    setActionLoading('verify-email');
+    try {
+      await sendEmailVerification(currentUser);
+      setVerifyLinkSent(true);
+      showMessage('success', 'Verification link sent. Check your inbox and spam folder.');
+    } catch (err: any) {
+      showMessage(
+        'error',
+        err?.code === 'auth/too-many-requests'
+          ? 'Too many attempts. Wait a few minutes and try again.'
+          : 'Unable to send the link. Try again.',
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleCancelDeletion = async () => {
     if (!user) return;
     setActionLoading('cancel-delete');
     try {
       await cancelAccountDeletion(user.uid);
       setDeletionStatus(null);
-      showMessage('success', 'Account deletion cancelled');
+      showMessage('success', 'Account deletion cancelled.');
     } catch (err: any) {
       showMessage('error', err.message);
     } finally {
@@ -457,15 +504,10 @@ const SecurityPage: React.FC = () => {
     }
   };
 
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return 'N/A';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) +
-      ' ' + date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-  };
+  const formatDate = (timestamp: any) => formatDateTime(timestamp) || 'a date to be confirmed';
 
   const formatRelativeTime = (timestamp: any) => {
-    if (!timestamp) return 'N/A';
+    if (!timestamp) return '';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -483,7 +525,7 @@ const SecurityPage: React.FC = () => {
   };
 
   const formatFullTimestamp = (timestamp: any) => {
-    if (!timestamp) return 'N/A';
+    if (!timestamp) return '';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     const dayName = date.toLocaleDateString('en-IN', { weekday: 'long' });
     const dateStr = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -508,10 +550,10 @@ const SecurityPage: React.FC = () => {
 
   const getLoginMethodLabel = (method: string) => {
     switch (method) {
-      case 'google': return 'Google Sign-In';
-      case 'email': return 'Email & Password';
-      case 'phone': return 'Phone OTP';
-      case 'magic_link': return 'Magic Link';
+      case 'google': return 'Google';
+      case 'email': return 'Email and password';
+      case 'phone': return 'Phone code';
+      case 'magic_link': return 'Email link';
       default: return method;
     }
   };
@@ -524,20 +566,40 @@ const SecurityPage: React.FC = () => {
 
   const getSectionTitle = (tab: SecurityTab) => {
     switch (tab) {
-      case 'overview': return 'Login & Security';
-      case 'password': return 'Change Password';
-      case 'login-history': return 'Login History';
-      case 'account': return 'Account Settings';
-      default: return 'Login & Security';
+      case 'overview': return 'Sign-in & security';
+      case 'password': return 'Change password';
+      case 'login-history': return 'Sign-in history';
+      case 'account': return 'Account settings';
+      default: return 'Sign-in & security';
     }
   };
 
+  /** Sub-views slide in 12px from the side; reduced motion keeps only the fade (MotionConfig). */
+  const subView = {
+    initial: { opacity: 0, x: 12 },
+    animate: { opacity: 1, x: 0 },
+    transition: { duration: 0.2, ease: EASE_OUT },
+  };
+
+  /** A field box with a +91 prefix and a trailing action: one border, copper focus ring on the whole box. */
+  const fieldBox =
+    'flex min-h-11 overflow-hidden rounded-control border border-input bg-background transition-[border-color,box-shadow] duration-hover focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30';
+  const bareInput =
+    'min-w-0 flex-1 bg-transparent px-3 py-2.5 text-base text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:text-muted-foreground sm:text-sm';
+  const inputClass =
+    'h-11 w-full rounded-control border border-input bg-background px-3 text-base text-foreground transition-[border-color,box-shadow] duration-hover placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm';
+  const prefix = 'flex select-none items-center border-r border-input bg-foreground/[0.04] px-3 text-sm font-medium text-muted-foreground';
+
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center tx-paper">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Loading security settings...</p>
+      <div className="min-h-screen tx-paper" style={{ fontFamily: "var(--font-body)" }}>
+        <Header />
+        <div aria-busy="true" className="mx-auto flex max-w-4xl flex-col gap-4 px-4 py-6 lg:py-10">
+          <span className="sr-only" role="status">Loading security settings</span>
+          <Skeleton className="h-7 w-48" />
+          <PanelSkeleton lines={1} label="" />
+          <ListSkeleton rows={3} label="" />
+          <PanelSkeleton lines={2} label="" />
         </div>
       </div>
     );
@@ -552,70 +614,50 @@ const SecurityPage: React.FC = () => {
     <div className="min-h-screen tx-paper" style={{ fontFamily: "var(--font-body)" }}>
       <Header />
 
+      <main id="main" tabIndex={-1} className="outline-none">
       {/* Back Button */}
       <div className="border-b border-foreground/[0.08] bg-card">
         <div className="max-w-4xl mx-auto px-4 flex items-center gap-3">
           <button
+            type="button"
             onClick={() => {
               if (activeTab !== 'overview') { setActiveTab('overview'); return; }
               navigate('/account');
             }}
-            className="flex items-center gap-2 py-3 text-muted-foreground transition-colors hover:text-gray-900 dark:hover:text-zinc-100"
+            className="-ml-2 inline-flex h-11 items-center gap-2 rounded-control px-2 text-muted-foreground transition-[color,transform] duration-press ease-out hover:text-foreground active:scale-[0.97]"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Back to Account</span>
+            <ArrowLeft aria-hidden="true" className="size-4" />
+            <span className="text-sm font-medium">{activeTab === 'overview' ? 'Back to account' : 'Back'}</span>
           </button>
-          <span className="ml-2 text-sm font-semibold text-foreground lg:hidden">
+          <h1 ref={sectionHeadingRef} tabIndex={-1} className="ml-1 text-sm font-semibold text-foreground outline-none lg:sr-only">
             {getSectionTitle(activeTab)}
-          </span>
+          </h1>
         </div>
       </div>
 
-      {/* Message Toast */}
+      {/* Message: a notice pinned to the top right, dismissed after a few seconds */}
       <AnimatePresence>
         {message && (
           <motion.div
-            initial={{ opacity: 0, y: -14, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.98 }}
-            className="fixed top-4 right-4 z-50 w-[min(calc(100vw-1.5rem),22rem)]"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: DUR.dropdown, ease: EASE_OUT } }}
+            exit={{ opacity: 0, transition: { duration: DUR.exit } }}
+            className="fixed right-4 top-4 z-toast w-[min(calc(100vw-2rem),22rem)]"
           >
-            <div
-              className={[
-                'rounded-[22px] border px-4 py-3 shadow-[0_24px_80px_-28px_rgba(15,23,42,0.45)] backdrop-blur-xl',
-                'flex items-start gap-3',
-                message.type === 'success'
-                  ? 'border-emerald-200/70 bg-white/95 text-emerald-950 dark:border-emerald-500/20 dark:text-emerald-50'
-                  : 'border-red-200/70 bg-white/95 text-red-950 dark:border-red-500/20 dark:text-red-50',
-              ].join(' ')}
+            <Notice
+              tone={message.type === 'success' ? 'success' : 'danger'}
+              className="pr-12 shadow-panel"
             >
-              <div
-                className={[
-                  'mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[var(--radius-card)] border',
-                  message.type === 'success'
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300'
-                    : 'border-red-200 bg-red-50 text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300',
-                ].join(' ')}
-              >
-                {message.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-              </div>
-
-              <div className="min-w-0 flex-1 pr-2">
-                <p className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-current/55">
-                  {message.type === 'success' ? 'Success' : 'Error'}
-                </p>
-                <p className="mt-1 text-sm font-medium leading-6">{message.text}</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setMessage(null)}
-                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-black/5 text-current/50 transition hover:bg-black/5 hover:text-current dark:border-white/10 dark:hover:bg-white/10"
-                aria-label="Close message"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+              {message.text}
+            </Notice>
+            <IconButton
+              label="Dismiss message"
+              size="sm"
+              className="absolute right-1.5 top-1.5 text-muted-foreground"
+              onClick={() => setMessage(null)}
+            >
+              <X aria-hidden="true" />
+            </IconButton>
           </motion.div>
         )}
       </AnimatePresence>
@@ -623,228 +665,248 @@ const SecurityPage: React.FC = () => {
       <div className="max-w-4xl mx-auto px-4 py-6 lg:py-10 pb-24 lg:pb-10">
         {/* Account Status Banner */}
         {deletionStatus && (
-          <div className="bg-red-50 border border-red-200 rounded-[10px] p-4 mb-6 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-red-900">Account Deletion Scheduled</p>
-              <p className="text-xs text-red-700 mt-1">
-                Your account will be permanently deleted on {formatDate(deletionStatus.scheduledDeletionAt)}.
-                All data will be removed.
-              </p>
+          <Notice
+            tone="danger"
+            role="status"
+            title="Account deletion scheduled"
+            className="mb-6"
+            action={
               <Button
                 size="sm"
-                variant="outline"
+                variant="destructive"
                 onClick={handleCancelDeletion}
                 disabled={actionLoading === 'cancel-delete'}
-                className="mt-3 border-red-300 text-red-700 hover:bg-red-100"
               >
-                {actionLoading === 'cancel-delete' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Cancel Deletion
+                {actionLoading === 'cancel-delete' && <Spinner />}
+                Cancel deletion
               </Button>
-            </div>
-          </div>
+            }
+          >
+            Your account will be deleted on {formatDate(deletionStatus.scheduledDeletionAt)}. All your data will be removed.
+          </Notice>
         )}
 
         {/* ─── SECURITY OVERVIEW CARDS ────────── */}
         {activeTab === 'overview' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2, ease: EASE_OUT }}>
+            <h2 className="sr-only">Overview</h2>
             {/* Security Score */}
-            <div className="mb-4 rounded-[10px] border border-foreground/[0.08] bg-foreground/[0.03] p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-foreground/[0.08] bg-card text-muted-foreground">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Account Security</p>
-                  <h2 className="text-base font-semibold text-foreground">
-                    {settings?.twoFactorEnabled ? 'Protected' : 'Basic Protection'}
-                  </h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {settings?.twoFactorEnabled
-                      ? 'Two-factor authentication is enabled'
-                      : 'Enable 2FA for enhanced security'}
-                  </p>
-                </div>
+            <div className="panel tx-sheet mb-4 flex items-center gap-3 p-4">
+              <div className="grid size-10 shrink-0 place-items-center rounded-card bg-primary/10 text-primary">
+                <ShieldCheck aria-hidden="true" className="size-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Account security</p>
+                <p className="text-base font-semibold text-foreground">
+                  {settings?.twoFactorEnabled ? 'Protected' : 'Basic protection'}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {settings?.twoFactorEnabled
+                    ? '2-step verification is on.'
+                    : 'Turn on 2-step verification for stronger protection.'}
+                </p>
               </div>
             </div>
 
             {/* Menu Items */}
-            <div className="space-y-1">
+            <nav aria-label="Security settings" className="panel tx-sheet overflow-hidden divide-y divide-foreground/[0.08]">
               {[
-                { id: 'password' as SecurityTab, icon: <Key className="w-5 h-5" />, label: 'Change Password', desc: 'Update your password', color: 'text-primary' },
-                { id: 'login-history' as SecurityTab, icon: <Clock className="w-5 h-5" />, label: 'Login History', desc: 'View recent login activity', color: 'text-purple-600' },
-                { id: 'account' as SecurityTab, icon: <Settings className="w-5 h-5" />, label: 'Account Settings', desc: 'Email, notifications & more', color: 'text-muted-foreground' },
+                { id: 'password' as SecurityTab, icon: Key, label: 'Change password', desc: 'Get a reset link by email' },
+                { id: 'login-history' as SecurityTab, icon: Clock, label: 'Sign-in history', desc: 'See recent sign-in activity' },
+                { id: 'account' as SecurityTab, icon: Settings, label: 'Account settings', desc: 'Email, phone and account deletion' },
               ].map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className="flex w-full items-center gap-3 bg-card px-4 py-3 text-left transition-colors hover:bg-foreground/[0.04] dark:hover:bg-zinc-800/80"
+                  type="button"
+                  data-security-row={item.id}
+                  onClick={() => { openedFromRef.current = item.id; setActiveTab(item.id); }}
+                  className="focus-inset flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-hover hover:bg-muted/60"
                 >
-                  <div className={`${item.color}`}>
-                    {item.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground">{item.label}</p>
-                    <p className="truncate text-xs text-muted-foreground">{item.desc}</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground/70" />
+                  <item.icon aria-hidden="true" className="size-5 shrink-0 text-primary" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="text-sm font-medium text-foreground">{item.label}</span>
+                    <span className="text-xs text-muted-foreground">{item.desc}</span>
+                  </span>
+                  <ChevronRight aria-hidden="true" className="size-5 text-muted-foreground" />
                 </button>
               ))}
-            </div>
+            </nav>
 
-            {/* 2FA — Real WhatsApp OTP flow */}
-            <div className={`rounded-[10px] p-4 mt-6 border ${settings?.twoFactorEnabled ? 'bg-green-50 border-green-200' : 'bg-highlight/10 border-highlight/30'}`}>
+            {/* 2FA: real WhatsApp OTP flow */}
+            <section
+              aria-labelledby="twofa-heading"
+              className={`mt-6 rounded-panel border p-4 ${
+                settings?.twoFactorEnabled
+                  ? 'border-status-success-line bg-status-success-bg'
+                  : 'border-highlight/30 bg-highlight/10'
+              }`}
+            >
               <div className="flex items-start gap-3">
-                <Fingerprint className={`w-5 h-5 flex-shrink-0 mt-0.5 ${settings?.twoFactorEnabled ? 'text-green-600' : 'text-highlight'}`} />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className={`text-sm font-medium ${settings?.twoFactorEnabled ? 'text-green-900' : 'text-highlight'}`}>
-                      Two-Factor Authentication
-                      {settings?.twoFactorEnabled && (
-                        <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-600 text-white">
-                          <CheckCircle2 className="w-3 h-3" /> ON
-                        </span>
-                      )}
-                    </p>
+                <Fingerprint
+                  aria-hidden="true"
+                  className={`mt-0.5 size-5 shrink-0 ${settings?.twoFactorEnabled ? 'text-status-success-fg' : 'text-primary'}`}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2
+                        id="twofa-heading"
+                        className={`text-sm font-semibold ${settings?.twoFactorEnabled ? 'text-status-success-fg' : 'text-foreground'}`}
+                      >
+                        2-step verification
+                      </h2>
+                      {settings?.twoFactorEnabled && <StatusBadge tone="success" label="On" icon={CircleCheck} />}
+                    </div>
                     {settings?.twoFactorEnabled ? (
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={handleDisable2FA}
                         disabled={actionLoading === 'disable-2fa'}
-                        className="border-green-300 text-green-700 hover:bg-green-100"
                       >
-                        {actionLoading === 'disable-2fa' ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
-                        Disable
+                        {actionLoading === 'disable-2fa' && <Spinner />}
+                        Turn off
                       </Button>
                     ) : (
                       <Button
                         size="sm"
+                        variant={twoFaPanelOpen ? 'outline' : 'default'}
+                        aria-expanded={twoFaPanelOpen}
+                        aria-controls="twofa-panel"
                         onClick={() => setTwoFaPanelOpen((v) => !v)}
-                        className="bg-highlight hover:bg-highlight text-white"
                       >
-                        {twoFaPanelOpen ? 'Cancel' : 'Enable'}
+                        {twoFaPanelOpen ? 'Cancel' : 'Turn on'}
                       </Button>
                     )}
                   </div>
-                  <p className={`text-xs mt-1 ${settings?.twoFactorEnabled ? 'text-green-700' : 'text-highlight'}`}>
+                  <p className={`mt-1 text-xs leading-relaxed ${settings?.twoFactorEnabled ? 'text-status-success-fg' : 'text-muted-foreground'}`}>
                     {settings?.twoFactorEnabled
-                      ? 'A WhatsApp code is required on every new sign-in to keep your account safe.'
-                      : 'Add an extra layer of security by verifying logins with a one-time code on WhatsApp.'}
+                      ? 'A WhatsApp code is needed for every sign-in on a new device.'
+                      : 'Confirm each sign-in on a new device with a one-time code on WhatsApp.'}
                   </p>
                 </div>
               </div>
 
               {twoFaPanelOpen && !settings?.twoFactorEnabled && (
-                <div className="mt-4 space-y-3 rounded-lg border border-highlight/30 bg-card p-4 dark:border-highlight/42">
+                <motion.div
+                  id="twofa-panel"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2, ease: EASE_OUT }}
+                  className="mt-4 flex flex-col gap-4 rounded-card border border-foreground/10 bg-card p-4"
+                >
                   <div>
-                    <label className="block text-xs font-medium text-foreground/80 mb-1">WhatsApp number</label>
-                    <div className="flex flex-col sm:flex-row rounded-lg border border-foreground/[0.08] overflow-hidden focus-within:ring-2 focus-within:ring-highlight/45">
-                      <span className="px-3 py-2 bg-foreground/[0.03] text-sm text-muted-foreground border-b sm:border-b-0 sm:border-r border-foreground/[0.08]">+91</span>
+                    <label htmlFor="twofa-phone" className="mb-1.5 block text-xs font-medium text-foreground/80">WhatsApp number</label>
+                    <div className={fieldBox}>
+                      <span className={prefix}>+91</span>
                       <input
+                        id="twofa-phone"
                         type="tel"
                         inputMode="numeric"
+                        autoComplete="tel-national"
                         maxLength={10}
                         value={twoFaPhone}
                         onChange={(e) => { setTwoFaPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); }}
                         placeholder="10-digit number"
                         disabled={twoFaOtp.isVerified || phoneAlreadyVerified}
-                        className="flex-1 min-w-0 px-3 py-2 text-sm outline-none disabled:bg-gray-50 disabled:text-gray-500"
+                        className={bareInput}
                       />
                       {phoneAlreadyVerified ? (
-                        <span className="px-3 py-2 flex items-center justify-center sm:justify-start text-xs font-semibold text-green-600 gap-1 border-t sm:border-t-0 sm:border-l border-foreground/[0.08]">
-                          <Check className="w-3.5 h-3.5" /> Verified
+                        <span className="flex items-center px-2.5">
+                          <StatusBadge tone="success" label="Verified" icon={Check} />
                         </span>
                       ) : (
                         <button
                           type="button"
                           onClick={twoFaOtp.sendOtp}
                           disabled={twoFaOtp.isBusy || twoFaOtp.isVerified || twoFaPhone.length !== 10}
-                          className="px-3 py-2 text-xs font-semibold text-highlight hover:bg-highlight/10 disabled:opacity-40 disabled:cursor-not-allowed border-t sm:border-t-0 sm:border-l border-foreground/[0.08]"
+                          className="shrink-0 border-l border-input px-3 text-xs font-semibold text-primary transition-colors duration-hover hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {twoFaOtp.phase === 'sending' ? 'Sending…' : twoFaOtp.phase === 'sent' || twoFaOtp.phase === 'verified' ? 'Resend' : 'Send code'}
                         </button>
                       )}
                     </div>
                     {phoneAlreadyVerified && (
-                      <p className="text-xs text-green-600 mt-1">This number is already verified on your account — you can proceed.</p>
+                      <p className="mt-1.5 text-xs text-status-success-fg">This number is already verified on your account.</p>
                     )}
                   </div>
 
                   {!phoneAlreadyVerified && (twoFaOtp.phase === 'sent' || twoFaOtp.phase === 'verifying' || twoFaOtp.phase === 'verified') && (
                     <div>
-                      <label className="block text-xs font-medium text-foreground/80 mb-1">6-digit WhatsApp code</label>
-                      <div className="flex flex-col sm:flex-row items-stretch gap-2">
+                      <label htmlFor="twofa-code" className="mb-1.5 block text-xs font-medium text-foreground/80">6-digit WhatsApp code</label>
+                      <div className="flex flex-col items-stretch gap-2 sm:flex-row">
                         <input
+                          id="twofa-code"
                           type="text"
                           inputMode="numeric"
+                          autoComplete="one-time-code"
                           maxLength={6}
                           value={twoFaOtp.otpCode}
                           onChange={(e) => twoFaOtp.setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                           placeholder="123456"
                           disabled={twoFaOtp.isVerified}
-                          className="flex-1 px-3 py-2 text-sm rounded-lg border border-foreground/[0.08] outline-none focus:ring-2 focus:ring-highlight/45 tracking-[0.4em] font-mono disabled:bg-gray-50"
+                          className={`${inputClass} flex-1 font-mono tracking-[0.4em]`}
                         />
                         <Button
                           type="button"
-                          size="sm"
+                          variant="outline"
                           onClick={twoFaOtp.confirmOtp}
                           disabled={twoFaOtp.isBusy || twoFaOtp.isVerified || twoFaOtp.otpCode.length !== 6}
-                          className="bg-highlight hover:bg-highlight text-white"
                         >
-                          {twoFaOtp.phase === 'verifying' ? <Loader2 className="w-4 h-4 animate-spin" /> : twoFaOtp.isVerified ? <Check className="w-4 h-4" /> : 'Verify'}
+                          {twoFaOtp.phase === 'verifying' ? <Spinner /> : twoFaOtp.isVerified ? <Check aria-hidden="true" className="size-4" /> : null}
+                          {twoFaOtp.isVerified ? 'Verified' : 'Verify'}
                         </Button>
                       </div>
                     </div>
                   )}
 
                   {twoFaOtp.otpError && (
-                    <p className="text-xs text-red-600 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5" /> {twoFaOtp.otpError}
+                    <p role="alert" className="flex items-center gap-1.5 text-xs text-destructive">
+                      <AlertCircle aria-hidden="true" className="size-3.5 shrink-0" /> {twoFaOtp.otpError}
                     </p>
                   )}
 
                   <Button
                     onClick={handleEnable2FA}
                     disabled={!canEnable2FA || actionLoading === 'enable-2fa'}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    className="w-full"
                   >
-                    {actionLoading === 'enable-2fa' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
-                    Turn on 2FA
+                    {actionLoading === 'enable-2fa' ? <Spinner /> : <ShieldCheck aria-hidden="true" className="size-4" />}
+                    Turn on 2-step verification
                   </Button>
-                </div>
+                </motion.div>
               )}
-            </div>
+            </section>
           </motion.div>
         )}
 
         {/* ─── CHANGE PASSWORD (Email Reset Flow) ─────────────────── */}
         {activeTab === 'password' && (
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <div className="bg-card rounded-[var(--radius-card)] shadow-sm border border-foreground/[0.06] p-6">
+          <motion.div {...subView}>
+            <div className="panel tx-sheet p-6">
               {resetEmailSent ? (
                 /* ── Step 2: Check Your Email ── */
                 <div className="text-center">
-                  <div className="bg-purple-100 rounded-full p-5 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-                    <Mail className="w-12 h-12 text-purple-600" />
+                  <div className="mx-auto mb-5 grid size-16 place-items-center rounded-full bg-primary/10">
+                    <Mail aria-hidden="true" className="size-7 text-primary" />
                   </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">Check Your Email</h3>
-                  <p className="text-muted-foreground text-sm mb-6">
-                    We've sent a password reset link to<br />
-                    <strong className="text-foreground">{resetEmail}</strong>
+                  <h2 className="font-heading mb-2 text-xl font-semibold tracking-tight text-foreground">Check your email</h2>
+                  <p className="mb-6 text-sm text-muted-foreground">
+                    We sent a password reset link to<br />
+                    <strong className="font-semibold text-foreground break-words [overflow-wrap:anywhere]">{resetEmail}</strong>
                   </p>
 
                   {/* Instructions */}
-                  <div className="bg-primary/5 border border-primary/25 rounded-[10px] p-4 mb-6 text-left">
+                  <div className="mb-6 rounded-card border border-foreground/10 bg-muted/50 p-4 text-left">
                     <div className="flex gap-3">
-                      <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                      <Shield aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
                       <div className="text-sm text-foreground/80">
-                        <p className="font-semibold mb-1">What to do next:</p>
-                        <ul className="space-y-1 text-xs">
-                          <li>• Open the email and click the reset link</li>
-                          <li>• Set your new password on the page that opens</li>
-                          <li>• You'll be redirected back here once done</li>
-                          <li>• The link expires in 1 hour</li>
+                        <p className="mb-1 font-semibold text-foreground">What to do next</p>
+                        <ul className="list-disc space-y-1 pl-4 text-xs marker:text-primary">
+                          <li>Open the email and select the reset link.</li>
+                          <li>Choose your new password on the page that opens.</li>
+                          <li>Then sign in with your new password.</li>
+                          <li>The link expires in 1 hour.</li>
                         </ul>
                       </div>
                     </div>
@@ -860,10 +922,11 @@ const SecurityPage: React.FC = () => {
                     }
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 rounded-[10px] bg-purple-600 hover:bg-purple-700 text-white font-semibold text-sm transition-colors mb-3"
+                    className="btn-copper mb-3 w-full"
                   >
-                    <Mail className="w-4 h-4" />
-                    Open Email App
+                    <Mail aria-hidden="true" className="size-4" />
+                    Open email
+                    <span className="sr-only"> (opens in a new tab)</span>
                   </a>
 
                   {/* Resend */}
@@ -871,25 +934,25 @@ const SecurityPage: React.FC = () => {
                     onClick={handleResendResetEmail}
                     disabled={resendCountdown > 0 || sendingReset}
                     variant="outline"
-                    className="w-full mb-3"
+                    className="mb-3 w-full"
                   >
                     {sendingReset ? (
-                      <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Sending...</>
+                      <><Spinner /> Sending…</>
                     ) : resendCountdown > 0 ? (
-                      <><Clock className="w-4 h-4 mr-2" /> Resend in {resendCountdown}s</>
+                      <><Clock aria-hidden="true" className="size-4" /> <span className="tabular-nums">Resend in {resendCountdown}s</span></>
                     ) : (
-                      'Resend Email'
+                      'Resend email'
                     )}
                   </Button>
 
                   {/* Didn't receive hint */}
-                  <p className="text-xs text-muted-foreground/70 mt-2">
-                    Didn't receive the email? Check your spam folder,<br />
-                    or try with a different email address.
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    No email? Check your spam folder, or try a different address.
                   </p>
                   <button
+                    type="button"
                     onClick={() => setResetEmailSent(false)}
-                    className="text-xs text-primary hover:underline mt-2"
+                    className="-mx-1 mt-1 inline-flex min-h-6 items-center rounded-control px-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
                   >
                     Try another email address
                   </button>
@@ -897,58 +960,46 @@ const SecurityPage: React.FC = () => {
               ) : (
                 /* ── Step 1: Enter Email ── */
                 <>
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-primary/5 rounded-[10px] flex items-center justify-center">
-                      <Key className="w-6 h-6 text-primary" />
+                  <div className="mb-5 flex items-center gap-3">
+                    <div className="grid size-12 shrink-0 place-items-center rounded-card bg-primary/10">
+                      <Key aria-hidden="true" className="size-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-foreground">Reset Password</h3>
-                      <p className="text-sm text-muted-foreground">We'll send a reset link to your email</p>
+                      <h2 className="font-heading text-lg font-semibold tracking-tight text-foreground">Reset your password</h2>
+                      <p className="text-sm text-muted-foreground">We'll email you a reset link.</p>
                     </div>
                   </div>
 
-                  <p className="text-sm text-muted-foreground mb-5">
-                    Enter the email address associated with your account and we'll send you a link to reset your password.
-                  </p>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground/80 mb-1.5">Email Address</label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
-                        <input
-                          type="email"
-                          value={resetEmail}
-                          onChange={(e) => setResetEmail(e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 border border-foreground/[0.08] rounded-[10px] text-sm focus:ring-2 focus:ring-primary outline-none"
-                          placeholder="your.email@example.com"
-                        />
-                      </div>
-                    </div>
+                  <div className="flex flex-col gap-4">
+                    <AuthField
+                      id="reset-email"
+                      name="email"
+                      label="Email"
+                      type="email"
+                      autoComplete="email"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      hint="Use the email address on your account."
+                    />
 
                     <Button
+                      size="lg"
                       onClick={handleSendResetEmail}
                       disabled={sendingReset || !resetEmail}
-                      className="w-full py-3 h-12 rounded-[10px] bg-primary hover:bg-primary/90"
+                      className="w-full"
                     >
-                      {sendingReset ? (
-                        <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Sending...</>
-                      ) : (
-                        'Send Reset Link'
-                      )}
+                      {sendingReset ? <><Spinner /> Sending…</> : 'Send reset link'}
                     </Button>
                   </div>
 
                   {/* Google sign-in notice */}
-                  <div className="mt-5 p-3 bg-highlight/10 border border-highlight/20 rounded-[10px]">
-                    <p className="text-xs text-highlight flex items-start gap-2">
-                      <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <span>
-                        <strong>Signed up with Google?</strong> Your password is managed by Google.
-                        You can still set a password here to use email sign-in as an alternative.
-                      </span>
-                    </p>
-                  </div>
+                  <Notice tone="info" role="note" title="Signed up with Google?" className="mt-5">
+                    Google manages your password. You can still set one here to sign in with your email as well.
+                  </Notice>
                 </>
               )}
             </div>
@@ -957,287 +1008,329 @@ const SecurityPage: React.FC = () => {
 
         {/* ─── LOGIN HISTORY ───────────────────── */}
         {activeTab === 'login-history' && (
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            {/* Timeline */}
-            <div className="space-y-0">
-              {loginHistory.length > 0 ? loginHistory.map((entry, index) => {
-                const isExpanded = historyExpanded === entry.id;
-                const isLast = index === loginHistory.length - 1;
-                return (
-                  <div key={entry.id} className="relative">
-                    {/* Timeline connector line */}
-                    {!isLast && (
-                      <div className="absolute left-[18px] top-[40px] bottom-0 w-[2px] bg-foreground/[0.06]" />
-                    )}
+          <motion.div {...subView}>
+            {loginHistory.length > 0 ? (
+              <ol className="flex flex-col">
+                {loginHistory.map((entry, index) => {
+                  const isExpanded = historyExpanded === entry.id;
+                  const isLast = index === loginHistory.length - 1;
+                  const detailsId = `login-${entry.id}-details`;
+                  return (
+                    <li key={entry.id} className="relative">
+                      {/* Timeline connector line */}
+                      {!isLast && (
+                        <div aria-hidden="true" className="absolute bottom-0 left-[30px] top-[52px] w-px bg-foreground/[0.08]" />
+                      )}
 
-                    <motion.div
-                      layout
-                      onClick={() => setHistoryExpanded(isExpanded ? null : entry.id)}
-                      className={`relative flex items-start gap-3 p-3 rounded-[10px] cursor-pointer transition-all hover:bg-foreground/[0.04] ${
-                        isExpanded ? 'bg-foreground/[0.03]' : ''
-                      }`}
-                    >
-                      {/* Status dot */}
-                      <div className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-card ${
-                        entry.status === 'success' ? 'bg-green-100 text-green-600' :
-                        entry.status === 'failed' ? 'bg-red-100 text-red-600' :
-                        'bg-highlight/15 text-highlight'
-                      }`}>
-                        {entry.status === 'success' ? <CheckCircle2 className="w-4 h-4" /> :
-                         entry.status === 'failed' ? <XCircle className="w-4 h-4" /> :
-                         <AlertTriangle className="w-4 h-4" />}
-                      </div>
+                      <button
+                        type="button"
+                        aria-expanded={isExpanded}
+                        aria-controls={detailsId}
+                        onClick={() => setHistoryExpanded(isExpanded ? null : entry.id)}
+                        className={`relative flex w-full items-start gap-3 rounded-card p-3 text-left transition-colors duration-hover hover:bg-muted/60 ${
+                          isExpanded ? 'bg-muted/50' : ''
+                        }`}
+                      >
+                        {/* Status dot */}
+                        <span
+                          aria-hidden="true"
+                          className={`relative z-raised grid size-9 shrink-0 place-items-center rounded-full border-2 border-card ${
+                            entry.status === 'success' ? 'bg-status-success-bg text-status-success-fg' :
+                            entry.status === 'failed' ? 'bg-status-danger-bg text-status-danger-fg' :
+                            'bg-status-warning-bg text-status-warning-fg'
+                          }`}
+                        >
+                          {entry.status === 'success' ? <CheckCircle2 className="size-4" /> :
+                           entry.status === 'failed' ? <XCircle className="size-4" /> :
+                           <AlertTriangle className="size-4" />}
+                        </span>
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="text-sm font-semibold text-foreground capitalize">
-                              {entry.status === 'success' ? 'Successful Login' :
-                               entry.status === 'failed' ? 'Failed Attempt' :
-                               'Login Attempt'}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
+                        {/* Content */}
+                        <span className="flex min-w-0 flex-1 items-start justify-between gap-2">
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold text-foreground">
+                              {entry.status === 'success' ? 'Signed in' :
+                               entry.status === 'failed' ? 'Failed attempt' :
+                               'Sign-in attempt'}
+                            </span>
+                            <span className="mt-0.5 block text-xs text-muted-foreground">
                               {getLoginMethodLabel(entry.method)}
-                              <span className="text-gray-300 mx-1">•</span>
-                              {entry.browser || 'Unknown'} on {entry.os || 'Unknown'}
-                            </p>
-                          </div>
-                          <div className="text-right flex-shrink-0 ml-2">
-                            <p className="text-xs font-medium text-foreground/80">{formatRelativeTime(entry.timestamp)}</p>
-                            <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground/70 ml-auto mt-0.5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                          </div>
-                        </div>
+                              <span aria-hidden="true" className="mx-1">·</span>
+                              {entry.browser || 'Unknown browser'} on {entry.os || 'unknown device'}
+                            </span>
+                          </span>
+                          <span className="ml-2 flex shrink-0 flex-col items-end">
+                            <span className="text-xs font-medium text-foreground/80">{formatRelativeTime(entry.timestamp)}</span>
+                            <ChevronDown
+                              aria-hidden="true"
+                              className={`mt-0.5 size-3.5 text-muted-foreground transition-transform duration-dropdown ease-out ${isExpanded ? 'rotate-180' : ''}`}
+                            />
+                          </span>
+                        </span>
+                      </button>
 
-                        {/* Expanded details */}
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="mt-3 pt-3 border-t border-foreground/[0.06] space-y-2.5">
-                                {/* Full timestamp */}
-                                <div className="flex items-center gap-2 text-xs">
-                                  <Clock className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0" />
-                                  <span className="text-muted-foreground">{formatFullTimestamp(entry.timestamp)}</span>
-                                </div>
+                      {/* Expanded details */}
+                      {isExpanded && (
+                        <motion.div
+                          id={detailsId}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.2, ease: EASE_OUT }}
+                          className="pb-3 pl-[60px] pr-3"
+                        >
+                          <div className="flex flex-col gap-2.5 border-t border-foreground/[0.08] pt-3 text-xs text-muted-foreground">
+                            {/* Full timestamp */}
+                            <div className="flex items-center gap-2">
+                              <Clock aria-hidden="true" className="size-3.5 shrink-0" />
+                              <span>{formatFullTimestamp(entry.timestamp)}</span>
+                            </div>
 
-                                {/* Device info */}
-                                <div className="flex items-center gap-2 text-xs">
-                                  {entry.os?.includes('Android') || entry.os?.includes('iOS') ? (
-                                    <Smartphone className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0" />
-                                  ) : (
-                                    <Monitor className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0" />
-                                  )}
-                                  <span className="text-muted-foreground">
-                                    {entry.device || 'Unknown Device'} — {entry.browser} / {entry.os}
-                                  </span>
-                                </div>
+                            {/* Device info */}
+                            <div className="flex items-center gap-2">
+                              {entry.os?.includes('Android') || entry.os?.includes('iOS') ? (
+                                <Smartphone aria-hidden="true" className="size-3.5 shrink-0" />
+                              ) : (
+                                <Monitor aria-hidden="true" className="size-3.5 shrink-0" />
+                              )}
+                              <span>
+                                {entry.device || 'Unknown device'} · {entry.browser} / {entry.os}
+                              </span>
+                            </div>
 
-                                {/* IP Address */}
-                                {entry.ipAddress && entry.ipAddress !== 'unknown' && (
-                                  <div className="flex items-center gap-2 text-xs">
-                                    <Globe className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0" />
-                                    <span className="text-muted-foreground">IP: {entry.ipAddress}</span>
-                                  </div>
-                                )}
-
-                                {/* Location */}
-                                {entry.location && (entry.location.city || entry.location.country) && (
-                                  <div className="flex items-center gap-2 text-xs">
-                                    <MapPin className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0" />
-                                    <span className="text-muted-foreground">
-                                      {[entry.location.city, entry.location.region, entry.location.country].filter(Boolean).join(', ')}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* Auth method */}
-                                <div className="flex items-center gap-2 text-xs">
-                                  <Key className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0" />
-                                  <span className="text-muted-foreground">{getLoginMethodLabel(entry.method)}</span>
-                                </div>
+                            {/* IP Address */}
+                            {entry.ipAddress && entry.ipAddress !== 'unknown' && (
+                              <div className="flex items-center gap-2">
+                                <Globe aria-hidden="true" className="size-3.5 shrink-0" />
+                                <span className="tabular-nums">IP {entry.ipAddress}</span>
                               </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </motion.div>
-                  </div>
-                );
-              }) : (
-                <div className="bg-card rounded-[var(--radius-card)] p-10 text-center shadow-sm border border-foreground/[0.06]">
-                  <div className="w-16 h-16 rounded-full bg-foreground/[0.03] mx-auto mb-4 flex items-center justify-center">
-                    <Clock className="w-8 h-8 text-gray-300" />
-                  </div>
-                  <p className="text-sm font-medium text-foreground/80">No login history yet</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">Login events will appear here as they happen</p>
-                </div>
-              )}
-            </div>
+                            )}
+
+                            {/* Location */}
+                            {entry.location && (entry.location.city || entry.location.country) && (
+                              <div className="flex items-center gap-2">
+                                <MapPin aria-hidden="true" className="size-3.5 shrink-0" />
+                                <span>
+                                  {[entry.location.city, entry.location.region, entry.location.country].filter(Boolean).join(', ')}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Auth method */}
+                            <div className="flex items-center gap-2">
+                              <Key aria-hidden="true" className="size-3.5 shrink-0" />
+                              <span>{getLoginMethodLabel(entry.method)}</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : (
+              <div className="panel tx-sheet">
+                <EmptyState
+                  icon={Clock}
+                  title="No sign-ins yet"
+                  description="Each sign-in to your account will be listed here."
+                />
+              </div>
+            )}
           </motion.div>
         )}
 
         {/* ─── ACCOUNT SETTINGS ────────────────── */}
         {activeTab === 'account' && (
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+          <motion.div {...subView}>
             {/* Account Info */}
-            <div className="bg-card rounded-[var(--radius-card)] shadow-sm border border-foreground/[0.06] p-5 mb-6">
-              <h3 className="font-semibold text-foreground mb-4">Account Information</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                  <span className="text-sm text-muted-foreground">Email</span>
-                  <span className="text-sm font-medium text-foreground">{user?.email}</span>
+            <section aria-labelledby="account-info-heading" className="panel tx-sheet mb-6 p-5">
+              <h2 id="account-info-heading" className="font-heading mb-3 text-lg font-semibold tracking-tight text-foreground">Account information</h2>
+              <div className="flex flex-col divide-y divide-foreground/[0.08]">
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <span className="shrink-0 text-sm text-muted-foreground">Email</span>
+                  <span className="min-w-0 text-right text-sm font-medium text-foreground break-words [overflow-wrap:anywhere]">{user?.email}</span>
                 </div>
-                <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                  <span className="text-sm text-muted-foreground">Account Type</span>
-                  <span className="text-sm font-medium text-foreground capitalize">{userProfile?.role || 'User'}</span>
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <span className="text-sm text-muted-foreground">Email verified</span>
+                  {user?.emailVerified ? (
+                    <StatusBadge tone="success" label="Verified" icon={CircleCheck} />
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <StatusBadge tone="warning" label="Not verified" icon={AlertCircle} />
+                      <button
+                        type="button"
+                        onClick={handleSendVerifyLink}
+                        disabled={actionLoading === 'verify-email'}
+                        className="-mx-1 inline-flex min-h-6 items-center gap-1.5 rounded-control px-1 text-xs font-medium text-primary underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {actionLoading === 'verify-email' && <Spinner />}
+                        {verifyLinkSent ? 'Resend link' : 'Send link'}
+                        <span className="sr-only"> to verify your email</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                  <span className="text-sm text-muted-foreground">Email Verified</span>
-                  <span className={`text-sm font-medium flex items-center gap-1 ${user?.emailVerified ? 'text-green-600' : 'text-highlight'}`}>
-                    {user?.emailVerified ? <><CheckCircle2 className="w-4 h-4" /> Verified</> : <><AlertCircle className="w-4 h-4" /> Not Verified</>}
-                  </span>
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <span className="text-sm text-muted-foreground">Phone verified</span>
+                  {isPhoneVerified
+                    ? <StatusBadge tone="success" label="Verified" icon={CircleCheck} />
+                    : <span className="text-sm text-muted-foreground">Not set</span>}
                 </div>
-                <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                  <span className="text-sm text-muted-foreground">Phone Verified</span>
-                  <span className={`text-sm font-medium flex items-center gap-1 ${isPhoneVerified ? 'text-green-600' : 'text-muted-foreground/70'}`}>
-                    {isPhoneVerified ? <><CheckCircle2 className="w-4 h-4" /> Verified</> : 'Not set'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                  <span className="text-sm text-muted-foreground">Phone Number</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-foreground">
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <span className="text-sm text-muted-foreground">Phone number</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-foreground tabular-nums">
                       {(userProfile?.whatsappNumber || userProfile?.phone)
                         ? `+91 ${(userProfile?.whatsappNumber || userProfile?.phone || '').replace(/\D/g, '').slice(-10)}`
-                        : <span className="text-muted-foreground/70">Not set</span>}
+                        : <span className="font-normal text-muted-foreground">Not set</span>}
                     </span>
                     <button
+                      type="button"
                       onClick={() => { setChangePhoneOpen(true); setNewPhoneInput(''); }}
-                      className="text-xs text-primary hover:underline font-medium"
+                      aria-expanded={changePhoneOpen}
+                      className="-mx-1 inline-flex min-h-6 items-center rounded-control px-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
                     >
-                      Change
+                      Change<span className="sr-only"> phone number</span>
                     </button>
                   </div>
                 </div>
                 {changePhoneOpen && (
-                  <div className="py-3 border-b border-gray-50">
-                    <p className="text-sm text-muted-foreground mb-3">Enter your new 10-digit WhatsApp number to receive a verification code.</p>
-                    <div className="flex gap-2 mb-3">
-                      <div className="flex items-center bg-foreground/[0.06] rounded-lg px-3 py-2 text-sm font-medium text-foreground/80 border border-foreground/[0.08] select-none">+91</div>
-                      <input
-                        type="tel"
-                        maxLength={10}
-                        placeholder="10-digit number"
-                        value={newPhoneInput}
-                        onChange={(e) => setNewPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        className="flex-1 border border-foreground/[0.08] rounded-lg px-3 py-2 text-sm bg-card text-foreground focus:ring-2 focus:ring-blue-400 outline-none"
-                      />
-                      <button
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2, ease: EASE_OUT }}
+                    className="flex flex-col gap-3 py-4"
+                  >
+                    <label htmlFor="new-phone" className="text-sm text-muted-foreground">
+                      Enter your new 10-digit WhatsApp number. We'll send it a verification code.
+                    </label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <div className={`${fieldBox} flex-1`}>
+                        <span className={prefix}>+91</span>
+                        <input
+                          id="new-phone"
+                          type="tel"
+                          inputMode="numeric"
+                          autoComplete="tel-national"
+                          maxLength={10}
+                          placeholder="10-digit number"
+                          value={newPhoneInput}
+                          onChange={(e) => setNewPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          className={bareInput}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
                         onClick={() => changePhoneOtp.sendOtp()}
                         disabled={newPhoneInput.length !== 10 || changePhoneOtp.isBusy || changePhoneOtp.isVerified}
-                        className="px-3 py-2 text-sm bg-primary text-white rounded-lg disabled:opacity-50 hover:bg-primary/90 transition-colors font-medium"
                       >
-                        {changePhoneOtp.phase === 'sent' || changePhoneOtp.phase === 'verifying' || changePhoneOtp.phase === 'verified' ? 'Resend' : 'Send OTP'}
-                      </button>
+                        {changePhoneOtp.phase === 'sent' || changePhoneOtp.phase === 'verifying' || changePhoneOtp.phase === 'verified' ? 'Resend code' : 'Send code'}
+                      </Button>
                     </div>
                     {(changePhoneOtp.phase === 'sent' || changePhoneOtp.phase === 'verifying') && !changePhoneOtp.isVerified && (
-                      <div className="flex gap-2 mb-3">
+                      <div className="flex flex-col gap-2 sm:flex-row">
                         <input
                           type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          aria-label="6-digit code"
                           maxLength={6}
-                          placeholder="Enter 6-digit OTP"
+                          placeholder="6-digit code"
                           value={changePhoneOtp.otpCode}
                           onChange={(e) => changePhoneOtp.setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                          className="flex-1 border border-foreground/[0.08] rounded-lg px-3 py-2 text-sm bg-card text-foreground focus:ring-2 focus:ring-blue-400 outline-none"
+                          className={`${inputClass} flex-1`}
                         />
-                        <button
+                        <Button
+                          type="button"
+                          variant="outline"
                           onClick={() => changePhoneOtp.confirmOtp()}
                           disabled={changePhoneOtp.otpCode.length !== 6 || changePhoneOtp.isBusy}
-                          className="px-3 py-2 text-sm bg-primary text-white rounded-lg disabled:opacity-50 hover:bg-primary/90 transition-colors font-medium"
                         >
                           Verify
-                        </button>
+                        </Button>
                       </div>
                     )}
                     {changePhoneOtp.isVerified && (
-                      <p className="text-sm text-green-600 flex items-center gap-1 mb-3"><CheckCircle2 className="w-4 h-4" /> OTP verified</p>
+                      <p role="status" className="flex items-center gap-1.5 text-sm text-status-success-fg">
+                        <CheckCircle2 aria-hidden="true" className="size-4" /> Code verified
+                      </p>
                     )}
                     {changePhoneOtp.otpError && (
-                      <p className="text-sm text-red-500 mb-2">{changePhoneOtp.otpError}</p>
+                      <p role="alert" className="text-sm text-destructive">{changePhoneOtp.otpError}</p>
                     )}
-                    <div className="flex gap-2">
-                      <button
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
                         onClick={handleChangePhone}
                         disabled={!changePhoneOtp.isVerified || actionLoading === 'change-phone'}
-                        className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg disabled:opacity-50 hover:bg-green-700 transition-colors font-medium"
                       >
-                        {actionLoading === 'change-phone' ? 'Saving…' : 'Save Number'}
-                      </button>
-                      <button
+                        {actionLoading === 'change-phone' && <Spinner />}
+                        {actionLoading === 'change-phone' ? 'Saving…' : 'Save number'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
                         onClick={() => { setChangePhoneOpen(false); setNewPhoneInput(''); }}
-                        className="px-4 py-2 text-sm border border-foreground/[0.08] rounded-lg hover:bg-foreground/[0.04] transition-colors font-medium text-muted-foreground"
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-muted-foreground">2FA</span>
-                  <span className={`text-sm font-medium flex items-center gap-1 ${settings?.twoFactorEnabled ? 'text-green-600' : 'text-muted-foreground/70'}`}>
-                    {settings?.twoFactorEnabled ? <><CheckCircle2 className="w-4 h-4" /> On (WhatsApp)</> : 'Off'}
-                  </span>
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <span className="text-sm text-muted-foreground">2-step verification</span>
+                  {settings?.twoFactorEnabled
+                    ? <StatusBadge tone="success" label="On (WhatsApp)" icon={CircleCheck} />
+                    : <span className="text-sm text-muted-foreground">Off</span>}
                 </div>
               </div>
-            </div>
+            </section>
 
             {/* Danger Zone */}
-            <div className="bg-card rounded-[var(--radius-card)] shadow-sm border border-red-200 p-5">
-              <h3 className="font-semibold text-red-900 mb-2">Danger Zone</h3>
-              <p className="text-xs text-muted-foreground mb-4">
-                Deleting your account will remove all your data, orders, and rewards permanently after a 30-day grace period.
+            <section aria-labelledby="danger-heading" className="panel tx-sheet border-destructive/30 p-5">
+              <h2 id="danger-heading" className="font-heading mb-2 text-lg font-semibold tracking-tight text-destructive">Danger zone</h2>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Deleting your account removes your data, orders and rewards for good after a 30-day grace period.
               </p>
 
               {!showDeleteConfirm ? (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="text-red-600 border-red-200 hover:bg-red-50"
-                >
-                  <UserX className="w-4 h-4 mr-2" /> Delete Account
+                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
+                  <UserX aria-hidden="true" className="size-4" /> Delete account
                 </Button>
               ) : (
-                <div className="bg-red-50 rounded-[10px] p-4 border border-red-200">
-                  <p className="text-sm font-medium text-red-900 mb-3">Are you absolutely sure?</p>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2, ease: EASE_OUT }}
+                  className="flex flex-col gap-3 border-t border-foreground/[0.08] pt-4"
+                >
+                  <p className="text-sm font-semibold text-foreground">Delete your account?</p>
+                  <label htmlFor="delete-reason" className="text-xs text-muted-foreground">Why are you leaving? (optional)</label>
                   <textarea
+                    id="delete-reason"
                     value={deleteReason}
                     onChange={(e) => setDeleteReason(e.target.value)}
-                    placeholder="Optional: Tell us why you're leaving..."
-                    className="w-full p-3 border border-red-200 rounded-lg text-sm resize-none h-20 focus:ring-2 focus:ring-red-400 outline-none mb-3"
+                    className="h-20 w-full resize-none rounded-control border border-input bg-background p-3 text-base text-foreground transition-[border-color,box-shadow] duration-hover placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 sm:text-sm"
                   />
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-3">
                     <Button
+                      variant="destructive"
                       onClick={handleDeleteAccount}
                       disabled={actionLoading === 'delete'}
-                      className="bg-red-600 hover:bg-red-700 text-white"
                     >
-                      {actionLoading === 'delete' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                      Delete My Account
+                      {actionLoading === 'delete' ? <Spinner /> : <Trash2 aria-hidden="true" className="size-4" />}
+                      Delete account
                     </Button>
-                    <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Keep account</Button>
                   </div>
-                </div>
+                </motion.div>
               )}
-            </div>
+            </section>
           </motion.div>
         )}
       </div>
+      </main>
 
       <Footer />
       <MobileBottomNav />

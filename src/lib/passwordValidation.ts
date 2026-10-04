@@ -21,7 +21,7 @@ export interface PasswordRequirements {
   maxLength?: number;
 }
 
-// Default requirements for jewellery eCommerce
+// Default requirements: the one password policy for sign-up and reset
 export const DEFAULT_PASSWORD_REQUIREMENTS: PasswordRequirements = {
   minLength: 8,
   requireUppercase: true,
@@ -75,7 +75,7 @@ export const validatePassword = (
   }
 
   // Check symbol
-  if (requirements.requireSymbol && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+  if (requirements.requireSymbol && !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
     errors.push('Password must contain at least one special character');
   }
 
@@ -106,7 +106,7 @@ export const calculatePasswordStrength = (password: string): PasswordStrengthRes
   const hasLower = /[a-z]/.test(password);
   const hasUpper = /[A-Z]/.test(password);
   const hasNumber = /\d/.test(password);
-  const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  const hasSymbol = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
 
   if (hasLower) score += 0.5;
   if (hasUpper) score += 0.5;
@@ -152,24 +152,24 @@ export const calculatePasswordStrength = (password: string): PasswordStrengthRes
 
   if (score < 1) {
     strength = 'very-weak';
-    color = '#ef4444'; // red-500
+    color = 'hsl(var(--destructive))';
     strengthFeedback = 'Very weak - not recommended';
   } else if (score < 2) {
     strength = 'weak';
-    color = '#f97316'; // orange-500
+    color = 'hsl(var(--destructive))';
     strengthFeedback = 'Weak - add more variety';
   } else if (score < 3) {
     strength = 'fair';
-    color = '#eab308'; // yellow-500
+    color = 'hsl(var(--highlight))';
     strengthFeedback = 'Fair - could be stronger';
   } else if (score < 4) {
     strength = 'good';
-    color = '#22c55e'; // green-500
+    color = 'hsl(var(--primary) / 0.8)';
     strengthFeedback = 'Good password';
   } else {
     strength = 'strong';
-    color = '#16a34a'; // green-600
-    strengthFeedback = 'Strong password!';
+    color = 'hsl(var(--primary))';
+    strengthFeedback = 'Strong password';
   }
 
   feedback.unshift(strengthFeedback);
@@ -188,42 +188,57 @@ export const calculatePasswordStrength = (password: string): PasswordStrengthRes
 };
 
 /**
- * Get password strength color class (Tailwind)
+ * Bar colour for the strength meter (Tailwind tokens, light and dark).
+ * Only the bar carries colour; the strength word stays in the text colour.
  */
 export const getStrengthColorClass = (strength: PasswordStrengthResult['strength']): string => {
   switch (strength) {
     case 'very-weak':
-      return 'bg-red-500';
     case 'weak':
-      return 'bg-orange-500';
+      return 'bg-destructive';
     case 'fair':
-      return 'bg-yellow-500';
+      return 'bg-highlight';
     case 'good':
-      return 'bg-green-500';
+      return 'bg-primary/80';
     case 'strong':
-      return 'bg-green-600';
+      return 'bg-primary';
     default:
-      return 'bg-gray-300';
+      return 'bg-foreground/10';
   }
 };
 
 /**
- * Get password strength text color class (Tailwind)
+ * Text colour for the strength word. Kept in the normal text colour so it
+ * passes contrast in both themes; the bar shows the level.
  */
 export const getStrengthTextColorClass = (strength: PasswordStrengthResult['strength']): string => {
   switch (strength) {
     case 'very-weak':
-      return 'text-red-600';
     case 'weak':
-      return 'text-orange-600';
     case 'fair':
-      return 'text-yellow-600';
     case 'good':
-      return 'text-green-600';
     case 'strong':
-      return 'text-green-700';
+      return 'text-foreground';
     default:
-      return 'text-gray-600';
+      return 'text-muted-foreground';
+  }
+};
+
+/** Display name of a strength level ("Very weak", "Fair"). */
+export const getStrengthLabel = (strength: PasswordStrengthResult['strength']): string => {
+  switch (strength) {
+    case 'very-weak':
+      return 'Very weak';
+    case 'weak':
+      return 'Weak';
+    case 'fair':
+      return 'Fair';
+    case 'good':
+      return 'Good';
+    case 'strong':
+      return 'Strong';
+    default:
+      return '';
   }
 };
 
@@ -279,4 +294,27 @@ export const getPasswordRequirementsText = (
   if (requirements.requireSymbol) texts.push('One special character (!@#$%^&*)');
   
   return texts;
+};
+
+/**
+ * Each requirement with whether the password meets it, for a live checklist.
+ * Mirrors validatePassword's rules (same order as getPasswordRequirementsText).
+ */
+export const getPasswordRequirementChecks = (
+  password: string,
+  requirements: PasswordRequirements = DEFAULT_PASSWORD_REQUIREMENTS
+): { label: string; met: boolean }[] => {
+  const checks: { label: string; met: boolean }[] = [
+    { label: `At least ${requirements.minLength} characters`, met: password.length >= requirements.minLength },
+  ];
+  if (requirements.requireUppercase) checks.push({ label: 'One uppercase letter', met: /[A-Z]/.test(password) });
+  if (requirements.requireLowercase) checks.push({ label: 'One lowercase letter', met: /[a-z]/.test(password) });
+  if (requirements.requireNumber) checks.push({ label: 'One number', met: /\d/.test(password) });
+  if (requirements.requireSymbol) {
+    checks.push({
+      label: 'One special character (!@#$%^&*)',
+      met: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
+    });
+  }
+  return checks;
 };

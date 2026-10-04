@@ -1,7 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, ArrowLeft, Copy, GalleryHorizontal } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { IconButton } from '@/components/ui/icon-button';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { useInlineFormFocus } from '@/components/admin/useInlineFormFocus';
+import { EmptyState } from '@/components/EmptyState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ListSkeleton } from '@/components/skeletons';
+import { fadeUp, staggerDelay } from '@/lib/motion';
 import { useAuth } from '@/contexts/AuthContext';
 import ImageUploader from '@/components/ImageUploader';
 import { 
@@ -19,10 +32,14 @@ const AdminBanners = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [banners, setBanners] = useState<Banner[]>([]);
+  const confirmReturnRef = useRef<HTMLElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
+  // Focus moves to the form when it opens and back to the opener when it closes.
+  const { headingRef: formHeadingRef, addButtonRef, rememberOpener } = useInlineFormFocus(showForm, editingBanner?.id);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bannerToDelete, setBannerToDelete] = useState<Banner | null>(null);
 
   // Form state
   const [selectedDesktopFile, setSelectedDesktopFile] = useState<File | null>(null);
@@ -51,7 +68,7 @@ const AdminBanners = () => {
       const data = await getAllBanners();
       setBanners(data);
     } catch (error) {
-      toast.error('Failed to load banners');
+      toast.error('Could not load banners');
       console.error(error);
     } finally {
       setLoading(false);
@@ -62,7 +79,7 @@ const AdminBanners = () => {
     e.preventDefault();
     
     if (!selectedDesktopFile && !formData.imageUrl) {
-      toast.error('Please select a desktop banner image');
+      toast.error('Choose a desktop banner image');
       return;
     }
 
@@ -72,15 +89,15 @@ const AdminBanners = () => {
       let mobileImageUrl = formData.mobileImageUrl;
 
       if (selectedDesktopFile) {
-        toast.loading('Uploading desktop banner image...', { id: 'upload-desktop' });
+        toast.loading('Uploading the desktop image', { id: 'upload-desktop' });
         imageUrl = await uploadBannerImage(selectedDesktopFile);
-        toast.success('Desktop image uploaded successfully!', { id: 'upload-desktop' });
+        toast.success('Desktop image uploaded', { id: 'upload-desktop' });
       }
 
       if (selectedMobileFile) {
-        toast.loading('Uploading mobile banner image...', { id: 'upload-mobile' });
+        toast.loading('Uploading the mobile image', { id: 'upload-mobile' });
         mobileImageUrl = await uploadBannerImage(selectedMobileFile);
-        toast.success('Mobile image uploaded successfully!', { id: 'upload-mobile' });
+        toast.success('Mobile image uploaded', { id: 'upload-mobile' });
       }
 
       // Create or update banner
@@ -92,7 +109,7 @@ const AdminBanners = () => {
           order: formData.order,
           status: formData.status,
         });
-        toast.success('Banner updated successfully!');
+        toast.success('Banner saved');
       } else {
         await createBanner({
           imageUrl,
@@ -101,14 +118,14 @@ const AdminBanners = () => {
           order: formData.order,
           status: formData.status,
         });
-        toast.success('Banner created successfully!');
+        toast.success('Banner created');
       }
 
       // Reset form and reload
       resetForm();
       await loadBanners();
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save banner');
+      toast.error(error instanceof Error ? error.message : 'Could not save banner');
       console.error(error);
     } finally {
       setIsSubmitting(false);
@@ -116,20 +133,19 @@ const AdminBanners = () => {
   };
 
   const handleDelete = async (banner: Banner) => {
-    if (!confirm('Are you sure you want to delete this banner?')) return;
-
     try {
-      toast.loading('Deleting banner...', { id: 'delete' });
+      toast.loading('Deleting the banner', { id: 'delete' });
       await deleteBanner(banner.id!, banner.imageUrl);
-      toast.success('Banner deleted successfully!', { id: 'delete' });
+      toast.success('Banner deleted', { id: 'delete' });
       await loadBanners();
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete banner', { id: 'delete' });
+      toast.error(error instanceof Error ? error.message : 'Could not delete banner', { id: 'delete' });
       console.error(error);
     }
   };
 
   const handleEdit = (banner: Banner) => {
+    rememberOpener();
     setEditingBanner(banner);
     setFormData({
       imageUrl: banner.imageUrl,
@@ -155,270 +171,259 @@ const AdminBanners = () => {
     setShowForm(false);
   };
 
+  const copyId = async (id?: string) => {
+    if (!id) return;
+    try {
+      await navigator.clipboard.writeText(id);
+      toast.success('Banner ID copied');
+    } catch {
+      toast.error('Could not copy the ID');
+    }
+  };
+
+  const header = (
+    <AdminPageHeader
+      title="Hero banners"
+      description="Home page carousel banners."
+      leading={
+        <IconButton label="Back to dashboard" tooltip onClick={() => navigate('/admin')}>
+          <ArrowLeft />
+        </IconButton>
+      }
+      actions={
+        !showForm && (
+          <Button ref={addButtonRef} onClick={() => setShowForm(true)}>
+            <Plus aria-hidden="true" />
+            Add banner
+          </Button>
+        )
+      }
+    />
+  );
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="mx-auto max-w-6xl">
+        {header}
+        <ListSkeleton rows={3} thumb label="Loading banners" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container-custom max-w-6xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/admin')}
-              className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Banner Management</h1>
-              <p className="text-gray-600 mt-1">Manage homepage carousel banners</p>
-            </div>
-          </div>
-          {!showForm && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-            >
-              <Plus className="w-5 h-5" />
-              Add Banner
-            </button>
-          )}
-        </div>
+    <div className="mx-auto max-w-6xl">
+      {header}
 
-        {/* Form */}
-        {showForm && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8"
-          >
-            <h2 className="text-xl font-bold text-gray-900 mb-6">
-              {editingBanner ? 'Edit Banner' : 'Add New Banner'}
-            </h2>
+      {/* Form */}
+      {showForm && (
+        <motion.section
+          {...fadeUp}
+          aria-labelledby="banner-form-title"
+          className="mb-8 rounded-card border border-border bg-card p-4 shadow-sm sm:p-6"
+        >
+          <h2 ref={formHeadingRef} tabIndex={-1} id="banner-form-title" className="mb-6 text-lg font-semibold text-foreground">
+            {editingBanner ? 'Edit banner' : 'Add banner'}
+          </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Desktop Banner Image
-                  </label>
-                  <p className="mb-3 text-xs text-gray-500">
-                    Use a 16:9 desktop asset (1920 × 1080 is ideal) - the hero shows it whole, uncropped.
-                  </p>
-                  <ImageUploader
-                    key={`${editingBanner?.id || 'new'}-desktop`}
-                    category="banners"
-                    onImageSelected={setSelectedDesktopFile}
-                    existingImageUrl={formData.imageUrl || undefined}
-                    onRemove={() => {
-                      setSelectedDesktopFile(null);
-                      setFormData((prev) => ({ ...prev, imageUrl: '' }));
-                    }}
-                    isUploading={isSubmitting}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Mobile Banner Image <span className="text-gray-400 text-xs">(Optional)</span>
-                  </label>
-                  <p className="mb-3 text-xs text-gray-500">Use a taller 4:5 mobile crop. If omitted, desktop image is used on mobile.</p>
-                  <ImageUploader
-                    key={`${editingBanner?.id || 'new'}-mobile`}
-                    category="banners"
-                    onImageSelected={setSelectedMobileFile}
-                    existingImageUrl={formData.mobileImageUrl || undefined}
-                    onRemove={() => {
-                      setSelectedMobileFile(null);
-                      setFormData((prev) => ({ ...prev, mobileImageUrl: '' }));
-                    }}
-                    isUploading={isSubmitting}
-                  />
-                </div>
-              </div>
-
-              {/* Redirect Link */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Redirect Link <span className="text-gray-400 text-xs">(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.redirectLink}
-                  onChange={(e) => setFormData({ ...formData, redirectLink: e.target.value })}
-                  placeholder="/shop/necklaces or https://example.com (leave empty for no click action)"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <p className="mb-2 block text-sm font-medium text-foreground/80">
+                  Desktop banner image
+                </p>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Use a 16:9 desktop image (1920 × 1080 is ideal). The hero shows it whole, uncropped.
+                </p>
+                <ImageUploader
+                  key={`${editingBanner?.id || 'new'}-desktop`}
+                  category="banners"
+                  onImageSelected={setSelectedDesktopFile}
+                  existingImageUrl={formData.imageUrl || undefined}
+                  onRemove={() => {
+                    setSelectedDesktopFile(null);
+                    setFormData((prev) => ({ ...prev, imageUrl: '' }));
+                  }}
+                  isUploading={isSubmitting}
                 />
               </div>
 
-              {/* Order and Status */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Display Order
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.order}
-                    onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
-                    min="1"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
+              <div>
+                <p className="mb-2 block text-sm font-medium text-foreground/80">
+                  Mobile banner image <span className="font-normal text-muted-foreground">(optional)</span>
+                </p>
+                <p className="mb-3 text-xs text-muted-foreground">Use a taller 4:5 mobile crop. Without one, the desktop image is used on mobile.</p>
+                <ImageUploader
+                  key={`${editingBanner?.id || 'new'}-mobile`}
+                  category="banners"
+                  onImageSelected={setSelectedMobileFile}
+                  existingImageUrl={formData.mobileImageUrl || undefined}
+                  onRemove={() => {
+                    setSelectedMobileFile(null);
+                    setFormData((prev) => ({ ...prev, mobileImageUrl: '' }));
+                  }}
+                  isUploading={isSubmitting}
+                />
               </div>
-
-              {/* Actions */}
-              <div className="flex gap-4">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      {editingBanner ? 'Updating...' : 'Creating...'}
-                    </span>
-                  ) : (
-                    editingBanner ? 'Update Banner' : 'Create Banner'
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  disabled={isSubmitting}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 font-medium"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        )}
-
-        {/* Banners List */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-bold text-gray-900">
-              All Banners ({banners.length})
-            </h2>
-          </div>
-
-          {banners.length === 0 ? (
-            <div className="p-12 text-center">
-              <p className="text-gray-500">No banners yet. Create your first banner!</p>
             </div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {banners.map((banner, index) => (
-                <motion.div
-                  key={banner.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="p-6 hover:bg-gray-50 transition-colors"
+
+            {/* Redirect link */}
+            <div>
+              <Label htmlFor="banner-link" className="mb-2 block text-sm font-medium text-foreground/80">
+                Link <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="banner-link"
+                type="text"
+                value={formData.redirectLink}
+                onChange={(e) => setFormData({ ...formData, redirectLink: e.target.value })}
+                placeholder="/category/hair-care or https://example.com (empty for no link)"
+              />
+            </div>
+
+            {/* Order and status */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="banner-order" className="mb-2 block text-sm font-medium text-foreground/80">
+                  Display order
+                </Label>
+                <Input
+                  id="banner-order"
+                  type="number"
+                  inputMode="numeric"
+                  value={formData.order}
+                  onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
+                  min="1"
+                  className="tabular-nums"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="banner-status" className="mb-2 block text-sm font-medium text-foreground/80">
+                  Status
+                </Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(v) => setFormData({ ...formData, status: v as 'active' | 'inactive' })}
                 >
-                  <div className="flex gap-6">
-                    {/* Image Preview */}
-                    <div className="flex flex-shrink-0 gap-3">
-                      <div className="w-40 h-24 rounded-lg overflow-hidden bg-gray-100">
-                        <SmartImage
-                          src={banner.imageUrl}
-                          alt="Desktop banner preview"
-                          className="w-full h-full object-cover" preset="hero" />
-                      </div>
-                      <div className="w-20 h-24 rounded-lg overflow-hidden bg-gray-100 border border-dashed border-gray-200">
-                        <SmartImage
-                          src={banner.mobileImageUrl || banner.imageUrl}
-                          alt="Mobile banner preview"
-                          className="w-full h-full object-cover" preset="hero" />
-                      </div>
+                  <SelectTrigger id="banner-status"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Live</SelectItem>
+                    <SelectItem value="inactive">Hidden</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 border-t border-border pt-4">
+              <Button type="button" variant="outline" onClick={resetForm} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Spinner />}
+                {isSubmitting
+                  ? editingBanner ? 'Saving' : 'Creating'
+                  : editingBanner ? 'Save banner' : 'Create banner'}
+              </Button>
+            </div>
+          </form>
+        </motion.section>
+      )}
+
+      {/* Banner list */}
+      <section aria-labelledby="banner-list-title" className="overflow-hidden rounded-card border border-border bg-card shadow-sm">
+        <div className="border-b border-border px-4 py-4 sm:px-6">
+          <h2 id="banner-list-title" className="text-base font-semibold text-foreground">
+            All banners <span className="font-normal tabular-nums text-muted-foreground">({banners.length})</span>
+          </h2>
+        </div>
+
+        {banners.length === 0 ? (
+          <div className="m-4 rounded-card border border-dashed border-border px-4 py-12 sm:m-6">
+            <EmptyState
+              icon={GalleryHorizontal}
+              title="No banners yet"
+              description="Add your first home page banner with Add banner."
+            />
+          </div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {banners.map((banner, index) => (
+              <motion.li
+                key={banner.id}
+                {...fadeUp}
+                transition={{ ...fadeUp.transition, delay: staggerDelay(index) }}
+                className="p-4 sm:p-6"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+                  {/* Image previews */}
+                  <div className="flex shrink-0 gap-3">
+                    <div className="h-24 w-40 overflow-hidden rounded-control bg-muted">
+                      <SmartImage
+                        src={banner.imageUrl}
+                        alt={`Banner ${index + 1}, desktop`}
+                        className="h-full w-full object-cover" preset="hero" />
                     </div>
-
-                    {/* Info */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-xs font-semibold text-gray-500">
-                              Order: {banner.order}
-                            </span>
-                            <span
-                              className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                banner.status === 'active'
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-gray-100 text-gray-700'
-                              }`}
-                            >
-                              {banner.status === 'active' ? (
-                                <span className="flex items-center gap-1">
-                                  <Eye className="w-3 h-3" />
-                                  Active
-                                </span>
-                              ) : (
-                                <span className="flex items-center gap-1">
-                                  <EyeOff className="w-3 h-3" />
-                                  Inactive
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-1">
-                            <span className="font-medium">Link:</span> {banner.redirectLink}
-                          </p>
-                          <p className="text-xs text-gray-500 mb-1">
-                            <span className="font-medium">Mobile image:</span> {banner.mobileImageUrl ? 'Added' : 'Using desktop fallback'}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            ID: {banner.id}
-                          </p>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleEdit(banner)}
-                            className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                          >
-                            <Edit2 className="w-4 h-4 text-blue-600" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(banner)}
-                            className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:border-red-300 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </button>
-                        </div>
-                      </div>
+                    <div className="h-24 w-20 overflow-hidden rounded-control border border-dashed border-border bg-muted">
+                      <SmartImage
+                        src={banner.mobileImageUrl || banner.imageUrl}
+                        alt={`Banner ${index + 1}, mobile`}
+                        className="h-full w-full object-cover" preset="hero" />
                     </div>
                   </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+
+                  {/* Info */}
+                  <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                          Position {index + 1}
+                        </span>
+                        {banner.status === 'active' ? (
+                          <StatusBadge tone="success" icon={Eye} label="Live" />
+                        ) : (
+                          <StatusBadge tone="neutral" icon={EyeOff} label="Hidden" />
+                        )}
+                      </div>
+                      <p className="truncate text-sm text-foreground/80">
+                        <span className="font-medium">Link:</span> {banner.redirectLink || 'None'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium">Mobile image:</span> {banner.mobileImageUrl ? 'Added' : 'Using the desktop image'}
+                      </p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex shrink-0 gap-1">
+                      <IconButton label={`Copy ID of banner ${index + 1}`} tooltip="Copy ID" onClick={() => copyId(banner.id)} className="text-muted-foreground">
+                        <Copy />
+                      </IconButton>
+                      <IconButton label={`Edit banner ${index + 1}`} tooltip="Edit" onClick={() => handleEdit(banner)} className="text-foreground/70">
+                        <Edit2 />
+                      </IconButton>
+                      <IconButton label={`Delete banner ${index + 1}`} tooltip="Delete" onClick={(e) => { confirmReturnRef.current = e.currentTarget; setBannerToDelete(banner); }} className="text-muted-foreground hover:text-status-danger-fg">
+                        <Trash2 />
+                      </IconButton>
+                    </div>
+                  </div>
+                </div>
+              </motion.li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <ConfirmDialog
+        returnFocusRef={confirmReturnRef}
+        open={!!bannerToDelete}
+        onOpenChange={(open) => !open && setBannerToDelete(null)}
+        title={`Delete banner ${bannerToDelete ? banners.indexOf(bannerToDelete) + 1 : ''}?`}
+        description="It is removed from the home page carousel. This cannot be undone."
+        confirmLabel="Delete banner"
+        tone="danger"
+        onConfirm={() => (bannerToDelete ? handleDelete(bannerToDelete) : undefined)}
+      />
     </div>
   );
 };

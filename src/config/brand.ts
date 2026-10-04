@@ -20,7 +20,7 @@ export const BRAND = {
   legalName: 'Ishaputra Botanicals',
   tagline: 'Pure wellness for a stronger you',
   description:
-    "Premium men's Ayurveda and botanical wellness - energy, hair, skin and personal care, made with classical herbs and modern science.",
+    "Premium men's Ayurveda and botanical wellness: energy, hair, skin and personal care, made with classical herbs and modern science.",
 
   /** TODO(client): the live domain. Until then VITE_SITE_URL (or this) is used. */
   siteUrl: 'https://ishaputra.com',
@@ -34,7 +34,7 @@ export const BRAND = {
   /** Empty until the real number arrives: the Enquire button would message whoever owns a dummy number. */
   whatsapp: '',
   addressLines: ['Road No. 12, Banjara Hills', 'Hyderabad, Telangana 500034'] as string[],
-  hours: 'Mon – Sat · 10:00 AM – 7:00 PM',
+  hours: 'Mon to Sat, 10 am to 7 pm',
   /** City-level map until the client shares a store location (no API key needed). */
   mapEmbedUrl: 'https://www.google.com/maps/embed?origin=mfe&pb=!1m2!2m1!1sBanjara+Hills,+Hyderabad',
   /** Left empty on purpose: a made-up GSTIN must never print on an invoice. */
@@ -56,9 +56,9 @@ export const BRAND = {
    */
   priceRanges: [
     { label: 'Under ₹400', min: 0, max: 400 },
-    { label: '₹400 – ₹700', min: 400, max: 700 },
-    { label: '₹700 – ₹1,000', min: 700, max: 1000 },
-    { label: '₹1,000 – ₹2,000', min: 1000, max: 2000 },
+    { label: '₹400 to ₹700', min: 400, max: 700 },
+    { label: '₹700 to ₹1,000', min: 700, max: 1000 },
+    { label: '₹1,000 to ₹2,000', min: 1000, max: 2000 },
     { label: 'Above ₹2,000', min: 2000, max: Infinity },
   ],
 

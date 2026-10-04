@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   Upload,
   X,
-  Loader2,
   Image as ImageIcon,
   Video,
   Plus,
@@ -14,6 +13,7 @@ import {
   ScanLine,
   Truck,
   Save,
+  CircleAlert,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
+import { IconButton } from '@/components/ui/icon-button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Notice } from '@/components/ui/notice';
+import { Spinner } from '@/components/ui/spinner';
+import { FormSkeleton } from '@/components/skeletons';
+import { subscribeDeliverySettings, DEFAULT_DELIVERY } from '@/services/siteSettingsService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -58,6 +64,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { SmartImage } from "@/components/ui/smart-image";
 import { describeError } from '@/lib/errorMessage';
+import { formatINR, plural } from '@/lib/format';
 import { SILVER_PRICING_ENABLED } from '@/config/features';
 
 // YouTube helpers
@@ -98,23 +105,26 @@ function saveSpecSuggestion(label: string, value: string) {
 
 /** Red asterisk marking a field the form will not submit without. */
 const Required = () => (
-  <span className="text-red-500 ml-0.5" title="Required">
+  <span className="ml-0.5 text-status-danger-fg" aria-hidden="true" title="Required">
     *
   </span>
 );
 
+/** Muted "(optional)" after a label. */
+const Optional = () => <span className="ml-1 font-normal text-muted-foreground">(optional)</span>;
+
 /** Inline validation message shown under the field it belongs to. */
-const FieldError = ({ message }: { message?: string }) =>
+const FieldError = ({ message, id }: { message?: string; id?: string }) =>
   message ? (
-    <p className="mt-1 text-xs font-medium text-red-600 flex items-center gap-1">
-      <span aria-hidden>!</span>
+    <p id={id} className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-status-danger-fg">
+      <CircleAlert aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
       {message}
     </p>
   ) : null;
 
 /** Red ring on an invalid control, so the offending field is obvious. */
 const invalidRing = (hasError?: boolean) =>
-  hasError ? ' border-red-400 ring-1 ring-red-300 focus-visible:ring-red-400' : '';
+  hasError ? ' border-destructive focus-visible:border-destructive' : '';
 
 const ProductForm = () => {
   const { productId } = useParams();
@@ -148,6 +158,13 @@ const ProductForm = () => {
 
   // Categories from Firestore
   const [categories, setCategories] = useState<Category[]>([]);
+
+  // Home state from Commerce > Delivery, only to label the two charge fields.
+  const [homeState, setHomeState] = useState(DEFAULT_DELIVERY.homeState);
+  useEffect(() => {
+    const unsub = subscribeDeliverySettings((d) => setHomeState(d.homeState || DEFAULT_DELIVERY.homeState));
+    return unsub;
+  }, []);
 
   useEffect(() => {
     // Seed any missing default, then fold away duplicate documents left behind
@@ -222,7 +239,7 @@ const ProductForm = () => {
   const [scannerOpen, setScannerOpen] = useState(false);
   /** Why the loaded product is hidden, when a rule hid it (see InactiveReason). */
   const [inactiveReason, setInactiveReason] = useState<'outOfStock' | 'noImages' | null>(null);
-  /** Shown under the Active switch when a rule changed it for the admin. */
+  /** Shown under the Live in store switch when a rule changed it for the admin. */
   const [statusNote, setStatusNote] = useState<string | null>(null);
 
   /**
@@ -274,9 +291,9 @@ const ProductForm = () => {
 
   // Dynamic specifications
   const [specifications, setSpecifications] = useState<{ label: string; value: string }[]>([
-    { label: 'Material', value: '' },
-    { label: 'Purity', value: '' },
-    { label: 'Dimensions', value: '' },
+    { label: 'Net quantity', value: '' },
+    { label: 'Key ingredients', value: '' },
+    { label: 'How to use', value: '' },
   ]);
 
   const [specSuggestions, setSpecSuggestions] = useState<Record<string, string[]>>({});
@@ -361,8 +378,11 @@ const ProductForm = () => {
 
         const specs = product.specifications || {};
         const specEntries: { label: string; value: string }[] = [];
+        // The old store's fixed rows come first when a product has them; empty
+        // ones are no longer added, so a product's saved specs stay as they are.
         const defaultLabels = ['material', 'purity', 'dimensions'];
         defaultLabels.forEach((key) => {
+          if (!(key in (specs as any))) return;
           const val = (specs as any)[key] || '';
           specEntries.push({ label: key.charAt(0).toUpperCase() + key.slice(1), value: val });
         });
@@ -400,7 +420,7 @@ const ProductForm = () => {
       await addSubcategory(selectedCategory.id, selectedCategory.subcategories, newSubcategory.trim());
       setFormData((prev) => ({ ...prev, subcategory: newSubcategory.trim(), subSubcategory: '' }));
       setNewSubcategory('');
-      toast({ title: 'Success', description: 'Subcategory added' });
+      toast({ title: 'Subcategory added', description: newSubcategory.trim() });
     } catch (error) {
       toast({ title: 'Could not add subcategory', description: describeError(error), variant: 'destructive' });
     } finally {
@@ -416,7 +436,7 @@ const ProductForm = () => {
       await addSubSubcategory(selectedCategory.id, selectedCategory.subcategories, selectedSubcategory.slug, newSubSubcategory.trim());
       setFormData((prev) => ({ ...prev, subSubcategory: newSubSubcategory.trim() }));
       setNewSubSubcategory('');
-      toast({ title: 'Success', description: 'Sub-subcategory added' });
+      toast({ title: 'Sub-subcategory added', description: newSubSubcategory.trim() });
     } catch (error) {
       toast({ title: 'Could not add sub-subcategory', description: describeError(error), variant: 'destructive' });
     } finally {
@@ -466,9 +486,9 @@ const ProductForm = () => {
       const reList = units > 0 && inactiveReason === 'outOfStock' && !formData.isActive;
       setFormData((prev) => ({ ...prev, stock: value, ...(reList ? { isActive: true } : {}) }));
       if (reList) {
-        setStatusNote('Back in stock - this product will go live again when you save.');
+        setStatusNote('Back in stock. This product goes live again when you save.');
       } else if (units <= 0 && formData.isActive) {
-        setStatusNote('Stock is 0 - this product will be hidden from the store when you save.');
+        setStatusNote('Stock is 0. This product will be hidden from the store when you save.');
       } else if (units > 0) {
         setStatusNote(null);
       }
@@ -526,7 +546,7 @@ const ProductForm = () => {
         setImages((prev) => [...prev, ...uploadedUrls].slice(0, MAX_PRODUCT_IMAGES));
         clearFieldError('images');
         if (!thumbnail) setThumbnail(uploadedUrls[0]);
-        toast({ title: 'Success', description: `${uploadedUrls.length} image(s) uploaded` });
+        toast({ title: uploadedUrls.length === 1 ? 'Image uploaded' : `${uploadedUrls.length} images uploaded` });
       }
       if (failures.length > 0) {
         toast({
@@ -562,9 +582,9 @@ const ProductForm = () => {
       clearFieldError('images');
       if (!thumbnail) setThumbnail(imageUrlInput);
       setImageUrlInput('');
-      toast({ title: 'Success', description: 'Image URL added' });
+      toast({ title: 'Image added' });
     } catch {
-      toast({ title: 'Invalid URL', description: 'Please enter a valid URL', variant: 'destructive' });
+      toast({ title: 'That link is not valid', description: 'Paste a full address starting with https://', variant: 'destructive' });
     }
   };
 
@@ -576,7 +596,7 @@ const ProductForm = () => {
       if (ytId) {
         setVideos((prev) => [...prev, 'yt:' + ytId]);
         setVideoUrlInput('');
-        toast({ title: 'Success', description: 'YouTube video added' });
+        toast({ title: 'YouTube video added' });
         return;
       }
     }
@@ -584,9 +604,9 @@ const ProductForm = () => {
       new URL(videoUrlInput);
       setVideos((prev) => [...prev, videoUrlInput]);
       setVideoUrlInput('');
-      toast({ title: 'Success', description: 'Video URL added' });
+      toast({ title: 'Video added' });
     } catch {
-      toast({ title: 'Invalid URL', description: 'Please enter a valid URL', variant: 'destructive' });
+      toast({ title: 'That link is not valid', description: 'Paste a full address starting with https://', variant: 'destructive' });
     }
   };
 
@@ -614,7 +634,7 @@ const ProductForm = () => {
         errors.weightGrams = 'Enter the silver weight in grams';
       }
       if (!(silverRate > 0)) {
-        errors.silverRate = 'No live silver rate is set — add one under Silver Rate, or turn the calculator off';
+        errors.silverRate = 'No live silver rate is set. Add one under Silver Rate, or turn the calculator off';
       }
     } else if (!(parseFloat(formData.price) > 0)) {
       errors.price = 'Enter a price greater than 0';
@@ -622,7 +642,7 @@ const ProductForm = () => {
 
     if (images.length === 0) errors.images = 'Add at least one product image';
     else if (images.length > MAX_PRODUCT_IMAGES) {
-      errors.images = `A product can have at most ${MAX_PRODUCT_IMAGES} photos — remove ${images.length - MAX_PRODUCT_IMAGES}`;
+      errors.images = `A product can have at most ${MAX_PRODUCT_IMAGES} photos. Remove ${images.length - MAX_PRODUCT_IMAGES}`;
     }
 
     if (delivery.override && delivery.chargeEnabled) {
@@ -636,12 +656,12 @@ const ProductForm = () => {
 
   /** Human labels for the toast summary, in the order they appear in the form. */
   const FIELD_LABELS: Record<string, string> = {
-    name: 'Product Name',
+    name: 'Product name',
     category: 'Category',
     price: 'Price',
     weightGrams: 'Silver weight',
     silverRate: 'Silver rate',
-    images: 'Product Images',
+    images: 'Product images',
     delivery: 'Delivery charges',
   };
 
@@ -660,9 +680,14 @@ const ProductForm = () => {
       });
       // Put the first problem on screen — the form is long enough that an
       // error above the fold is invisible when you save from the bottom.
-      const first = document.querySelector<HTMLElement>('[data-field-error="true"]');
-      first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      (first?.querySelector('input, textarea, button') as HTMLElement | null)?.focus?.();
+      // After React has rendered the error state (the attribute is not on the
+      // page yet while this handler runs).
+      requestAnimationFrame(() => {
+        const first = document.querySelector<HTMLElement>('[data-field-error="true"]');
+        const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        first?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+        (first?.querySelector('input, textarea, button') as HTMLElement | null)?.focus?.({ preventScroll: true });
+      });
       return;
     }
     setFieldErrors({});
@@ -748,7 +773,7 @@ const ProductForm = () => {
           variant: 'destructive',
         });
       } else {
-        toast({ title: 'Success', description: isEditing ? 'Product updated successfully' : 'Product created successfully' });
+        toast({ title: isEditing ? 'Product saved' : 'Product created', description: formData.name });
       }
       savedRef.current = true;
       const dropped = [...loadedImagesRef.current, ...sessionUploadsRef.current].filter((url) => !images.includes(url));
@@ -759,7 +784,7 @@ const ProductForm = () => {
       // Show what actually went wrong. A bare "Failed to update product" left
       // no way to tell a permission problem from a bad field or a quota limit.
       toast({
-        title: 'Failed to ' + (isEditing ? 'update' : 'create') + ' product',
+        title: isEditing ? 'Could not save the product' : 'Could not create the product',
         description: describeError(error),
         variant: 'destructive',
       });
@@ -770,113 +795,121 @@ const ProductForm = () => {
 
   if (fetchingProduct) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-highlight" />
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="h-16 border-b border-border" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="rounded-card border border-border bg-card p-6 lg:col-span-2">
+            <FormSkeleton fields={5} label="Loading product" />
+          </div>
+          <div className="rounded-card border border-border bg-card p-6">
+            <FormSkeleton fields={3} label="" />
+          </div>
+        </div>
       </div>
     );
   }
 
+  const goBack = () => navigate('/admin/products');
+  const saveLabel = loading
+    ? isEditing ? 'Saving' : 'Creating'
+    : isEditing ? 'Save product' : 'Create product';
+
   return (
-    <div className="space-y-6">
-      {/* Header — sticky so the save button is reachable from anywhere in the
-          form. The long form used to put "Update Product" only at the very
-          bottom, which meant scrolling past every section to save one edit. */}
-      <div className="sticky top-0 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 py-3 bg-white/95 backdrop-blur border-b border-gray-200 flex items-center gap-3 flex-wrap">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/admin/products')} className="text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
-            {isEditing ? 'Edit Product' : 'Add New Product'}
-          </h1>
-          <p className="text-gray-500 text-xs truncate">
-            {isEditing ? formData.name || 'Update product details' : 'Add a new product to your catalog'}
-            <span className="ml-2 hidden sm:inline text-gray-400">
-              · fields marked <span className="text-red-500">*</span> are required
-            </span>
-          </p>
+    <div className="mx-auto max-w-6xl space-y-6">
+      {/* Header: sticky so Save is reachable from anywhere in the long form. */}
+      <div className="sticky top-0 z-sticky -mx-4 flex flex-wrap items-center gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur-md lg:-mx-6 lg:px-6">
+        {/* Below sm the title row takes the full width and the actions wrap under it, so the title never truncates. */}
+        <div className="flex min-w-0 flex-1 basis-full items-center gap-3 sm:basis-auto">
+          <IconButton label="Back to products" onClick={goBack} tooltip>
+            <ArrowLeft />
+          </IconButton>
+          <div className="min-w-0 flex-1">
+            <h1
+              className="truncate text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
+              style={{ fontFamily: 'var(--font-heading)', fontStretch: 'var(--font-heading-stretch)' }}
+            >
+              {isEditing ? 'Edit product' : 'Add product'}
+            </h1>
+            <p className="truncate text-xs text-muted-foreground">
+              {isEditing ? formData.name || 'Update product details' : 'Add a new product to your catalogue'}
+              <span className="ml-2 hidden sm:inline">
+                · Required fields are marked <span aria-hidden="true" className="text-status-danger-fg">*</span>
+                <span className="sr-only">with an asterisk</span>
+              </span>
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2 ml-auto">
-          <Button
-            type="button"
-            variant="outline"
-            className="border-gray-300 text-gray-700 hover:bg-gray-100"
-            onClick={() => navigate('/admin/products')}
-            disabled={loading}
-          >
+        <div className="ml-auto flex w-full items-center gap-2 sm:w-auto">
+          <Button type="button" variant="outline" size="sm" className="h-10 flex-1 sm:flex-none" onClick={goBack} disabled={loading}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            form="product-form"
-            className="bg-highlight hover:bg-highlight text-white"
-            disabled={loading}
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            {loading
-              ? isEditing ? 'Updating…' : 'Creating…'
-              : isEditing ? 'Update Product' : 'Create Product'}
+          <Button type="submit" form="product-form" size="sm" className="h-10 flex-1 sm:flex-none" disabled={loading}>
+            {loading ? <Spinner /> : <Save aria-hidden="true" />}
+            {saveLabel}
           </Button>
         </div>
       </div>
 
-      <form id="product-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-4 lg:space-y-6">
-          {/* Basic Info */}
-          <Card className="bg-white border-gray-200">
+      <form id="product-form" onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
+        {/* Main content */}
+        <div className="space-y-4 lg:col-span-2 lg:space-y-6">
+          {/* Basic info */}
+          <Card>
             <CardHeader>
-              <CardTitle className="text-gray-900">Basic Information</CardTitle>
+              <h2 className="text-base font-semibold text-foreground leading-tight tracking-tight">Basic information</h2>
+              <CardDescription>Name, category and description shown on the product page.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5">
               <div data-field-error={!!fieldErrors.name}>
-                <Label className="text-gray-700">
-                  Product Name<Required />
+                <Label htmlFor="pf-name" className="text-foreground/80">
+                  Product name<Required />
                 </Label>
                 <Input
+                  id="pf-name"
                   name="name"
                   value={formData.name}
                   onChange={(e) => { clearFieldError('name'); handleInputChange(e); }}
-                  placeholder="Enter product name"
-                  className={'mt-2 bg-gray-100 border-gray-300 text-gray-900' + invalidRing(!!fieldErrors.name)}
+                  placeholder="e.g., Shilajit resin"
+                  aria-required="true"
+                  aria-invalid={!!fieldErrors.name || undefined}
+                  aria-describedby={fieldErrors.name ? 'pf-name-error' : undefined}
+                  className={'mt-2' + invalidRing(!!fieldErrors.name)}
                 />
-                <FieldError message={fieldErrors.name} />
+                <FieldError id="pf-name-error" message={fieldErrors.name} />
               </div>
 
               <div>
-                <Label className="text-gray-700">Barcode</Label>
-                <div className="flex gap-2 mt-2">
+                <Label htmlFor="pf-barcode" className="text-foreground/80">Barcode<Optional /></Label>
+                <div className="mt-2 flex gap-2">
                   <Input
+                    id="pf-barcode"
                     name="barcode"
                     value={formData.barcode}
                     onChange={handleInputChange}
                     placeholder="Scan or type the barcode"
-                    className="flex-1 bg-gray-100 border-gray-300 text-gray-900"
+                    aria-describedby="pf-barcode-hint"
+                    className="flex-1"
                   />
                   <Button
                     type="button"
                     variant="outline"
-                    className="border-highlight/45 text-highlight hover:bg-highlight/10 shrink-0"
+                    size="sm"
+                    className="h-11 shrink-0"
                     onClick={() => setScannerOpen(true)}
                   >
-                    <ScanLine className="h-4 w-4 mr-2" />
+                    <ScanLine aria-hidden="true" />
                     Scan
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p id="pf-barcode-hint" className="mt-1.5 text-xs text-muted-foreground">
                   Saved with the product so you can find it later by scanning or searching
                   the barcode on the Products page.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div data-field-error={!!fieldErrors.category}>
-                  <Label className="text-gray-700">
+                  <Label htmlFor="pf-category" className="text-foreground/80">
                     Category<Required />
                   </Label>
                   <Select
@@ -886,57 +919,63 @@ const ProductForm = () => {
                       setFormData((prev) => ({ ...prev, category: value, subcategory: '', subSubcategory: '' }));
                     }}
                   >
-                    <SelectTrigger className={'mt-2 bg-gray-100 border-gray-300 text-gray-900' + invalidRing(!!fieldErrors.category)}>
+                    <SelectTrigger
+                      id="pf-category"
+                      aria-required="true"
+                      aria-invalid={!!fieldErrors.category || undefined}
+                      aria-describedby={fieldErrors.category ? 'pf-category-error' : undefined}
+                      className={'mt-2' + invalidRing(!!fieldErrors.category)}
+                    >
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-gray-200">
+                    <SelectContent>
                       {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.name} className="text-gray-900">{cat.name}</SelectItem>
+                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <FieldError message={fieldErrors.category} />
+                  <FieldError id="pf-category-error" message={fieldErrors.category} />
                 </div>
 
                 <div>
-                  <Label className="text-gray-700">Subcategory</Label>
+                  <Label htmlFor="pf-subcategory" className="text-foreground/80">Subcategory</Label>
                   <Select value={formData.subcategory} onValueChange={(value) => setFormData((prev) => ({ ...prev, subcategory: value, subSubcategory: '' }))} disabled={!formData.category || subcategoryOptions.length === 0}>
-                    <SelectTrigger className="mt-2 bg-gray-100 border-gray-300 text-gray-900">
+                    <SelectTrigger id="pf-subcategory" className="mt-2">
                       <SelectValue placeholder={subcategoryOptions.length > 0 ? 'Select subcategory' : 'No subcategories'} />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-gray-200">
+                    <SelectContent>
                       {subcategoryOptions.map((sub) => (
-                        <SelectItem key={sub.slug} value={sub.name} className="text-gray-900">{sub.name}</SelectItem>
+                        <SelectItem key={sub.slug} value={sub.name}>{sub.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   {formData.category && selectedCategory && (
-                    <div className="flex gap-1.5 mt-1.5">
-                      <Input value={newSubcategory} onChange={(e) => setNewSubcategory(e.target.value)} placeholder="New subcategory" className="h-8 text-xs bg-white border-gray-300" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubcategory())} />
-                      <Button type="button" size="sm" variant="outline" className="h-8 px-2 text-xs border-gray-300" onClick={handleAddSubcategory} disabled={addingSub || !newSubcategory.trim()}>
-                        {addingSub ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                    <div className="mt-2 flex gap-1.5">
+                      <Input aria-label="New subcategory name" value={newSubcategory} onChange={(e) => setNewSubcategory(e.target.value)} placeholder="New subcategory" className="h-9 text-sm md:text-xs" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubcategory())} />
+                      <Button type="button" size="sm" variant="outline" className="w-9 shrink-0 px-0" aria-label="Add subcategory" onClick={handleAddSubcategory} disabled={addingSub || !newSubcategory.trim()}>
+                        {addingSub ? <Spinner /> : <Plus aria-hidden="true" />}
                       </Button>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <Label className="text-gray-700">Sub-subcategory</Label>
+                  <Label htmlFor="pf-subsub" className="text-foreground/80">Sub-subcategory</Label>
                   <Select value={formData.subSubcategory} onValueChange={(value) => setFormData((prev) => ({ ...prev, subSubcategory: value }))} disabled={!formData.subcategory || subSubcategoryOptions.length === 0}>
-                    <SelectTrigger className="mt-2 bg-gray-100 border-gray-300 text-gray-900">
+                    <SelectTrigger id="pf-subsub" className="mt-2">
                       <SelectValue placeholder={subSubcategoryOptions.length > 0 ? 'Select sub-subcategory' : 'None'} />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-gray-200">
+                    <SelectContent>
                       {subSubcategoryOptions.map((child) => (
-                        <SelectItem key={child.slug} value={child.name} className="text-gray-900">{child.name}</SelectItem>
+                        <SelectItem key={child.slug} value={child.name}>{child.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   {formData.subcategory && selectedSubcategory && (
-                    <div className="flex gap-1.5 mt-1.5">
-                      <Input value={newSubSubcategory} onChange={(e) => setNewSubSubcategory(e.target.value)} placeholder="New sub-subcategory" className="h-8 text-xs bg-white border-gray-300" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubSubcategory())} />
-                      <Button type="button" size="sm" variant="outline" className="h-8 px-2 text-xs border-gray-300" onClick={handleAddSubSubcategory} disabled={addingSubSub || !newSubSubcategory.trim()}>
-                        {addingSubSub ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                    <div className="mt-2 flex gap-1.5">
+                      <Input aria-label="New sub-subcategory name" value={newSubSubcategory} onChange={(e) => setNewSubSubcategory(e.target.value)} placeholder="New sub-subcategory" className="h-9 text-sm md:text-xs" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubSubcategory())} />
+                      <Button type="button" size="sm" variant="outline" className="w-9 shrink-0 px-0" aria-label="Add sub-subcategory" onClick={handleAddSubSubcategory} disabled={addingSubSub || !newSubSubcategory.trim()}>
+                        {addingSubSub ? <Spinner /> : <Plus aria-hidden="true" />}
                       </Button>
                     </div>
                   )}
@@ -944,72 +983,78 @@ const ProductForm = () => {
               </div>
 
               <div>
-                <Label className="text-gray-700">Description</Label>
-                <Textarea name="description" value={formData.description} onChange={handleInputChange} placeholder="Enter product description" className="mt-2 bg-gray-100 border-gray-300 text-gray-900 min-h-[120px]" />
+                <Label htmlFor="pf-description" className="text-foreground/80">Description</Label>
+                <Textarea id="pf-description" name="description" value={formData.description} onChange={handleInputChange} placeholder="What it is, who it is for and what makes it different" className="mt-2 min-h-[120px]" />
               </div>
             </CardContent>
           </Card>
 
           {/* Media */}
-          <Card className="bg-white border-gray-200">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-gray-900">Media</CardTitle>
+              <h2 className="text-base font-semibold text-foreground leading-tight tracking-tight">Media</h2>
+              <CardDescription>Photos and videos. The cover photo is used on product cards.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               {/* Images */}
               <div data-field-error={!!fieldErrors.images}>
-                <Label className="text-gray-700">
-                  Product Images<Required />
-                </Label>
+                <p id="pf-images-label" className="text-sm font-medium leading-none text-foreground/80">
+                  Product images<Required />
+                </p>
                 <FieldError message={fieldErrors.images} />
-                <div className="flex gap-2 mt-2 mb-3">
-                  <button type="button" onClick={() => setImageUploadMode('upload')} className={'flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ' + (imageUploadMode === 'upload' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-600 hover:bg-gray-50')}>
-                    Upload Files
-                  </button>
-                  <button type="button" onClick={() => setImageUploadMode('url')} className={'flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ' + (imageUploadMode === 'url' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-600 hover:bg-gray-50')}>
-                    Paste URL
-                  </button>
-                </div>
+                <ToggleGroup
+                  type="single"
+                  value={imageUploadMode}
+                  onValueChange={(v) => v && setImageUploadMode(v as 'upload' | 'url')}
+                  aria-label="How to add images"
+                  className="mb-3 mt-2 grid w-full grid-cols-2"
+                >
+                  <ToggleGroupItem value="upload" size="sm">Upload files</ToggleGroupItem>
+                  <ToggleGroupItem value="url" size="sm">Paste URL</ToggleGroupItem>
+                </ToggleGroup>
 
                 {images.length >= MAX_PRODUCT_IMAGES ? (
-                  <div className="flex items-center justify-center w-full h-32 border-2 border-gray-200 border-dashed rounded-lg bg-gray-50 text-center px-4">
-                    <p className="text-sm text-gray-600">
-                      {MAX_PRODUCT_IMAGES} of {MAX_PRODUCT_IMAGES} photos added — the maximum. Remove one to add another.
+                  <div className="flex h-32 w-full items-center justify-center rounded-card border-2 border-dashed border-border bg-muted/50 px-4 text-center">
+                    <p className="text-sm text-foreground/80">
+                      {MAX_PRODUCT_IMAGES} of {MAX_PRODUCT_IMAGES} photos added, the maximum. Remove one to add another.
                     </p>
                   </div>
                 ) : imageUploadMode === 'upload' ? (
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:border-highlight transition-colors">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <label
+                    className={
+                      'flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-card border-2 border-dashed bg-muted/30 transition-colors duration-hover hover:border-primary has-[input:focus-visible]:border-primary has-[input:focus-visible]:outline has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring ' +
+                      (fieldErrors.images ? 'border-destructive' : 'border-input')
+                    }
+                  >
+                    <div className="flex flex-col items-center justify-center px-4 text-center">
                       {uploadingImages ? (
                         <>
-                          <Loader2 className="h-8 w-8 animate-spin text-highlight mb-2" />
-                          <p className="text-sm text-gray-600">Uploading... {uploadProgress}%</p>
+                          <Spinner size={24} className="mb-2 text-primary" />
+                          <p className="text-sm tabular-nums text-foreground/80" aria-live="polite">Uploading {uploadProgress}%</p>
                         </>
                       ) : (
                         <>
-                          <Upload className="h-8 w-8 text-gray-600 mb-2" />
-                          <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
-                          <p className="text-xs text-gray-500">
+                          <Upload aria-hidden="true" className="mb-2 h-7 w-7 text-muted-foreground" />
+                          <p className="text-sm text-foreground/80">Click to upload or drag and drop</p>
+                          <p className="text-xs text-muted-foreground">
                             JPG, PNG or WebP · max 500 KB each · up to {MAX_PRODUCT_IMAGES} photos ({images.length}/{MAX_PRODUCT_IMAGES} used)
                           </p>
                         </>
                       )}
                     </div>
-                    <input type="file" className="hidden" accept={IMAGE_ACCEPT} multiple onChange={handleImageUpload} disabled={uploadingImages} />
+                    <input type="file" className="sr-only" aria-labelledby="pf-images-label" accept={IMAGE_ACCEPT} multiple onChange={handleImageUpload} disabled={uploadingImages} />
                   </label>
                 ) : (
                   <div className="flex gap-2">
-                    <Input type="url" value={imageUrlInput} onChange={(e) => setImageUrlInput(e.target.value)} placeholder="https://example.com/image.jpg" className="flex-1 bg-white border-gray-300" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddImageUrl())} />
-                    <Button type="button" onClick={handleAddImageUrl} className="bg-gray-900 hover:bg-gray-800 text-white">Add</Button>
+                    <Input type="url" aria-label="Image URL" value={imageUrlInput} onChange={(e) => setImageUrlInput(e.target.value)} placeholder="https://example.com/image.jpg" className="flex-1" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddImageUrl())} />
+                    <Button type="button" variant="outline" size="sm" className="h-11" onClick={handleAddImageUrl}>Add image</Button>
                   </div>
                 )}
 
                 {images.length > 0 && (
                   <>
-                    <div className="flex items-center justify-between mt-4 mb-2">
-                      <p className="text-xs text-gray-500">{images.length} image{images.length !== 1 ? 's' : ''} • drag to reorder • first image is shown in cards</p>
-                    </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    <p className="mb-2 mt-4 text-xs text-muted-foreground">{plural(images.length, 'image')} · drag to reorder · the cover is shown on cards</p>
+                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                       {images.map((url, index) => (
                         <div
                           key={url + index}
@@ -1034,17 +1079,23 @@ const ProductForm = () => {
                               return next;
                             });
                           }}
-                          className="relative group cursor-move"
+                          className="group relative cursor-move"
                         >
-                          <div className="w-full aspect-square bg-gray-200 rounded-lg overflow-hidden ring-1 ring-gray-200">
-                            <SmartImage src={url} alt={'Product ' + (index + 1)} className={'w-full h-full object-cover ' + (thumbnail === url ? 'ring-2 ring-highlight' : '')} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} preset="card" />
+                          <div className={'aspect-square w-full overflow-hidden rounded-card bg-muted ' + (thumbnail === url ? 'ring-2 ring-primary ring-offset-2 ring-offset-card' : 'ring-1 ring-border')}>
+                            <SmartImage src={url} alt={'Product image ' + (index + 1)} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} preset="card" />
                           </div>
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-                            <button type="button" onClick={() => setThumbnail(url)} className="p-1.5 bg-highlight hover:bg-highlight rounded text-white" title="Set as thumbnail"><ImageIcon className="h-4 w-4" /></button>
-                            <button type="button" onClick={() => handleRemoveImage(url)} className="p-1.5 bg-red-500 hover:bg-red-600 rounded text-white" title="Remove"><X className="h-4 w-4" /></button>
+                          <span className="tag-dark absolute right-1.5 top-1.5 tabular-nums">{index + 1}</span>
+                          {thumbnail === url && <span className="absolute left-1.5 top-1.5 rounded-chip bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">Cover</span>}
+                          <div className="absolute inset-x-1.5 bottom-1.5 flex justify-end gap-1 opacity-100 transition-opacity duration-hover lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+                            {thumbnail !== url && (
+                              <IconButton label={`Use image ${index + 1} as cover`} variant="onPhoto" size="sm" onClick={() => setThumbnail(url)}>
+                                <ImageIcon />
+                              </IconButton>
+                            )}
+                            <IconButton label={`Remove image ${index + 1}`} variant="onPhoto" size="sm" onClick={() => handleRemoveImage(url)}>
+                              <X />
+                            </IconButton>
                           </div>
-                          <span className="absolute top-1 right-1 bg-black/70 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">#{index + 1}</span>
-                          {thumbnail === url && <span className="absolute top-1 left-1 bg-highlight text-white text-[10px] font-medium px-1.5 py-0.5 rounded">THUMB</span>}
                         </div>
                       ))}
                     </div>
@@ -1052,32 +1103,38 @@ const ProductForm = () => {
                 )}
               </div>
 
-              {/* Videos – YouTube aware */}
+              {/* Videos: YouTube aware */}
               <div>
-                <Label className="text-gray-700">Product Videos (Optional)</Label>
-                <p className="text-xs text-gray-500 mt-1 mb-2">Paste a YouTube URL and we auto-extract the video ID. Or paste a direct video URL.</p>
+                <Label htmlFor="pf-video" className="text-foreground/80">Product videos<Optional /></Label>
+                <p id="pf-video-hint" className="mb-2 mt-1.5 text-xs text-muted-foreground">Paste a YouTube link and the video ID is picked up for you, or paste a direct video URL.</p>
                 <div className="flex gap-2">
-                  <Input type="url" value={videoUrlInput} onChange={(e) => setVideoUrlInput(e.target.value)} placeholder="https://youtube.com/watch?v=... or video URL" className="flex-1 bg-white border-gray-300" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddVideoUrl())} />
-                  <Button type="button" onClick={handleAddVideoUrl} className="bg-gray-900 hover:bg-gray-800 text-white">Add</Button>
+                  <Input id="pf-video" type="url" aria-describedby="pf-video-hint" value={videoUrlInput} onChange={(e) => setVideoUrlInput(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="flex-1" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddVideoUrl())} />
+                  <Button type="button" variant="outline" size="sm" className="h-11" onClick={handleAddVideoUrl}>Add video</Button>
                 </div>
                 {videos.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
                     {videos.map((v, index) => {
                       const isYt = v.startsWith('yt:');
                       const ytId = isYt ? v.replace('yt:', '') : null;
                       return (
-                        <div key={index} className="relative group rounded-lg overflow-hidden bg-gray-100">
+                        <div key={index} className="group relative overflow-hidden rounded-card bg-muted">
                           {ytId ? (
-                            <img src={'https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg'} alt="YouTube video" className="w-full aspect-video object-cover" />
+                            <img src={'https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg'} alt={`YouTube video ${index + 1}`} className="aspect-video w-full object-cover" />
                           ) : (
-                            <div className="w-full aspect-video flex items-center justify-center">
-                              <Video className="w-8 h-8 text-gray-400" />
+                            <div className="flex aspect-video w-full items-center justify-center">
+                              <Video aria-hidden="true" className="h-8 w-8 text-muted-foreground" />
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <button type="button" onClick={() => setVideos((prev) => prev.filter((_, i) => i !== index))} className="p-1 bg-red-500 rounded text-white"><X className="h-4 w-4" /></button>
-                          </div>
-                          {ytId && <span className="absolute top-1 left-1 bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">YouTube</span>}
+                          {ytId && <span className="tag-dark absolute left-1.5 top-1.5">YouTube</span>}
+                          <IconButton
+                            label={`Remove video ${index + 1}`}
+                            variant="onPhoto"
+                            size="sm"
+                            onClick={() => setVideos((prev) => prev.filter((_, i) => i !== index))}
+                            className="absolute bottom-1.5 right-1.5 opacity-100 transition-opacity duration-hover lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
+                          >
+                            <X />
+                          </IconButton>
                         </div>
                       );
                     })}
@@ -1087,22 +1144,23 @@ const ProductForm = () => {
 
               {/* Tags */}
               <div>
-                <Label className="text-gray-700">Tags (optional)</Label>
-                <Input name="tags" value={formData.tags} onChange={handleInputChange} placeholder="new, featured, bestseller (comma-separated)" className="mt-2 bg-white border-gray-300 text-gray-900" />
+                <Label htmlFor="pf-tags" className="text-foreground/80">Tags<Optional /></Label>
+                <Input id="pf-tags" name="tags" value={formData.tags} onChange={handleInputChange} placeholder="new, featured, bestseller (comma-separated)" className="mt-2" />
               </div>
             </CardContent>
           </Card>
 
-          {/* Pricing & Inventory */}
-          <Card className="bg-white border-gray-200">
+          {/* Pricing and inventory */}
+          <Card>
             <CardHeader>
-              <CardTitle className="text-gray-900">Pricing & Inventory</CardTitle>
+              <h2 className="text-base font-semibold text-foreground leading-tight tracking-tight">Pricing and inventory</h2>
+              <CardDescription>What customers pay and how many you have.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5">
 
               {/* ── Silver Rate Calculator (optional) ── */}
               {SILVER_PRICING_ENABLED && (
-              <div className="rounded-xl border border-dashed border-highlight/45 bg-highlight/6 p-4 space-y-3">
+              <div className="rounded-card border border-dashed border-primary/45 bg-primary/6 p-4 space-y-3">
                 {/* Entire header row is clickable to toggle */}
                 <div
                   className="flex items-center justify-between gap-3 cursor-pointer select-none flex-wrap"
@@ -1115,12 +1173,12 @@ const ProductForm = () => {
                   }}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <Calculator className="h-4 w-4 text-highlight shrink-0" />
-                    <span className="text-sm font-semibold text-gray-800 truncate">Silver Rate Calculator</span>
+                    <Calculator className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm font-semibold text-foreground truncate">Silver rate calculator</span>
                     <span className={`text-xs rounded-full px-2 py-0.5 border transition-colors shrink-0 ${
                       silverPricing.enabled
-                        ? 'text-highlight bg-highlight/15 border-highlight/45 font-medium'
-                        : 'text-gray-500 bg-white border-gray-200'
+                        ? 'text-primary bg-primary/15 border-primary/45 font-medium'
+                        : 'text-muted-foreground bg-card border-border'
                     }`}>
                       {silverPricing.enabled ? 'Enabled' : 'Optional'}
                     </span>
@@ -1139,26 +1197,26 @@ const ProductForm = () => {
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-500 leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   Enable for silver jewellery. Original Price = (grams × silver rate) + wastage + making charges.
                   For fixed-price articles, leave this off.
                 </p>
 
                 {silverPricing.enabled && (
                   <div className="space-y-4 pt-1">
-                    {/* Silver rate display — live Firestore listener */}
-                    <div className="flex items-center gap-2 bg-white border border-highlight/30 rounded-lg px-3 py-2">
-                      <Info className="h-3.5 w-3.5 text-highlight shrink-0" />
-                      <span className="text-xs text-gray-600 flex-1">
+                    {/* Silver rate display, live Firestore listener */}
+                    <div className="flex items-center gap-2 bg-card border border-primary/30 rounded-lg px-3 py-2">
+                      <Info className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="text-xs text-foreground/80 flex-1">
                         Current silver rate:{' '}
                         {silverRate > 0 ? (
-                          <strong className="text-highlight">₹{silverRate.toFixed(2)} / gram</strong>
+                          <strong className="text-primary">₹{silverRate.toFixed(2)} / gram</strong>
                         ) : (
-                          <span className="text-red-500">Not set — go to Silver Rate page first</span>
+                          <span className="text-status-danger-fg">Not set. Set it on the Silver Rate page first</span>
                         )}
                       </span>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 shrink-0">
-                        <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-status-success-fg bg-status-success-bg border border-status-success-line rounded-full px-2 py-0.5 shrink-0">
+                        <span className="h-1.5 w-1.5 rounded-full bg-status-success-fg animate-pulse" />
                         LIVE
                       </span>
                     </div>
@@ -1166,8 +1224,8 @@ const ProductForm = () => {
                     {/* Inputs row */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div data-field-error={!!fieldErrors.weightGrams || !!fieldErrors.silverRate}>
-                        <Label className="text-gray-700 text-xs font-medium">
-                          Weight (grams) — x<Required />
+                        <Label className="text-foreground/80 text-xs font-medium">
+                          Weight (grams), x<Required />
                         </Label>
                         <Input
                           type="number"
@@ -1179,18 +1237,18 @@ const ProductForm = () => {
                           placeholder="e.g., 12"
                           min="0"
                           step="0.01"
-                          className={'mt-1.5 bg-white border-highlight/30 text-gray-900 text-sm' + invalidRing(!!fieldErrors.weightGrams)}
+                          className={'mt-1.5 bg-card border-primary/30 text-foreground text-sm' + invalidRing(!!fieldErrors.weightGrams)}
                         />
                         <FieldError message={fieldErrors.weightGrams || fieldErrors.silverRate} />
                         {silverRate > 0 && silverPricing.weightGrams && (
-                          <p className="text-xs text-highlight mt-1">
+                          <p className="text-xs text-primary mt-1">
                             Silver cost: ₹{(parseFloat(silverPricing.weightGrams || '0') * silverRate).toFixed(2)}
                           </p>
                         )}
                       </div>
 
                       <div>
-                        <Label className="text-gray-700 text-xs font-medium">Wastage % — y</Label>
+                        <Label className="text-foreground/80 text-xs font-medium">Wastage %, y</Label>
                         <Input
                           type="number"
                           value={silverPricing.wastagePercent}
@@ -1199,17 +1257,17 @@ const ProductForm = () => {
                           min="0"
                           max="100"
                           step="0.1"
-                          className="mt-1.5 bg-white border-highlight/30 text-gray-900 text-sm"
+                          className="mt-1.5 bg-card border-primary/30 text-foreground text-sm"
                         />
                         {silverRate > 0 && silverPricing.weightGrams && silverPricing.wastagePercent && (
-                          <p className="text-xs text-highlight mt-1">
+                          <p className="text-xs text-primary mt-1">
                             Wastage: ₹{(parseFloat(silverPricing.weightGrams || '0') * silverRate * (parseFloat(silverPricing.wastagePercent || '0') / 100)).toFixed(2)}
                           </p>
                         )}
                       </div>
 
                       <div>
-                        <Label className="text-gray-700 text-xs font-medium">Making Charges (₹) — z</Label>
+                        <Label className="text-foreground/80 text-xs font-medium">Making charges (₹), z</Label>
                         <Input
                           type="number"
                           value={silverPricing.makingCharges}
@@ -1217,7 +1275,7 @@ const ProductForm = () => {
                           placeholder="e.g., 50"
                           min="0"
                           step="1"
-                          className="mt-1.5 bg-white border-highlight/30 text-gray-900 text-sm"
+                          className="mt-1.5 bg-card border-primary/30 text-foreground text-sm"
                         />
                       </div>
                     </div>
@@ -1232,21 +1290,21 @@ const ProductForm = () => {
                       const z = making;
                       const total = Math.ceil(x + y + z);
                       return (
-                        <div className="bg-white border border-highlight/30 rounded-lg p-3 text-xs space-y-1.5">
-                          <div className="flex justify-between text-gray-600">
+                        <div className="bg-card border border-primary/30 rounded-lg p-3 text-xs space-y-1.5">
+                          <div className="flex justify-between text-foreground/80">
                             <span>Silver cost ({grams}g × ₹{silverRate}/g)</span>
-                            <span className="font-medium text-gray-800">₹{x.toFixed(2)}</span>
+                            <span className="font-medium text-foreground">₹{x.toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between text-gray-600">
+                          <div className="flex justify-between text-foreground/80">
                             <span>Wastage ({wastage}%)</span>
-                            <span className="font-medium text-gray-800">₹{y.toFixed(2)}</span>
+                            <span className="font-medium text-foreground">₹{y.toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between text-gray-600">
+                          <div className="flex justify-between text-foreground/80">
                             <span>Making charges</span>
-                            <span className="font-medium text-gray-800">₹{z.toFixed(2)}</span>
+                            <span className="font-medium text-foreground">₹{z.toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between border-t border-highlight/30 pt-1.5 font-semibold text-highlight">
-                            <span>Original Price (x + y + z)</span>
+                          <div className="flex justify-between border-t border-primary/30 pt-1.5 font-semibold text-primary">
+                            <span>Original price (x + y + z)</span>
                             <span>₹{total.toLocaleString('en-IN')}</span>
                           </div>
                         </div>
@@ -1257,118 +1315,128 @@ const ProductForm = () => {
               </div>
               )}
 
-              {/* ── Standard pricing fields ── */}
+              {/* Standard pricing fields */}
               {silverPricing.enabled ? (
-                <div className="rounded-lg bg-highlight/10 border border-highlight/30 px-4 py-3">
+                <div className="rounded-card border border-primary/30 bg-primary/10 px-4 py-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-highlight">Price (live)</span>
+                    <span className="text-sm font-semibold text-foreground">Price (live)</span>
                     {formData.price ? (
-                      <span className="text-lg font-bold text-highlight">
-                        ₹{parseFloat(formData.price).toLocaleString('en-IN')}
-                        <span className="ml-2 text-xs font-normal text-highlight">at ₹{silverRate}/g</span>
+                      <span className="text-lg font-bold tabular-nums text-foreground">
+                        {formatINR(parseFloat(formData.price))}
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">at ₹{silverRate}/g</span>
                       </span>
                     ) : (
-                      <span className="text-sm text-highlight">Fill calculator inputs above</span>
+                      <span className="text-sm text-muted-foreground">Fill calculator inputs above</span>
                     )}
                   </div>
-                  <p className="text-xs text-highlight mt-1">Customers always see the price recomputed at the current live silver rate.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Customers always see the price recomputed at the current live silver rate.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div>
-                    <Label className="text-gray-700">Original Price (&#8377;)</Label>
+                    <Label htmlFor="pf-original-price" className="text-foreground/80">Original price (&#8377;)</Label>
                     <Input
+                      id="pf-original-price"
                       name="originalPrice"
                       type="number"
+                      inputMode="decimal"
                       value={formData.originalPrice}
                       onChange={handleInputChange}
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className="mt-2 bg-gray-100 border-gray-300 text-gray-900"
+                      className="mt-2 tabular-nums"
                     />
                   </div>
                   <div data-field-error={!!fieldErrors.price}>
-                    <Label className="text-gray-700">
+                    <Label htmlFor="pf-price" className="text-foreground/80">
                       Price (&#8377;)<Required />
                     </Label>
                     <Input
+                      id="pf-price"
                       name="price"
                       type="number"
+                      inputMode="decimal"
                       value={formData.price}
                       onChange={(e) => { clearFieldError('price'); handleInputChange(e); }}
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className={'mt-2 bg-gray-100 border-gray-300 text-gray-900' + invalidRing(!!fieldErrors.price)}
+                      aria-required="true"
+                      aria-invalid={!!fieldErrors.price || undefined}
+                      aria-describedby={fieldErrors.price ? 'pf-price-error' : undefined}
+                      className={'mt-2 tabular-nums' + invalidRing(!!fieldErrors.price)}
                     />
-                    <FieldError message={fieldErrors.price} />
+                    <FieldError id="pf-price-error" message={fieldErrors.price} />
                   </div>
                   <div>
-                    <Label className="text-gray-700">Discount</Label>
-                    <div className="flex gap-2 mt-2">
-                      <Input name="discount" type="number" value={formData.discount} onChange={handleInputChange} placeholder="0" min="0" step="0.1" className="flex-1 bg-gray-100 border-gray-300 text-gray-900" />
+                    <Label htmlFor="pf-discount" className="text-foreground/80">Discount</Label>
+                    <div className="mt-2 flex gap-2">
+                      <Input id="pf-discount" name="discount" type="number" inputMode="decimal" value={formData.discount} onChange={handleInputChange} placeholder="0" min="0" step="0.1" aria-describedby="pf-discount-hint" className="flex-1 tabular-nums" />
                       <Select value={formData.discountType} onValueChange={(val) => setFormData((prev) => ({ ...prev, discountType: val as any }))}>
-                        <SelectTrigger className="w-20 bg-gray-100 border-gray-300">
+                        <SelectTrigger aria-label="Discount type" className="w-20">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent>
                           <SelectItem value="percent">%</SelectItem>
                           <SelectItem value="amount">&#8377;</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Auto-calculated from prices</p>
+                    <p id="pf-discount-hint" className="mt-1.5 text-xs text-muted-foreground">Worked out from the two prices</p>
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
-                  <Label className="text-gray-700">Stock</Label>
-                  <Input name="stock" type="number" value={formData.stock} onChange={handleInputChange} placeholder="0" min="0" className="mt-2 bg-gray-100 border-gray-300 text-gray-900" />
+                  <Label htmlFor="pf-stock" className="text-foreground/80">Stock</Label>
+                  <Input id="pf-stock" name="stock" type="number" inputMode="numeric" value={formData.stock} onChange={handleInputChange} placeholder="0" min="0" className="mt-2 tabular-nums" />
                 </div>
                 <div className="sm:col-span-2">
-                  <Label className="text-gray-700">Weight</Label>
-                  <div className="flex gap-2 mt-2">
-                    <Input name="weight" type="number" value={formData.weight} onChange={handleInputChange} placeholder="e.g., 100" min="0" step="0.01"
+                  <Label htmlFor="pf-weight" className="text-foreground/80">Weight</Label>
+                  <div className="mt-2 flex gap-2">
+                    <Input id="pf-weight" name="weight" type="number" inputMode="decimal" value={formData.weight} onChange={handleInputChange} placeholder="e.g., 100" min="0" step="0.01"
                       readOnly={silverPricing.enabled}
-                      className={`flex-1 border-gray-300 text-gray-900 ${silverPricing.enabled ? 'bg-gray-200 cursor-not-allowed text-gray-500' : 'bg-gray-100'}`}
+                      className={`flex-1 tabular-nums ${silverPricing.enabled ? 'cursor-not-allowed bg-muted text-muted-foreground' : ''}`}
                     />
                     <Select value={formData.weightUnit} onValueChange={(val) => setFormData((prev) => ({ ...prev, weightUnit: val as 'grams' | 'kgs' }))} disabled={silverPricing.enabled}>
-                      <SelectTrigger className={`w-28 border-gray-300 ${silverPricing.enabled ? 'bg-gray-200 cursor-not-allowed' : 'bg-gray-100'}`}>
+                      <SelectTrigger aria-label="Weight unit" className="w-32">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-white">
+                      <SelectContent>
                         <SelectItem value="grams">Grams</SelectItem>
                         <SelectItem value="kgs">Kilograms</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   {silverPricing.enabled && (
-                    <p className="text-xs text-highlight mt-1">Auto-synced from Silver Rate Calculator</p>
+                    <p className="mt-1.5 text-xs text-muted-foreground">Synced from the silver rate calculator</p>
                   )}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Specifications – dynamic */}
-          <Card className="bg-white border-gray-200">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-gray-900">Specifications</CardTitle>
-              <Button type="button" variant="outline" size="sm" onClick={addSpecRow} className="text-xs">
-                <Plus className="h-3 w-3 mr-1" /> Add Field
+          {/* Specifications: dynamic */}
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+              <div className="space-y-1.5">
+                <h2 className="text-base font-semibold text-foreground leading-tight tracking-tight">Specifications</h2>
+                <CardDescription>Shown as a table on the product page.</CardDescription>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={addSpecRow} className="shrink-0">
+                <Plus aria-hidden="true" /> Add field
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
               {specifications.map((spec, idx) => (
-                <div key={idx} className="flex gap-2 items-start">
+                <div key={idx} className="flex items-start gap-2">
                   <div className="flex-1">
-                    <Input value={spec.label} onChange={(e) => handleSpecChange(idx, 'label', e.target.value)} placeholder="Label (e.g., Material)" className="bg-gray-100 border-gray-300 text-gray-900 text-sm" />
+                    <Input aria-label={`Specification ${idx + 1} label`} value={spec.label} onChange={(e) => handleSpecChange(idx, 'label', e.target.value)} placeholder="Label (e.g., Net quantity)" />
                   </div>
-                  <div className="flex-[2] relative">
-                    <Input value={spec.value} onChange={(e) => handleSpecChange(idx, 'value', e.target.value)} placeholder="Value (e.g., Silver)" className="bg-gray-100 border-gray-300 text-gray-900 text-sm" list={'spec-suggestions-' + idx} />
+                  <div className="relative flex-[2]">
+                    <Input aria-label={spec.label ? `${spec.label} value` : `Specification ${idx + 1} value`} value={spec.value} onChange={(e) => handleSpecChange(idx, 'value', e.target.value)} placeholder="Value (e.g., 30 ml)" list={'spec-suggestions-' + idx} />
                     {spec.label && specSuggestions[spec.label.toLowerCase().trim()] && (
                       <datalist id={'spec-suggestions-' + idx}>
                         {specSuggestions[spec.label.toLowerCase().trim()].map((s, si) => (
@@ -1378,47 +1446,56 @@ const ProductForm = () => {
                     )}
                   </div>
                   {specifications.length > 1 && (
-                    <button type="button" onClick={() => removeSpecRow(idx)} className="p-2 text-red-400 hover:text-red-600 mt-0.5">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <IconButton
+                      label={spec.label ? `Remove ${spec.label}` : `Remove specification ${idx + 1}`}
+                      onClick={() => removeSpecRow(idx)}
+                      className="text-muted-foreground hover:text-status-danger-fg"
+                    >
+                      <Trash2 />
+                    </IconButton>
                   )}
                 </div>
               ))}
-              <p className="text-xs text-gray-500">Previously entered values will appear as suggestions.</p>
+              <p className="text-xs text-muted-foreground">Values you entered before appear as suggestions.</p>
             </CardContent>
           </Card>
 
-          {/* Delivery — per-product override of Commerce → Delivery */}
-          <Card className="bg-white border-gray-200">
+          {/* Delivery: per-product override of Commerce > Delivery */}
+          <Card>
             <CardHeader>
-              <CardTitle className="text-gray-900 flex items-center gap-2">
-                <Truck className="h-4 w-4 text-highlight" /> Delivery
-              </CardTitle>
+              <h2 className="flex items-center gap-2 text-base font-semibold text-foreground leading-tight tracking-tight">
+                <Truck aria-hidden="true" className="h-4 w-4 text-muted-foreground" /> Delivery
+              </h2>
+              <CardDescription>Override the store-wide delivery charge for this product.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <Label className="text-gray-700">Set delivery for this product</Label>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <Label htmlFor="pf-delivery-override" className="text-foreground/80">Set delivery for this product</Label>
+                  <p id="pf-delivery-override-hint" className="mt-1 text-xs text-muted-foreground">
                     Off: this product follows the universal charge in Commerce → Delivery.
                   </p>
                 </div>
                 <Switch
+                  id="pf-delivery-override"
+                  aria-describedby="pf-delivery-override-hint"
                   checked={delivery.override}
                   onCheckedChange={(checked) => setDelivery((p) => ({ ...p, override: checked }))}
                 />
               </div>
 
               {delivery.override && (
-                <div className="space-y-4 border-t border-gray-200 pt-4">
+                <div className="space-y-4 border-t border-border pt-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <Label className="text-gray-700">Charge delivery</Label>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <Label htmlFor="pf-delivery-charge" className="text-foreground/80">Charge delivery</Label>
+                      <p id="pf-delivery-charge-hint" className="mt-1 text-xs text-muted-foreground">
                         Off means this product always ships free.
                       </p>
                     </div>
                     <Switch
+                      id="pf-delivery-charge"
+                      aria-describedby="pf-delivery-charge-hint"
                       checked={delivery.chargeEnabled}
                       onCheckedChange={(checked) =>
                         setDelivery((p) => ({ ...p, chargeEnabled: checked }))
@@ -1427,42 +1504,52 @@ const ProductForm = () => {
                   </div>
 
                   {delivery.chargeEnabled ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" data-field-error={!!fieldErrors.delivery}>
-                      <div className="sm:col-span-2">
-                        <FieldError message={fieldErrors.delivery} />
-                      </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" data-field-error={!!fieldErrors.delivery}>
+                      {fieldErrors.delivery && (
+                        <div className="sm:col-span-2">
+                          <FieldError id="pf-delivery-error" message={fieldErrors.delivery} />
+                        </div>
+                      )}
                       <div>
-                        <Label className="text-gray-700">Within Andhra Pradesh (&#8377;)</Label>
+                        <Label htmlFor="pf-within" className="text-foreground/80">Within {homeState} (&#8377;)</Label>
                         <Input
+                          id="pf-within"
                           type="number"
+                          inputMode="decimal"
                           min="0"
                           value={delivery.withinState}
                           onChange={(e) => { clearFieldError('delivery'); setDelivery((p) => ({ ...p, withinState: e.target.value })); }}
                           placeholder="0"
-                          className="mt-2 bg-gray-100 border-gray-300 text-gray-900"
+                          aria-invalid={!!fieldErrors.delivery || undefined}
+                          aria-describedby={fieldErrors.delivery ? 'pf-delivery-error' : undefined}
+                          className={'mt-2 tabular-nums' + invalidRing(!!fieldErrors.delivery)}
                         />
                       </div>
                       <div>
-                        <Label className="text-gray-700">Outside Andhra Pradesh (&#8377;)</Label>
+                        <Label htmlFor="pf-outside" className="text-foreground/80">Outside {homeState} (&#8377;)</Label>
                         <Input
+                          id="pf-outside"
                           type="number"
+                          inputMode="decimal"
                           min="0"
                           value={delivery.outsideState}
                           onChange={(e) => { clearFieldError('delivery'); setDelivery((p) => ({ ...p, outsideState: e.target.value })); }}
                           placeholder="0"
-                          className="mt-2 bg-gray-100 border-gray-300 text-gray-900"
+                          aria-invalid={!!fieldErrors.delivery || undefined}
+                          aria-describedby={fieldErrors.delivery ? 'pf-delivery-error' : undefined}
+                          className={'mt-2 tabular-nums' + invalidRing(!!fieldErrors.delivery)}
                         />
                       </div>
-                      <p className="sm:col-span-2 text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground sm:col-span-2">
                         A state listed under Commerce → Delivery → Per-state rates overrides the
-                        outside-AP figure for that destination, and free delivery above the
+                        outside {homeState} figure for that destination, and free delivery above the
                         order threshold still applies.
                       </p>
                     </div>
                   ) : (
-                    <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">
-                      Free delivery — no charge is added for this product.
-                    </p>
+                    <Notice tone="success" compact>
+                      Free delivery. No charge is added for this product.
+                    </Notice>
                   )}
                 </div>
               )}
@@ -1472,47 +1559,51 @@ const ProductForm = () => {
 
         {/* Sidebar */}
         <div className="space-y-4 lg:space-y-6">
-          <Card className="bg-white border-gray-200">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-gray-900">Status</CardTitle>
+              <h2 className="text-base font-semibold text-foreground leading-tight tracking-tight">Status</h2>
+              <CardDescription>Where this product appears in the store.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-gray-700">Active</Label>
-                <Switch checked={formData.isActive} onCheckedChange={(checked) => { setStatusNote(null); setFormData((prev) => ({ ...prev, isActive: checked })); }} />
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <Label htmlFor="pf-active" className="text-foreground/80">Live in store</Label>
+                  <p id="pf-active-hint" className="mt-0.5 text-xs text-muted-foreground">Off hides it from shoppers</p>
+                </div>
+                <Switch id="pf-active" aria-describedby="pf-active-hint" checked={formData.isActive} onCheckedChange={(checked) => { setStatusNote(null); setFormData((prev) => ({ ...prev, isActive: checked })); }} />
               </div>
               {!formData.isActive && inactiveReason && !statusNote && (
-                <p className="rounded-lg bg-highlight/10 px-3 py-2 text-xs text-highlight">
+                <Notice tone="info" compact>
                   {inactiveReason === 'outOfStock'
                     ? 'Hidden automatically because it sold out. Add stock and it goes live again.'
-                    : 'Hidden because it had no photos. Add a photo, then switch Active on.'}
-                </p>
+                    : 'Hidden because it had no photos. Add a photo, then switch Live in store on.'}
+                </Notice>
               )}
               {statusNote && (
-                <p className="rounded-lg bg-highlight/10 px-3 py-2 text-xs text-highlight">{statusNote}</p>
+                <Notice tone="info" compact>{statusNote}</Notice>
               )}
-              <div className="flex items-center justify-between">
-                <Label className="text-gray-700">Featured</Label>
-                <Switch checked={formData.isFeatured} onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isFeatured: checked }))} />
+              <div className="flex items-center justify-between gap-4">
+                <Label htmlFor="pf-featured" className="text-foreground/80">Featured</Label>
+                <Switch id="pf-featured" checked={formData.isFeatured} onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isFeatured: checked }))} />
               </div>
-              <div className="flex items-center justify-between">
-                <Label className="text-gray-700">New Arrival</Label>
-                <Switch checked={formData.isNewArrival} onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isNewArrival: checked }))} />
+              <div className="flex items-center justify-between gap-4">
+                <Label htmlFor="pf-new" className="text-foreground/80">New arrival</Label>
+                <Switch id="pf-new" checked={formData.isNewArrival} onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isNewArrival: checked }))} />
               </div>
-              <div className="flex items-center justify-between">
-                <Label className="text-gray-700">Best Seller</Label>
-                <Switch checked={formData.isBestSeller} onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isBestSeller: checked }))} />
+              <div className="flex items-center justify-between gap-4">
+                <Label htmlFor="pf-bestseller" className="text-foreground/80">Best seller</Label>
+                <Switch id="pf-bestseller" checked={formData.isBestSeller} onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isBestSeller: checked }))} />
               </div>
-              <div className="border-t border-gray-200 pt-4 mt-4">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Shop Flags</p>
+              <div className="mt-4 border-t border-border pt-4">
+                <p className="mb-3 text-xs font-medium text-muted-foreground">Shop flags</p>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-gray-700">Top Deal</Label>
-                    <Switch checked={formData.isTopDeal} onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isTopDeal: checked }))} />
+                  <div className="flex items-center justify-between gap-4">
+                    <Label htmlFor="pf-topdeal" className="text-foreground/80">Top deal</Label>
+                    <Switch id="pf-topdeal" checked={formData.isTopDeal} onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isTopDeal: checked }))} />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-gray-700">Trend Product</Label>
-                    <Switch checked={formData.isTrendProduct} onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isTrendProduct: checked }))} />
+                  <div className="flex items-center justify-between gap-4">
+                    <Label htmlFor="pf-trend" className="text-foreground/80">Trend product</Label>
+                    <Switch id="pf-trend" checked={formData.isTrendProduct} onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isTrendProduct: checked }))} />
                   </div>
                 </div>
               </div>
@@ -1520,21 +1611,15 @@ const ProductForm = () => {
           </Card>
         </div>
 
-        {/* Actions */}
-        <div className="lg:col-span-3">
-          <div className="flex gap-3">
-            <Button type="submit" className="bg-highlight hover:bg-highlight text-white px-8" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {isEditing ? 'Updating...' : 'Creating...'}
-                </>
-              ) : isEditing ? 'Update Product' : 'Create Product'}
-            </Button>
-            <Button type="button" variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-200 hover:text-gray-900 px-8" onClick={() => navigate('/admin/products')}>
-              Cancel
-            </Button>
-          </div>
+        {/* Actions: same order as the header, right-aligned */}
+        <div className="flex justify-end gap-3 border-t border-border pt-4 lg:col-span-3">
+          <Button type="button" variant="outline" onClick={goBack} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading && <Spinner />}
+            {saveLabel}
+          </Button>
         </div>
       </form>
 

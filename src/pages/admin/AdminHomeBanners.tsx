@@ -2,14 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
-  Loader2,
   Save,
   Upload,
   Image as ImageIcon,
-  Sparkles,
-  Layers,
+  GalleryHorizontal,
   Trash2,
 } from 'lucide-react';
+import { IconButton } from '@/components/ui/icon-button';
+import { Spinner } from '@/components/ui/spinner';
+import { FormSkeleton } from '@/components/skeletons';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { fadeUp } from '@/lib/motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,9 +39,9 @@ interface SlotConfig {
 const SLOTS: SlotConfig[] = [
   {
     slot: 'collection-wide',
-    title: 'Collection Banner',
+    title: 'Collection banner',
     description: 'Full-width banner displayed inside the showcase area on the home page.',
-    ratioHint: 'Recommended ratio: 21:9 · 1920×820',
+    ratioHint: 'Recommended ratio: 21:9 · 1920 × 820',
   },
 ];
 
@@ -61,8 +64,8 @@ const emptyDraft = (slot: HomeBannerSlot, order = 0): DraftBanner => ({
   eyebrow: '',
   title: '',
   subtitle: '',
-  ctaLabel: 'Shop Now',
-  ctaLink: '/category/jewellery',
+  ctaLabel: 'Shop now',
+  ctaLink: '/products',
   active: true,
   order,
 });
@@ -100,18 +103,18 @@ const SlotCard = ({ config, banner }: { config: SlotConfig; banner?: HomeBanner 
 
   const handleSave = async () => {
     if (!draft.imageUrl) {
-      toast.error('Please upload an image first');
+      toast.error('Upload an image first');
       return;
     }
     if (!draft.title?.trim()) {
-      toast.error('Title is required');
+      toast.error('Add a title');
       return;
     }
     setSaving(true);
     try {
       if (draft.id) {
         await updateHomeBanner(draft.id, draft);
-        toast.success('Banner updated');
+        toast.success('Banner saved');
       } else {
         const id = await createHomeBanner(draft);
         setDraft((prev) => ({ ...prev, id }));
@@ -119,43 +122,44 @@ const SlotCard = ({ config, banner }: { config: SlotConfig; banner?: HomeBanner 
       }
     } catch (err) {
       console.error(err);
-      toast.error('Failed to save');
+      toast.error('Could not save the banner');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl p-6 shadow-sm"
+    <motion.section
+      {...fadeUp}
+      aria-labelledby={`slot-${config.slot}-title`}
+      className="rounded-card border border-border bg-card p-4 shadow-sm sm:p-6"
     >
-      <div className="flex items-start justify-between gap-3 mb-5 flex-wrap">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-highlight/10 dark:bg-highlight/5 grid place-items-center text-highlight dark:text-highlight">
-            <Layers className="w-4 h-4" />
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-muted text-foreground/70">
+            <GalleryHorizontal aria-hidden="true" className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">{config.title}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{config.description}</p>
+            <h2 id={`slot-${config.slot}-title`} className="text-base font-semibold text-foreground">{config.title}</h2>
+            <p className="text-xs text-muted-foreground">{config.description}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <Switch checked={draft.active} onCheckedChange={(v) => setField('active', v)} />
-          <span>{draft.active ? 'Active' : 'Hidden'}</span>
+        <div className="flex items-center gap-2">
+          <Switch id={`slot-${config.slot}-active`} checked={draft.active} onCheckedChange={(v) => setField('active', v)} />
+          <Label htmlFor={`slot-${config.slot}-active`} className="text-sm font-normal text-foreground/80">{draft.active ? 'Live' : 'Hidden'}</Label>
         </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Image upload */}
         <div>
-          <Label className="text-xs text-gray-500">Image</Label>
-          <p className="text-[11px] text-gray-400 mb-2">{config.ratioHint}</p>
-          <div
+          <p className="text-xs font-medium text-foreground/80">Image</p>
+          <p className="mb-2 text-xs text-muted-foreground">{config.ratioHint}</p>
+          <button
+            type="button"
             onClick={() => fileRef.current?.click()}
-            className="relative aspect-[16/10] rounded-xl border-2 border-dashed border-highlight/30 dark:border-highlight/20 bg-highlight/5 dark:bg-highlight/5 grid place-items-center cursor-pointer hover:border-highlight/70 transition-colors overflow-hidden"
+            aria-label={draft.imageUrl ? 'Replace the banner image' : 'Upload a banner image'}
+            className="relative grid aspect-[16/10] w-full cursor-pointer place-items-center overflow-hidden rounded-card border-2 border-dashed border-input bg-muted/40 transition-colors duration-hover hover:border-primary"
           >
             {draft.imageUrl ? (
               <SmartImage
@@ -163,26 +167,28 @@ const SlotCard = ({ config, banner }: { config: SlotConfig; banner?: HomeBanner 
                 alt="Banner preview"
                 className="absolute inset-0 w-full h-full object-cover" preset="card" />
             ) : (
-              <div className="text-center text-gray-400">
-                <ImageIcon className="w-8 h-8 mx-auto mb-2" />
-                <p className="text-xs">Click to upload</p>
-              </div>
+              <span className="flex flex-col items-center text-center text-muted-foreground">
+                <ImageIcon aria-hidden="true" className="mx-auto mb-2 h-8 w-8" />
+                <span className="text-xs">Click to upload</span>
+              </span>
             )}
             {uploading && (
-              <div className="absolute inset-0 bg-black/40 grid place-items-center">
-                <Loader2 className="w-6 h-6 animate-spin text-white" />
-              </div>
+              <span className="absolute inset-0 grid place-items-center bg-charcoal/60 text-charcoal-foreground">
+                <Spinner size={24} label="Uploading" />
+              </span>
             )}
-          </div>
+          </button>
           <input
             ref={fileRef}
             type="file"
             accept={IMAGE_ACCEPT}
             className="hidden"
+            tabIndex={-1}
+            aria-hidden="true"
             onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
           />
           {draft.imageUrl && (
-            <div className="flex gap-2 mt-2">
+            <div className="mt-2 flex gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -190,17 +196,16 @@ const SlotCard = ({ config, banner }: { config: SlotConfig; banner?: HomeBanner 
                 onClick={() => fileRef.current?.click()}
                 className="flex-1"
               >
-                <Upload className="w-3.5 h-3.5 mr-1.5" /> Replace
+                <Upload aria-hidden="true" /> Replace
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
+              <IconButton
+                label="Remove image"
                 size="sm"
                 onClick={() => setField('imageUrl', '')}
-                className="text-red-500"
+                className="text-muted-foreground hover:text-status-danger-fg"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
+                <Trash2 />
+              </IconButton>
             </div>
           )}
         </div>
@@ -208,50 +213,55 @@ const SlotCard = ({ config, banner }: { config: SlotConfig; banner?: HomeBanner 
         {/* Content fields */}
         <div className="space-y-3">
           <div>
-            <Label className="text-xs text-gray-500">Eyebrow (small uppercase label)</Label>
+            <Label htmlFor="hb-eyebrow" className="text-xs font-medium text-foreground/80">Eyebrow (small uppercase label)</Label>
             <Input
+              id="hb-eyebrow"
               value={draft.eyebrow || ''}
               onChange={(e) => setField('eyebrow', e.target.value)}
-              placeholder="LUXURY NECKLACE"
-              className="mt-1.5 bg-white dark:bg-gray-950"
+              placeholder="ROOTED IN AYURVEDA"
+              className="mt-1.5"
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-500">Title</Label>
+            <Label htmlFor="hb-title" className="text-xs font-medium text-foreground/80">Title</Label>
             <Input
+              id="hb-title"
               value={draft.title}
               onChange={(e) => setField('title', e.target.value)}
-              placeholder="Best Friend Jewelry"
-              className="mt-1.5 bg-white dark:bg-gray-950"
+              placeholder="Built for the modern man"
+              className="mt-1.5"
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-500">Subtitle</Label>
+            <Label htmlFor="hb-subtitle" className="text-xs font-medium text-foreground/80">Subtitle</Label>
             <Textarea
+              id="hb-subtitle"
               rows={2}
               value={draft.subtitle || ''}
               onChange={(e) => setField('subtitle', e.target.value)}
-              placeholder="A wide range of exquisite necklaces"
-              className="mt-1.5 bg-white dark:bg-gray-950"
+              placeholder="Classical formulations, clean ingredients."
+              className="mt-1.5"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <Label className="text-xs text-gray-500">CTA label</Label>
+              <Label htmlFor="hb-cta" className="text-xs font-medium text-foreground/80">Button label</Label>
               <Input
+                id="hb-cta"
                 value={draft.ctaLabel}
                 onChange={(e) => setField('ctaLabel', e.target.value)}
-                placeholder="Shop Now"
-                className="mt-1.5 bg-white dark:bg-gray-950"
+                placeholder="Shop now"
+                className="mt-1.5"
               />
             </div>
             <div>
-              <Label className="text-xs text-gray-500">CTA link</Label>
+              <Label htmlFor="hb-link" className="text-xs font-medium text-foreground/80">Button link</Label>
               <Input
+                id="hb-link"
                 value={draft.ctaLink}
                 onChange={(e) => setField('ctaLink', e.target.value)}
-                placeholder="/shop/necklaces"
-                className="mt-1.5 bg-white dark:bg-gray-950"
+                placeholder="/category/hair-care"
+                className="mt-1.5"
               />
             </div>
           </div>
@@ -259,19 +269,12 @@ const SlotCard = ({ config, banner }: { config: SlotConfig; banner?: HomeBanner 
       </div>
 
       <div className="mt-6 flex justify-end">
-        <Button onClick={handleSave} disabled={saving} className="bg-highlight hover:bg-highlight text-white">
-          {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving…
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4 mr-2" /> Save banner
-            </>
-          )}
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <Spinner /> : <Save aria-hidden="true" />}
+          {saving ? 'Saving' : 'Save banner'}
         </Button>
       </div>
-    </motion.div>
+    </motion.section>
   );
 };
 
@@ -287,27 +290,29 @@ const AdminHomeBanners = () => {
     return unsub;
   }, []);
 
+  const header = (
+    <AdminPageHeader
+      eyebrow="Home page"
+      title="Collection banner"
+      description="The full-width collection banner inside the home page showcase."
+      className="pb-0"
+    />
+  );
+
   if (loading) {
     return (
-      <div className="grid place-items-center py-32">
-        <Loader2 className="w-6 h-6 animate-spin text-highlight" />
+      <div className="mx-auto max-w-6xl [&>*]:max-w-4xl space-y-6">
+        {header}
+        <div className="rounded-card border border-border bg-card p-4 sm:p-6">
+          <FormSkeleton fields={5} label="Loading banner" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div>
-        <p className="text-[10px] uppercase tracking-[0.3em] text-highlight dark:text-highlight font-medium mb-2 flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5" /> Showcase
-        </p>
-        <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white">
-          Collection Banner
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Manage the full-width collection banner displayed inside the home page showcase.
-        </p>
-      </div>
+    <div className="mx-auto max-w-6xl [&>*]:max-w-4xl space-y-6">
+      {header}
 
       {SLOTS.map((s) => (
         <SlotCard

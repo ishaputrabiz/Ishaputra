@@ -21,7 +21,7 @@ import {
   signOut,
   User as FirebaseUser
 } from 'firebase/auth';
-import { auth, secondaryAuth, db } from '@/config/firebase';
+import { auth, getSecondaryAuth, db } from '@/config/firebase';
 
 export interface DeliveryBoy {
   id: string;
@@ -55,6 +55,8 @@ export interface DeliveryBoyFormData {
  * Uses secondary auth instance to avoid logging out the admin
  */
 export const createDeliveryBoy = async (data: DeliveryBoyFormData): Promise<string> => {
+  // Created on first use: visitors never pay for a second Auth instance.
+  const secondaryAuth = getSecondaryAuth();
   try {
     // Create user in Firebase Authentication using secondary auth
     // This prevents the admin from being logged out

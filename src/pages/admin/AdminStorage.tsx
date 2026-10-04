@@ -15,6 +15,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Notice } from '@/components/ui/notice';
+import { Skeleton } from '@/components/ui/skeleton';
+import { StatCardsSkeleton } from '@/components/skeletons';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { fadeUp } from '@/lib/motion';
 import {
   fetchStorageUsage,
   describeUploadError,
@@ -26,7 +31,7 @@ import {
 
 const nf = new Intl.NumberFormat('en-IN');
 const fmt = (n: number) => nf.format(Math.max(0, Math.floor(n)));
-const pct = (p: number | null) => (p == null ? '—' : `${(p * 100).toFixed(p < 0.01 && p > 0 ? 2 : 1)}%`);
+const pct = (p: number | null) => (p == null ? 'Not measured' : `${(p * 100).toFixed(p < 0.01 && p > 0 ? 2 : 1)}%`);
 
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -35,7 +40,7 @@ const shortDate = (iso: string) =>
 const DEFAULT_PHOTO_BYTES = MAX_IMAGE_BYTES * 0.9 + 50 * 1024;
 
 const barColor = (p: number, warn: number, block: number) =>
-  p >= block ? 'bg-red-500' : p >= warn ? 'bg-highlight' : 'bg-emerald-500';
+  p >= block ? 'bg-destructive' : p >= warn ? 'bg-primary' : 'bg-status-success-fg';
 
 interface MeterProps {
   icon: typeof HardDrive;
@@ -49,31 +54,31 @@ interface MeterProps {
 }
 
 const Meter = ({ icon: Icon, title, hint, used, limit, percent, usage, missing }: MeterProps) => (
-  <div className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl p-5 shadow-sm">
-    <div className="flex items-start gap-3 mb-4">
-      <div className="w-9 h-9 rounded-lg bg-highlight/10 dark:bg-highlight/5 grid place-items-center text-highlight dark:text-highlight shrink-0">
-        <Icon className="w-4 h-4" />
+  <div className="rounded-card border border-border bg-card p-5 shadow-sm">
+    <div className="mb-4 flex items-start gap-3">
+      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-muted text-foreground/70">
+        <Icon className="h-4 w-4" aria-hidden="true" />
       </div>
       <div className="min-w-0">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{title}</h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{hint}</p>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>
       </div>
     </div>
     {percent == null ? (
-      <p className="text-sm text-gray-500 dark:text-gray-400">{missing}</p>
+      <p className="text-sm text-muted-foreground">{missing}</p>
     ) : (
       <>
         <div className="flex items-baseline justify-between gap-2 mb-2">
-          <p className="text-xl font-bold text-gray-900 dark:text-white tabular-nums">{used}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">of {limit} free</p>
+          <p className="text-xl font-semibold tabular-nums text-foreground">{used}</p>
+          <p className="text-xs text-muted-foreground tabular-nums">of {limit} free</p>
         </div>
-        <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-label={`${title} used`} aria-valuenow={Math.round(percent * 100)} aria-valuemin={0} aria-valuemax={100}>
           <div
-            className={`h-full rounded-full transition-all ${barColor(percent, usage.thresholds.warn, usage.thresholds.block)}`}
+            className={`h-full rounded-full ${barColor(percent, usage.thresholds.warn, usage.thresholds.block)}`}
             style={{ width: `${Math.min(100, Math.max(percent * 100, percent > 0 ? 1 : 0))}%` }}
           />
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 tabular-nums">{pct(percent)} used</p>
+        <p className="text-xs text-muted-foreground mt-2 tabular-nums">{pct(percent)} used</p>
       </>
     )}
   </div>
@@ -93,27 +98,28 @@ const NumberField = ({
   min?: number;
 }) => (
   <div>
-    <Label htmlFor={id} className="text-xs text-gray-500 dark:text-gray-400">
+    <Label htmlFor={id} className="text-xs font-medium text-foreground/80">
       {label}
     </Label>
     <Input
       id={id}
       type="number"
+      inputMode="numeric"
       min={min}
       value={value}
       onChange={(e) => onChange(Math.max(min, Number(e.target.value) || min))}
-      className="mt-1.5 bg-white dark:bg-gray-950"
+      className="mt-1.5 tabular-nums"
     />
   </div>
 );
 
 const Estimate = ({ icon: Icon, label, value, detail }: { icon: typeof HardDrive; label: string; value: string; detail: string }) => (
-  <div className="bg-cream dark:bg-gray-800/60 rounded-xl px-4 py-3">
-    <p className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1.5">
-      <Icon className="w-3.5 h-3.5" /> {label}
+  <div className="rounded-card bg-muted/60 px-4 py-3">
+    <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {label}
     </p>
-    <p className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">{value}</p>
-    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{detail}</p>
+    <p className="text-lg font-semibold tabular-nums text-foreground">{value}</p>
+    <p className="text-xs text-muted-foreground mt-0.5">{detail}</p>
   </div>
 );
 
@@ -148,10 +154,33 @@ const AdminStorage = () => {
     void load(false);
   }, [load]);
 
+  const header = (
+    <AdminPageHeader
+      eyebrow="Cloudflare R2 · Free plan"
+      title="Storage"
+      description="How much of the free image storage is used this month, and how much room is left."
+      actions={
+        <Button variant="outline" size="sm" onClick={() => load(true)} disabled={refreshing || loading}>
+          <RefreshCw aria-hidden="true" className={refreshing ? 'animate-spin' : ''} /> Refresh
+        </Button>
+      }
+      className="pb-0"
+    />
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96 text-gray-500 gap-2">
-        <RefreshCw className="w-5 h-5 animate-spin" /> Loading storage usage…
+      <div className="mx-auto max-w-6xl space-y-6">
+        {header}
+        <Skeleton className="h-16 w-full rounded-card" />
+        <StatCardsSkeleton count={3} className="grid-cols-1 md:grid-cols-3 lg:grid-cols-3" label="Loading storage usage" />
+        <div className="space-y-4 rounded-card border border-border bg-card p-5 sm:p-6">
+          <Skeleton className="h-5 w-1/3" />
+          <Skeleton className="h-3 w-2/3" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-card" />)}
+          </div>
+        </div>
       </div>
     );
   }
@@ -177,74 +206,44 @@ const AdminStorage = () => {
   const daysLeft = usage ? Math.max(0, Math.ceil((new Date(usage.periodEnd).getTime() - Date.now()) / 86400000)) : 0;
 
   return (
-    <div className="max-w-5xl mx-auto py-6 px-1 sm:px-4 space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400 font-medium mb-2 flex items-center gap-2">
-            <HardDrive className="w-3.5 h-3.5" /> Cloudflare R2 · Free plan
-          </p>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Storage</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            How much of the free image storage is used this month, and how much room is left.
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => load(true)} disabled={refreshing} className="gap-2">
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
-        </Button>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      {header}
 
       {error && (
-        <div className="flex gap-3 rounded-xl border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40 px-4 py-3 text-sm text-red-800 dark:text-red-300">
-          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-          <p>Could not load usage: {error}</p>
-        </div>
+        <Notice tone="danger" title="Could not load usage">
+          {error}
+        </Notice>
       )}
 
       {!publicUrlConfigured && (
-        <div className="flex gap-3 rounded-xl border border-highlight/30 bg-highlight/10 dark:border-highlight/50 dark:bg-highlight/6 px-4 py-3 text-sm text-highlight dark:text-charcoal-foreground">
-          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-          <p>
-            <strong>Uploads are not possible yet:</strong> the bucket&apos;s public link is not set. Turn on
-            &quot;Public Development URL&quot; (or add a custom domain) for the <code>ssstorage</code> bucket in
-            Cloudflare and put that link in <code>R2_PUBLIC_URL</code>.
-          </p>
-        </div>
+        <Notice tone="warning" title="Uploads are not possible yet">
+          The bucket&rsquo;s public link is not set. Turn on &ldquo;Public Development URL&rdquo; (or add a custom
+          domain) for the <code>ssstorage</code> bucket in Cloudflare and put that link in <code>R2_PUBLIC_URL</code>.
+        </Notice>
       )}
 
       {usage && (
         <>
           {/* Status */}
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`flex gap-3 rounded-xl border px-4 py-3 text-sm ${
-              usage.level === 'block'
-                ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300'
-                : usage.level === 'warn'
-                  ? 'border-highlight/30 bg-highlight/10 text-highlight dark:border-highlight/50 dark:bg-highlight/6 dark:text-charcoal-foreground'
-                  : 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200'
-            }`}
-          >
-            {usage.level === 'ok' ? (
-              <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />
-            ) : (
-              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-            )}
-            <div>
-              <p className="font-semibold">
-                {usage.level === 'block'
+          <motion.div {...fadeUp}>
+            <Notice
+              tone={usage.level === 'block' ? 'danger' : usage.level === 'warn' ? 'warning' : 'success'}
+              icon={usage.level === 'ok' ? ShieldCheck : AlertTriangle}
+              role="status"
+              title={
+                usage.level === 'block'
                   ? 'Uploads are paused to stay on the free plan'
                   : usage.level === 'warn'
                     ? 'Getting close to the free limit'
-                    : 'Everything is within the free plan'}
-              </p>
-              {usage.reasons.length > 0 && <p className="mt-0.5">{usage.reasons.join(' · ')}</p>}
-              <p className="mt-0.5 opacity-80">
-                Period {shortDate(usage.periodStart)} – {shortDate(usage.periodEnd)} · resets in {daysLeft} day
+                    : 'Everything is within the free plan'
+              }
+            >
+              {usage.reasons.length > 0 && <p>{usage.reasons.join(' · ')}</p>}
+              <p className="mt-0.5 text-muted-foreground">
+                Period {shortDate(usage.periodStart)} to {shortDate(usage.periodEnd)} · resets in {daysLeft} day
                 {daysLeft === 1 ? '' : 's'}
               </p>
-            </div>
+            </Notice>
           </motion.div>
 
           {/* Meters */}
@@ -279,8 +278,8 @@ const AdminStorage = () => {
             />
           </div>
 
-          <p className="text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1.5">
-            <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>
               {fmt(usage.objectCount)} {usage.objectCount === 1 ? 'file' : 'files'} stored · {usage.notes.join(' ')} Updated{' '}
               {new Date(usage.fetchedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}.
@@ -290,9 +289,9 @@ const AdminStorage = () => {
       )}
 
       {/* Estimates */}
-      <div className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl p-5 sm:p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-gray-900 dark:text-white">What the free plan can handle</h2>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-5">
+      <section className="rounded-card border border-border bg-card p-5 shadow-sm sm:p-6">
+        <h2 className="text-base font-semibold text-foreground">What the free plan can handle</h2>
+        <p className="mb-5 mt-1 text-xs text-muted-foreground">
           Estimates, stopping at {Math.round(thresholds.block * 100)}% of each limit. Change the numbers to match
           your shop.
           {measured
@@ -344,17 +343,17 @@ const AdminStorage = () => {
           />
         </div>
 
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+        <p className="text-xs text-muted-foreground mt-4">
           Storage is the limit that matters: it fills up and stays full, while uploads and views reset every month.
-          Visitor numbers are a floor — with a custom domain, Cloudflare&apos;s cache serves repeat photo views
+          Visitor numbers are a floor: with a custom domain, Cloudflare&rsquo;s cache serves repeat photo views
           without counting them.
         </p>
-      </div>
+      </section>
 
       {/* How the protection works */}
-      <div className="bg-white dark:bg-gray-900 border border-cream-dark dark:border-gray-800 rounded-2xl p-5 sm:p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-3">How you stay on the free plan</h2>
-        <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300 list-disc pl-5">
+      <section className="rounded-card border border-border bg-card p-5 shadow-sm sm:p-6">
+        <h2 className="mb-3 text-base font-semibold text-foreground">How you stay on the free plan</h2>
+        <ul className="list-disc space-y-2 pl-5 text-sm text-foreground/80">
           <li>
             Photos must be JPG, PNG or WebP and <strong>500 KB or smaller</strong>. Each product can have at most{' '}
             {MAX_PRODUCT_IMAGES} photos.
@@ -366,13 +365,13 @@ const AdminStorage = () => {
             At <strong>{Math.round(thresholds.block * 100)}%</strong>, new uploads stop automatically. The shop keeps
             working and existing photos keep showing.
           </li>
-          <li>Deleting a product deletes its photos too (deleting is free) — that frees space.</li>
+          <li>Deleting a product deletes its photos too (deleting is free), which frees space.</li>
           <li>
             Image views come from visitors, so the app can&apos;t stop them. Set a budget alert in Cloudflare
             (R2 → Billing → Add Budget Alert) so you get an email if anything ever becomes billable.
           </li>
         </ul>
-      </div>
+      </section>
     </div>
   );
 };

@@ -4,10 +4,13 @@ import {
   policySectionClassName,
 } from "@/components/PolicyPageLayout";
 import PolicyPageLayout from "@/components/PolicyPageLayout";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const ShippingPolicy = () => {
+  usePageMeta({ title: "Shipping policy", description: "Where Ishaputra Botanicals delivers, how long orders take and how tracking works." });
+
   return (
-    <PolicyPageLayout title="Shipping Policy" effectiveDate="Last Updated: February 17, 2026">
+    <PolicyPageLayout title="Shipping policy" effectiveDate="Draft: pending review by Ishaputra Botanicals">
       <>
             {/* Introduction */}
             <section className={policySectionClassName}>
@@ -18,7 +21,7 @@ const ShippingPolicy = () => {
 
             {/* Delivery Area */}
             <section className={policySectionClassName}>
-              <h2 className={policyHeadingClassName}>1. Delivery Area</h2>
+              <h2 className={policyHeadingClassName}>1. Delivery area</h2>
               <p className={policyBodyClassName}>
                 We deliver across India only.
               </p>
@@ -26,23 +29,23 @@ const ShippingPolicy = () => {
 
             {/* Processing Time */}
             <section className={policySectionClassName}>
-              <h2 className={policyHeadingClassName}>2. Processing Time</h2>
+              <h2 className={policyHeadingClassName}>2. Processing time</h2>
               <p className={policyBodyClassName}>
-                Orders are processed within 1–3 working days after confirmation.
+                Orders are processed within 1 to 3 working days after confirmation.
               </p>
             </section>
 
             {/* Delivery Time */}
             <section className={policySectionClassName}>
-              <h2 className={policyHeadingClassName}>3. Delivery Time</h2>
+              <h2 className={policyHeadingClassName}>3. Delivery time</h2>
               <p className={policyBodyClassName}>
-                Estimated delivery time is 3–7 business days depending on location.
+                Estimated delivery time is 3 to 7 business days, depending on location.
               </p>
             </section>
 
             {/* Shipping Charges */}
             <section className={policySectionClassName}>
-              <h2 className={policyHeadingClassName}>4. Shipping Charges</h2>
+              <h2 className={policyHeadingClassName}>4. Shipping charges</h2>
               <p className={policyBodyClassName}>
                 Shipping charges (if any) will be displayed at checkout before payment.
               </p>

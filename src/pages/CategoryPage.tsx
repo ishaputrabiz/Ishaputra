@@ -5,18 +5,31 @@ import {
   SlidersHorizontal,
   X,
   ChevronDown,
-  ChevronRight,
-  ChevronLeft,
   PanelLeftClose,
   PanelLeft,
-  Loader2,
-  Heart,
   Star,
   ShoppingBag,
   ArrowLeft,
-  Home,
+  PackageSearch,
+  SearchX,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { WishlistToggle } from "@/components/WishlistToggle";
+import { IconButton } from "@/components/ui/icon-button";
+import { EmptyState } from "@/components/EmptyState";
+import { ProductGridSkeleton } from "@/components/skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { formatINR, plural } from "@/lib/format";
+import { EASE_OUT } from "@/lib/motion";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CategoryIconNav from "@/components/CategoryIconNav";
@@ -50,10 +63,10 @@ import { BRAND } from "@/config/brand";
 const priceRanges = BRAND.priceRanges;
 
 const sortOptions = [
-  { value: "recent", label: "Newest First" },
-  { value: "price-low", label: "Price: Low to High" },
-  { value: "price-high", label: "Price: High to Low" },
-  { value: "name-asc", label: "Name: A-Z" },
+  { value: "recent", label: "Newest first", short: "Newest" },
+  { value: "price-low", label: "Price: low to high", short: "Price low" },
+  { value: "price-high", label: "Price: high to low", short: "Price high" },
+  { value: "name-asc", label: "Name A to Z", short: "A to Z" },
 ];
 
 // ─── Stable product card ────────────────────────────────────────
@@ -65,12 +78,20 @@ const sortOptions = [
 // the visible "flash"/loading effect users were complaining about. Lifting it
 // out + memoizing it keeps cards mounted across filter changes — the grid
 // just reorders/diffs by product id.
+//
+// The products page keeps its own card (owner decision) but follows the shared
+// ProductCard spec: the title is a real link stretched over the card, so
+// keyboards, screen readers, open-in-new-tab and crawlers all reach the
+// product; the heart and Add to cart sit above it (z-raised).
+type CategoryCardProduct = UIProduct & { isNew?: boolean };
+
 type CategoryProductCardProps = {
-  product: UIProduct;
+  product: CategoryCardProduct;
   wishlisted: boolean;
   onAddToCart: (product: UIProduct) => void;
   onToggleWishlist: (product: UIProduct, wishlisted: boolean) => void;
-  onOpen: (productId: string) => void;
+  /** First cards on the page load their photo eagerly. */
+  priority?: boolean;
 };
 
 const CategoryProductCard = memo(function CategoryProductCard({
@@ -78,7 +99,7 @@ const CategoryProductCard = memo(function CategoryProductCard({
   wishlisted,
   onAddToCart,
   onToggleWishlist,
-  onOpen,
+  priority = false,
 }: CategoryProductCardProps) {
   const { ratePerGram } = useSilverRate();
   const sp = product.silverPricing;
@@ -89,89 +110,105 @@ const CategoryProductCard = memo(function CategoryProductCard({
   const displayOldPrice = !sp?.enabled && displayDiscount
     ? (product.oldPrice ?? null)
     : null;
+  const href = `/product/${product.id}`;
   return (
-    <div className="card-product group overflow-hidden p-1.5 sm:p-2 flex flex-col">
+    <article
+      className={
+        "card-product group relative flex flex-col p-1.5 sm:p-2 " +
+        "has-[a[data-card-link]:focus-visible]:outline has-[a[data-card-link]:focus-visible]:outline-2 has-[a[data-card-link]:focus-visible]:outline-offset-2 has-[a[data-card-link]:focus-visible]:outline-ring"
+      }
+    >
       {/* Image */}
-      <div
-        className="tile-img relative aspect-square overflow-hidden cursor-pointer"
-        onClick={() => onOpen(product.id)}
-      >
+      <div className="tile-img relative aspect-square overflow-hidden">
         <SmartImage
           src={product.image}
-          alt={product.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" preset="card" />
-        {product.badge && (
-          <span className="tag-dark absolute top-2 left-2">
-            {product.badge}
-          </span>
+          alt={product.alt || product.title}
+          className="h-full w-full object-cover transition-transform duration-reveal ease-out group-hover:scale-[1.03]"
+          preset="card"
+          priority={priority}
+        />
+        {/* One meaningful flag at most: the discount already sits by the price,
+            so the photo only says "New" for genuinely new products. */}
+        {product.isNew && (
+          <span className="tag-dark pointer-events-none absolute left-2 top-2">New</span>
         )}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleWishlist(product, wishlisted);
-          }}
-          className="absolute top-2 right-2 z-10 w-8 h-8 bg-card/90 backdrop-blur-sm rounded-full flex items-center justify-center border border-foreground/10 hover:border-primary/40 transition-colors"
-        >
-          <Heart
-            className={`w-3.5 h-3.5 ${wishlisted ? "fill-red-500 text-red-500" : "text-foreground/70"}`}
-          />
-        </button>
+        <WishlistToggle
+          name={product.title}
+          saved={wishlisted}
+          onToggle={() => onToggleWishlist(product, wishlisted)}
+          size="sm"
+          className="absolute right-1.5 top-1.5 z-raised sm:right-2 sm:top-2"
+        />
       </div>
 
       {/* Info */}
-      <div className="px-1.5 pt-3 pb-1 space-y-1.5 flex flex-col flex-1">
+      <div className="flex flex-1 flex-col gap-1.5 px-1.5 pb-1 pt-3">
         <h3
-          className="text-[13px] sm:text-sm font-semibold text-foreground line-clamp-1 cursor-pointer hover:text-primary transition-colors"
-          onClick={() => onOpen(product.id)}
+          title={product.title}
+          className="line-clamp-2 min-h-[2.6em] text-[13px] font-semibold leading-[1.3] text-foreground [text-wrap:pretty] sm:text-sm"
         >
-          {product.title}
+          <Link
+            to={href}
+            data-card-link=""
+            className="outline-none transition-colors duration-hover ease-out after:absolute after:inset-0 after:rounded-card after:content-[''] group-hover:text-primary"
+          >
+            {product.title}
+          </Link>
         </h3>
         <div className="flex items-center gap-1">
-          {product.reviews > 0 ? (
-            <>
-              <span className="text-xs font-semibold text-highlight">{product.rating.toFixed(1)}</span>
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className={`w-3 h-3 ${
-                  i < Math.floor(product.rating) ? "fill-highlight-soft text-highlight-soft"
-                  : i < product.rating ? "fill-charcoal-foreground text-highlight-soft"
+          {product.reviews > 0 && (
+            <span className="text-xs font-semibold tabular-nums text-highlight">{product.rating.toFixed(1)}</span>
+          )}
+          <span className="sr-only">
+            {product.reviews > 0
+              ? `Rated ${product.rating.toFixed(1)} out of 5 from ${plural(product.reviews, "review")}`
+              : "No reviews yet"}
+          </span>
+          {[...Array(5)].map((_, i) => (
+            <Star
+              key={i}
+              aria-hidden="true"
+              className={`h-3 w-3 ${
+                product.reviews > 0 && i < Math.floor(product.rating)
+                  ? "fill-highlight-soft text-highlight-soft"
+                  : product.reviews > 0 && i < product.rating
+                  ? "fill-charcoal-foreground text-highlight-soft"
                   : "fill-foreground/10 text-foreground/20"
-                }`} />
-              ))}
-              <span className="text-xs text-muted-foreground">({product.reviews})</span>
-            </>
-          ) : (
-            <>
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-3 h-3 fill-foreground/10 text-foreground/20" />
-              ))}
-            </>
+              }`}
+            />
+          ))}
+          {product.reviews > 0 && (
+            <span aria-hidden="true" className="text-xs tabular-nums text-muted-foreground">({product.reviews})</span>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pb-3">
-          <span className="price-now text-[15px]">
-            ₹{displayPrice.toLocaleString("en-IN")}
-          </span>
+        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-3">
+          <span className="price-now text-[15px]">{formatINR(displayPrice)}</span>
           {displayOldPrice && displayOldPrice > product.price && (
             <span className="price-was text-xs">
-              ₹{displayOldPrice.toLocaleString("en-IN")}
+              <span className="sr-only">Was </span>
+              {formatINR(displayOldPrice)}
             </span>
           )}
+          {/* Below sm the chip always takes its own line, so every card in a
+              row has the same price block (the 160px cards cannot fit all three). */}
           {displayDiscount && (
-            <span className="chip-off">
-              {displayDiscount}% off
+            <span className="basis-full sm:basis-auto">
+              <span className="chip-off">{displayDiscount}% off</span>
             </span>
           )}
-        </div>
+        </p>
         <button
+          type="button"
           onClick={() => onAddToCart(product)}
-          className="w-full !mt-auto py-2.5 rounded-[6px] border border-foreground/15 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground hover:bg-primary hover:border-primary hover:text-primary-foreground transition-colors"
+          className="relative z-raised mt-auto flex h-10 w-full items-center justify-center rounded-control border border-foreground/15 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground transition-[background-color,border-color,color,transform] duration-press ease-out hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-[0.97]"
         >
-          Add to cart
+          Add to cart<span className="sr-only">: {product.title}</span>
         </button>
       </div>
-    </div>
+    </article>
   );
 });
+
 
 // ─── Component ────────────────────────────────────────
 const CategoryPage = () => {
@@ -185,7 +222,7 @@ const CategoryPage = () => {
   const { toast } = useToast();
 
   // Data
-  const [allProducts, setAllProducts] = useState<UIProduct[]>([]);
+  const [allProducts, setAllProducts] = useState<CategoryCardProduct[]>([]);
   /**
    * True when this category's products were found by subcategory rather than by
    * category (see the products effect below). The sidebar then filters on the
@@ -205,11 +242,11 @@ const CategoryPage = () => {
 
   // Map known tag slugs to their Firestore flag + display label.
   const TAG_MAP: Record<string, { flag: string; label: string }> = {
-    'top-deals': { flag: 'isTopDeal', label: 'Top Deals' },
-    'best-sellers': { flag: 'isBestSeller', label: 'Best Sellers' },
-    'new-arrivals': { flag: 'isNewArrival', label: 'New Arrivals' },
-    'trending': { flag: 'isTrendProduct', label: 'Trending Now' },
-    'featured': { flag: 'isFeatured', label: 'Featured Products' },
+    'top-deals': { flag: 'isTopDeal', label: 'Top deals' },
+    'best-sellers': { flag: 'isBestSeller', label: 'Best sellers' },
+    'new-arrivals': { flag: 'isNewArrival', label: 'New arrivals' },
+    'trending': { flag: 'isTrendProduct', label: 'Trending now' },
+    'featured': { flag: 'isFeatured', label: 'Editor’s picks' },
   };
   const tagMeta = activeTag ? TAG_MAP[activeTag] : undefined;
   /** Bare /products (no category, no tag): the whole catalogue. "Shop all" links land here. */
@@ -218,7 +255,6 @@ const CategoryPage = () => {
   // UI
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [expandedSubs, setExpandedSubs] = useState<Set<string>>(new Set());
-  const [showSortDropdown, setShowSortDropdown] = useState(false);
   // Desktop sidebar collapse — persisted per user
   const [desktopFiltersCollapsed, setDesktopFiltersCollapsed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -461,6 +497,7 @@ const CategoryPage = () => {
             ...ui,
             subcategory: fp.subcategory || "",
             subSubcategory: (fp as any).subSubcategory || "",
+            isNew: (fp as any).flags?.isNewArrival === true,
           };
         });
         setAllProducts(uiProducts);
@@ -508,6 +545,7 @@ const CategoryPage = () => {
           ...ui,
           subcategory: fp.subcategory || "",
           subSubcategory: (fp as any).subSubcategory || "",
+          isNew: (fp as any).flags?.isNewArrival === true,
         };
       });
       setAllProducts(uiProducts);
@@ -518,19 +556,24 @@ const CategoryPage = () => {
   }, [currentCategory, categorySlug, activeTag, categories.length]);
 
   // ── Render: filter sidebar content (reused desktop + mobile) ──
-  const FilterContent = () => (
+  // Called as a function, not rendered as <FilterContent />: a component
+  // declared inside the render is a new type on every render, so React
+  // remounted the whole tree after each click (focus lost, accordion replayed).
+  const renderFilterContent = () => (
     <div className="space-y-6">
       {/* Subcategories */}
       {currentCategory && visibleSubOptions.length > 0 && (
         <div>
-          <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.24em] mb-3">
+          <h3 className="mb-3 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
             Subcategories
           </h3>
           <div className="space-y-1">
             <button
+              type="button"
+              aria-pressed={!activeSub}
               onClick={() => { setFilter("sub", ""); setMobileFiltersOpen(false); }}
-              className={`w-full text-left px-3 py-2 rounded-[6px] text-sm transition-colors ${
-                !activeSub ? "bg-primary/10 text-primary font-semibold shadow-[inset_2px_0_0_hsl(var(--primary))]" : "text-foreground/80 hover:bg-foreground/[0.05]"
+              className={`min-h-10 w-full rounded-control px-3 py-2 text-left text-sm transition-colors duration-hover ease-out ${
+                !activeSub ? "bg-primary/10 font-semibold text-primary shadow-[inset_2px_0_0_hsl(var(--primary))]" : "text-foreground/80 hover:bg-foreground/[0.05]"
               }`}
             >
               All {currentCategory.name}
@@ -541,59 +584,70 @@ const CategoryPage = () => {
                   (subCounts.childCounts.get(`${sub.slug}/${c.slug}`) || 0) > 0 ||
                   (activeSub === sub.slug && activeSubSub === c.slug),
               );
+              const expanded = expandedSubs.has(sub.slug);
+              const childListId = `filter-children-${sub.slug}`;
               return (
               <div key={sub.slug}>
-                <div className="flex items-center">
+                <div className="flex items-center gap-1">
                   <button
+                    type="button"
+                    aria-pressed={activeSub === sub.slug}
                     onClick={() => { setFilter("sub", sub.slug); setMobileFiltersOpen(false); }}
-                    className={`flex-1 text-left px-3 py-2 rounded-[6px] text-sm transition-colors flex items-center justify-between gap-2 ${
+                    className={`flex min-h-10 flex-1 items-center justify-between gap-2 rounded-control px-3 py-2 text-left text-sm transition-colors duration-hover ease-out ${
                       activeSub === sub.slug
-                        ? "bg-primary/10 text-primary font-semibold shadow-[inset_2px_0_0_hsl(var(--primary))]"
+                        ? "bg-primary/10 font-semibold text-primary shadow-[inset_2px_0_0_hsl(var(--primary))]"
                         : "text-foreground/80 hover:bg-foreground/[0.05]"
                     }`}
                   >
                     <span>{sub.name}</span>
-                    <span className={`text-[11px] ${activeSub === sub.slug ? "text-primary/70" : "text-muted-foreground"}`}>
+                    <span className={`text-[11px] tabular-nums ${activeSub === sub.slug ? "text-primary" : "text-muted-foreground"}`}>
                       {subCounts.counts.get(sub.slug) || 0}
                     </span>
                   </button>
                   {visibleChildren.length > 0 && (
-                    <button
+                    <IconButton
+                      label={expanded ? `Hide ${sub.name} types` : `Show ${sub.name} types`}
+                      aria-expanded={expanded}
+                      aria-controls={childListId}
+                      size="sm"
                       onClick={() => toggleExpandSub(sub.slug)}
-                      className="p-2 text-muted-foreground hover:text-foreground"
+                      className="text-muted-foreground"
                     >
                       <ChevronDown
-                        className={`w-4 h-4 transition-transform ${
-                          expandedSubs.has(sub.slug) ? "rotate-180" : ""
-                        }`}
+                        aria-hidden="true"
+                        className={`transition-transform duration-dropdown ease-out ${expanded ? "rotate-180" : ""}`}
                       />
-                    </button>
+                    </IconButton>
                   )}
                 </div>
                 {/* Sub-sub-categories dropdown */}
-                <AnimatePresence>
-                  {expandedSubs.has(sub.slug) && visibleChildren.length > 0 && (
+                <AnimatePresence initial={false}>
+                  {expanded && visibleChildren.length > 0 && (
                     <motion.div
+                      id={childListId}
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden ml-4 space-y-1"
+                      exit={{ height: 0, opacity: 0, transition: { duration: 0.15, ease: EASE_OUT } }}
+                      transition={{ duration: 0.2, ease: EASE_OUT }}
+                      className="ml-4 space-y-1 overflow-hidden"
                     >
                       {visibleChildren.map((child) => (
                         <button
+                          type="button"
                           key={child.slug}
+                          aria-pressed={activeSubSub === child.slug}
                           onClick={() => {
                             setFilters({ sub: sub.slug, subsub: child.slug });
                             setMobileFiltersOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-1.5 rounded-[6px] text-xs transition-colors flex items-center justify-between gap-2 ${
+                          className={`focus-inset flex min-h-9 w-full items-center justify-between gap-2 rounded-control px-3 py-1.5 text-left text-xs transition-colors duration-hover ease-out ${
                             activeSubSub === child.slug
-                              ? "bg-primary/10 text-primary font-medium"
-                              : "text-muted-foreground hover:bg-muted"
+                              ? "bg-primary/10 font-medium text-primary"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
                           }`}
                         >
                           <span>{child.name}</span>
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-[10px] tabular-nums text-muted-foreground">
                             {subCounts.childCounts.get(`${sub.slug}/${child.slug}`) || 0}
                           </span>
                         </button>
@@ -608,22 +662,24 @@ const CategoryPage = () => {
         </div>
       )}
 
-      {/* Price Range */}
+      {/* Price range */}
       <div>
-        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.24em] mb-3">
-          Price Range
+        <h3 className="mb-3 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
+          Price range
         </h3>
         <div className="space-y-1">
           {priceRanges.map((range, idx) => (
             <button
+              type="button"
               key={idx}
+              aria-pressed={activePriceIdx === String(idx)}
               onClick={() => {
                 setFilter("price", activePriceIdx === String(idx) ? "" : String(idx));
                 setMobileFiltersOpen(false);
               }}
-              className={`w-full text-left px-3 py-2 rounded-[6px] text-sm transition-colors ${
+              className={`min-h-10 w-full rounded-control px-3 py-2 text-left text-sm tabular-nums transition-colors duration-hover ease-out ${
                 activePriceIdx === String(idx)
-                  ? "bg-primary/10 text-primary font-semibold shadow-[inset_2px_0_0_hsl(var(--primary))]"
+                  ? "bg-primary/10 font-semibold text-primary shadow-[inset_2px_0_0_hsl(var(--primary))]"
                   : "text-foreground/80 hover:bg-foreground/[0.05]"
               }`}
             >
@@ -636,10 +692,11 @@ const CategoryPage = () => {
       {/* Clear all */}
       {activeFilterCount > 0 && (
         <button
+          type="button"
           onClick={() => { clearAllFilters(); setMobileFiltersOpen(false); }}
           className="link-arrow mx-auto !flex w-fit"
         >
-          Clear All Filters
+          Clear filters
         </button>
       )}
     </div>
@@ -648,10 +705,6 @@ const CategoryPage = () => {
   // ── Product Card handlers ──
   // The card itself is a stable, memoized component declared at module scope
   // (see `CategoryProductCard`). We only need to provide event handlers here.
-  const handleCardOpen = (productId: string) => {
-    navigate(`/product/${productId}`);
-  };
-
   const handleCardAddToCart = async (product: UIProduct) => {
     if (!user) {
       navigate("/login", { state: { from: location } });
@@ -669,24 +722,45 @@ const CategoryPage = () => {
   };
 
   const handleCardToggleWishlist = (product: UIProduct, wishlisted: boolean) => {
+    // The hook shows the toast (with Undo on removal), so none here.
     if (wishlisted) {
-      removeFromWishlist(product.id);
+      removeFromWishlist(product.id, product.title);
     } else {
       addToWishlist(product.id, product.title);
-      toast({ title: "Added to wishlist" });
     }
   };
 
-  if (!currentCategory && !tagMeta && !showAll && !loading && categories.length > 0) {
+  const activeSubName = currentCategory?.subcategories.find((s) => s.slug === activeSub)?.name;
+  const activeSort = sortOptions.find((o) => o.value === activeSortBy) ?? sortOptions[0];
+  /** Category documents still loading: the title is not known yet. */
+  const titlePending = loading && !currentCategory && !tagMeta && !showAll;
+  const pageTitle = currentCategory?.name || tagMeta?.label || "Products";
+  const categoryMissing = !currentCategory && !tagMeta && !showAll && !loading && categories.length > 0;
+
+  usePageMeta({
+    title: categoryMissing ? "Collection not found" : titlePending ? undefined : showAll ? "All products" : pageTitle,
+    description: categoryMissing || titlePending
+      ? undefined
+      : showAll
+      ? "The full range from Ishaputra Botanicals: Ayurvedic and botanical care for men."
+      : `Shop ${pageTitle} from Ishaputra Botanicals.`,
+    noindex: categoryMissing,
+  });
+
+  if (categoryMissing) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen tx-paper flex flex-col">
         <Header />
-        <div className="flex flex-col items-center justify-center py-32">
-          <p className="text-muted-foreground text-lg">Category not found</p>
-          <Link to="/" className="mt-4 text-primary hover:underline">
-            Go Home
-          </Link>
-        </div>
+        <main id="main" tabIndex={-1} className="flex flex-1 items-center justify-center px-4 py-16 sm:py-24">
+          <EmptyState
+            as="h1"
+            icon={PackageSearch}
+            title="We couldn't find that collection"
+            description="It may have been renamed or retired. Everything we make is in the full catalogue."
+            action={{ label: "Browse all products", to: "/products" }}
+            secondaryAction={{ label: "Go home", to: "/" }}
+          />
+        </main>
         <Footer />
       </div>
     );
@@ -697,91 +771,98 @@ const CategoryPage = () => {
       <Header />
       <CategoryIconNav />
 
+      <main id="main" tabIndex={-1} className="flex flex-1 flex-col">
       {/* Back button + title bar */}
       <div className="tx-sheet tx-contour overflow-hidden border-b border-foreground/[0.08]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 lg:py-10 flex items-center lg:items-end gap-3 lg:gap-5">
-          <button
-            onClick={() => navigate(-1)}
-            aria-label="Go back"
-            className="btn-round !h-9 !w-9 lg:!h-11 lg:!w-11 flex-shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5" />
-          </button>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 lg:py-10 flex items-center lg:items-end gap-3 lg:gap-5">
+          <IconButton label="Go back" variant="solid" onClick={() => navigate(-1)} className="lg:size-11 lg:[&_svg]:size-5">
+            <ArrowLeft aria-hidden="true" />
+          </IconButton>
           <div className="min-w-0">
-          <p className="eyebrow-no mb-2 hidden lg:inline-flex"><b>{String(filteredProducts.length).padStart(2, "0")}</b><span>{showAll ? "The full range" : tagMeta ? "Curated" : "Collection"}</span></p>
-          <h1 className="text-lg lg:text-5xl font-semibold text-foreground leading-tight lg:block" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
-            {currentCategory?.name || tagMeta?.label || "Products"}
-            {activeSub && currentCategory && (
-              <span className="text-muted-foreground font-normal">
-                {" / "}
-                {currentCategory.subcategories.find((s) => s.slug === activeSub)?.name}
-              </span>
+            <p className="eyebrow-no mb-2 hidden lg:inline-flex">
+              <span>{showAll ? "The full range" : tagMeta ? "Curated" : "Collection"}</span>
+            </p>
+            {titlePending ? (
+              <>
+                <h1 className="sr-only">Loading collection</h1>
+                <Skeleton aria-hidden="true" className="h-8 w-48 lg:h-12 lg:w-72" />
+              </>
+            ) : (
+              <h1
+                className="text-2xl sm:text-3xl lg:text-5xl font-semibold text-foreground leading-tight [text-wrap:balance]"
+                style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
+              >
+                {pageTitle}
+                {activeSub && currentCategory && activeSubName && (
+                  <span className="text-muted-foreground font-normal">
+                    {" / "}
+                    {activeSubName}
+                  </span>
+                )}
+              </h1>
             )}
-          </h1>
           </div>
         </div>
       </div>
 
       {/* Mobile: Sort + Filter bar */}
-      <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-foreground/[0.08]">
-        <div className="flex items-center justify-between px-4 py-3">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-            {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""}
+      <div className="lg:hidden sticky top-0 z-sticky bg-background/95 backdrop-blur border-b border-foreground/[0.08]">
+        <div className="flex items-center justify-between gap-3 px-4 py-2">
+          <p className="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground tabular-nums" aria-live="polite">
+            {loading ? <span aria-label="Loading products">-</span> : plural(filteredProducts.length, "product")}
           </p>
           <div className="flex gap-2">
             {/* Sort */}
-            <div className="relative">
-              <button
-                onClick={() => setShowSortDropdown(!showSortDropdown)}
-                className="flex items-center gap-1.5 px-3.5 py-2 border border-foreground/15 rounded-[6px] text-[10px] font-bold uppercase tracking-[0.16em] text-foreground/85"
-              >
-                Sort
-                <ChevronDown className="w-3 h-3" />
-              </button>
-              {showSortDropdown && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowSortDropdown(false)} />
-                  <div className="tx-sheet absolute right-0 top-full mt-1.5 border border-foreground/10 rounded-[8px] shadow-[var(--shadow-panel)] py-1 z-20 min-w-[180px]">
-                    {sortOptions.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => {
-                          setFilter("sort", opt.value);
-                          setShowSortDropdown(false);
-                        }}
-                        className={`w-full text-left px-4 py-2 text-sm ${
-                          activeSortBy === opt.value
-                            ? "text-primary font-semibold bg-primary/10"
-                            : "text-foreground/80 hover:bg-muted"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-11 items-center gap-1.5 whitespace-nowrap rounded-control border border-foreground/15 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-foreground transition-[border-color,color,transform] duration-press ease-out active:scale-[0.97] data-[state=open]:border-primary data-[state=open]:text-primary"
+                >
+                  <span>Sort: {activeSort.short}</span>
+                  <ChevronDown aria-hidden="true" className="size-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="tx-sheet min-w-[200px]">
+                <DropdownMenuRadioGroup value={activeSortBy} onValueChange={(v) => setFilter("sort", v)}>
+                  {sortOptions.map((opt) => (
+                    <DropdownMenuRadioItem
+                      key={opt.value}
+                      value={opt.value}
+                      className="min-h-11 data-[state=checked]:font-semibold data-[state=checked]:text-primary"
+                    >
+                      {opt.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Filter button (mobile) */}
             <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
               <SheetTrigger asChild>
-                <button className="flex items-center gap-1.5 px-3.5 py-2 border border-foreground/15 rounded-[6px] text-[10px] font-bold uppercase tracking-[0.16em] text-foreground/85 relative">
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                <button
+                  type="button"
+                  className="relative flex h-11 items-center gap-1.5 whitespace-nowrap rounded-control border border-foreground/15 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-foreground transition-[border-color,color,transform] duration-press ease-out active:scale-[0.97]"
+                >
+                  <SlidersHorizontal aria-hidden="true" className="size-3.5" />
                   Filters
                   {activeFilterCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-primary text-white w-4 h-4 rounded-full text-[10px] flex items-center justify-center">
+                    <span className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-primary text-[10px] tabular-nums text-primary-foreground">
                       {activeFilterCount}
+                      <span className="sr-only"> active</span>
                     </span>
                   )}
                 </button>
               </SheetTrigger>
-              <SheetContent side="bottom" className="tx-sheet h-[75vh] rounded-t-[var(--radius-panel)]">
+              {/* Sized to its content (up to 85dvh, then the sheet scrolls), so a
+                  short list of filters does not leave a screen of empty paper. */}
+              <SheetContent side="bottom" className="tx-sheet h-auto max-h-[85dvh]">
                 <SheetHeader>
                   <SheetTitle>Filters</SheetTitle>
                 </SheetHeader>
-                <div className="mt-4 overflow-y-auto max-h-[calc(75vh-80px)] pb-6">
-                  <FilterContent />
+                <div className="mt-4 pb-2">
+                  {renderFilterContent()}
                 </div>
               </SheetContent>
             </Sheet>
@@ -791,16 +872,26 @@ const CategoryPage = () => {
         {activeFilterCount > 0 && (
           <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-hide">
             {activeSub && (
-              <span className="flex items-center gap-1 border border-primary/40 text-primary text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
-                {currentCategory?.subcategories.find((s) => s.slug === activeSub)?.name}
-                <X className="w-3 h-3 cursor-pointer" onClick={() => setFilter("sub", "")} />
-              </span>
+              <button
+                type="button"
+                onClick={() => setFilter("sub", "")}
+                aria-label={`Remove ${activeSubName ?? activeSub} filter`}
+                className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-control border border-primary/40 px-3 text-xs font-medium text-primary transition-[background-color,transform] duration-press ease-out hover:bg-primary/10 active:scale-[0.97]"
+              >
+                {activeSubName ?? activeSub}
+                <X aria-hidden="true" className="size-3.5" />
+              </button>
             )}
             {activePriceIdx && (
-              <span className="flex items-center gap-1 border border-primary/40 text-primary text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
+              <button
+                type="button"
+                onClick={() => setFilter("price", "")}
+                aria-label={`Remove ${priceRanges[parseInt(activePriceIdx)]?.label ?? "price"} filter`}
+                className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-control border border-primary/40 px-3 text-xs font-medium text-primary transition-[background-color,transform] duration-press ease-out hover:bg-primary/10 active:scale-[0.97]"
+              >
                 {priceRanges[parseInt(activePriceIdx)]?.label}
-                <X className="w-3 h-3 cursor-pointer" onClick={() => setFilter("price", "")} />
-              </span>
+                <X aria-hidden="true" className="size-3.5" />
+              </button>
             )}
           </div>
         )}
@@ -809,61 +900,68 @@ const CategoryPage = () => {
       {/* Main content */}
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex gap-6 lg:gap-8">
-          {/* Desktop sidebar — collapsible */}
+          {/* Desktop sidebar: collapsible, switches width instantly (no width animation) */}
           <aside
-            className={`hidden lg:block flex-shrink-0 transition-all duration-300 ease-in-out ${
-              desktopFiltersCollapsed ? 'w-12' : 'w-64'
-            }`}
+            aria-label="Filters"
+            className={`hidden lg:block flex-shrink-0 ${desktopFiltersCollapsed ? "w-12" : "w-64"}`}
           >
-            <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2 scrollbar-thin">
+            <div className="sticky top-[var(--sticky-top)] max-h-[calc(100dvh-152px)] overflow-y-auto pr-2 scrollbar-thin">
               {desktopFiltersCollapsed ? (
                 /* Collapsed rail */
-                <button
-                  onClick={() => setDesktopFiltersCollapsed(false)}
-                  className="btn-round group relative mx-auto !flex"
-                  aria-label="Show filters"
-                  title="Show filters"
-                >
-                  <PanelLeft className="w-4 h-4 text-foreground/70 group-hover:text-primary" />
+                <div className="relative mx-auto w-fit">
+                  <IconButton
+                    label={activeFilterCount > 0 ? `Show filters (${activeFilterCount} active)` : "Show filters"}
+                    tooltip="Show filters"
+                    tooltipSide="right"
+                    variant="solid"
+                    onClick={() => setDesktopFiltersCollapsed(false)}
+                  >
+                    <PanelLeft aria-hidden="true" />
+                  </IconButton>
                   {activeFilterCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    <span aria-hidden="true" className="pointer-events-none absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-primary text-[10px] font-bold tabular-nums text-primary-foreground">
                       {activeFilterCount}
                     </span>
                   )}
-                </button>
+                </div>
               ) : (
                 <div className="panel tx-sheet space-y-2 p-5">
                   <div className="flex items-center justify-between mb-5 pb-4 border-b border-foreground/[0.08]">
                     <h2 className="text-xs font-bold uppercase tracking-[0.24em] text-foreground">Filters</h2>
-                    <button
+                    <IconButton
+                      label="Hide filters"
+                      tooltip
+                      size="sm"
                       onClick={() => setDesktopFiltersCollapsed(true)}
-                      className="p-1.5 rounded-md hover:bg-muted text-foreground/60 hover:text-foreground transition-colors"
-                      aria-label="Hide filters"
-                      title="Hide filters"
+                      className="-mr-2 text-muted-foreground"
                     >
-                      <PanelLeftClose className="w-4 h-4" />
-                    </button>
+                      <PanelLeftClose aria-hidden="true" />
+                    </IconButton>
                   </div>
 
                   {/* Sort */}
-                  <div className="mb-4">
-                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.24em] mb-2">
-                      Sort By
-                    </h3>
-                    <select
-                      value={activeSortBy}
-                      onChange={(e) => setFilter("sort", e.target.value)}
-                      className="w-full border border-foreground/15 rounded-[6px] px-3 py-2 text-sm text-foreground/85 bg-card focus:outline-none focus:border-primary"
+                  <div className="mb-6">
+                    <label
+                      htmlFor="sort-select"
+                      className="mb-2 block text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground"
                     >
-                      {sortOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                      Sort by
+                    </label>
+                    <Select value={activeSortBy} onValueChange={(v) => setFilter("sort", v)}>
+                      <SelectTrigger id="sort-select" className="h-10 bg-card">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sortOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  <FilterContent />
+                  {renderFilterContent()}
                 </div>
               )}
             </div>
@@ -871,43 +969,45 @@ const CategoryPage = () => {
 
           {/* Products grid */}
           <div ref={resultsRef} className="flex-1 min-w-0 scroll-mt-32">
-            {/* Desktop: result count + sort */}
+            {/* Desktop: result count */}
             <div className="hidden lg:flex items-center justify-between mb-6">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                Showing {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""}
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground tabular-nums">
+                {loading ? <span aria-label="Loading products">Showing -</span> : `Showing ${plural(filteredProducts.length, "product")}`}
               </p>
-              <span className="h-px flex-1 ml-5 bg-gradient-to-r from-foreground/10 to-transparent" />
+              <span aria-hidden="true" className="h-px flex-1 ml-5 bg-gradient-to-r from-foreground/10 to-transparent" />
             </div>
 
             {loading ? (
-              <div className="flex items-center justify-center py-32">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              </div>
+              <ProductGridSkeleton
+                count={8}
+                className="sm:grid-cols-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4"
+              />
             ) : filteredProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 text-center">
-                <ShoppingBag className="w-16 h-16 text-primary/30 mb-4" />
-                <h3 className="text-xl font-semibold text-foreground mb-2" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>Products coming soon</h3>
-                <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-                  We're adding exciting new products to this category. Check back soon for our latest collection!
-                </p>
-                {activeFilterCount > 0 && (
-                  <button
-                    onClick={clearAllFilters}
-                    className="link-arrow"
-                  >
-                    Clear all filters
-                  </button>
-                )}
-              </div>
+              activeFilterCount > 0 ? (
+                <EmptyState
+                  icon={SearchX}
+                  title="No products in this range"
+                  description="Try another price range or clear the filters."
+                  action={{ label: "Clear filters", onClick: clearAllFilters }}
+                />
+              ) : (
+                <EmptyState
+                  icon={ShoppingBag}
+                  title="Nothing here yet"
+                  description="This range is being stocked. Browse the full catalogue meanwhile."
+                  secondaryAction={showAll ? undefined : { label: "Browse all products", to: "/products" }}
+                />
+              )
             ) : (
               <>
+                <h2 className="sr-only">Products</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
-                  {visibleProducts.map((product) => (
+                  {visibleProducts.map((product, idx) => (
                     <CategoryProductCard
                       key={product.id}
                       product={product}
+                      priority={idx < 4}
                       wishlisted={isInWishlist(product.id)}
-                      onOpen={handleCardOpen}
                       onAddToCart={(p) => { void handleCardAddToCart(p); }}
                       onToggleWishlist={handleCardToggleWishlist}
                     />
@@ -922,8 +1022,8 @@ const CategoryPage = () => {
                       onPageChange={goToPage}
                       hrefFor={pageHref}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Showing {pageStart + 1}–{pageStart + visibleProducts.length} of {filteredProducts.length}
+                    <p className="text-xs text-muted-foreground tabular-nums">
+                      Showing {pageStart + 1}-{pageStart + visibleProducts.length} of {filteredProducts.length}
                     </p>
                   </div>
                 )}
@@ -932,6 +1032,7 @@ const CategoryPage = () => {
           </div>
         </div>
       </div>
+      </main>
 
       <Footer />
       <MobileBottomNav />

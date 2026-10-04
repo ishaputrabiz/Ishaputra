@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { BRAND } from '@/config/brand';
 
 type Theme = 'light' | 'dark' | 'system';
@@ -20,43 +20,100 @@ export const useTheme = () => {
 };
 
 const THEME_KEY = BRAND.storageKeys.theme;
+/** New visitors follow their device (owner decision, 2026-10-04). index.html's pre-paint script uses the same default. */
+const DEFAULT_THEME: Theme = 'system';
+
+/** Browser-bar colours: the page background of each theme. */
+const THEME_COLOR = { light: '#F6F2EB', dark: '#0E0D0C' } as const;
 
 function getSystemTheme(): 'light' | 'dark' {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  try {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
+}
+
+function readStoredTheme(): Theme {
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : DEFAULT_THEME;
+  } catch {
+    return DEFAULT_THEME;
+  }
+}
+
+/**
+ * Put the resolved theme on <html>. Every transition is switched off for one
+ * frame so the whole page snaps to the new colours instead of smearing through
+ * hundreds of colour transitions at once.
+ */
+function applyTheme(resolved: 'light' | 'dark') {
+  const root = document.documentElement;
+  const alreadyApplied = root.classList.contains(resolved) && root.style.colorScheme === resolved;
+
+  if (!alreadyApplied) {
+    root.classList.add('theme-switching');
+    root.classList.remove('light', 'dark');
+    root.classList.add(resolved);
+    root.style.colorScheme = resolved;
+    // Force a style flush while transitions are off, then restore them next frame.
+    void window.getComputedStyle(root).opacity;
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => root.classList.remove('theme-switching'));
+    });
+  }
+
+  // A chosen theme overrides the device preference, so both theme-color metas
+  // carry the chosen colour; 'system' keeps one per media query (index.html).
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta) => {
+    meta.setAttribute('content', THEME_COLOR[resolved]);
+  });
+}
+
+function resetThemeColorToSystem() {
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta) => {
+    const media = meta.getAttribute('media') || '';
+    meta.setAttribute('content', media.includes('dark') ? THEME_COLOR.dark : THEME_COLOR.light);
+  });
 }
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    const stored = localStorage.getItem(THEME_KEY);
-    return (stored === 'light' || stored === 'dark' || stored === 'system') ? stored : 'light';
-  });
+  const [theme, setThemeState] = useState<Theme>(readStoredTheme);
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
     theme === 'system' ? getSystemTheme() : theme
   );
 
-  const setTheme = (newTheme: Theme) => {
+  const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme);
-    localStorage.setItem(THEME_KEY, newTheme);
-  };
+    try {
+      localStorage.setItem(THEME_KEY, newTheme);
+    } catch {
+      // Private mode or blocked storage: the choice lasts for this visit only.
+    }
+  }, []);
 
   useEffect(() => {
     const resolved = theme === 'system' ? getSystemTheme() : theme;
     setResolvedTheme(resolved);
-
-    const root = document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(resolved);
+    applyTheme(resolved);
+    if (theme === 'system') resetThemeColorToSystem();
   }, [theme]);
 
-  // Listen for system theme changes
+  // Follow the device while the theme is 'system'.
   useEffect(() => {
     if (theme !== 'system') return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    let mq: MediaQueryList;
+    try {
+      mq = window.matchMedia('(prefers-color-scheme: dark)');
+    } catch {
+      return;
+    }
     const handler = (e: MediaQueryListEvent) => {
       const resolved = e.matches ? 'dark' : 'light';
       setResolvedTheme(resolved);
-      document.documentElement.classList.remove('light', 'dark');
-      document.documentElement.classList.add(resolved);
+      applyTheme(resolved);
+      resetThemeColorToSystem();
     };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);

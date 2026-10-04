@@ -1,6 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Loader2, Sparkles, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, LayoutGrid } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Spinner } from '@/components/ui/spinner';
+import { IconButton } from '@/components/ui/icon-button';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { EmptyState } from '@/components/EmptyState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { MediaGridSkeleton } from '@/components/skeletons';
+import { fadeUp, staggerDelay } from '@/lib/motion';
 import { toast } from 'sonner';
 import { DEFAULT_HOME_COLLECTIONS } from '@/data/defaultHomeCollections';
 import {
@@ -49,12 +64,15 @@ const emptyDraft = (order = 0): DraftCollection => ({
 
 const AdminHomeCollections = () => {
   const [items, setItems] = useState<HomeCollection[]>([]);
+  const confirmReturnRef = useRef<HTMLElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const [draft, setDraft] = useState<DraftCollection>(emptyDraft());
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [importingDefaults, setImportingDefaults] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = subscribeHomeCollections((data) => {
@@ -65,12 +83,14 @@ const AdminHomeCollections = () => {
   }, []);
 
   const openNew = () => {
+    returnFocusRef.current = document.activeElement as HTMLElement | null;
     setDraft(emptyDraft(items.length));
     setFile(null);
     setShowForm(true);
   };
 
   const openEdit = (item: HomeCollection) => {
+    returnFocusRef.current = document.activeElement as HTMLElement | null;
     setDraft({
       id: item.id,
       eyebrow: item.eyebrow || '',
@@ -89,14 +109,14 @@ const AdminHomeCollections = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!draft.title.trim()) return toast.error('Title is required');
-    if (!draft.imageUrl && !file) return toast.error('Image is required');
+    if (!draft.title.trim()) return toast.error('Add a title');
+    if (!draft.imageUrl && !file) return toast.error('Add an image');
 
     try {
       setSaving(true);
       let imageUrl = draft.imageUrl;
       if (file) {
-        toast.loading('Uploading image…', { id: 'hc-upload' });
+        toast.loading('Uploading the image', { id: 'hc-upload' });
         imageUrl = await uploadHomeMedia(file);
         toast.success('Image uploaded', { id: 'hc-upload' });
       }
@@ -113,7 +133,7 @@ const AdminHomeCollections = () => {
       };
       if (draft.id) {
         await updateHomeCollection(draft.id, payload);
-        toast.success('Collection updated');
+        toast.success('Collection saved');
       } else {
         await createHomeCollection(payload);
         toast.success('Collection added');
@@ -128,10 +148,9 @@ const AdminHomeCollections = () => {
 
   const handleDelete = async (id?: string) => {
     if (!id) return;
-    if (!confirm('Delete this collection card?')) return;
     try {
       await deleteHomeCollection(id);
-      toast.success('Deleted');
+      toast.success('Collection card deleted');
     } catch (err: any) {
       toast.error(err?.message || 'Delete failed');
     }
@@ -147,241 +166,218 @@ const AdminHomeCollections = () => {
   };
 
   const importDefaults = async () => {
-    if (items.length > 0) return;
+    if (items.length > 0 || importingDefaults) return;
     try {
       setImportingDefaults(true);
       await Promise.all(
         DEFAULT_HOME_COLLECTIONS.map((item) => createHomeCollection(item))
       );
-      toast.success('Imported current home-page collections into admin');
+      toast.success('Home page collections imported');
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to import defaults');
+      toast.error(err?.message || 'Could not import defaults');
     } finally {
       setImportingDefaults(false);
     }
   };
 
+  const deleting = items.find((i) => i.id === deleteId);
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-highlight dark:text-highlight font-medium mb-2 flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5" /> Content & Media
-          </p>
-          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white">
-            Our Collections
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage the cards displayed in the “Our Collections” section on the home page.
-          </p>
-        </div>
-        <button
-          onClick={openNew}
-          className="inline-flex items-center gap-2 rounded-full bg-highlight hover:bg-highlight text-white px-5 py-2.5 text-sm font-medium shadow-sm"
-        >
-          <Plus className="w-4 h-4" /> Add Collection
-        </button>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <AdminPageHeader
+        eyebrow="Home page"
+        title="Our collections"
+        description="The cards in the “Our Collections” section on the home page."
+        actions={
+          <Button onClick={openNew}>
+            <Plus aria-hidden="true" /> Add collection
+          </Button>
+        }
+        className="pb-0"
+      />
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-highlight" />
-        </div>
+        <MediaGridSkeleton count={3} className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 [&>*]:aspect-[4/5]" label="Loading collections" />
       ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-12 text-center">
-          <p className="text-sm text-gray-500 max-w-xl mx-auto">
-            No collection cards yet. The home page is currently using the built-in collection cards. Import them here once, then update or reorder them from admin.
-          </p>
-          <button
-            type="button"
-            onClick={importDefaults}
-            disabled={importingDefaults}
-            className="mt-5 inline-flex items-center gap-2 rounded-full border border-highlight/30 bg-highlight/10 px-5 py-2.5 text-sm font-medium text-highlight transition-colors hover:bg-highlight/15 disabled:cursor-default disabled:opacity-60 dark:border-highlight/20 dark:bg-highlight/5 dark:text-highlight"
-          >
-            {importingDefaults ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            Import Current Collections
-          </button>
+        <div className="rounded-card border border-dashed border-border bg-card px-4 py-12">
+          <EmptyState
+            icon={LayoutGrid}
+            title="No collection cards yet"
+            description="The home page is using the built-in collection cards. Import them once, then edit or reorder them here."
+            action={{ label: importingDefaults ? 'Importing' : 'Import collections', onClick: importDefaults }}
+          />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {items.map((item) => (
-            <motion.div
+        <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((item, index) => (
+            <motion.li
               key={item.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="group relative rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm"
+              {...fadeUp}
+              transition={{ ...fadeUp.transition, delay: staggerDelay(index) }}
+              className="group relative overflow-hidden rounded-card border border-border bg-card shadow-sm"
             >
-              <div className="aspect-[4/5] relative">
-                <SmartImage src={item.imageUrl} alt={item.title} className="absolute inset-0 w-full h-full object-cover" preset="card" />
+              <div className="relative aspect-[4/5]">
+                <SmartImage src={item.imageUrl} alt={item.title} className="absolute inset-0 h-full w-full object-cover" preset="card" />
                 <div className={`absolute inset-0 bg-gradient-to-t ${item.tint || TINTS[0].value}`} />
-                <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-                  <p className="text-[10px] uppercase tracking-[0.25em] opacity-80">{item.eyebrow}</p>
-                  <h3 className="text-lg font-semibold leading-tight" style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}>
+                <div className="on-photo absolute inset-x-0 bottom-0 p-4 text-charcoal-foreground">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-charcoal-foreground/80">{item.eyebrow}</p>
+                  <h2 className="text-lg font-semibold leading-tight" style={{ fontFamily: 'var(--font-heading)', fontStretch: 'var(--font-heading-stretch)' }}>
                     {item.title}
-                  </h3>
-                  {item.subtitle && <p className="text-xs opacity-80 mt-1 line-clamp-2">{item.subtitle}</p>}
+                  </h2>
+                  {item.subtitle && <p className="mt-1 line-clamp-2 text-xs text-charcoal-foreground/80">{item.subtitle}</p>}
                 </div>
                 {!item.active && (
-                  <div className="absolute top-3 left-3 rounded-full bg-black/70 px-2 py-0.5 text-[10px] uppercase tracking-wider text-white">
-                    Hidden
-                  </div>
+                  <span className="absolute left-3 top-3">
+                    <StatusBadge tone="neutral" icon={EyeOff} label="Hidden" />
+                  </span>
                 )}
               </div>
-              <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-gray-100 dark:border-gray-800">
-                <div className="text-xs text-gray-500">Order: {item.order ?? 0}</div>
+              <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3">
+                <div className="text-xs tabular-nums text-muted-foreground">Position {index + 1}</div>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => toggleActive(item)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title={item.active ? 'Hide' : 'Show'}>
-                    {item.active ? <Eye className="w-4 h-4 text-gray-600 dark:text-gray-300" /> : <EyeOff className="w-4 h-4 text-gray-400" />}
-                  </button>
-                  <button
-                    onClick={() => openEdit(item)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-highlight hover:bg-highlight text-white text-xs font-medium transition-colors"
-                    title="Edit collection"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" /> Edit
-                  </button>
-                  <button onClick={() => handleDelete(item.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20" title="Delete">
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </button>
+                  <IconButton label={item.active ? `Hide ${item.title}` : `Show ${item.title}`} tooltip={item.active ? 'Hide' : 'Show'} size="sm" onClick={() => toggleActive(item)}>
+                    {item.active ? <Eye /> : <EyeOff />}
+                  </IconButton>
+                  <IconButton label={`Edit ${item.title}`} tooltip="Edit" size="sm" onClick={() => openEdit(item)} className="text-foreground/70">
+                    <Edit2 />
+                  </IconButton>
+                  <IconButton label={`Delete ${item.title}`} tooltip="Delete" size="sm" onClick={(e) => { confirmReturnRef.current = e.currentTarget; if (item.id) setDeleteId(item.id); }} className="text-muted-foreground hover:text-status-danger-fg">
+                    <Trash2 />
+                  </IconButton>
                 </div>
               </div>
-            </motion.div>
+            </motion.li>
           ))}
-        </div>
+        </ul>
       )}
 
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {draft.id ? 'Edit Collection' : 'New Collection'}
-              </h2>
-              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-                <X className="w-5 h-5" />
-              </button>
+      <ConfirmDialog
+        returnFocusRef={confirmReturnRef}
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title={`Delete ${deleting?.title ?? 'this collection card'}?`}
+        description="It is removed from the home page. This cannot be undone."
+        confirmLabel="Delete card"
+        tone="danger"
+        onConfirm={() => handleDelete(deleteId ?? undefined)}
+      />
+
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent
+          className="max-h-[90vh] max-w-2xl overflow-y-auto"
+          onCloseAutoFocus={(e) => {
+            if (returnFocusRef.current?.isConnected) {
+              e.preventDefault();
+              returnFocusRef.current.focus();
+            }
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>{draft.id ? 'Edit collection' : 'New collection'}</DialogTitle>
+            <DialogDescription>A card in the Our Collections section of the home page.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Eyebrow" htmlFor="hc-eyebrow">
+                <Input id="hc-eyebrow" value={draft.eyebrow} onChange={(e) => setDraft({ ...draft, eyebrow: e.target.value })} />
+              </Field>
+              <Field label="Title" htmlFor="hc-title" required>
+                <Input id="hc-title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} required />
+              </Field>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Eyebrow">
-                  <input className="form-input" value={draft.eyebrow} onChange={(e) => setDraft({ ...draft, eyebrow: e.target.value })} />
-                </Field>
-                <Field label="Title *">
-                  <input className="form-input" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} required />
-                </Field>
-              </div>
-              <Field label="Subtitle">
-                <textarea className="form-input min-h-[70px]" value={draft.subtitle} onChange={(e) => setDraft({ ...draft, subtitle: e.target.value })} />
+            <Field label="Subtitle" htmlFor="hc-subtitle">
+              <Textarea id="hc-subtitle" className="min-h-[70px]" value={draft.subtitle} onChange={(e) => setDraft({ ...draft, subtitle: e.target.value })} />
+            </Field>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Button label" htmlFor="hc-cta">
+                <Input id="hc-cta" value={draft.ctaLabel} onChange={(e) => setDraft({ ...draft, ctaLabel: e.target.value })} />
               </Field>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="CTA Label">
-                  <input className="form-input" value={draft.ctaLabel} onChange={(e) => setDraft({ ...draft, ctaLabel: e.target.value })} />
-                </Field>
-                <Field label="CTA Link">
-                  <input className="form-input" value={draft.ctaLink} onChange={(e) => setDraft({ ...draft, ctaLink: e.target.value })} placeholder="/category/jewellery" />
-                </Field>
-              </div>
-              <Field label="Image">
-                <div className="flex flex-col gap-2">
-                  {(file || draft.imageUrl) && (
-                    <SmartImage
-                      src={file ? URL.createObjectURL(file) : draft.imageUrl}
-                      alt="preview"
-                      className="h-40 w-full object-cover rounded-lg border border-gray-200 dark:border-gray-700" preset="card" />
-                  )}
-                  <input
-                    type="file"
-                    accept={IMAGE_ACCEPT}
-                    onChange={(e) => {
-                      const picked = e.target.files?.[0] || null;
-                      if (picked) {
-                        try {
-                          assertUploadableImage(picked);
-                        } catch (err) {
-                          toast.error(describeUploadError(err));
-                          e.target.value = '';
-                          return;
-                        }
+              <Field label="Button link" htmlFor="hc-link">
+                <Input id="hc-link" value={draft.ctaLink} onChange={(e) => setDraft({ ...draft, ctaLink: e.target.value })} placeholder="/category/hair-care" />
+              </Field>
+            </div>
+            <Field label="Image" htmlFor="hc-file">
+              <div className="flex flex-col gap-2">
+                {(file || draft.imageUrl) && (
+                  <SmartImage
+                    src={file ? URL.createObjectURL(file) : draft.imageUrl}
+                    alt="Preview"
+                    className="h-40 w-full rounded-card border border-border object-cover" preset="card" />
+                )}
+                <input
+                  id="hc-file"
+                  type="file"
+                  accept={IMAGE_ACCEPT}
+                  onChange={(e) => {
+                    const picked = e.target.files?.[0] || null;
+                    if (picked) {
+                      try {
+                        assertUploadableImage(picked);
+                      } catch (err) {
+                        toast.error(describeUploadError(err));
+                        e.target.value = '';
+                        return;
                       }
-                      setFile(picked);
-                    }}
-                    className="text-sm"
-                  />
-                  <input
-                    className="form-input"
-                    value={draft.imageUrl}
-                    onChange={(e) => setDraft({ ...draft, imageUrl: e.target.value })}
-                    placeholder="…or paste an image URL"
-                  />
-                </div>
-              </Field>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Field label="Tint">
-                  <select className="form-input" value={draft.tint} onChange={(e) => setDraft({ ...draft, tint: e.target.value })}>
+                    }
+                    setFile(picked);
+                  }}
+                  className="text-sm text-foreground/80 file:mr-3 file:h-9 file:cursor-pointer file:rounded-control file:border file:border-input file:bg-transparent file:px-3 file:text-xs file:font-semibold file:text-foreground hover:file:bg-muted"
+                />
+                <Input
+                  aria-label="Image URL"
+                  value={draft.imageUrl}
+                  onChange={(e) => setDraft({ ...draft, imageUrl: e.target.value })}
+                  placeholder="Or paste an image URL"
+                />
+              </div>
+            </Field>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Field label="Tint" htmlFor="hc-tint">
+                <Select value={draft.tint} onValueChange={(v) => setDraft({ ...draft, tint: v })}>
+                  <SelectTrigger id="hc-tint"><SelectValue /></SelectTrigger>
+                  <SelectContent>
                     {TINTS.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                     ))}
-                  </select>
-                </Field>
-                <Field label="Order">
-                  <input type="number" className="form-input" value={draft.order} onChange={(e) => setDraft({ ...draft, order: Number(e.target.value) || 0 })} />
-                </Field>
-                <Field label="Active">
-                  <label className="inline-flex items-center gap-2 mt-2 text-sm">
-                    <input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />
-                    Show on home page
-                  </label>
-                </Field>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Order" htmlFor="hc-order">
+                <Input id="hc-order" type="number" inputMode="numeric" className="tabular-nums" value={draft.order} onChange={(e) => setDraft({ ...draft, order: Number(e.target.value) || 0 })} />
+              </Field>
+              <div>
+                <p className="mb-1.5 block text-xs font-medium text-foreground/80">Visibility</p>
+                <div className="flex h-11 items-center gap-2">
+                  <Checkbox id="hc-active" checked={draft.active} onCheckedChange={(checked) => setDraft({ ...draft, active: checked === true })} />
+                  <Label htmlFor="hc-active" className="text-sm font-normal text-foreground">Show on home page</Label>
+                </div>
               </div>
+            </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 px-5 py-2 text-sm bg-highlight hover:bg-highlight disabled:opacity-60 text-white rounded-lg"
-                >
-                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {draft.id ? 'Save changes' : 'Create collection'}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-
-      <style>{`
-        .form-input {
-          width: 100%;
-          padding: 0.55rem 0.75rem;
-          border-radius: 0.6rem;
-          border: 1px solid rgb(229 231 235);
-          background: white;
-          color: rgb(17 24 39);
-          font-size: 0.875rem;
-        }
-        .dark .form-input {
-          background: rgb(17 24 39);
-          color: white;
-          border-color: rgb(55 65 81);
-        }
-        .form-input:focus { outline: none; border-color: rgb(217 119 6); box-shadow: 0 0 0 3px hsl(var(--highlight)/0.15); }
-      `}</style>
+            <DialogFooter className="gap-2 border-t border-border pt-4">
+              <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Spinner />}
+                {draft.id ? 'Save changes' : 'Create collection'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="block">
-    <span className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">{label}</span>
+const Field = ({ label, htmlFor, required, children }: { label: string; htmlFor: string; required?: boolean; children: React.ReactNode }) => (
+  <div>
+    <Label htmlFor={htmlFor} className="mb-1.5 block text-xs font-medium text-foreground/80">
+      {label}
+      {required && <span aria-hidden="true" className="ml-0.5 text-status-danger-fg">*</span>}
+    </Label>
     {children}
-  </label>
+  </div>
 );
 
 export default AdminHomeCollections;

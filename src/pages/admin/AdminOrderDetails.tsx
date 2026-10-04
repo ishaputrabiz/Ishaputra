@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ChevronLeft,
-  Loader2,
   MapPin,
   MessageSquare,
   Package,
@@ -16,11 +15,22 @@ import {
   Receipt,
   ExternalLink,
   Coins,
-  AlertTriangle,
   ShieldAlert,
+  TriangleAlert,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { IconButton } from '@/components/ui/icon-button';
+import { Notice } from '@/components/ui/notice';
+import { Spinner } from '@/components/ui/spinner';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { DetailSkeleton } from '@/components/skeletons';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { getOrderStatus, orderLabel, type OrderStatusContext } from '@/lib/orderStatus';
+import { formatDate as fmtDate, formatDateTime as fmtDateTime, formatINR, plural } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -69,44 +79,39 @@ import { SmartImage } from "@/components/ui/smart-image";
 
 /**
  * Canonical, simplified status options for the admin dropdown. Legacy values
- * (shipped/assigned/picked) are intentionally excluded — they are normalised
+ * (shipped/assigned/picked) are intentionally excluded: they are normalised
  * to `packed` / `outForDelivery` for display.
  */
 const STATUS_OPTIONS: Array<{ value: Order['status']; label: string }> = [
   { value: 'pending', label: 'Pending' },
   { value: 'processing', label: 'Processing' },
   { value: 'packed', label: 'Packed' },
-  { value: 'outForDelivery', label: 'Out for Delivery' },
+  { value: 'outForDelivery', label: 'Out for delivery' },
   { value: 'delivered', label: 'Delivered' },
   // Exception flow
   { value: 'cancelled', label: 'Cancelled' },
-  { value: 'returnRequested', label: 'Return Requested' },
-  { value: 'returnScheduled', label: 'Return Scheduled' },
-  { value: 'picked', label: 'Return Picked Up' },
+  { value: 'returnRequested', label: 'Return requested' },
+  { value: 'returnScheduled', label: 'Return scheduled' },
+  { value: 'picked', label: 'Return picked up' },
   { value: 'returned', label: 'Returned' },
   { value: 'refunded', label: 'Refunded' },
-  { value: 'deliveryFailed', label: 'Delivery Failed' },
+  { value: 'deliveryFailed', label: getOrderStatus('deliveryFailed').label },
 ];
 
-const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  pending: { label: 'Pending', className: 'bg-gray-200 text-gray-800 hover:bg-gray-200' },
-  processing: { label: 'Processing', className: 'bg-blue-100 text-blue-700 hover:bg-blue-100' },
-  packed: { label: 'Packed', className: 'bg-orange-100 text-orange-700 hover:bg-orange-100' },
-  outForDelivery: { label: 'Out for Delivery', className: 'bg-purple-100 text-purple-700 hover:bg-purple-100' },
-  delivered: { label: 'Delivered', className: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100' },
-  cancelled: { label: 'Cancelled', className: 'bg-red-100 text-red-700 hover:bg-red-100' },
-  returnRequested: { label: 'Return Requested', className: 'bg-red-100 text-red-700 hover:bg-red-100' },
-  returnScheduled: { label: 'Return Scheduled', className: 'bg-red-100 text-red-700 hover:bg-red-100' },
-  picked: { label: 'Return Picked Up', className: 'bg-highlight/15 text-highlight hover:bg-highlight/15' },
-  returned: { label: 'Returned', className: 'bg-red-100 text-red-700 hover:bg-red-100' },
-  refunded: { label: 'Refunded', className: 'bg-green-100 text-green-700 hover:bg-green-100' },
-  deliveryFailed: { label: 'Delivery Failed', className: 'bg-red-100 text-red-700 hover:bg-red-100' },
-};
+/** The dropdown's label for a status (sentence case). */
+const statusLabel = (status: string) => STATUS_OPTIONS.find((o) => o.value === status)?.label || status;
+
+/** Panel surface for every section of this page. */
+const PANEL = 'panel bg-card p-5 text-card-foreground sm:p-6';
+/** Section heading inside a panel. */
+const SECTION_TITLE = 'mb-3 flex items-center gap-2 text-sm font-semibold text-foreground';
+/** Small label above a field in the window setters. */
+const FIELD_LABEL = 'mb-1.5 block text-xs font-medium text-muted-foreground';
 
 const NEXT_STEP_HINT: Record<string, string> = {
   pending: 'Confirm the order to start processing.',
   processing: 'Pack the items and mark as Packed when ready.',
-  packed: 'Assign a delivery partner — this will mark the order as Out for Delivery.',
+  packed: 'Assign a delivery partner. This marks the order as Out for delivery.',
   outForDelivery: 'Awaiting OTP verification by the delivery partner at the customer\'s door.',
   delivered: 'Order completed.',
   cancelled: 'Order cancelled.',
@@ -118,8 +123,7 @@ const NEXT_STEP_HINT: Record<string, string> = {
   deliveryFailed: 'Delivery failed. Share the Return Store OTP with the delivery partner when they arrive at the store.',
 };
 
-const formatPrice = (price: number) =>
-  `₹${(price ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+const formatPrice = (price: number) => formatINR(price ?? 0);
 
 type TimestampLike = { seconds?: number; toDate?: () => Date } | Date | string | number | null | undefined;
 type OrderReturnMeta = Order & {
@@ -132,25 +136,8 @@ type OrderReturnMeta = Order & {
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
-const formatDateTime = (value: TimestampLike) => {
-  if (!value) return 'N/A';
-  const date = value instanceof Date
-    ? value
-    : typeof value === 'object' && value.toDate
-      ? value.toDate()
-      : typeof value === 'object' && typeof value.seconds === 'number'
-        ? new Date(value.seconds * 1000)
-        : typeof value === 'string' || typeof value === 'number'
-          ? new Date(value)
-          : new Date();
-  return date.toLocaleString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
+/** '3 Oct 2026, 8:01 pm', or 'N/A' when the time is missing. */
+const formatDateTime = (value: TimestampLike) => (value ? fmtDateTime(value) || 'N/A' : 'N/A');
 
 const millisOf = (value: TimestampLike): number => {
   if (!value) return 0;
@@ -163,8 +150,7 @@ const millisOf = (value: TimestampLike): number => {
   return Number.isFinite(ms) ? ms : 0;
 };
 
-const formatDay = (ms: number) =>
-  new Date(ms).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+const formatDay = (ms: number) => fmtDate(ms);
 
 /** Rupees to the paisa: comparing a payment with the order must not round a difference away. */
 const formatAmount = (value: number) => {
@@ -284,9 +270,9 @@ const describeReconcile = (
 };
 
 const NOTE_TONE: Record<'ok' | 'warn' | 'error', string> = {
-  ok: 'text-emerald-700 dark:text-emerald-400',
-  warn: 'text-highlight',
-  error: 'text-red-600 dark:text-red-400',
+  ok: 'text-status-success-fg',
+  warn: 'text-status-warning-fg',
+  error: 'text-status-danger-fg',
 };
 
 const ENDED_STATUSES: Order['status'][] = ['cancelled', 'returned', 'refunded'];
@@ -304,6 +290,11 @@ const AdminOrderDetails = () => {
   const [assigning, setAssigning] = useState(false);
   const [assigningReturn, setAssigningReturn] = useState(false);
   const [returnReviewing, setReturnReviewing] = useState<'approve' | 'reject' | null>(null);
+  // A status change or a return decision waiting for the admin to confirm it.
+  const [confirmAction, setConfirmAction] = useState<
+    { kind: 'status'; next: Order['status'] } | { kind: 'approve' } | { kind: 'reject' } | null
+  >(null);
+  const statusTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   // Delivery window state
   const [windowDate, setWindowDate] = useState('');
@@ -501,17 +492,17 @@ const AdminOrderDetails = () => {
     // the assign-partner / OTP panels rather than the dropdown. With it disabled,
     // the admin moves the order through every status directly.
     if (DELIVERY_PARTNERS_ENABLED && next === 'outForDelivery' && !order.delivery_boy_id && !order.delivery_partner_id) {
-      toast.error('Assign a delivery partner first — that will mark the order as Out for Delivery.');
+      toast.error('Assign a delivery partner first. That marks the order as Out for delivery.');
       return;
     }
     if (DELIVERY_PARTNERS_ENABLED && next === 'returnScheduled') {
-      toast.error('Use the “Assign pickup partner” panel below to schedule a return — direct status change is disabled.');
+      toast.error('Use the “Assign pickup partner” panel below to schedule a return. Direct status change is disabled.');
       return;
     }
     setSavingStatus(true);
     try {
       await updateOrderStatus(order.id, next);
-      toast.success(`Status updated to ${STATUS_BADGE[next]?.label || next}`);
+      toast.success(`Status updated to ${statusLabel(next)}`);
     } catch (err: unknown) {
       console.error(err);
       toast.error(getErrorMessage(err, 'Failed to update status'));
@@ -591,7 +582,7 @@ const AdminOrderDetails = () => {
     setSavingWindow(true);
     try {
       await setDeliveryWindow(order.id, { date: windowDate, from: windowFrom, to: windowTo, note: windowNote || undefined });
-      toast.success('Delivery window saved!');
+      toast.success('Delivery window saved');
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, 'Failed to save delivery window.'));
     } finally {
@@ -612,7 +603,7 @@ const AdminOrderDetails = () => {
         to: returnWindowTo,
         note: returnWindowNote || undefined,
       });
-      toast.success('Return pickup window saved!');
+      toast.success('Return pickup window saved');
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, 'Failed to save return pickup window.'));
     } finally {
@@ -666,15 +657,20 @@ const AdminOrderDetails = () => {
 
   if (loading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-highlight" />
+      <div className="mx-auto w-full max-w-6xl">
+        <DetailSkeleton label="Loading order" />
       </div>
     );
   }
 
   if (!order) return null;
 
-  const badge = STATUS_BADGE[normalizedStatus] || STATUS_BADGE.pending;
+  // Same map as the orders list, so both show the same chip. 'Needs review'
+  // gets its own chip (and the notice below), the status chip stays the status.
+  const badge = getOrderStatus(normalizedStatus, {
+    ...(order as unknown as OrderStatusContext),
+    needsManualReview: false,
+  });
   const nextStatus = normalizedStatus === 'picked' ? ('returned' as Order['status']) : getNextStatus(normalizedStatus);
 
   // In admin-managed fulfilment mode (delivery system off), the admin advances
@@ -685,6 +681,8 @@ const AdminOrderDetails = () => {
     outForDelivery: 'Mark as Delivered once the customer has received the order.',
     returnRequested: 'Approve the return, then set the status to Returned once the item is back.',
     returnScheduled: 'Set the status to Returned once the item is back with you.',
+    picked: 'Item collected. Mark as Returned once it reaches you.',
+    deliveryFailed: 'Contact the customer and reschedule, or cancel the order.',
   };
   const statusHint =
     (!DELIVERY_PARTNERS_ENABLED && ADMIN_DRIVEN_HINTS[normalizedStatus]) ||
@@ -758,16 +756,16 @@ const AdminOrderDetails = () => {
   // The summary's payment line follows the server's record where it has one.
   const paymentLabel =
     paymentCheck === 'verified'
-      ? { text: 'Paid', className: 'text-emerald-600' }
+      ? { text: 'Paid', className: 'text-status-success-fg' }
       : paymentCheck === 'mismatch'
-        ? { text: 'Order does not match payment', className: 'text-red-600 dark:text-red-400' }
+        ? { text: 'Order does not match payment', className: 'text-status-danger-fg' }
         : paymentCheck === 'missing'
-          ? { text: 'Not confirmed', className: 'text-highlight' }
+          ? { text: 'Not confirmed', className: 'text-status-warning-fg' }
           : paymentCheck === 'unlinked'
-            ? { text: 'No payment linked', className: 'text-highlight' }
+            ? { text: 'No payment linked', className: 'text-status-warning-fg' }
             : {
                 text: isPaid ? (isCod ? 'COD collected' : 'Paid') : isCod ? 'COD pending' : 'Payment pending',
-                className: isPaid ? 'text-emerald-600' : 'text-highlight',
+                className: isPaid ? 'text-status-success-fg' : 'text-status-warning-fg',
               };
 
   // ── Points earned, as the reconcile action last wrote them on the order ──
@@ -808,105 +806,98 @@ const AdminOrderDetails = () => {
     );
   };
 
+  const headingFont = { fontFamily: 'var(--font-heading)', fontStretch: 'var(--font-heading-stretch)' } as const;
+
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/admin/orders')}>
-            <ChevronLeft className="mr-1 h-4 w-4" /> Back
-          </Button>
-          <div>
-            <p className="text-xs uppercase tracking-widest text-gray-400">Order</p>
-            <h1 className="font-mono text-lg font-bold text-gray-900 dark:text-zinc-100">
-              #{order.orderId}
-            </h1>
+      <AdminPageHeader
+        title={<span className="tabular-nums">Order {orderLabel(order.orderId)}</span>}
+        className="items-center pb-0"
+        leading={
+          <IconButton label="Back to orders" onClick={() => navigate('/admin/orders')} className="-ml-2">
+            <ChevronLeft />
+          </IconButton>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {order.needsManualReview && (
+              <StatusBadge tone="danger" label="Needs review" icon={TriangleAlert} />
+            )}
+            <StatusBadge tone={badge.tone} label={badge.label} icon={badge.icon} className="h-7 px-2.5 text-sm" />
           </div>
-        </div>
-        <Badge className={`${badge.className} px-3 py-1.5 text-sm font-semibold`}>
-          {badge.label}
-        </Badge>
-      </div>
+        }
+      />
 
       {/* Flagged for a human: a paid order that could not be completed
            automatically, or a reward spend that may need a correction. */}
       {order.needsManualReview && (
-        <div
-          role="alert"
-          className="flex items-start gap-3 rounded-2xl border-2 border-red-300 bg-red-50 p-4 text-red-800 shadow-sm dark:border-red-500/50 dark:bg-red-500/10 dark:text-red-200"
-        >
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
-          <div className="min-w-0">
-            <p className="text-sm font-bold">Needs manual review</p>
-            <p className="mt-1 break-words text-sm">
-              {order.manualReviewReason || 'This order was flagged for a manual check.'}
-            </p>
-          </div>
-        </div>
+        <Notice tone="danger" title="Needs manual review" className="shadow-sm">
+          <span className="break-words">
+            {order.manualReviewReason || 'This order was flagged for a manual check.'}
+          </span>
+        </Notice>
       )}
 
       {/* Top summary card */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-widest text-gray-400">Customer</p>
-            <p className="mt-1 font-semibold text-gray-900 dark:text-zinc-100">
+      <section aria-label="Order summary" className={PANEL}>
+        <dl className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+          <div className="min-w-0">
+            <dt className="text-xs text-muted-foreground">Customer</dt>
+            <dd className="mt-1 truncate font-semibold text-foreground">
               {order.shippingAddress?.fullName || order.userName}
-            </p>
-            <p className="text-xs text-gray-500">{order.shippingAddress?.mobile}</p>
+            </dd>
+            <dd className="text-xs tabular-nums text-muted-foreground">{order.shippingAddress?.mobile}</dd>
           </div>
           <div>
-            <p className="text-[11px] uppercase tracking-widest text-gray-400">Total</p>
-            <p className="mt-1 text-xl font-bold text-highlight">{formatPrice(order.total)}</p>
-            <p className="text-xs text-gray-500">{order.items?.length || 0} item(s)</p>
+            <dt className="text-xs text-muted-foreground">Total</dt>
+            <dd className="mt-1 text-xl font-semibold tabular-nums text-foreground" style={headingFont}>
+              {formatPrice(order.total)}
+            </dd>
+            <dd className="text-xs text-muted-foreground">{plural(order.items?.length || 0, 'item')}</dd>
           </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-widest text-gray-400">Payment</p>
-            <p className="mt-1 font-semibold text-gray-900 dark:text-zinc-100">
+          <div className="min-w-0">
+            <dt className="text-xs text-muted-foreground">Payment</dt>
+            <dd className="mt-1 font-semibold text-foreground">
               {order.paymentMethod || 'Online'}
-            </p>
-            {/* Cash on Delivery was retired, but historic orders still carry it -
+            </dd>
+            {/* Cash on Delivery was retired, but historic orders still carry it,
                 so the label follows the order rather than assuming COD. An
                 online payment's label follows the server's record (below). */}
-            <p className={`text-xs font-medium ${paymentLabel.className}`}>{paymentLabel.text}</p>
+            <dd className={cn('text-xs font-medium', paymentLabel.className)}>{paymentLabel.text}</dd>
             {order.paymentCollectedAt && (
-              <p className="mt-1 text-[11px] text-gray-500">
+              <dd className="mt-1 text-xs text-muted-foreground">
                 Collected {formatDateTime(order.paymentCollectedAt)}
                 {order.paymentCollectedByName ? ` by ${order.paymentCollectedByName}` : ''}
-              </p>
+              </dd>
             )}
           </div>
           <div>
-            <p className="text-[11px] uppercase tracking-widest text-gray-400">Placed</p>
-            <p className="mt-1 text-sm text-gray-700 dark:text-zinc-300">
+            <dt className="text-xs text-muted-foreground">Placed</dt>
+            <dd className="mt-1 text-sm tabular-nums text-foreground/80">
               {formatDateTime(order.createdAt)}
-            </p>
+            </dd>
           </div>
-        </div>
+        </dl>
 
         {/* Payment check: the order against payments/<razorpay order id>, which
              only the server writes. An order edited in the browser shows here. */}
         {paymentCheck === 'loading' && (
-          <p className="mt-4 flex items-center gap-2 text-xs text-gray-500 dark:text-zinc-400">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Checking the payment record…
+          <p role="status" className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+            <Spinner size={14} /> Checking the payment record
           </p>
         )}
         {paymentCheck === 'verified' && (
-          <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
-            <ShieldCheck className="h-4 w-4 shrink-0" />
-            <span>Payment verified · {formatAmount(amountPaid)}</span>
-            {record.razorpayPaymentId && <span className="break-all font-mono">· {record.razorpayPaymentId}</span>}
-          </div>
+          <Notice tone="success" icon={ShieldCheck} compact className="mt-4 text-xs font-medium">
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="tabular-nums">Payment verified · {formatAmount(amountPaid)}</span>
+              {record.razorpayPaymentId && <span className="break-all font-mono">{record.razorpayPaymentId}</span>}
+            </span>
+          </Notice>
         )}
         {paymentCheck === 'mismatch' && (
-          <div
-            role="alert"
-            className="mt-4 rounded-lg border-2 border-red-300 bg-red-50 px-3 py-3 text-red-800 dark:border-red-500/50 dark:bg-red-500/10 dark:text-red-200"
-          >
-            <p className="flex items-center gap-2 text-sm font-bold">
-              <ShieldAlert className="h-4 w-4 shrink-0" /> This order does not match its payment
-            </p>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+          <Notice tone="danger" icon={ShieldAlert} title="This order does not match its payment" className="mt-4">
+            <ul className="list-disc space-y-1 pl-5">
               {paymentIssues.map((issue) => (
                 <li key={issue}>{issue}</li>
               ))}
@@ -916,125 +907,124 @@ const AdminOrderDetails = () => {
               {record.razorpayPaymentId ? ` · ${record.razorpayPaymentId}` : ''}. The order may have been
               edited: check it in Razorpay before packing.
             </p>
-          </div>
+          </Notice>
         )}
         {paymentCheck === 'missing' && (
-          <div className="mt-4 rounded-lg border border-highlight/45 bg-highlight/10 px-3 py-2.5 text-xs text-highlight dark:border-highlight dark:bg-highlight/8 dark:text-charcoal-foreground">
-            <p className="flex items-center gap-2 text-sm font-semibold">
-              <AlertTriangle className="h-4 w-4 shrink-0" /> Payment not confirmed by the server
-            </p>
-            <p className="mt-1">
-              Press Check payment & rewards before packing. It asks Razorpay and records the payment if it went
-              through.
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={reconcileRunning}
-                onClick={() => checkPaymentAndRewards('payment')}
-              >
-                {reconcileRunning && reconcile?.from === 'payment' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Check payment & rewards
-              </Button>
-              {reconcileNote('payment')}
-            </div>
-          </div>
+          <Notice
+            tone="warning"
+            title="Payment not confirmed by the server"
+            className="mt-4"
+            action={
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={reconcileRunning}
+                  onClick={() => checkPaymentAndRewards('payment')}
+                >
+                  {reconcileRunning && reconcile?.from === 'payment' ? <Spinner /> : null}
+                  Check payment & rewards
+                </Button>
+                {reconcileNote('payment')}
+              </>
+            }
+          >
+            Press Check payment & rewards before packing. It asks Razorpay and records the payment if it went
+            through.
+          </Notice>
         )}
         {paymentCheck === 'legacy' && (
-          <p className="mt-4 flex items-start gap-2 rounded-lg border border-highlight/45 bg-highlight/10 px-3 py-2 text-xs font-medium text-highlight dark:border-highlight dark:bg-highlight/8 dark:text-charcoal-foreground">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
+          <Notice tone="warning" compact className="mt-4 text-xs">
             <span className="min-w-0 break-words">
               No server record of this payment: the order was placed before payments were recorded. Check{' '}
               {order.razorpayPaymentId || 'it'} in the Razorpay dashboard.
             </span>
-          </p>
+          </Notice>
         )}
         {paymentCheck === 'unlinked' && (
-          <p className="mt-4 flex items-start gap-2 rounded-lg border border-highlight/45 bg-highlight/10 px-3 py-2 text-xs font-medium text-highlight dark:border-highlight dark:bg-highlight/8 dark:text-charcoal-foreground">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            <span>No Razorpay payment is linked to this order. Make sure it was paid before packing.</span>
-          </p>
+          <Notice tone="warning" compact className="mt-4 text-xs">
+            No Razorpay payment is linked to this order. Make sure it was paid before packing.
+          </Notice>
         )}
         {paymentCheck === 'error' && lookup?.state === 'error' && (
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-medium text-red-600 dark:text-red-400">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
+          <Notice
+            tone="danger"
+            compact
+            className="mt-4 text-xs"
+            action={
+              <Button variant="outline" size="sm" onClick={() => void rereadPayment()}>
+                Try again
+              </Button>
+            }
+          >
             <span className="min-w-0 break-words">Could not read the payment record: {lookup.message}</span>
-            <Button variant="outline" size="sm" onClick={() => void rereadPayment()}>
-              Try again
-            </Button>
-          </div>
+          </Notice>
         )}
         {itemsUnchecked && (paymentCheck === 'verified' || paymentCheck === 'mismatch') && (
-          <p className="mt-2 text-xs text-gray-500 dark:text-zinc-400">
+          <p className="mt-2 text-xs text-muted-foreground">
             Items were not compared: this browser cannot hash them (it needs HTTPS).
           </p>
         )}
 
         {statusHint && (
-          <div className="mt-4 rounded-lg bg-highlight/10 px-3 py-2 text-xs text-highlight dark:bg-highlight/10 dark:text-charcoal-foreground">
+          <p className="mt-4 rounded-control bg-muted px-3 py-2 text-xs text-foreground">
             <span className="font-semibold">Next:</span> {statusHint}
-          </div>
+          </p>
         )}
         {isCod && !isPaid && normalizedStatus === 'outForDelivery' && (
-          <div className="mt-3 rounded-lg border border-highlight/45 bg-highlight/10 px-3 py-2 text-xs font-medium text-highlight dark:border-highlight dark:bg-highlight/8 dark:text-charcoal-foreground">
+          <Notice tone="warning" compact className="mt-3 text-xs">
             {DELIVERY_PARTNERS_ENABLED
               ? 'COD payment is still pending. The delivery partner must collect cash and mark it received before the order can be completed.'
               : 'This is a Cash on Delivery order. The payment will be recorded as collected when you mark the order Delivered.'}
-          </div>
+          </Notice>
         )}
-      </div>
+      </section>
 
       {/* Items */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-zinc-100">
-          <Package className="h-4 w-4" /> Items
+      <section aria-labelledby="order-items-title" className={PANEL}>
+        <h2 id="order-items-title" className={SECTION_TITLE}>
+          <Package aria-hidden="true" className="size-4 text-muted-foreground" /> Items
         </h2>
-        <div className="space-y-2">
+        <ul className="divide-y divide-foreground/[0.08]">
           {order.items?.map((item, idx) => (
-            <div
-              key={idx}
-              className="flex items-center gap-3 rounded-lg bg-gray-50 p-2 dark:bg-zinc-800/50"
-            >
+            <li key={idx} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
               {item.image && (
                 <SmartImage
                   src={item.image}
-                  alt={item.name}
-                  className="h-12 w-12 rounded-md object-cover" preset="thumb" />
+                  alt=""
+                  className="size-12 shrink-0 rounded-control bg-muted object-cover"
+                  preset="thumb"
+                />
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-900 dark:text-zinc-100">
-                  {item.name}
-                </p>
-                <p className="text-xs text-gray-500">Qty {item.quantity}</p>
+                <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
+                <p className="text-xs tabular-nums text-muted-foreground">Qty {item.quantity}</p>
               </div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100">
+              <p className="text-sm font-semibold tabular-nums text-foreground">
                 {formatPrice(item.price * item.quantity)}
               </p>
-            </div>
+            </li>
           ))}
-        </div>
-      </div>
+        </ul>
+      </section>
 
-      {/* Pricing breakdown — sourced from the saved order so admins see exactly
+      {/* Pricing breakdown: sourced from the saved order so admins see exactly
            what the customer paid (subtotal, delivery, GST, COD, coupon, total). */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-zinc-100">
+      <section aria-labelledby="order-pricing-title" className={PANEL}>
+        <h2 id="order-pricing-title" className={SECTION_TITLE}>
           Pricing breakdown
         </h2>
-        <div className="space-y-1.5 text-sm">
-          <div className="flex justify-between text-gray-700 dark:text-zinc-300">
+        <div className="space-y-1.5 text-sm tabular-nums">
+          <div className="flex justify-between text-foreground/80">
             <span>Subtotal</span>
             <span>{formatPrice(order.subtotal || 0)}</span>
           </div>
-          <div className="flex justify-between text-gray-700 dark:text-zinc-300">
+          <div className="flex justify-between text-foreground/80">
             <span>Delivery</span>
-            <span>{(order.deliveryCharge || 0) === 0 ? 'FREE' : formatPrice(order.deliveryCharge || 0)}</span>
+            <span>{(order.deliveryCharge || 0) === 0 ? 'Free' : formatPrice(order.deliveryCharge || 0)}</span>
           </div>
           {(order.taxAmount || 0) > 0 && (
-            <div className="flex justify-between text-gray-700 dark:text-zinc-300">
+            <div className="flex justify-between text-foreground/80">
               <span>
                 GST{order.gstRate ? ` (${order.gstRate}%${order.gstInclusive ? ' incl.' : ''})` : ''}
               </span>
@@ -1042,13 +1032,13 @@ const AdminOrderDetails = () => {
             </div>
           )}
           {(order.codCharge || 0) > 0 && (
-            <div className="flex justify-between text-gray-700 dark:text-zinc-300">
+            <div className="flex justify-between text-foreground/80">
               <span>COD charge</span>
               <span>{formatPrice(order.codCharge || 0)}</span>
             </div>
           )}
           {(order.discount || order.couponDiscount || 0) > 0 && (
-            <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+            <div className="flex justify-between text-status-success-fg">
               <span>
                 Discount{order.couponCode ? ` (${order.couponCode})` : ''}
               </span>
@@ -1056,7 +1046,7 @@ const AdminOrderDetails = () => {
             </div>
           )}
           {(order.pointsUsed || 0) > 0 && (
-            <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+            <div className="flex justify-between text-status-success-fg">
               <span>Points ({order.pointsUsed})</span>
               {/* pointsUsed is a count; pointsValue is what they were worth. Older
                    orders lack it, and then 1 point was ₹1. */}
@@ -1064,24 +1054,24 @@ const AdminOrderDetails = () => {
             </div>
           )}
           {(order.cashbackUsed || 0) > 0 && (
-            <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+            <div className="flex justify-between text-status-success-fg">
               <span>Wallet cashback</span>
               <span>-{formatPrice(order.cashbackUsed || 0)}</span>
             </div>
           )}
-          <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 text-base font-bold text-gray-900 dark:border-zinc-800 dark:text-zinc-100">
+          <div className="mt-2 flex justify-between border-t border-foreground/[0.08] pt-2 text-base font-semibold text-foreground">
             <span>Total</span>
-            <span className="text-highlight">{formatPrice(order.total || 0)}</span>
+            <span>{formatPrice(order.total || 0)}</span>
           </div>
           {order.couponCode && (
-            <p className="pt-1 text-xs text-gray-500">
-              Coupon <span className="font-mono font-semibold">{order.couponCode}</span>
-              {order.couponDescription ? ` — ${order.couponDescription}` : ''}
+            <p className="pt-1 text-xs text-muted-foreground">
+              Coupon <span className="font-mono font-semibold text-foreground/80">{order.couponCode}</span>
+              {order.couponDescription ? `: ${order.couponDescription}` : ''}
             </p>
           )}
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-zinc-800">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-foreground/[0.08] pt-3 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <Coins className="h-3.5 w-3.5 shrink-0" />
+              <Coins aria-hidden="true" className="size-3.5 shrink-0" />
               {pointsText}
             </span>
             <Button
@@ -1090,37 +1080,35 @@ const AdminOrderDetails = () => {
               disabled={reconcileRunning}
               onClick={() => checkPaymentAndRewards('rewards')}
             >
-              {reconcileRunning && reconcile?.from === 'rewards' ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
+              {reconcileRunning && reconcile?.from === 'rewards' ? <Spinner /> : null}
               Check payment & rewards
             </Button>
             {reconcileNote('rewards')}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Order conversation — admin can see everything (internal + customer
+      {/* Order conversation: admin can see everything (internal + customer
            visible) and reply inside the same thread the customer uses. */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-zinc-100">
-          <MessageSquare className="h-4 w-4" /> Order conversation
+      <section aria-labelledby="order-chat-title" className={PANEL}>
+        <h2 id="order-chat-title" className={SECTION_TITLE}>
+          <MessageSquare aria-hidden="true" className="size-4 text-muted-foreground" /> Order conversation
           {chatMessages.length > 0 && (
-            <span className="ml-1 inline-flex items-center justify-center rounded-full bg-highlight px-2 py-0.5 text-[10px] font-bold text-white">
+            <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[11px] font-semibold tabular-nums text-foreground">
               {chatMessages.length}
             </span>
           )}
         </h2>
-        <p className="mb-3 text-xs text-gray-500 dark:text-zinc-400">
+        <p className="mb-3 text-xs text-muted-foreground">
           Replies marked customer-visible appear on the customer order page in real time.
         </p>
 
         <div
           ref={chatScrollRef}
-          className="max-h-[360px] space-y-2 overflow-y-auto rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-zinc-800 dark:bg-zinc-950/40"
+          className="max-h-[360px] space-y-2 overflow-y-auto rounded-card border border-foreground/[0.06] bg-muted p-3"
         >
           {chatMessages.length === 0 ? (
-            <p className="py-6 text-center text-xs text-gray-500 dark:text-zinc-400">
+            <p className="py-6 text-center text-xs text-muted-foreground">
               No messages yet. Send the first reply below.
             </p>
           ) : (
@@ -1129,26 +1117,26 @@ const AdminOrderDetails = () => {
               const isSystem = m.authorType === 'system';
               const align = isAdmin ? 'justify-end' : 'justify-start';
               const bubble = isAdmin
-                ? 'bg-highlight text-white'
+                ? 'border border-primary/20 bg-primary/10 text-foreground'
                 : isSystem
-                  ? 'border border-dashed border-gray-300 bg-white text-gray-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200'
-                  : 'border border-gray-200 bg-white text-gray-800 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100';
+                  ? 'border border-dashed border-foreground/20 bg-card text-foreground/80'
+                  : 'border border-foreground/[0.08] bg-card text-foreground';
               return (
                 <div key={m.id} className={`flex ${align}`}>
-                  <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm shadow-sm ${bubble}`}>
-                    <div className={`flex flex-wrap items-center gap-2 text-[10px] ${isAdmin ? 'text-white/80' : 'text-gray-500 dark:text-zinc-400'}`}>
-                      <span className="font-semibold">
+                  <div className={`max-w-[85%] rounded-card px-3 py-2 text-sm ${bubble}`}>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                      <span className="font-semibold text-foreground/80">
                         {m.authorName || (isAdmin ? 'Support team' : isSystem ? 'System' : 'Customer')}
                       </span>
-                      <span>{formatDateTime(m.createdAt)}</span>
+                      <span className="tabular-nums">{formatDateTime(m.createdAt)}</span>
                       {m.channel !== 'chat' && (
-                        <span className={`rounded-full px-1.5 py-0.5 ${isAdmin ? 'bg-white/15' : 'bg-gray-100 dark:bg-zinc-800'}`}>
+                        <span className="rounded-chip bg-muted px-1.5 py-0.5">
                           {m.channel}
                         </span>
                       )}
                       {m.visibility === 'internal' && (
-                        <span className={`rounded-full px-1.5 py-0.5 ${isAdmin ? 'bg-white/15' : 'bg-highlight/15 text-highlight dark:bg-highlight/10 dark:text-charcoal-foreground'}`}>
-                          internal
+                        <span className="rounded-chip border border-status-warning-line bg-status-warning-bg px-1.5 py-0.5 text-status-warning-fg">
+                          Internal
                         </span>
                       )}
                     </div>
@@ -1161,43 +1149,49 @@ const AdminOrderDetails = () => {
         </div>
 
         <div className="mt-3 space-y-2">
+          <Label htmlFor="admin-chat-reply" className="sr-only">Reply to the customer</Label>
           <Textarea
+            id="admin-chat-reply"
             value={chatDraft}
             onChange={(e) => setChatDraft(e.target.value)}
-            placeholder="Reply to the customer about this order…"
+            placeholder="Reply to the customer about this order"
             className="min-h-[88px] resize-none"
             disabled={sendingChat}
           />
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-gray-500 dark:text-zinc-400">
-              Sent as <span className="font-semibold">{userProfile?.username || user?.displayName || 'Support team'}</span> — visible to the customer.
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              Sent as <span className="font-semibold text-foreground/80">{userProfile?.username || user?.displayName || 'Support team'}</span>. Visible to the customer.
             </p>
             <Button
               size="sm"
               onClick={sendAdminChatMessage}
               disabled={sendingChat || !chatDraft.trim()}
-              className="gap-2"
             >
-              {sendingChat ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              {sendingChat ? 'Sending…' : 'Send reply'}
+              {sendingChat ? <Spinner /> : <Send aria-hidden="true" />}
+              {sendingChat ? 'Sending' : 'Send reply'}
             </Button>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Status + Assign Partner */}
       <div className={`grid gap-4 ${DELIVERY_PARTNERS_ENABLED ? 'lg:grid-cols-2' : ''}`}>
         {/* Status control */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-zinc-100">
-            Order Status
+        <section aria-labelledby="order-status-title" className={PANEL}>
+          <h2 id="order-status-title" className={SECTION_TITLE}>
+            Order status
           </h2>
+          <Label htmlFor="order-status" className="sr-only">Order status</Label>
           <Select
             value={normalizedStatus}
-            onValueChange={(v) => handleStatusChange(v as Order['status'])}
+            onValueChange={(v) => {
+              const next = v as Order['status'];
+              if (next === normalizedStatus) return;
+              setConfirmAction({ kind: 'status', next });
+            }}
             disabled={savingStatus}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger id="order-status" ref={statusTriggerRef} className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1213,42 +1207,36 @@ const AdminOrderDetails = () => {
               })}
             </SelectContent>
           </Select>
-          <p className="mt-2 text-xs text-gray-500">
-            Changes save automatically. Status can only move forward.
+          <p className="mt-2 text-xs text-muted-foreground">
+            You confirm each change. Status can only move forward.
           </p>
           {normalizedStatus === 'returnRequested' && returnTiming !== 'in-window' && (
-            <p
-              role="alert"
-              className="mt-3 flex items-start gap-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-medium text-red-800 dark:border-red-500/50 dark:bg-red-500/10 dark:text-red-200"
-            >
-              <AlertTriangle className="h-4 w-4 shrink-0" />
+            <Notice tone="warning" compact className="mt-3 text-xs" role="alert">
               <span className="min-w-0 break-words">
                 {returnTiming === 'late' && returnWindowClosed
                   ? `Requested after the ${RETURN_WINDOW_DAYS}-day return window, which closed on ${formatDay(returnWindowClosed.getTime())}. Points earned on this order may already be spent; approving voids them.`
                   : `No delivery or request time is recorded, so the ${RETURN_WINDOW_DAYS}-day return window can't be checked. Confirm the delivery date before approving.`}
               </span>
-            </p>
+            </Notice>
           )}
           {normalizedStatus === 'returnRequested' && (
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <Button
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700"
                 disabled={returnReviewing !== null || returnMeta.returnStatus === 'approved'}
-                onClick={handleApproveReturn}
+                onClick={() => setConfirmAction({ kind: 'approve' })}
               >
-                {returnReviewing === 'approve' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {returnMeta.returnStatus === 'approved' ? 'Return Approved' : 'Approve Return'}
+                {returnReviewing === 'approve' ? <Spinner /> : null}
+                {returnMeta.returnStatus === 'approved' ? 'Return approved' : 'Approve return'}
               </Button>
               <Button
                 size="sm"
-                variant="outline"
-                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                variant="destructive"
                 disabled={returnReviewing !== null || returnMeta.returnStatus === 'rejected'}
-                onClick={handleRejectReturn}
+                onClick={() => setConfirmAction({ kind: 'reject' })}
               >
-                {returnReviewing === 'reject' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {returnMeta.returnStatus === 'rejected' ? 'Return Rejected' : 'Reject Return'}
+                {returnReviewing === 'reject' ? <Spinner /> : null}
+                {returnMeta.returnStatus === 'rejected' ? 'Return rejected' : 'Reject return'}
               </Button>
             </div>
           )}
@@ -1258,40 +1246,38 @@ const AdminOrderDetails = () => {
               variant="outline"
               size="sm"
               disabled={savingStatus || (DELIVERY_PARTNERS_ENABLED && nextStatus === 'outForDelivery' && !partnerName)}
-              onClick={() => handleStatusChange(nextStatus)}
+              onClick={() => setConfirmAction({ kind: 'status', next: nextStatus })}
             >
-              {savingStatus ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              Mark as {STATUS_BADGE[nextStatus]?.label || nextStatus}
+              {savingStatus ? <Spinner /> : null}
+              Mark as {statusLabel(nextStatus)}
             </Button>
           )}
-        </div>
+        </section>
 
-        {/* Delivery partner / Return pickup partner — only when the delivery system is on */}
+        {/* Delivery partner / Return pickup partner: only when the delivery system is on */}
         {DELIVERY_PARTNERS_ENABLED && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-zinc-100">
-            <Truck className="h-4 w-4" />
+        <section className={PANEL}>
+          <h2 className={SECTION_TITLE}>
+            <Truck aria-hidden="true" className="size-4 text-muted-foreground" />
             {normalizedStatus === 'returnRequested' || normalizedStatus === 'returnScheduled' || normalizedStatus === 'picked'
-              ? 'Return Pickup Partner'
-              : 'Delivery Partner'}
+              ? 'Return pickup partner'
+              : 'Delivery partner'}
           </h2>
 
-          {/* Return flow — assign pickup partner */}
+          {/* Return flow: assign pickup partner */}
           {normalizedStatus === 'returnRequested' ? (
             <div className="space-y-2">
               {returnMeta.returnStatus !== 'approved' && (
-                <p className="rounded-lg border border-highlight/45 bg-highlight/10 px-3 py-2 text-xs font-medium text-highlight dark:bg-highlight/8 dark:border-highlight dark:text-charcoal-foreground">
+                <Notice tone="warning" compact className="text-xs">
                   Approve the return request above before assigning a pickup partner.
-                </p>
+                </Notice>
               )}
               <Select
                 onValueChange={handleAssignReturnPartner}
                 disabled={assigningReturn || returnMeta.returnStatus !== 'approved'}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a pickup partner…" />
+                <SelectTrigger aria-label="Pickup partner">
+                  <SelectValue placeholder="Select a pickup partner" />
                 </SelectTrigger>
                 <SelectContent>
                   {deliveryPartners.length === 0 && (
@@ -1302,78 +1288,78 @@ const AdminOrderDetails = () => {
                   {deliveryPartners.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       <span className="flex items-center gap-2">
-                        <UserPlus className="h-3 w-3" />
+                        <UserPlus aria-hidden="true" className="size-3" />
                         {p.name}
-                        {p.phone ? <span className="text-xs text-gray-500">· {p.phone}</span> : null}
+                        {p.phone ? <span className="text-xs text-muted-foreground">· {p.phone}</span> : null}
                       </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Assigning a pickup partner will set the order to{' '}
-                <span className="font-medium">Return Scheduled</span> and share a pickup OTP with
+                <span className="font-medium text-foreground/80">Return scheduled</span> and share a pickup OTP with
                 the customer.
               </p>
               {assigningReturn && (
-                <div className="flex items-center gap-2 text-xs text-highlight">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Assigning…
+                <div role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Spinner size={12} /> Assigning
                 </div>
               )}
             </div>
           ) : partnerName ? (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-500/30 dark:bg-emerald-500/10">
+            <div className="rounded-card border border-status-success-line bg-status-success-bg p-3 text-sm">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-semibold text-emerald-800 dark:text-emerald-200">
+                  <p className="font-semibold text-foreground">
                     {partnerName}
                   </p>
                   {partnerPhone && (
                     <a
                       href={`tel:${partnerPhone}`}
-                      className="mt-0.5 flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300"
+                      className="mt-0.5 flex items-center gap-1 text-xs text-status-success-fg"
                     >
-                      <Phone className="h-3 w-3" /> {partnerPhone}
+                      <Phone aria-hidden="true" className="size-3" /> {partnerPhone}
                     </a>
                   )}
                 </div>
-                <ShieldCheck className="h-5 w-5 text-emerald-600" />
+                <ShieldCheck aria-hidden="true" className="size-5 text-status-success-fg" />
               </div>
               {otp && normalizedStatus === 'outForDelivery' && (
-                <div className="mt-3 rounded-md bg-white px-3 py-2 dark:bg-zinc-900/60">
-                  <p className="text-[10px] uppercase tracking-widest text-gray-400">
+                <div className="mt-3 rounded-control bg-card px-3 py-2">
+                  <p className="text-xs text-muted-foreground">
                     Delivery OTP
                   </p>
-                  <p className="font-mono text-lg font-bold tracking-[0.4em] text-highlight">
+                  <p className="font-mono text-lg font-bold tracking-[0.4em] text-foreground">
                     {otp}
                   </p>
-                  <p className="mt-1 text-[10px] text-gray-500">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     Customer can see this on their order page.
                   </p>
                 </div>
               )}
               {returnOtp && normalizedStatus === 'returnScheduled' && (
-                <div className="mt-3 rounded-md bg-white px-3 py-2 dark:bg-zinc-900/60">
-                  <p className="text-[10px] uppercase tracking-widest text-gray-400">
-                    Return Pickup OTP
+                <div className="mt-3 rounded-control bg-card px-3 py-2">
+                  <p className="text-xs text-muted-foreground">
+                    Return pickup OTP
                   </p>
-                  <p className="font-mono text-lg font-bold tracking-[0.4em] text-highlight">
+                  <p className="font-mono text-lg font-bold tracking-[0.4em] text-foreground">
                     {returnOtp}
                   </p>
-                  <p className="mt-1 text-[10px] text-gray-500">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     Customer shows this OTP to the pickup partner.
                   </p>
                 </div>
               )}
               {returnStoreOtp && (normalizedStatus === 'picked' || normalizedStatus === 'deliveryFailed') && (
-                <div className="mt-3 rounded-md bg-highlight/10 border border-highlight/30 px-3 py-2 dark:bg-highlight/10 dark:border-highlight/30">
-                  <p className="text-[10px] uppercase tracking-widest text-highlight dark:text-highlight">
-                    Return Store OTP
+                <div className="mt-3 rounded-control border border-status-warning-line bg-card px-3 py-2">
+                  <p className="text-xs font-medium text-status-warning-fg">
+                    Return store OTP
                   </p>
-                  <p className="font-mono text-2xl font-bold tracking-[0.4em] text-highlight dark:text-highlight">
+                  <p className="font-mono text-2xl font-bold tracking-[0.4em] text-foreground">
                     {returnStoreOtp}
                   </p>
-                  <p className="mt-1 text-[10px] text-highlight dark:text-highlight font-medium">
+                  <p className="mt-1 text-xs font-medium text-foreground/80">
                     Tell this OTP to the delivery partner when they arrive at the store.
                   </p>
                 </div>
@@ -1382,8 +1368,8 @@ const AdminOrderDetails = () => {
           ) : (
             <div className="space-y-2">
               <Select onValueChange={handleAssignPartner} disabled={assigning}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a delivery partner…" />
+                <SelectTrigger aria-label="Delivery partner">
+                  <SelectValue placeholder="Select a delivery partner" />
                 </SelectTrigger>
                 <SelectContent>
                   {deliveryPartners.length === 0 && (
@@ -1394,192 +1380,82 @@ const AdminOrderDetails = () => {
                   {deliveryPartners.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       <span className="flex items-center gap-2">
-                        <UserPlus className="h-3 w-3" />
+                        <UserPlus aria-hidden="true" className="size-3" />
                         {p.name}
-                        {p.phone ? <span className="text-xs text-gray-500">· {p.phone}</span> : null}
+                        {p.phone ? <span className="text-xs text-muted-foreground">· {p.phone}</span> : null}
                       </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Assigning a partner automatically sets the order to{' '}
-                <span className="font-medium">Out for Delivery</span> and generates an OTP for
+                <span className="font-medium text-foreground/80">Out for delivery</span> and generates an OTP for
                 the customer.
               </p>
               {assigning && (
-                <div className="flex items-center gap-2 text-xs text-highlight">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Assigning…
+                <div role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Spinner size={12} /> Assigning
                 </div>
               )}
             </div>
           )}
-        </div>
+        </section>
         )}
       </div>
 
-      {/* Delivery Window Setter — available once the order is packed or out for delivery */}
+      {/* Delivery window setter: available once the order is packed or out for delivery */}
       {(normalizedStatus === 'packed' || normalizedStatus === 'outForDelivery') && (
-        <div className="rounded-2xl border border-purple-200 bg-purple-50/60 p-5 shadow-sm dark:border-purple-800 dark:bg-purple-900/20">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-purple-900 dark:text-purple-100">
-            <Calendar className="h-4 w-4" /> Set Delivery Window
-          </h2>
-          {(order.delivery_window_date && order.delivery_window_from && order.delivery_window_to) && (
-            <p className="mb-3 rounded-lg border border-purple-200 bg-white px-3 py-2 text-xs text-purple-800 dark:bg-zinc-800 dark:border-purple-700 dark:text-purple-200">
-              Currently scheduled: <span className="font-semibold">{order.delivery_window_date}</span>
-              {' · '}{order.delivery_window_from}–{order.delivery_window_to}
-            </p>
-          )}
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-semibold text-purple-700 mb-1 block">Quick templates</label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {FULFILLMENT_WINDOW_TEMPLATES.map((tpl) => (
-                  <button
-                    key={tpl.id}
-                    type="button"
-                    onClick={() => applyDeliveryTemplate(tpl.id)}
-                    className="rounded-lg border border-purple-200 bg-white px-2 py-2 text-[11px] font-semibold text-purple-700 hover:border-purple-400 hover:bg-purple-100 transition-colors dark:bg-zinc-800 dark:border-purple-700 dark:text-purple-200"
-                  >
-                    {tpl.shortLabel}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-purple-700 mb-1 block">Date</label>
-              <input
-                type="date"
-                value={windowDate}
-                onChange={(e) => setWindowDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full rounded-xl border border-purple-300 bg-white px-3 py-2 text-sm focus:border-purple-500 focus:outline-none dark:bg-zinc-800 dark:border-purple-600 dark:text-zinc-100"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs font-semibold text-purple-700 mb-1 block">From</label>
-                <input
-                  type="time"
-                  value={windowFrom}
-                  onChange={(e) => setWindowFrom(e.target.value)}
-                  className="w-full rounded-xl border border-purple-300 bg-white px-3 py-2 text-sm focus:border-purple-500 focus:outline-none dark:bg-zinc-800 dark:border-purple-600 dark:text-zinc-100"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-purple-700 mb-1 block">To</label>
-                <input
-                  type="time"
-                  value={windowTo}
-                  onChange={(e) => setWindowTo(e.target.value)}
-                  className="w-full rounded-xl border border-purple-300 bg-white px-3 py-2 text-sm focus:border-purple-500 focus:outline-none dark:bg-zinc-800 dark:border-purple-600 dark:text-zinc-100"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-purple-700 mb-1 block">Note (optional)</label>
-              <textarea
-                value={windowNote}
-                onChange={(e) => setWindowNote(e.target.value)}
-                placeholder="e.g. Please be available at the gate"
-                rows={2}
-                className="w-full rounded-xl border border-purple-300 bg-white px-3 py-2 text-sm focus:border-purple-500 focus:outline-none resize-none dark:bg-zinc-800 dark:border-purple-600 dark:text-zinc-100"
-              />
-            </div>
-            <Button
-              onClick={handleSetWindow}
-              disabled={savingWindow || !windowDate || !windowFrom || !windowTo}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-sm font-bold"
-            >
-              {savingWindow ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
-              Save Delivery Window
-            </Button>
-          </div>
-        </div>
+        <WindowSetter
+          idPrefix="delivery-window"
+          title="Set delivery window"
+          current={
+            order.delivery_window_date && order.delivery_window_from && order.delivery_window_to
+              ? { date: order.delivery_window_date, from: order.delivery_window_from, to: order.delivery_window_to }
+              : null
+          }
+          emptyNote={null}
+          onTemplate={applyDeliveryTemplate}
+          date={windowDate}
+          setDate={setWindowDate}
+          from={windowFrom}
+          setFrom={setWindowFrom}
+          to={windowTo}
+          setTo={setWindowTo}
+          note={windowNote}
+          setNote={setWindowNote}
+          notePlaceholder="e.g. Please be available at the gate"
+          saving={savingWindow}
+          onSave={handleSetWindow}
+          saveLabel="Save delivery window"
+        />
       )}
 
-      {/* Return Pickup Window Setter — visible when a return is scheduled */}
+      {/* Return pickup window setter: visible when a return is scheduled */}
       {normalizedStatus === 'returnScheduled' && (
-        <div className="rounded-2xl border border-highlight/30 bg-highlight/6 p-5 shadow-sm dark:border-highlight/60 dark:bg-highlight/5">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-highlight dark:text-charcoal-foreground">
-            <Calendar className="h-4 w-4" /> Set Return Pickup Window
-          </h2>
-          {(order.return_window_date && order.return_window_from && order.return_window_to) ? (
-            <p className="mb-3 rounded-lg border border-highlight/30 bg-white px-3 py-2 text-xs text-highlight dark:bg-zinc-800 dark:border-highlight dark:text-charcoal-foreground">
-              Currently scheduled: <span className="font-semibold">{order.return_window_date}</span>
-              {' · '}{order.return_window_from}–{order.return_window_to}
-            </p>
-          ) : (
-            <p className="mb-3 rounded-lg border border-highlight/45 bg-highlight/11 px-3 py-2 text-xs font-medium text-highlight dark:bg-highlight/8 dark:border-highlight dark:text-charcoal-foreground">
-              The pickup partner cannot complete this return until a window is saved.
-            </p>
-          )}
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-semibold text-highlight mb-1 block">Quick templates</label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {FULFILLMENT_WINDOW_TEMPLATES.map((tpl) => (
-                  <button
-                    key={tpl.id}
-                    type="button"
-                    onClick={() => applyReturnTemplate(tpl.id)}
-                    className="rounded-lg border border-highlight/30 bg-white px-2 py-2 text-[11px] font-semibold text-highlight hover:border-highlight/70 hover:bg-highlight/15 transition-colors dark:bg-zinc-800 dark:border-highlight dark:text-charcoal-foreground"
-                  >
-                    {tpl.shortLabel}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-highlight mb-1 block">Date</label>
-              <input
-                type="date"
-                value={returnWindowDate}
-                onChange={(e) => setReturnWindowDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full rounded-xl border border-highlight/45 bg-white px-3 py-2 text-sm focus:border-highlight focus:outline-none dark:bg-zinc-800 dark:border-highlight dark:text-zinc-100"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs font-semibold text-highlight mb-1 block">From</label>
-                <input
-                  type="time"
-                  value={returnWindowFrom}
-                  onChange={(e) => setReturnWindowFrom(e.target.value)}
-                  className="w-full rounded-xl border border-highlight/45 bg-white px-3 py-2 text-sm focus:border-highlight focus:outline-none dark:bg-zinc-800 dark:border-highlight dark:text-zinc-100"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-highlight mb-1 block">To</label>
-                <input
-                  type="time"
-                  value={returnWindowTo}
-                  onChange={(e) => setReturnWindowTo(e.target.value)}
-                  className="w-full rounded-xl border border-highlight/45 bg-white px-3 py-2 text-sm focus:border-highlight focus:outline-none dark:bg-zinc-800 dark:border-highlight dark:text-zinc-100"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-highlight mb-1 block">Note (optional)</label>
-              <textarea
-                value={returnWindowNote}
-                onChange={(e) => setReturnWindowNote(e.target.value)}
-                placeholder="e.g. Item should be packed in the original box"
-                rows={2}
-                className="w-full rounded-xl border border-highlight/45 bg-white px-3 py-2 text-sm focus:border-highlight focus:outline-none resize-none dark:bg-zinc-800 dark:border-highlight dark:text-zinc-100"
-              />
-            </div>
-            <Button
-              onClick={handleSetReturnWindow}
-              disabled={savingReturnWindow || !returnWindowDate || !returnWindowFrom || !returnWindowTo}
-              className="w-full bg-highlight hover:bg-highlight text-sm font-bold"
-            >
-              {savingReturnWindow ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
-              Save Return Pickup Window
-            </Button>
-          </div>
-        </div>
+        <WindowSetter
+          idPrefix="return-window"
+          title="Set return pickup window"
+          current={
+            order.return_window_date && order.return_window_from && order.return_window_to
+              ? { date: order.return_window_date, from: order.return_window_from, to: order.return_window_to }
+              : null
+          }
+          emptyNote="The pickup partner cannot complete this return until a window is saved."
+          onTemplate={applyReturnTemplate}
+          date={returnWindowDate}
+          setDate={setReturnWindowDate}
+          from={returnWindowFrom}
+          setFrom={setReturnWindowFrom}
+          to={returnWindowTo}
+          setTo={setReturnWindowTo}
+          note={returnWindowNote}
+          setNote={setReturnWindowNote}
+          notePlaceholder="e.g. Item should be packed in the original box"
+          saving={savingReturnWindow}
+          onSave={handleSetReturnWindow}
+          saveLabel="Save pickup window"
+        />
       )}
 
       {/* Refund receipt upload (visible only when order is refunded) */}
@@ -1588,25 +1464,182 @@ const AdminOrderDetails = () => {
       )}
 
       {/* Address */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-zinc-100">
-          <MapPin className="h-4 w-4" /> Delivery Address
+      <section aria-labelledby="order-address-title" className={PANEL}>
+        <h2 id="order-address-title" className={SECTION_TITLE}>
+          <MapPin aria-hidden="true" className="size-4 text-muted-foreground" /> Delivery address
         </h2>
-        <p className="text-sm text-gray-700 dark:text-zinc-300">
+        <p className="text-sm text-foreground/80">
           {order.shippingAddress?.address}
           {order.shippingAddress?.locality ? `, ${order.shippingAddress.locality}` : ''},{' '}
-          {order.shippingAddress?.city}, {order.shippingAddress?.state} -{' '}
+          {order.shippingAddress?.city}, {order.shippingAddress?.state}{' '}
           {order.shippingAddress?.pincode}
         </p>
         {order.shippingAddress?.landmark && (
-          <p className="mt-1 text-xs italic text-gray-500">
+          <p className="mt-1 text-xs text-muted-foreground">
             Landmark: {order.shippingAddress.landmark}
           </p>
         )}
-      </div>
+      </section>
+
+      {/* Confirmation for status changes and return decisions; the same handlers run after. */}
+      <ConfirmDialog
+        open={!!confirmAction}
+        onOpenChange={(open) => !open && setConfirmAction(null)}
+        returnFocusRef={confirmAction?.kind === 'status' ? statusTriggerRef : undefined}
+        title={
+          confirmAction?.kind === 'approve'
+            ? `Approve the return for ${orderLabel(order.orderId)}?`
+            : confirmAction?.kind === 'reject'
+              ? `Reject the return for ${orderLabel(order.orderId)}?`
+              : confirmAction?.kind === 'status'
+                ? `Mark ${orderLabel(order.orderId)} as ${statusLabel(confirmAction.next).toLowerCase()}?`
+                : 'Confirm'
+        }
+        description={
+          confirmAction?.kind === 'approve'
+            ? returnTiming === 'late' && returnWindowClosed
+              ? `This request came after the ${RETURN_WINDOW_DAYS}-day return window, which closed on ${formatDay(returnWindowClosed.getTime())}. Approving voids the points earned on this order.`
+              : returnTiming !== 'in-window'
+                ? `The ${RETURN_WINDOW_DAYS}-day return window can't be checked for this order. Confirm the delivery date first.`
+                : DELIVERY_PARTNERS_ENABLED
+                  ? 'The return is marked approved. Assign a pickup partner next.'
+                  : 'The return is marked approved. Set the status to Returned once the item is back.'
+            : confirmAction?.kind === 'reject'
+              ? 'The order goes back to Delivered and the return request is closed.'
+              : 'Status only moves forward in the workflow, so this cannot be undone from here.'
+        }
+        confirmLabel={
+          confirmAction?.kind === 'approve'
+            ? 'Approve return'
+            : confirmAction?.kind === 'reject'
+              ? 'Reject return'
+              : 'Change status'
+        }
+        tone={confirmAction?.kind === 'reject' ? 'danger' : 'default'}
+        onConfirm={() => {
+          const action = confirmAction;
+          if (!action) return undefined;
+          if (action.kind === 'approve') return handleApproveReturn();
+          if (action.kind === 'reject') return handleRejectReturn();
+          return handleStatusChange(action.next);
+        }}
+      />
     </div>
   );
 };
+
+// ============================================================
+// Delivery / return pickup window form (same fields, same handlers)
+// ============================================================
+function WindowSetter({
+  idPrefix,
+  title,
+  current,
+  emptyNote,
+  onTemplate,
+  date,
+  setDate,
+  from,
+  setFrom,
+  to,
+  setTo,
+  note,
+  setNote,
+  notePlaceholder,
+  saving,
+  onSave,
+  saveLabel,
+}: {
+  idPrefix: string;
+  title: string;
+  current: { date: string; from: string; to: string } | null;
+  emptyNote: string | null;
+  onTemplate: (id: FulfillmentWindowTemplateId) => void;
+  date: string;
+  setDate: (v: string) => void;
+  from: string;
+  setFrom: (v: string) => void;
+  to: string;
+  setTo: (v: string) => void;
+  note: string;
+  setNote: (v: string) => void;
+  notePlaceholder: string;
+  saving: boolean;
+  onSave: () => void;
+  saveLabel: string;
+}) {
+  return (
+    <section aria-labelledby={`${idPrefix}-title`} className={PANEL}>
+      <h2 id={`${idPrefix}-title`} className={SECTION_TITLE}>
+        <Calendar aria-hidden="true" className="size-4 text-muted-foreground" /> {title}
+      </h2>
+      {current ? (
+        <p className="mb-3 rounded-control bg-muted px-3 py-2 text-xs text-foreground/80">
+          Currently scheduled: <span className="font-semibold text-foreground">{current.date}</span>
+          {' · '}{current.from} to {current.to}
+        </p>
+      ) : emptyNote ? (
+        <Notice tone="warning" compact className="mb-3 text-xs">
+          {emptyNote}
+        </Notice>
+      ) : null}
+      <div className="space-y-4">
+        <div>
+          <p className={FIELD_LABEL}>Quick templates</p>
+          <div className="grid grid-cols-3 gap-2">
+            {FULFILLMENT_WINDOW_TEMPLATES.map((tpl) => (
+              <Button
+                key={tpl.id}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onTemplate(tpl.id)}
+                className="h-9 whitespace-normal px-2 text-xs leading-tight"
+              >
+                {tpl.shortLabel}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label htmlFor={`${idPrefix}-date`} className={FIELD_LABEL}>Date</label>
+          <Input
+            id={`${idPrefix}-date`}
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            min={new Date().toISOString().split('T')[0]}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor={`${idPrefix}-from`} className={FIELD_LABEL}>From</label>
+            <Input id={`${idPrefix}-from`} type="time" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor={`${idPrefix}-to`} className={FIELD_LABEL}>To</label>
+            <Input id={`${idPrefix}-to`} type="time" value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
+        </div>
+        <div>
+          <label htmlFor={`${idPrefix}-note`} className={FIELD_LABEL}>Note (optional)</label>
+          <Textarea
+            id={`${idPrefix}-note`}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={notePlaceholder}
+            rows={2}
+            className="resize-none"
+          />
+        </div>
+        <Button onClick={onSave} disabled={saving || !date || !from || !to} className="w-full">
+          {saving ? <Spinner /> : <Clock aria-hidden="true" />}
+          {saveLabel}
+        </Button>
+      </div>
+    </section>
+  );
+}
 
 // ============================================================
 // Refund Receipt Uploader (admin uploads PDF or image; customer sees it)
@@ -1642,11 +1675,11 @@ function RefundReceiptUploader({ order }: { order: Order }) {
   };
 
   return (
-    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-5 shadow-sm dark:border-emerald-800/60 dark:bg-emerald-950/20">
-      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-900 dark:text-emerald-200">
-        <Receipt className="h-4 w-4" /> Refund Receipt
+    <section aria-labelledby="refund-receipt-title" className={PANEL}>
+      <h2 id="refund-receipt-title" className={SECTION_TITLE}>
+        <Receipt aria-hidden="true" className="size-4 text-muted-foreground" /> Refund receipt
       </h2>
-      <p className="mb-3 text-xs text-emerald-800/80 dark:text-emerald-300/80">
+      <p className="mb-3 text-xs text-muted-foreground">
         Upload the refund receipt (image up to 500 KB, or PDF up to 1 MB). The customer will
         see a “View Receipt” button on their order page once uploaded.
       </p>
@@ -1665,12 +1698,12 @@ function RefundReceiptUploader({ order }: { order: Order }) {
           href={order.refundReceiptUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:underline"
+          className="mt-3 inline-flex min-h-9 items-center gap-1.5 text-xs font-semibold text-primary underline-offset-4 hover:underline"
         >
-          <ExternalLink className="h-3.5 w-3.5" /> Open current receipt
+          <ExternalLink aria-hidden="true" className="size-3.5" /> Open current receipt
         </a>
       )}
-    </div>
+    </section>
   );
 }
 

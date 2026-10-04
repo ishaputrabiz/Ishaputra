@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, ShieldCheck, AlertCircle, MessageCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Notice } from '@/components/ui/notice';
+import { Spinner } from '@/components/ui/spinner';
+import { ShieldCheck, MessageCircle, CircleCheck, RefreshCw } from 'lucide-react';
 import { useWhatsAppOtpVerification } from '@/hooks/useWhatsAppOtpVerification';
 import { trustCurrentDevice } from '@/services/securityService';
 
@@ -56,100 +59,96 @@ const TwoFactorChallengeModal = ({
   return (
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent
-        className="w-[calc(100vw-1.5rem)] max-w-sm p-5 sm:p-6 rounded-2xl"
+        hideClose
+        className="tx-sheet max-w-sm p-5 sm:p-6"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-              <ShieldCheck className="w-5 h-5 text-blue-600" />
+        <DialogHeader className="text-left sm:text-left">
+          <div className="flex items-start gap-3">
+            <div className="tx-slate grid size-12 shrink-0 place-items-center rounded-card">
+              <ShieldCheck aria-hidden="true" className="size-5 text-highlight-soft" />
             </div>
-            <div>
-              <DialogTitle className="text-base">Verify Your Identity</DialogTitle>
-              <p className="text-xs text-gray-500 mt-0.5">Two-factor authentication required</p>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <DialogTitle className="px-0 text-xl sm:pl-0 sm:pr-0">Confirm it's you</DialogTitle>
+              <DialogDescription className="mt-1">2-step verification is on for your account.</DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="space-y-4 pt-1">
+        <div className="flex flex-col gap-4">
           {/* Info banner */}
-          <div className="flex gap-2 rounded-lg bg-blue-50 border border-blue-100 p-3">
-            <MessageCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-blue-700">
-              A 6-digit code{' '}
-              {otp.phase !== 'idle' ? 'has been sent' : 'will be sent'} to your WhatsApp
-              number ending in <strong>{maskedPhone}</strong>.
-            </p>
-          </div>
+          <Notice tone="info" icon={MessageCircle} compact>
+            {otp.phase !== 'idle' ? 'We sent' : 'We will send'} a 6-digit code to your WhatsApp
+            number ending in <strong className="font-semibold tabular-nums">{maskedPhone}</strong>.
+          </Notice>
 
           {/* OTP Input */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">
-              Enter WhatsApp code
+            <label htmlFor="twofa-challenge-code" className="mb-1.5 block text-xs font-medium text-foreground/80">
+              WhatsApp code
             </label>
             <div className="flex items-stretch gap-2">
               <input
+                id="twofa-challenge-code"
                 type="text"
                 inputMode="numeric"
+                autoComplete="one-time-code"
                 maxLength={6}
                 value={otp.otpCode}
                 onChange={(e) => otp.setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="• • • • • •"
+                placeholder="123456"
                 disabled={otp.isVerified}
-                className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-blue-300 tracking-[0.5em] font-mono text-center disabled:bg-gray-50 disabled:text-gray-500"
+                className="h-11 min-w-0 flex-1 rounded-control border border-input bg-background px-3 text-center font-mono text-base tracking-[0.5em] text-foreground transition-[border-color,box-shadow] duration-hover placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:text-muted-foreground"
               />
               <Button
                 type="button"
-                size="sm"
                 onClick={otp.confirmOtp}
                 disabled={otp.isBusy || otp.isVerified || otp.otpCode.length !== 6}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3"
+                className="shrink-0 px-4"
               >
                 {otp.phase === 'verifying' ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Spinner label="Checking the code" />
                 ) : otp.isVerified ? (
-                  <CheckCircle2 className="w-4 h-4" />
-                ) : (
-                  'Verify'
-                )}
+                  <CircleCheck aria-hidden="true" className="size-4" />
+                ) : null}
+                {otp.isVerified ? 'Verified' : 'Verify'}
               </Button>
             </div>
 
             {/* Resend button */}
-            <button
-              type="button"
-              onClick={otp.sendOtp}
-              disabled={otp.isBusy || otp.phase === 'sending'}
-              className="mt-2 flex items-center gap-1 text-xs text-blue-600 hover:underline disabled:opacity-40 disabled:no-underline"
-            >
-              <RefreshCw className="w-3 h-3" />
-              {otp.phase === 'sending' ? 'Sending…' : 'Resend code'}
-            </button>
+            {!otp.isVerified && (
+              <button
+                type="button"
+                onClick={otp.sendOtp}
+                disabled={otp.isBusy || otp.phase === 'sending'}
+                className="-mx-1 mt-2 inline-flex min-h-6 items-center gap-1.5 rounded-control px-1 text-xs font-medium text-primary underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:no-underline"
+              >
+                <RefreshCw aria-hidden="true" className="size-3" />
+                {otp.phase === 'sending' ? 'Sending…' : 'Resend code'}
+              </button>
+            )}
           </div>
 
           {/* Error */}
           {otp.otpError && (
-            <p className="flex items-center gap-1 text-xs text-red-600">
-              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-              {otp.otpError}
-            </p>
+            <Notice tone="danger" compact>{otp.otpError}</Notice>
           )}
 
           {/* Trust device checkbox */}
           {otp.isVerified && (
-            <label className="flex items-center gap-2.5 cursor-pointer rounded-lg border border-gray-200 p-3">
-              <input
-                type="checkbox"
+            <div className="flex items-start gap-3 rounded-card border border-foreground/10 p-3">
+              <Checkbox
+                id="twofa-trust-device"
                 checked={trustDevice}
-                onChange={(e) => setTrustDevice(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                onCheckedChange={(v) => setTrustDevice(v === true)}
+                className="mt-0.5"
               />
-              <div>
-                <p className="text-sm font-medium text-gray-700">Trust this device</p>
-                <p className="text-xs text-gray-500">Skip verification on this device next time</p>
-              </div>
-            </label>
+              <label htmlFor="twofa-trust-device" className="cursor-pointer">
+                <span className="block text-sm font-medium text-foreground">Trust this device</span>
+                <span className="block text-xs text-muted-foreground">Skip the code on this device next time.</span>
+              </label>
+            </div>
           )}
 
           {/* Actions */}
@@ -157,7 +156,6 @@ const TwoFactorChallengeModal = ({
             <Button
               type="button"
               variant="outline"
-              size="sm"
               onClick={onCancel}
               className="flex-1"
             >
@@ -165,12 +163,11 @@ const TwoFactorChallengeModal = ({
             </Button>
             <Button
               type="button"
-              size="sm"
               onClick={handleContinue}
               disabled={!otp.isVerified || trusting}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              className="flex-1"
             >
-              {trusting && <Loader2 className="w-4 h-4 animate-spin mr-1" />}
+              {trusting && <Spinner />}
               Continue
             </Button>
           </div>

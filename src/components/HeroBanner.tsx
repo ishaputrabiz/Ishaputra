@@ -1,9 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type FocusEvent, type TransitionEvent } from "react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useReducedMotion } from "framer-motion";
 import { subscribeToActiveBanners, Banner } from "@/services/bannerService";
-import { useNavigate } from "react-router-dom";
 import { SmartImage } from "@/components/ui/smart-image";
+import { IconButton } from "@/components/ui/icon-button";
+import { CarouselDots } from "@/components/ui/carousel-dots";
+import { HeroSkeleton } from "@/components/skeletons";
 import { cldUrl } from "@/lib/cloudinaryUrl";
+import { cn } from "@/lib/utils";
 
 /**
  * Brand lines laid over the hero photos, one per slide in turn. Banner
@@ -15,38 +20,56 @@ const HERO_LINES = [
   "Rooted in Ayurveda.\nBuilt for men.",
 ];
 
+/** Time each slide stays on screen before the next one. */
+const SLIDE_MS = 4200;
+/** After a click on an arrow or a dot, wait this long before autoplay resumes. */
+const RESUME_MS = 4200;
+/** Movement on screen: strong ease-in-out (--ease-in-out). */
+const SLIDE_TRANSITION = "transform 650ms cubic-bezier(0.77, 0, 0.175, 1)";
+const SLIDE_SIZE = "aspect-[4/5] md:aspect-[4/3] lg:aspect-auto lg:h-[min(84vh,56.25vw)]";
+const MOBILE_QUERY = "(max-width: 1023px)";
+const INERT = { inert: "" } as Record<string, string>;
+
+/** The one image this viewport will ask for: the 900px phone crop or the 1600px desktop banner. */
+const visibleSource = (banner: Banner, isMobile: boolean) =>
+  isMobile ? cldUrl(banner.mobileImageUrl || banner.imageUrl, "detail") : cldUrl(banner.imageUrl, "hero");
+
+const idle = (cb: () => void) => {
+  const w = window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number };
+  if (w.requestIdleCallback) w.requestIdleCallback(cb, { timeout: 2000 });
+  else window.setTimeout(cb, 300);
+};
+
 /**
  * Seamless looping hero carousel.
  *
  * Full-bleed: the photo runs edge to edge, capped at the viewport height.
  * The first slide is cloned at the end of the track so looping from the last
  * banner back to the first does not produce a visible reset.
+ *
+ * Slide 1 renders as soon as the banners arrive (its image is the page's LCP,
+ * fetched eagerly at high priority); the other slides warm up in idle time once
+ * it has loaded. Autoplay waits for slide 1, pauses on hover, on keyboard focus
+ * inside, while off screen or in a hidden tab, and never runs under reduced
+ * motion. Only the slide on screen can be focused or read.
  */
 const HeroBanner = () => {
-  const navigate = useNavigate();
+  const reduceMotion = useReducedMotion();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
-  const [imagesReady, setImagesReady] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
+  const [firstSlideReady, setFirstSlideReady] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [transitionsEnabled, setTransitionsEnabled] = useState(true);
-  const preloadedImages = useRef<Map<string, HTMLImageElement>>(new Map());
-
-  /**
-   * URLs to warm before revealing the carousel.
-   *
-   * These must be the exact URLs the markup below requests, otherwise the
-   * preload is a pure waste: it used to fetch the raw originals (~2.5 MB each,
-   * ~10 MB total on the homepage) while the rendered <SmartImage> asked for the
-   * transformed version separately, so every banner was paid for twice.
-   */
-  const getBannerImageSources = (banner: Banner) => {
-    const mobileSource = banner.mobileImageUrl || banner.imageUrl;
-    return [
-      banner.imageUrl ? cldUrl(banner.imageUrl, 'hero') : null,
-      mobileSource ? cldUrl(mobileSource, 'detail') : null,
-    ].filter((value): value is string => Boolean(value));
-  };
+  const [hovered, setHovered] = useState(false);
+  const [focusWithin, setFocusWithin] = useState(false);
+  const [touching, setTouching] = useState(false);
+  const [holdAfterClick, setHoldAfterClick] = useState(false);
+  const [inView, setInView] = useState(true);
+  const [pageVisible, setPageVisible] = useState(true);
+  const resumeTimerRef = useRef<number | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const touchStartXRef = useRef<number | null>(null);
+  const warmedRef = useRef(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToActiveBanners(
@@ -62,53 +85,50 @@ const HeroBanner = () => {
     return () => unsubscribe();
   }, []);
 
+  // Autoplay waits for slide 1's image, with a fallback so a slow or failed
+  // image never stops the carousel for good.
   useEffect(() => {
-    if (banners.length === 0) {
-      setImagesReady(true);
-      return;
-    }
-    setImagesReady(false);
-    let cancelled = false;
-    const urls = [...new Set(banners.flatMap(getBannerImageSources))];
-    if (urls.length === 0) {
-      setImagesReady(true);
-      return;
-    }
-
-    Promise.allSettled(
-      urls.map((url) => {
-        if (preloadedImages.current.has(url)) return Promise.resolve();
-        return new Promise<void>((resolve) => {
-          const img = new Image();
-          img.onload = () => {
-            preloadedImages.current.set(url, img);
-            resolve();
-          };
-          img.onerror = () => resolve();
-          img.src = url;
-        });
-      })
-    ).then(() => {
-      if (!cancelled) setImagesReady(true);
-    });
-
-    const fallbackTimer = setTimeout(() => setImagesReady(true), 3000);
-    return () => {
-      cancelled = true;
-      clearTimeout(fallbackTimer);
-    };
+    if (banners.length === 0) return;
+    const fallback = window.setTimeout(() => setFirstSlideReady(true), 3000);
+    return () => window.clearTimeout(fallback);
   }, [banners]);
 
-  const handleBannerClick = (banner: Banner) => {
-    if (!banner.redirectLink) return;
-    if (banner.redirectLink.startsWith("http")) {
-      window.open(banner.redirectLink, "_blank");
-    } else {
-      navigate(banner.redirectLink);
-    }
-  };
+  // Once slide 1 is in, warm the other slides at the size this screen uses.
+  useEffect(() => {
+    if (!firstSlideReady || warmedRef.current || banners.length < 2) return;
+    warmedRef.current = true;
+    idle(() => {
+      const isMobile = window.matchMedia(MOBILE_QUERY).matches;
+      banners.slice(1).forEach((banner) => {
+        const src = visibleSource(banner, isMobile);
+        if (!src) return;
+        const img = new Image();
+        img.decoding = "async";
+        img.src = src;
+      });
+    });
+  }, [firstSlideReady, banners]);
 
-  const hasMultipleBanners = banners.length > 1;
+  useEffect(() => {
+    const node = sectionRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => setInView(entries.some((e) => e.isIntersecting)));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loading, banners.length]);
+
+  useEffect(() => {
+    const onVisibility = () => setPageVisible(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
+  useEffect(() => () => {
+    if (resumeTimerRef.current !== null) window.clearTimeout(resumeTimerRef.current);
+  }, []);
+
+  const count = banners.length;
+  const hasMultipleBanners = count > 1;
   const displayBanners = useMemo(
     () => (hasMultipleBanners ? [...banners, banners[0]] : banners),
     [banners, hasMultipleBanners]
@@ -117,46 +137,87 @@ const HeroBanner = () => {
   useEffect(() => {
     setCurrentIndex(0);
     setTransitionsEnabled(true);
-  }, [banners.length]);
+  }, [count]);
 
+  const autoplay =
+    hasMultipleBanners &&
+    firstSlideReady &&
+    !reduceMotion &&
+    !hovered &&
+    !focusWithin &&
+    !touching &&
+    !holdAfterClick &&
+    inView &&
+    pageVisible;
+
+  // One timeout per slide, so every slide gets its full time after any change.
   useEffect(() => {
-    if (!hasMultipleBanners || isPaused || loading || !imagesReady) return;
-
-    const interval = window.setInterval(() => {
+    if (!autoplay) return;
+    const timer = window.setTimeout(() => {
+      setTransitionsEnabled(true);
       setCurrentIndex((prev) => prev + 1);
-    }, 4200);
+    }, SLIDE_MS);
+    return () => window.clearTimeout(timer);
+  }, [autoplay, currentIndex]);
 
-    return () => window.clearInterval(interval);
-  }, [hasMultipleBanners, isPaused, loading, imagesReady]);
+  /** A click on an arrow or dot holds autoplay; it resumes RESUME_MS later (if the pointer is away and nothing has focus). */
+  const holdAutoplay = () => {
+    if (resumeTimerRef.current !== null) window.clearTimeout(resumeTimerRef.current);
+    setHoldAfterClick(true);
+    resumeTimerRef.current = window.setTimeout(() => {
+      resumeTimerRef.current = null;
+      setHoldAfterClick(false);
+    }, RESUME_MS);
+  };
+
+  const realIndex = count === 0 ? 0 : currentIndex % count;
 
   const jumpToSlide = (index: number) => {
+    holdAutoplay();
     setTransitionsEnabled(true);
     setCurrentIndex(index);
   };
 
   const goToPrev = () => {
     if (!hasMultipleBanners) return;
-    setIsPaused(true);
-    setTransitionsEnabled(true);
-    setCurrentIndex((prev) => {
-      const realIdx = ((prev % banners.length) + banners.length) % banners.length;
-      return realIdx === 0 ? banners.length - 1 : realIdx - 1;
+    holdAutoplay();
+    if (realIndex > 0) {
+      setTransitionsEnabled(true);
+      setCurrentIndex(realIndex - 1);
+      return;
+    }
+    if (reduceMotion) {
+      setCurrentIndex(count - 1);
+      return;
+    }
+    // From slide 1: jump without animation to the clone at the end (it looks
+    // identical), then slide back one, so the move is a single step.
+    setTransitionsEnabled(false);
+    setCurrentIndex(count);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        setTransitionsEnabled(true);
+        setCurrentIndex(count - 1);
+      });
     });
-    window.setTimeout(() => setIsPaused(false), 4200);
   };
 
   const goToNext = () => {
     if (!hasMultipleBanners) return;
-    setIsPaused(true);
+    holdAutoplay();
+    if (reduceMotion) {
+      // No transition runs, so the clone reset would never fire.
+      setCurrentIndex((realIndex + 1) % count);
+      return;
+    }
     setTransitionsEnabled(true);
-    setCurrentIndex((prev) => prev + 1);
-    window.setTimeout(() => setIsPaused(false), 4200);
+    setCurrentIndex((prev) => Math.min(prev + 1, count));
   };
 
-  const touchStartXRef = useRef<number | null>(null);
-
-  const handleTrackTransitionEnd = () => {
-    if (!hasMultipleBanners || currentIndex < banners.length) return;
+  const handleTrackTransitionEnd = (event: TransitionEvent<HTMLDivElement>) => {
+    // Image zooms and button colours bubble up here too; only the track counts.
+    if (event.target !== event.currentTarget || event.propertyName !== "transform") return;
+    if (!hasMultipleBanners || currentIndex < count) return;
 
     setTransitionsEnabled(false);
     setCurrentIndex(0);
@@ -168,31 +229,32 @@ const HeroBanner = () => {
     });
   };
 
-  const activeDotIndex = banners.length === 0 ? 0 : currentIndex % banners.length;
+  // Keyboard focus pauses; a mouse click that leaves focus on an arrow does not.
+  const handleFocus = (event: FocusEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement;
+    setFocusWithin(typeof target.matches === "function" && target.matches(":focus-visible"));
+  };
+  const handleBlur = (event: FocusEvent<HTMLElement>) => {
+    if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
+    setFocusWithin(false);
+  };
 
-  if (loading || !imagesReady) {
-    return (
-      <section className="tx-slate relative flex aspect-[4/5] items-center justify-center lg:aspect-auto lg:h-[min(84vh,56.25vw)]">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-6 h-6 animate-spin text-highlight-soft" />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-charcoal-foreground/60">Loading</span>
-        </div>
-      </section>
-    );
+  if (loading) {
+    return <HeroSkeleton label="Loading banners" />;
   }
 
-  if (banners.length === 0) {
+  if (count === 0) {
     return (
-      <section className="tx-slate tx-contour relative flex aspect-[4/5] items-center justify-center lg:aspect-auto lg:h-[min(84vh,56.25vw)]">
+      <section className={cn("tx-slate tx-contour relative flex items-center justify-center", SLIDE_SIZE)}>
         <div className="flex flex-col items-center gap-4 px-6 text-center">
           <img src="/loading_white.png" alt="" className="h-16 w-auto" />
-          <h2
-            className="text-2xl md:text-4xl font-semibold text-charcoal-foreground"
+          <h1
+            className="text-2xl font-semibold text-charcoal-foreground [text-wrap:balance] md:text-4xl"
             style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" }}
           >
             Welcome to Ishaputra Botanicals
-          </h2>
-          <p className="text-sm md:text-base text-charcoal-foreground/65 max-w-md">
+          </h1>
+          <p className="max-w-md text-sm text-charcoal-foreground/80 md:text-base">
             Pure wellness for a stronger you. Our first rituals are on their way.
           </p>
         </div>
@@ -202,134 +264,150 @@ const HeroBanner = () => {
 
   return (
     <section
-      className="relative overflow-hidden bg-background"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      ref={sectionRef}
+      aria-roledescription="carousel"
+      aria-label="Highlights"
+      className="relative bg-background"
+      onPointerEnter={(e) => e.pointerType === "mouse" && setHovered(true)}
+      onPointerLeave={(e) => e.pointerType === "mouse" && setHovered(false)}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
     >
+      {/* The page's one h1 lives outside the moving track: inactive slides are
+          aria-hidden and inert, so a slide headline cannot be the h1. */}
+      <h1 className="sr-only">Ishaputra Botanicals: Ayurvedic and botanical wellness for men</h1>
       {/*
         Desktop frame keeps the banners' own 16:9 shape, so nothing is ever
-        cropped - the offer strip and the call-to-action sit near the bottom
-        edge of the artwork and a wider frame eats them.
-
-        1400px rather than the old 1120px: at 1120 the banner sat as a small
-        island in the middle of anything above ~1500px wide. Going wider than
-        this means cropping, so widen the artwork first - upload 2400x1000
-        (desktop) and this frame can go edge to edge without losing anything.
-
-        Phones keep their own 4:5 portrait crop from the mobile artwork.
+        cropped. Tablets get a 4:3 frame so the line and the call to action sit
+        above the fold; phones keep their own 4:5 portrait crop from the mobile
+        artwork.
       */}
-      <div className="relative">
-        <div
-          className="relative overflow-hidden"
-          onTouchStart={(e) => {
-            touchStartXRef.current = e.touches[0]?.clientX ?? null;
-            setIsPaused(true);
-          }}
-          onTouchEnd={(e) => {
-            const startX = touchStartXRef.current;
-            const endX = e.changedTouches[0]?.clientX ?? null;
-            touchStartXRef.current = null;
-            setIsPaused(false);
-            if (startX !== null && endX !== null) {
-              const dx = endX - startX;
-              if (Math.abs(dx) > 40) {
-                if (dx < 0) goToNext();
-                else goToPrev();
-              }
+      <div
+        className="relative overflow-clip"
+        onTouchStart={(e) => {
+          touchStartXRef.current = e.touches[0]?.clientX ?? null;
+          setTouching(true);
+        }}
+        onTouchEnd={(e) => {
+          const startX = touchStartXRef.current;
+          const endX = e.changedTouches[0]?.clientX ?? null;
+          touchStartXRef.current = null;
+          setTouching(false);
+          if (startX !== null && endX !== null) {
+            const dx = endX - startX;
+            if (Math.abs(dx) > 40) {
+              if (dx < 0) goToNext();
+              else goToPrev();
             }
+          }
+        }}
+      >
+        <div
+          className="flex"
+          onTransitionEnd={handleTrackTransitionEnd}
+          style={{
+            transform: `translate3d(-${currentIndex * 100}%, 0, 0)`,
+            transition: transitionsEnabled ? SLIDE_TRANSITION : "none",
           }}
         >
-          <div
-            className="flex"
-            onTransitionEnd={handleTrackTransitionEnd}
-            style={{
-              transform: `translate3d(-${currentIndex * 100}%, 0, 0)`,
-              transition: transitionsEnabled ? "transform 850ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
-            }}
-          >
-            {displayBanners.map((banner, idx) => (
-              <button
-                type="button"
+          {displayBanners.map((banner, idx) => {
+            const isClone = idx === count;
+            const isActive = idx === currentIndex;
+            const Heading = "h2";
+            const line = HERO_LINES[(idx % count) % HERO_LINES.length];
+            const link = banner.redirectLink?.trim();
+            const ctaClass =
+              "btn-line mt-6 w-fit text-charcoal-foreground after:absolute after:inset-0 after:content-[''] group-hover/hero:bg-charcoal-foreground group-hover/hero:text-charcoal md:mt-7 lg:mt-8";
+            const cta = (
+              <>
+                Explore the range <ArrowRight aria-hidden="true" className="size-3.5" />
+              </>
+            );
+
+            return (
+              <div
                 key={`${banner.id || banner.imageUrl}-${idx}`}
-                onClick={() => handleBannerClick(banner)}
-                className="group/hero relative aspect-[4/5] w-full flex-shrink-0 cursor-pointer overflow-hidden bg-charcoal text-left lg:aspect-auto lg:h-[min(84vh,56.25vw)]"
-                aria-label={`Hero banner ${((idx % banners.length) || 0) + 1}`}
+                aria-hidden={isActive ? undefined : true}
+                {...(isActive ? {} : INERT)}
+                role="group"
+                aria-roledescription="slide"
+                aria-label={isClone ? undefined : `${(idx % count) + 1} of ${count}`}
+                className={cn(
+                  "group/hero relative isolate flex w-full flex-shrink-0 flex-col justify-end overflow-hidden bg-charcoal",
+                  SLIDE_SIZE,
+                )}
               >
                 <picture>
                   {/* A <source> wins over the <img> when its media query matches,
-                      so it needs the same transform - an untransformed srcSet here
+                      so it needs the same transform: an untransformed srcSet here
                       served multi-MB originals no matter what the <img> asked for. */}
-                  <source
-                    media="(max-width: 1023px)"
-                    srcSet={cldUrl(banner.mobileImageUrl || banner.imageUrl, 'detail')}
-                  />
+                  <source media={MOBILE_QUERY} srcSet={cldUrl(banner.mobileImageUrl || banner.imageUrl, "detail")} />
                   <SmartImage
                     src={banner.imageUrl}
-                    alt={`Hero banner ${((idx % banners.length) || 0) + 1}`}
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-[2400ms] ease-out group-hover/hero:scale-[1.03]"
+                    alt=""
+                    className="absolute inset-0 -z-10 h-full w-full object-cover transition-transform duration-500 ease-out group-hover/hero:scale-[1.03]"
                     draggable={false}
                     preset="hero"
                     priority={idx === 0}
+                    onLoad={idx === 0 ? () => setFirstSlideReady(true) : undefined}
                   />
                 </picture>
-                {/* Legibility wash: rises from the bottom on phones, from the left on desktop */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/5 lg:bg-gradient-to-r lg:from-black/75 lg:via-black/30 lg:to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 px-6 pb-14 lg:inset-y-0 lg:right-auto lg:flex lg:w-[60%] lg:max-w-[820px] lg:flex-col lg:items-start lg:justify-end lg:px-16 lg:pb-24">
-                  <p className="eyebrow-no text-white/70 [&_b]:text-highlight-soft">
-                    <b>{String(((idx % banners.length) || 0) + 1).padStart(2, "0")}</b>
-                    <span>Ishaputra Botanicals</span>
-                  </p>
-                  <h2
-                    className="mt-4 whitespace-pre-line text-[32px] font-semibold leading-[1.02] text-white lg:text-[60px] xl:text-[68px]"
+                {/* Legibility scrim: rises from the bottom on phones and tablets, from the left on desktop */}
+                <div aria-hidden="true" className="photo-scrim lg:photo-scrim-side absolute inset-0 -z-10" />
+
+                <div className="px-6 pb-16 md:px-10 md:pb-16 lg:w-[60%] lg:max-w-[820px] lg:px-16 lg:pb-24">
+                  <Heading
+                    className="on-photo whitespace-pre-line text-[32px] font-semibold leading-[1.04] text-charcoal-foreground md:text-[44px] lg:text-[60px] xl:text-[68px]"
                     style={{ fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)", letterSpacing: "-0.03em" }}
                   >
-                    {HERO_LINES[(idx % banners.length) % HERO_LINES.length]}
-                  </h2>
-                  <span className="btn-line mt-6 w-fit text-white transition-colors group-hover/hero:bg-white group-hover/hero:text-charcoal lg:mt-8">
-                    Explore the range <ArrowRight className="h-3.5 w-3.5" />
-                  </span>
+                    {line}
+                  </Heading>
+                  {link ? (
+                    /^https?:\/\//i.test(link) ? (
+                      <a href={link} target="_blank" rel="noopener noreferrer" className={ctaClass}>
+                        {cta}
+                      </a>
+                    ) : (
+                      <Link to={link} className={ctaClass}>
+                        {cta}
+                      </Link>
+                    )
+                  ) : null}
                 </div>
-              </button>
-            ))}
-          </div>
-
-          {hasMultipleBanners && (
-            <>
-              <button
-                type="button"
-                onClick={goToPrev}
-                aria-label="Previous banner"
-                className="btn-round absolute right-20 bottom-8 z-10 hidden border-white/30 bg-black/25 text-white hover:!border-white hover:!text-white lg:inline-flex"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={goToNext}
-                aria-label="Next banner"
-                className="btn-round absolute right-8 bottom-8 z-10 hidden border-white/30 bg-black/25 text-white hover:!border-white hover:!text-white lg:inline-flex"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </>
-          )}
-
-          {hasMultipleBanners && (
-            <div className="absolute bottom-5 left-6 z-10 flex items-center gap-2 lg:bottom-11 lg:left-auto lg:right-36">
-              {banners.map((_, index) => (
-                <button
-                  key={`hero-dot-${index}`}
-                  type="button"
-                  onClick={() => jumpToSlide(index)}
-                  className={`h-[2px] rounded-full transition-all duration-500 ${
-                    activeDotIndex === index ? "w-10 bg-highlight-soft" : "w-5 bg-white/40 hover:bg-white/70"
-                  }`}
-                  aria-label={`Go to banner ${index + 1}`}
-                />
-              ))}
-            </div>
-          )}
+              </div>
+            );
+          })}
         </div>
+
+        {hasMultipleBanners && (
+          <>
+            <CarouselDots
+              count={count}
+              active={realIndex}
+              onSelect={jumpToSlide}
+              itemLabel="banner"
+              label="Choose banner"
+              tone="onDark"
+              className="absolute bottom-4 left-5 z-raised md:left-9 lg:bottom-10 lg:left-auto lg:right-36"
+            />
+            <IconButton
+              label="Previous banner"
+              variant="onPhoto"
+              onClick={goToPrev}
+              className="absolute bottom-8 right-20 z-raised hidden border border-charcoal-foreground/25 lg:inline-flex"
+            >
+              <ChevronLeft aria-hidden="true" />
+            </IconButton>
+            <IconButton
+              label="Next banner"
+              variant="onPhoto"
+              onClick={goToNext}
+              className="absolute bottom-8 right-8 z-raised hidden border border-charcoal-foreground/25 lg:inline-flex"
+            >
+              <ChevronRight aria-hidden="true" />
+            </IconButton>
+          </>
+        )}
       </div>
     </section>
   );

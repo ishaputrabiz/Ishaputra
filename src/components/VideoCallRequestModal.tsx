@@ -1,15 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Video, Calendar, Phone, User, X, Loader2, ArrowRight, MessageCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Video, Calendar, Phone, User, ArrowRight, MessageCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
+import { Spinner } from '@/components/ui/spinner';
+import { Notice } from '@/components/ui/notice';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 import { createVideoCallRequest } from '@/services/videoCallRequestService';
 import { getCustomerSupportSettings } from '@/services/siteSettingsService';
 import { SmartImage } from "@/components/ui/smart-image";
+import { fadeUp } from '@/lib/motion';
+import { cn } from '@/lib/utils';
+import { BRAND } from '@/config/brand';
 
 interface VideoCallRequestModalProps {
   open: boolean;
@@ -21,6 +28,17 @@ interface VideoCallRequestModalProps {
 
 type Tab = 'instant' | 'scheduled' | 'whatsapp';
 
+const TABS = [
+  { id: 'instant' as Tab, label: 'Call now', icon: Phone },
+  { id: 'scheduled' as Tab, label: 'Schedule', icon: Calendar },
+  { id: 'whatsapp' as Tab, label: 'WhatsApp', icon: MessageCircle },
+] as const;
+
+/**
+ * "Book a video consultation" from a product page. A centred dialog from
+ * tablet width up and a bottom sheet on phones; both are Radix, so Escape
+ * closes, focus is trapped and returns to the Consult button.
+ */
 const VideoCallRequestModal = ({
   open,
   onClose,
@@ -30,6 +48,7 @@ const VideoCallRequestModal = ({
 }: VideoCallRequestModalProps) => {
   const { user, userProfile } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState<Tab>('instant');
   const [name, setName] = useState(userProfile?.username || userProfile?.name || '');
   const [phone, setPhone] = useState(userProfile?.phone || userProfile?.whatsappNumber || '');
@@ -45,23 +64,38 @@ const VideoCallRequestModal = ({
     }
   }, [open]);
 
+  // Start each visit on the first tab with a fresh form, and fill in the
+  // shopper's name and phone once their profile has loaded (it is often still
+  // loading when this component first renders).
+  useEffect(() => {
+    if (!open) return;
+    setSubmitted(false);
+    setTab('instant');
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !userProfile) return;
+    setName((current) => current || userProfile.username || userProfile.name || '');
+    setPhone((current) => current || userProfile.phone || userProfile.whatsappNumber || '');
+  }, [open, userProfile]);
+
   const handleWhatsApp = () => {
     const digits = adminWhatsapp.replace(/\D/g, '');
     if (!digits) {
-      toast.error('Admin WhatsApp number not configured');
+      toast.error("WhatsApp isn't set up yet. Please use Call now instead.");
       return;
     }
     const productLine = productTitle ? `Product: *${productTitle}*` : '';
     // The site's own address, so the link is right on every domain (and in dev).
     const productLink = productId ? `\n${window.location.origin}/product/${productId}` : '';
     const customerLine = name.trim() ? `\nRequested by: ${name.trim()}` : '';
-    const message = `Hi Ishaputra Botanicals! I'd like a WhatsApp video consultation.${productLine ? '\n' + productLine : ''}${productLink}${customerLine}`;
-    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, '_blank');
+    const message = `Hi Ishaputra Botanicals, I'd like a WhatsApp video consultation.${productLine ? '\n' + productLine : ''}${productLink}${customerLine}`;
+    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
   const handleSubmit = async () => {
     if (!user) {
-      toast.error('Please login to book a video call');
+      toast.error('Please sign in to book a video call');
       return;
     }
     if (!name.trim() || !phone.trim()) {
@@ -95,235 +129,242 @@ const VideoCallRequestModal = ({
       setSubmitted(true);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to book. Please try again.');
+      toast.error("Couldn't send your request. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleClose = () => {
-    setSubmitted(false);
-    setTab('instant');
     onClose();
   };
 
-  if (!open) return null;
+  // Opened from state (no Radix Trigger), so remember the button that opened
+  // it and give focus back on close. Captured during render, before Radix
+  // moves focus into the panel.
+  const wasOpen = useRef(false);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  if (open && !wasOpen.current && typeof document !== 'undefined') {
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  }
+  wasOpen.current = open;
+  const restoreFocus = (event: Event) => {
+    event.preventDefault();
+    returnFocusRef.current?.focus({ preventScroll: true });
+  };
+
+  const Title = isMobile ? SheetTitle : DialogTitle;
+  const Description = isMobile ? SheetDescription : DialogDescription;
+
+  const body = submitted ? (
+    /* Success state */
+    <motion.div {...fadeUp} className="space-y-4 py-4 text-center">
+      <div className="mx-auto grid size-16 place-items-center rounded-full bg-primary/10">
+        <Video aria-hidden="true" className="size-7 text-primary" />
+      </div>
+      <Title className="px-0 text-center sm:px-0">Request received</Title>
+      <Description className="mx-auto max-w-xs">
+        We'll confirm your {tab === 'instant' ? 'video call' : 'appointment'} shortly.
+      </Description>
+      <div className="flex flex-col gap-2 pt-1">
+        <button
+          type="button"
+          onClick={() => { handleClose(); navigate('/my-video-calls'); }}
+          className="btn-copper w-full"
+        >
+          My video calls
+          <ArrowRight aria-hidden="true" className="size-4" />
+        </button>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="h-11 w-full rounded-control text-sm font-medium text-muted-foreground transition-[background-color,color,transform] duration-press ease-out hover:bg-muted hover:text-foreground active:scale-[0.97]"
+        >
+          Done
+        </button>
+      </div>
+    </motion.div>
+  ) : (
+    <>
+      {/* Header */}
+      <div className="mb-5 pr-8">
+        <div className="mb-1 flex items-center gap-2">
+          <Video aria-hidden="true" className="size-5 shrink-0 text-primary" />
+          <Title className="px-0 sm:px-0">Book a video consultation</Title>
+        </div>
+        <Description className={cn('truncate text-xs', !productTitle && 'sr-only')}>
+          {productTitle ? `For ${productTitle}` : 'Talk to us about a product on a video call.'}
+        </Description>
+      </div>
+
+      {/* Mode: segmented control */}
+      <div role="group" aria-label="How would you like to talk?" className="mb-5 flex rounded-control bg-foreground/[0.05] p-1">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            type="button"
+            key={id}
+            aria-pressed={tab === id}
+            onClick={() => setTab(id)}
+            className={cn(
+              'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[4px] text-sm font-medium transition-[background-color,color,box-shadow] duration-hover ease-out',
+              tab === id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <Icon aria-hidden="true" className="size-3.5" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'whatsapp' ? (
+        /* ── WhatsApp video call panel ── */
+        <div className="space-y-4">
+          {productImage && (
+            <div className="flex items-center gap-3 rounded-card border border-foreground/[0.08] bg-card/70 p-3">
+              <SmartImage
+                src={productImage}
+                alt=""
+                className="size-14 shrink-0 rounded-control object-cover" preset="thumb" />
+              <p className="line-clamp-2 text-sm font-medium text-foreground">{productTitle}</p>
+            </div>
+          )}
+          <div className="space-y-2 rounded-card border border-foreground/10 bg-card/70 p-4 text-foreground">
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <MessageCircle aria-hidden="true" className="size-4 text-primary" />
+              WhatsApp video call
+            </p>
+            <p className="text-sm text-muted-foreground [text-wrap:pretty]">
+              Talk to our Ayurveda expert on a WhatsApp video call about this product.
+            </p>
+            {adminWhatsapp && (
+              <p className="text-xs text-muted-foreground">
+                Call number: <span className="font-semibold tabular-nums text-foreground">{adminWhatsapp}</span>
+              </p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="vc-name-wa" className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+              <User aria-hidden="true" className="size-3" /> Your name (optional)
+            </Label>
+            <Input
+              id="vc-name-wa"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Full name"
+              autoComplete="name"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleWhatsApp}
+            className="btn-line w-full text-foreground transition-[border-color,color,transform] duration-press ease-out hover:border-primary hover:text-primary active:scale-[0.97]"
+          >
+            <MessageCircle aria-hidden="true" className="size-4" />
+            Open WhatsApp
+          </button>
+        </div>
+      ) : (
+        /* ── In-app / Scheduled panel ── */
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSubmit();
+          }}
+        >
+          <div>
+            <Label htmlFor="vc-name" className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+              <User aria-hidden="true" className="size-3" /> Your name
+            </Label>
+            <Input
+              id="vc-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Full name"
+              autoComplete="name"
+              aria-required="true"
+            />
+          </div>
+          <div>
+            <Label htmlFor="vc-phone" className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+              <Phone aria-hidden="true" className="size-3" /> Phone number
+            </Label>
+            <Input
+              id="vc-phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+91 XXXXX XXXXX"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              aria-required="true"
+            />
+          </div>
+
+          {tab === 'scheduled' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="vc-date" className="mb-1.5 block text-xs text-muted-foreground">Date</Label>
+                <Input
+                  id="vc-date"
+                  type="date"
+                  value={scheduledDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="vc-time" className="mb-1.5 block text-xs text-muted-foreground">Time</Label>
+                <Input
+                  id="vc-time"
+                  type="time"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {tab === 'instant' && (
+            <Notice tone="neutral" icon={Clock} compact role="note">
+              We'll call you back as soon as we can during business hours ({BRAND.hours}).
+            </Notice>
+          )}
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="btn-copper w-full disabled:cursor-wait disabled:opacity-80"
+          >
+            {submitting ? (
+              <><Spinner /> Sending</>
+            ) : tab === 'instant' ? (
+              'Call me now'
+            ) : (
+              'Book this time'
+            )}
+          </button>
+        </form>
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={(next) => { if (!next) handleClose(); }}>
+        <SheetContent side="bottom" className="tx-sheet max-h-[92dvh] overflow-y-auto" onCloseAutoFocus={restoreFocus}>
+          {body}
+        </SheetContent>
+      </Sheet>
+    );
+  }
 
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50"
-            onClick={handleClose}
-          />
-
-          {/* Panel */}
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl shadow-2xl p-6 max-w-lg mx-auto"
-          >
-            {/* Handle */}
-            <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-5" />
-
-            {/* Close */}
-            <button
-              onClick={handleClose}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            {submitted ? (
-              /* Success state */
-              <div className="text-center py-6 space-y-4">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center mx-auto">
-                  <Video className="w-8 h-8 text-emerald-600" />
-                </div>
-                <h3 className="text-lg font-semibold">Request Received!</h3>
-                <p className="text-sm text-muted-foreground">
-                  Our team will confirm your{' '}
-                  {tab === 'instant' ? 'video call' : 'scheduled appointment'} shortly.
-                </p>
-                <div className="flex flex-col gap-2 pt-1">
-                  <Button
-                    onClick={() => { handleClose(); navigate('/my-video-calls'); }}
-                    className="bg-highlight hover:bg-highlight text-white w-full gap-2"
-                  >
-                    <Video className="w-4 h-4" />
-                    Track My Video Calls
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" onClick={handleClose} className="w-full text-muted-foreground text-sm">
-                    Done
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Header */}
-                <div className="mb-5">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Video className="w-5 h-5 text-highlight" />
-                    <h3 className="text-lg font-semibold">Book a Video Consultation</h3>
-                  </div>
-                  {productTitle && (
-                    <p className="text-xs text-muted-foreground truncate">For: {productTitle}</p>
-                  )}
-                </div>
-
-                {/* Tabs */}
-                <div className="flex rounded-full bg-muted p-1 mb-5">
-                  {([
-                    { id: 'instant' as Tab, label: 'Call Now', icon: Phone },
-                    { id: 'scheduled' as Tab, label: 'Schedule', icon: Calendar },
-                    { id: 'whatsapp' as Tab, label: 'WhatsApp', icon: MessageCircle },
-                  ] as const).map(({ id, label, icon: Icon }) => (
-                    <button
-                      key={id}
-                      onClick={() => setTab(id)}
-                      className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium py-2 rounded-full transition-all ${
-                        tab === id
-                          ? 'bg-background shadow text-foreground'
-                          : 'text-muted-foreground'
-                      }`}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {tab === 'whatsapp' ? (
-                  /* ── WhatsApp video call panel ── */
-                  <div className="space-y-4">
-                    {productImage && (
-                      <div className="flex items-center gap-3 bg-muted/40 rounded-xl p-3">
-                        <SmartImage
-                          src={productImage}
-                          alt={productTitle}
-                          className="w-14 h-14 rounded-lg object-cover shrink-0" preset="thumb" />
-                        <p className="text-sm font-medium line-clamp-2">{productTitle}</p>
-                      </div>
-                    )}
-                    <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-xl p-4 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <MessageCircle className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-semibold text-green-800 dark:text-green-300">WhatsApp Video Call</span>
-                      </div>
-                      <p className="text-xs text-green-700 dark:text-green-400">
-                        Our expert will connect with you directly on WhatsApp for a high-quality video demo.
-                      </p>
-                      {adminWhatsapp && (
-                        <p className="text-xs font-medium text-green-800 dark:text-green-300">
-                          Call number: <span className="font-bold">{adminWhatsapp}</span>
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1.5">
-                        <User className="w-3 h-3" /> Your Name (optional)
-                      </Label>
-                      <Input
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Full name"
-                        className="bg-muted/40"
-                      />
-                    </div>
-                    <Button
-                      onClick={handleWhatsApp}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white rounded-full gap-2"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Connect on WhatsApp
-                    </Button>
-                  </div>
-                ) : (
-                  /* ── In-app / Scheduled panel ── */
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1.5">
-                        <User className="w-3 h-3" /> Your Name
-                      </Label>
-                      <Input
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Full name"
-                        className="bg-muted/40"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1.5">
-                        <Phone className="w-3 h-3" /> Phone Number
-                      </Label>
-                      <Input
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+91 XXXXX XXXXX"
-                        type="tel"
-                        className="bg-muted/40"
-                      />
-                    </div>
-
-                    {tab === 'scheduled' && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-xs text-muted-foreground mb-1.5 block">Date</Label>
-                          <Input
-                            type="date"
-                            value={scheduledDate}
-                            min={new Date().toISOString().split('T')[0]}
-                            onChange={(e) => setScheduledDate(e.target.value)}
-                            className="bg-muted/40"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground mb-1.5 block">Time</Label>
-                          <Input
-                            type="time"
-                            value={scheduledTime}
-                            onChange={(e) => setScheduledTime(e.target.value)}
-                            className="bg-muted/40"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {tab === 'instant' && (
-                      <p className="text-xs text-muted-foreground bg-highlight/10 dark:bg-highlight/6 border border-highlight/20 dark:border-highlight/50 rounded-lg px-3 py-2">
-                        Our wellness expert will call you as soon as possible during business hours (10am–7pm).
-                      </p>
-                    )}
-
-                    <Button
-                      onClick={handleSubmit}
-                      disabled={submitting}
-                      className="w-full bg-highlight hover:bg-highlight text-white rounded-full"
-                    >
-                      {submitting ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending…</>
-                      ) : tab === 'instant' ? (
-                        'Request Immediate Call'
-                      ) : (
-                        'Book Appointment'
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+    <Dialog open={open} onOpenChange={(next) => { if (!next) handleClose(); }}>
+      <DialogContent className="tx-sheet max-w-md" onCloseAutoFocus={restoreFocus}>
+        <div>{body}</div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -66,7 +66,8 @@ const ProductPagination = ({ page, totalPages, onPageChange, hrefFor, className 
             href={hrefFor(entry)}
             onClick={go(entry)}
             isActive={entry === page}
-            className="h-9 w-9 sm:h-10 sm:w-10"
+            aria-label={`Page ${entry}`}
+            className="h-10 w-10 tabular-nums"
           >
             {entry}
           </PaginationLink>
