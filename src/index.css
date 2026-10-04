@@ -172,12 +172,16 @@
    * html, body and every scrollable box keeps anchor links, "back to top",
    * `scrollIntoView` and carousel/scroll-into-view calls animated everywhere.
    *
-   * Route changes deliberately opt out with `behavior: 'auto'` in
+   * Route changes deliberately opt out with `behavior: 'instant'` in
    * ScrollToTop.tsx - restoring a saved position must be instant, not a visible
-   * animated sweep down the page.
+   * animated sweep down the page. ('auto' would inherit the smooth value below.)
+   *
+   * scroll-padding-top keeps anything scrolled into view (Tab focus, anchors,
+   * scrollIntoView) clear of the sticky header and category bar (WCAG 2.4.11).
    */
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 7.5rem;
     overflow-x: clip;
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--border)) transparent;
@@ -185,6 +189,12 @@
 
   body {
     scroll-behavior: smooth;
+  }
+
+  @media (min-width: 1024px) {
+    html {
+      scroll-padding-top: 8rem;
+    }
   }
 
   /* Inner scroll areas: smooth programmatic scrolling + iOS momentum. */

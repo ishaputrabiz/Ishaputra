@@ -68,7 +68,7 @@ const Index = () => {
           <Deferred reserve="h-[552px] md:h-[840px] lg:h-[893px]">
             <PromoSection />
           </Deferred>
-          <Deferred reserve="h-0 md:h-[71px] xl:h-[47px]">
+          <Deferred reserve="h-0 md:h-[47px]">
             <FreeShippingBand />
           </Deferred>
           <Deferred reserve="h-[925px] md:h-[985px] lg:h-[677px] xl:h-[631px]">

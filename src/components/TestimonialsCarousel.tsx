@@ -145,9 +145,10 @@ const TestimonialsCarousel = () => {
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-14">
           {/* ── the quote ── */}
           <figure className="relative lg:col-span-7">
+            {/* Watermark quote mark, top right of the quote so it never collides with the tag or stars. */}
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute -left-5 -top-16 z-0 select-none font-serif text-[9rem] leading-none text-highlight-soft/10 md:-left-8 md:-top-24 md:text-[13rem]"
+              className="pointer-events-none absolute -top-8 right-0 z-0 select-none font-serif text-[8rem] leading-none text-highlight-soft/10 md:-top-12 md:text-[11rem]"
             >
               &ldquo;
             </span>

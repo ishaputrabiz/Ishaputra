@@ -132,7 +132,7 @@ export default function ScrollToTop() {
       // Attempt 1 — immediate (in case content is already rendered)
       const tryScroll = () => {
         const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-        window.scrollTo({ top: Math.min(saved, maxScroll), left: 0, behavior: 'auto' });
+        window.scrollTo({ top: Math.min(saved, maxScroll), left: 0, behavior: 'instant' });
       };
 
       requestAnimationFrame(tryScroll);
@@ -151,7 +151,7 @@ export default function ScrollToTop() {
       };
     } else {
       // PUSH / REPLACE: scroll to top, then unlock
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       const t = setTimeout(() => { lockRef.current = false; }, 100);
       return () => {
         clearTimeout(t);

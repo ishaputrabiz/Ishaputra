@@ -291,13 +291,13 @@ const BestSellers = () => {
 
             <div className="relative hidden md:block">
               {loading ? (
-                <ProductRowSkeleton count={5} label="" className="px-4 py-4" itemClassName="h-[332px] w-[230px] overflow-hidden lg:h-[341px]" />
+                <ProductRowSkeleton count={5} label="" className="py-4" itemClassName="h-[332px] w-[230px] overflow-hidden lg:h-[341px]" />
               ) : products.length === 0 ? (
                 empty
               ) : (
-                <div className="group/best-sellers relative overflow-hidden rounded-card py-2">
+                <div className="group/best-sellers relative -mx-2 overflow-hidden rounded-card py-2">
                   <div ref={desktopBSRef} className="overflow-x-auto scrollbar-hide px-2 py-2">
-                    <div className={cn("flex gap-4 px-2", canDesktopBSScroll ? "w-max" : "justify-center")}>
+                    <div className={cn("flex gap-4", canDesktopBSScroll ? "w-max" : "justify-center")}>
                       {desktopCarouselProducts.map((product, index) => {
                         const sourceIndex = products.length > 0 ? index % products.length : index;
                         return (
@@ -318,7 +318,7 @@ const BestSellers = () => {
                     type="button"
                     onClick={() => desktopBSScrollByPage("prev")}
                     disabled={!canDesktopBSScroll}
-                    className={cn(desktopArrowClass, "left-4")}
+                    className={cn(desktopArrowClass, "left-6")}
                     aria-label="Show previous best sellers"
                   >
                     <ChevronLeft aria-hidden="true" className="size-5" />
@@ -328,7 +328,7 @@ const BestSellers = () => {
                     type="button"
                     onClick={() => desktopBSScrollByPage("next")}
                     disabled={!canDesktopBSScroll}
-                    className={cn(desktopArrowClass, "right-4")}
+                    className={cn(desktopArrowClass, "right-6")}
                     aria-label="Show next best sellers"
                   >
                     <ChevronRight aria-hidden="true" className="size-5" />

@@ -108,8 +108,11 @@ const MobileHeader = ({ skipLink = true }: MobileHeaderProps) => {
   return (
     <header
       className={cn(
-        "lg:hidden sticky top-0 z-header border-b border-border bg-background transition-transform ease-out",
-        hidden ? "-translate-y-full duration-exit" : "translate-y-0 duration-[220ms]",
+        // visibility rides the transition: it flips to hidden only after the slide
+        // out ends, so keyboard and screen-reader users never land on the
+        // off-screen links, and it is visible again from the first frame back.
+        "lg:hidden sticky top-0 z-header border-b border-border bg-background transition-[transform,visibility] ease-out",
+        hidden ? "invisible -translate-y-full duration-exit" : "visible translate-y-0 duration-[220ms]",
       )}
     >
       {skipLink && <SkipLink />}

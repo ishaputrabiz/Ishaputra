@@ -2,6 +2,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { subscribeToShowcases, Showcase } from "@/services/showcaseService";
+import { subscribeToCategories, DEFAULT_CATEGORIES, type Category } from "@/services/categoryService";
 import { ArrowRight } from "lucide-react";
 import { SmartImage } from "@/components/ui/smart-image";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,8 +12,14 @@ import { cn } from "@/lib/utils";
 /** Showcase subtitles are category slugs ("personal-care"), so they link straight to the category. */
 const getCategoryLink = (subtitle: string): string => `/category/${subtitle.toLowerCase().trim()}`;
 
-/** "personal-care" -> "personal care" (shown in tracked capitals). */
-const displayName = (subtitle: string) => subtitle.replace(/-/g, " ").trim();
+/**
+ * The category's own name ("Energy & Vitality"), so the caption matches the
+ * category strip and footer; falls back to "personal-care" -> "personal care".
+ */
+const displayName = (subtitle: string, categories: Pick<Category, "name" | "slug">[]) => {
+  const slug = subtitle.toLowerCase().trim();
+  return categories.find((c) => c.slug === slug)?.name ?? subtitle.replace(/-/g, " ").trim();
+};
 
 const GRID = "grid grid-cols-1 gap-3 md:grid-cols-12 md:auto-rows-[190px] md:gap-5";
 const SPANS = ["md:col-span-7 md:row-span-2", "md:col-span-5 md:row-span-1", "md:col-span-5 md:row-span-1"];
@@ -33,7 +40,15 @@ const SectionHeader = () => (
 const CategoryShowcase = () => {
   const [showcases, setShowcases] = useState<Showcase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<Pick<Category, "name" | "slug">[]>(DEFAULT_CATEGORIES);
   const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    const unsubscribe = subscribeToCategories((cats) => {
+      if (cats.length > 0) setCategories(cats);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     // Subscribe to active showcases only
@@ -116,7 +131,7 @@ const CategoryShowcase = () => {
                             isFirst ? "text-[10px] md:text-xs" : "text-[10px] md:text-[11px]",
                           )}
                         >
-                          {displayName(showcase.subtitle)}
+                          {displayName(showcase.subtitle, categories)}
                         </p>
 
                         {/* Description: large card only, revealed on hover or keyboard focus (pointer

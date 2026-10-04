@@ -26,7 +26,7 @@ const TILE_LAYOUT = ["col-span-2 row-span-2", "col-span-2 row-span-1", "col-span
 
 const Heading = () => (
   <h2 className="text-xl font-semibold text-foreground [text-wrap:balance] md:text-3xl lg:text-4xl" style={HEADING_FONT}>
-    Trending this week
+    Trending now
   </h2>
 );
 

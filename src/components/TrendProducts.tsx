@@ -241,13 +241,13 @@ const TrendProducts = () => {
 
           <div className="relative hidden md:block">
             {loading ? (
-              <ProductRowSkeleton count={5} label="" className="px-4 py-4" itemClassName="h-[332px] w-[230px] overflow-hidden lg:h-[341px]" />
+              <ProductRowSkeleton count={5} label="" className="py-4" itemClassName="h-[332px] w-[230px] overflow-hidden lg:h-[341px]" />
             ) : products.length === 0 ? (
               empty
             ) : (
-              <div className="group/new-arrivals relative overflow-hidden py-2">
+              <div className="group/new-arrivals relative -mx-2 overflow-hidden py-2">
                 <div ref={desktopNARef} className="overflow-x-auto scrollbar-hide px-2 py-2">
-                  <div className={cn("flex gap-4 px-2", canDesktopNAScroll ? "w-max" : "justify-center")}>
+                  <div className={cn("flex gap-4", canDesktopNAScroll ? "w-max" : "justify-center")}>
                     {desktopTrackProducts.map((product, index) => {
                       const isLoopCopy = index >= products.length;
                       return (
@@ -268,7 +268,7 @@ const TrendProducts = () => {
                   type="button"
                   onClick={() => desktopNAScrollByPage("prev")}
                   disabled={!canDesktopNAScroll}
-                  className={cn(desktopArrowClass, "left-4")}
+                  className={cn(desktopArrowClass, "left-6")}
                   aria-label="Show previous new arrivals"
                 >
                   <ChevronLeft aria-hidden="true" className="size-5" />
@@ -278,7 +278,7 @@ const TrendProducts = () => {
                   type="button"
                   onClick={() => desktopNAScrollByPage("next")}
                   disabled={!canDesktopNAScroll}
-                  className={cn(desktopArrowClass, "right-4")}
+                  className={cn(desktopArrowClass, "right-6")}
                   aria-label="Show next new arrivals"
                 >
                   <ChevronRight aria-hidden="true" className="size-5" />

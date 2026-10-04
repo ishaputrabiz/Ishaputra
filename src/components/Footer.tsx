@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { subscribeEmail } from "@/services/newsletterService";
 import { LazyMount } from "@/components/ui/lazy-mount";
+import { cn } from "@/lib/utils";
 import {
   Facebook,
   Instagram,
@@ -19,6 +20,7 @@ import {
   Mail,
   Clock,
   ArrowRight,
+  ArrowUpRight,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -87,12 +89,45 @@ const resolveFooterHref = (name: string, categories: Category[]) => {
 /** Hours are typed by the admin; show ranges with words, not dashes. */
 const tidyHours = (value: string) => value.replace(/\s*[–—]\s*/g, " to ");
 
+/** The address and a way out to Google Maps, shown while the map embed loads. */
+const MapCard = ({ addressLines, hidden = false }: { addressLines?: string[]; hidden?: boolean }) => {
+  const address = (addressLines ?? []).filter(Boolean).join(", ");
+  return (
+    <div
+      aria-hidden={hidden || undefined}
+      {...(hidden ? ({ inert: "" } as Record<string, string>) : {})}
+      className={cn(
+        "tx-slate absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center transition-[opacity,visibility] duration-500 ease-out motion-reduce:transition-none",
+        // Fades out only once the map above it has faded in, so nothing ghosts through.
+        hidden && "invisible opacity-0 delay-500",
+      )}
+    >
+      <MapPin aria-hidden="true" className="size-5 text-highlight-soft" />
+      {address && <p className="max-w-xs text-sm leading-snug text-charcoal-foreground/80 text-pretty">{address}</p>}
+      {address && (
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-highlight-soft transition-colors duration-hover ease-out hover:text-charcoal-foreground"
+        >
+          Open in Google Maps <ArrowUpRight aria-hidden="true" className="size-3.5" />
+          <span className="sr-only">(opens in a new tab)</span>
+        </a>
+      )}
+    </div>
+  );
+};
+
 const Footer = () => {
   const darkModeLogo = "/white_logo.png";
   const [settings, setSettings] = useState<FooterSettings>(DEFAULT_FOOTER);
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES as Category[]);
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const mapTimer = useRef<number>();
+  useEffect(() => () => window.clearTimeout(mapTimer.current), []);
 
   useEffect(() => {
     const unsub = subscribeFooterSettings(setSettings);
@@ -185,9 +220,9 @@ const Footer = () => {
 
       {/* ── Main grid ── */}
       <div className="relative container-custom py-14 md:py-16">
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-x-8 gap-y-10">
-          {/* Brand & socials */}
-          <div className="col-span-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-8 gap-y-10">
+          {/* Brand & socials: its own row on tablets so the four link columns get room */}
+          <div className="col-span-2 md:col-span-4 lg:col-span-2">
             <img
               src={darkModeLogo}
               alt="Ishaputra Botanicals"
@@ -285,7 +320,7 @@ const Footer = () => {
               {settings.addressLines?.length > 0 && (
                 <li className="flex gap-2.5">
                   <MapPin aria-hidden="true" className="size-4 text-highlight-soft flex-shrink-0 mt-0.5" />
-                  <span>
+                  <span className="min-w-0 [overflow-wrap:anywhere]">
                     {settings.addressLines.map((line, i) => (
                       <span key={i} className="block leading-snug">{line}</span>
                     ))}
@@ -297,7 +332,7 @@ const Footer = () => {
                   <Phone aria-hidden="true" className="size-4 text-highlight-soft flex-shrink-0 mt-0.5" />
                   <a
                     href={`tel:${settings.phones[0].replace(/\s+/g, "")}`}
-                    className="break-all transition-colors duration-hover ease-out hover:text-charcoal-foreground"
+                    className="min-w-0 whitespace-nowrap transition-colors duration-hover ease-out hover:text-charcoal-foreground"
                   >
                     {settings.phones[0]}
                   </a>
@@ -308,9 +343,15 @@ const Footer = () => {
                   <Mail aria-hidden="true" className="size-4 text-highlight-soft flex-shrink-0 mt-0.5" />
                   <a
                     href={`mailto:${settings.emails[0]}`}
-                    className="break-all transition-colors duration-hover ease-out hover:text-charcoal-foreground"
+                    className="min-w-0 [overflow-wrap:anywhere] transition-colors duration-hover ease-out hover:text-charcoal-foreground"
                   >
-                    {settings.emails[0]}
+                    {/* Wrap after the @ if the column is narrow, never mid-word. */}
+                    {settings.emails[0].split("@").map((part, i) => (
+                      <span key={i}>
+                        {i > 0 && <>@<wbr /></>}
+                        {part}
+                      </span>
+                    ))}
                   </a>
                 </li>
               )}
@@ -324,19 +365,29 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Map */}
+        {/* Map: the address card sits under the iframe, so the box is never an empty
+            grey slab while the embed and its tiles load. */}
         {settings.mapEmbedUrl && (
           <LazyMount
-            className="group mt-12 rounded-card overflow-hidden border border-charcoal-foreground/10"
-            placeholder={<div className="h-[220px] w-full bg-charcoal-foreground/5" />}
+            className="group relative mt-12 h-[220px] overflow-hidden rounded-card border border-charcoal-foreground/10"
+            placeholder={<MapCard addressLines={settings.addressLines} />}
           >
+            <MapCard addressLines={settings.addressLines} hidden={mapLoaded} />
             <iframe
               src={settings.mapEmbedUrl}
               width="100%"
               height="220"
               style={{ border: 0 }}
+              // The embed paints a flat grey box for a moment after "load" while its
+              // tiles arrive, so the map is revealed a beat later.
+              onLoad={() => {
+                mapTimer.current = window.setTimeout(() => setMapLoaded(true), 900);
+              }}
               // Quiet monochrome inside the charcoal footer; full colour when the visitor reaches for it.
-              className="block [filter:grayscale(1)_contrast(1.05)_brightness(0.82)] opacity-90 transition-[filter,opacity] duration-500 ease-out group-hover:[filter:none] group-hover:opacity-100 group-focus-within:[filter:none] group-focus-within:opacity-100 motion-reduce:transition-none"
+              className={cn(
+                "absolute inset-0 block [filter:grayscale(1)_contrast(1.05)_brightness(0.82)] transition-[filter,opacity] duration-500 ease-out group-hover:[filter:none] group-focus-within:[filter:none] motion-reduce:transition-none",
+                mapLoaded ? "opacity-90 group-hover:opacity-100 group-focus-within:opacity-100" : "opacity-0",
+              )}
               allowFullScreen
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"

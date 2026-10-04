@@ -158,14 +158,17 @@ const ProductCard = ({ product, index = 0, size = "grid", showEmptyRating = true
         {/* Info */}
         <div className="flex flex-1 flex-col gap-1 px-1 pb-1 lg:gap-1.5">
           {!isRow && (
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+            <span
+              title={product.category}
+              className="block truncate text-[10px] font-bold uppercase tracking-[0.16em] text-primary lg:tracking-[0.2em]"
+            >
               {product.category}
             </span>
           )}
 
           <h3
             title={product.title}
-            className="line-clamp-2 min-h-[2.6em] text-[13px] font-semibold leading-[1.3] text-foreground [text-wrap:pretty] md:text-sm"
+            className="line-clamp-2 min-h-[2.6em] text-[13px] font-semibold leading-[1.3] text-foreground [text-wrap:pretty] md:text-sm md:leading-[1.3]"
             style={{ fontFamily: "var(--font-body)" }}
           >
             <Link
@@ -206,17 +209,36 @@ const ProductCard = ({ product, index = 0, size = "grid", showEmptyRating = true
           {!isRow && !showRating && <div aria-hidden="true" className="h-4" />}
 
           {/* Price (+ round cart button on row cards) */}
-          <div className={cn("flex items-center gap-2", isRow ? "mt-auto justify-between pt-1" : "pb-2.5 pt-0.5 lg:pb-3 lg:pt-1")}>
-            <p className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-1">
-              <span className="price-now text-[15px] lg:text-lg">{formatINR(displayPrice)}</span>
-              {displayOldPrice && (
-                <span className="price-was text-xs lg:text-sm">
-                  <span className="sr-only">Was </span>
-                  {formatINR(displayOldPrice)}
+          <div className={cn("flex gap-2", isRow ? "mt-auto items-end justify-between pt-1" : "items-center pb-2.5 pt-0.5 lg:pb-3 lg:pt-1")}>
+            {isRow ? (
+              /* Row cards sit side by side: price on one fixed line and the chip on its
+                 own reserved line, so every price in a row shares one baseline. */
+              <p className="flex min-w-0 flex-col gap-1">
+                <span className="flex min-w-0 items-baseline gap-x-1.5 whitespace-nowrap">
+                  <span className="price-now text-[15px] lg:text-lg">{formatINR(displayPrice)}</span>
+                  {displayOldPrice && (
+                    <span className="price-was text-xs lg:text-sm">
+                      <span className="sr-only">Was </span>
+                      {formatINR(displayOldPrice)}
+                    </span>
+                  )}
                 </span>
-              )}
-              {displayDiscount && <span className="chip-off">{displayDiscount}% off</span>}
-            </p>
+                <span className="flex h-[18px] items-center">
+                  {displayDiscount && <span className="chip-off">{displayDiscount}% off</span>}
+                </span>
+              </p>
+            ) : (
+              <p className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-1">
+                <span className="price-now text-[15px] lg:text-lg">{formatINR(displayPrice)}</span>
+                {displayOldPrice && (
+                  <span className="price-was text-xs lg:text-sm">
+                    <span className="sr-only">Was </span>
+                    {formatINR(displayOldPrice)}
+                  </span>
+                )}
+                {displayDiscount && <span className="chip-off">{displayDiscount}% off</span>}
+              </p>
+            )}
             {isRow && (
               <IconButton
                 label={`Add ${product.title} to cart`}
@@ -261,6 +283,7 @@ const ProductCard = ({ product, index = 0, size = "grid", showEmptyRating = true
               >
                 <ShoppingBag aria-hidden="true" className="size-4" />
                 Add to cart
+                <span className="sr-only">: {product.title}</span>
               </button>
             )
           )}

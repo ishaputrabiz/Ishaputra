@@ -97,7 +97,7 @@ const PromoSection = () => {
           <div className="relative">
             <div
               ref={scrollerRef}
-              className={`collections-scroller flex gap-4 overflow-x-auto scrollbar-hide px-1 pb-3 md:gap-6 md:px-2 ${
+              className={`collections-scroller -mx-1 flex gap-4 overflow-x-auto scrollbar-hide px-1 pb-3 md:-mx-2 md:gap-6 md:px-2 ${
                 // Two or three collections don't fill the row; centred they look
                 // composed rather than left over.
                 cards.length <= 3 ? "md:justify-center" : ""

@@ -148,13 +148,13 @@ const CategoryIconNav = () => {
         aria-label="Categories"
         aria-busy={!loaded || undefined}
         className={cn(
-          "lg:hidden sticky top-[57px] z-sticky border-b transition-[transform,opacity,background-color,box-shadow,border-color] ease-out",
+          "lg:hidden sticky top-[57px] z-sticky border-b transition-[transform,opacity,visibility,background-color,box-shadow,border-color] ease-out",
           isScrolled
             ? "bg-background/90 backdrop-blur-xl border-border/40 shadow-[0_1px_0_hsl(var(--foreground)/0.05)]"
             : "bg-background border-border/70",
           isMobileNavHidden
-            ? "-translate-y-full opacity-0 pointer-events-none duration-exit"
-            : "translate-y-0 opacity-100 duration-[220ms]",
+            ? "invisible -translate-y-full opacity-0 pointer-events-none duration-exit"
+            : "visible translate-y-0 opacity-100 duration-[220ms]",
         )}
       >
         <div
@@ -177,7 +177,7 @@ const CategoryIconNav = () => {
                 className={cn(
                   "group flex h-[42px] min-w-fit flex-shrink-0 items-center gap-2 rounded-control border pl-[6px] pr-3 transition-[transform,background-color,border-color,color] duration-press ease-out active:scale-[0.97]",
                   isActive
-                    ? "border-primary/45 bg-primary/10 text-primary"
+                    ? "border-primary/45 bg-primary/10 text-foreground"
                     : "border-foreground/10 bg-card/60 text-foreground/80 hover:border-foreground/20",
                 )}
               >

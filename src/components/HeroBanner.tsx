@@ -273,6 +273,9 @@ const HeroBanner = () => {
       onFocus={handleFocus}
       onBlur={handleBlur}
     >
+      {/* The page's one h1 lives outside the moving track: inactive slides are
+          aria-hidden and inert, so a slide headline cannot be the h1. */}
+      <h1 className="sr-only">Ishaputra Botanicals: Ayurvedic and botanical wellness for men</h1>
       {/*
         Desktop frame keeps the banners' own 16:9 shape, so nothing is ever
         cropped. Tablets get a 4:3 frame so the line and the call to action sit
@@ -310,7 +313,7 @@ const HeroBanner = () => {
           {displayBanners.map((banner, idx) => {
             const isClone = idx === count;
             const isActive = idx === currentIndex;
-            const Heading = idx === 0 ? "h1" : "h2";
+            const Heading = "h2";
             const line = HERO_LINES[(idx % count) % HERO_LINES.length];
             const link = banner.redirectLink?.trim();
             const ctaClass =
