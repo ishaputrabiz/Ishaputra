@@ -41,6 +41,8 @@ export interface RewardEntry extends LedgerLike {
   late?: boolean;
   /** Why the server voided it, e.g. 'payment-not-completed', 'order-returned'. */
   voidReason?: string;
+  /** Where an earn entry came from: 'scratch' for a Scratch & Win prize. */
+  source?: string;
   createdAtMs: number;
   createdBy: string;
 }
@@ -63,6 +65,7 @@ const toEntry = (id: string, d: Record<string, any>): RewardEntry => ({
   holdUntilMs: millis(d.holdUntil) || undefined,
   late: d.late === true,
   voidReason: typeof d.voidReason === 'string' ? d.voidReason : undefined,
+  source: typeof d.source === 'string' ? d.source : undefined,
   note: String(d.note || ''),
   orderId: d.orderId,
   razorpayOrderId: d.razorpayOrderId,
@@ -128,7 +131,7 @@ export const adminAdjustRewards = async (
 };
 
 /** POST an action to /api/notify-order as the signed-in user. Never throws. */
-async function rewardsAction(
+export async function rewardsAction(
   payload: Record<string, unknown>,
 ): Promise<{ ok: boolean; status: number; data: Record<string, any>; detail?: string }> {
   try {

@@ -56,6 +56,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { SmartImage } from "@/components/ui/smart-image";
+import { ScratchCardOrderNote } from "@/components/scratch/ScratchCardOrderNote";
+import { getScratchCard, type ScratchCard } from "@/services/scratchWinService";
 import { BRAND } from "@/config/brand";
 import { SITE_HOST } from "@/lib/siteUrl";
 import { isWithinReturnWindow } from "@/lib/returnWindow";
@@ -337,6 +339,22 @@ const OrderDetailsPage = () => {
 
     return () => unsubscribe();
   }, [user, orderId, navigate, reloadKey]);
+
+  // The order's scratch card, if it has one (given on delivery). Read again
+  // when the status changes, since that is when the server gives or cancels it.
+  const [scratchCard, setScratchCard] = useState<ScratchCard | null>(null);
+  const scratchOrderId = order?.razorpayOrderId && order.razorpayOrderId === order.id ? order.id : null;
+  const orderStatus = order?.status;
+  useEffect(() => {
+    if (!user || !scratchOrderId) return;
+    let live = true;
+    getScratchCard(user.uid, scratchOrderId).then((card) => {
+      if (live) setScratchCard(card);
+    });
+    return () => {
+      live = false;
+    };
+  }, [user, scratchOrderId, orderStatus]);
 
   // Messages are read only once the order is known to be this customer's,
   // so a wrong link does not ask for a conversation the rules will refuse.
@@ -886,7 +904,10 @@ const OrderDetailsPage = () => {
                 {isReturnPickup && 'The pickup partner has collected the item. Return in progress.'}
                 {order.status === 'delivered' && 'Your package has been delivered.'}
                 {order.status === 'cancelled' && 'This order has been cancelled.'}
-                {order.status === 'returnRequested' && 'Return request submitted. Waiting for approval.'}
+                {order.status === 'returnRequested' &&
+                  ((order.returnStatus ?? 'pending') === 'approved'
+                    ? "Return approved. We'll arrange a pickup. To change it, please contact us."
+                    : 'Return request submitted. Waiting for approval.')}
                 {order.status === 'returnScheduled' && "Return approved. We'll schedule a pickup."}
                 {order.status === 'returned' && 'The item has been picked up and returned.'}
                 {order.status === 'refunded' && 'Your refund has been processed.'}
@@ -973,8 +994,8 @@ const OrderDetailsPage = () => {
             </Button>
           )}
 
-          {/* Cancel Return: only for returnRequested orders, one-time, asks first */}
-          {order.status === 'returnRequested' && !(order as any).returnCancelled && (
+          {/* Cancel Return: only while the return is still a request (not yet approved), one-time, asks first */}
+          {order.status === 'returnRequested' && !(order as any).returnCancelled && (order.returnStatus ?? 'pending') === 'pending' && (
             <Button
               ref={cancelReturnBtnRef}
               variant="destructive"
@@ -1300,6 +1321,7 @@ const OrderDetailsPage = () => {
               <span>{pointsEarnedNote}</span>
             </p>
           )}
+          <ScratchCardOrderNote card={scratchCard} nowMs={Date.now()} />
         </section>
 
         {/* Share order details + invoice */}

@@ -7,23 +7,51 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-04 (Scratch & Win screens mocked up, waiting for the owner's yes).
+Last updated: 2026-10-05 (Scratch & Win: rules deployed, live test passed, merged into `main`).
 
 ## State
 
-- **2026-10-04: Scratch & Win screens designed as a mockup; waiting for the owner's yes. No feature code yet.**
-  - Screenshots (390 and 1440, light and dark, 0 console errors, no sideways overflow): `../shots/scratch-win-mockup/` (outside the repo). Start with `board-customer-light.png`, `board-customer-dark.png`, `9-dialog-scratching-1440-light.png`, `11-admin-1440-light.png`, `13-admin-390-light.png`.
-  - The mockup is a dev-only page: `src/pages/__mock/ScratchWinMock.tsx` (git-ignored locally through `.git/info/exclude`) plus two `import.meta.env.DEV` routes in `src/App.tsx` marked "MOCKUP, do not commit" (left uncommitted). Live at `/__mock/scratch-win?view=wallet|sheet&state=new|scratching|won|nowin` and `/__mock/scratch-win-admin`; the scratch gesture really works. **Delete the mock file and both App.tsx route blocks (and the two lazy imports) when the real build starts.** The screenshot script is a scratchpad copy of `docs/handoff/ui-shots.mjs`'s approach; rerun by hand if needed.
-  - **Proposed customer design (in the mockup):**
-    - A "Scratch cards" panel on `/wallet`, right under the tier card, above Points & cashback. A copper "2 new" chip. Phone: a swipe row of tiles; desktop: a row of 5. Tile states: new (charcoal tile with bronze foil, "Scratch now"), won ("+25 points, unlocks 12 Oct"), no prize, expired; plus "cancelled, order returned" (not drawn). One muted line: "One card for every delivered order of ₹499 or more. Scratch it within 30 days of delivery." Panel hidden when the feature is off and the customer has no cards.
-    - Tapping a new card opens a bottom sheet (phone) or dialog (desktop): a charcoal-stone card ("Scratch & Win", order number, expiry) with a canvas bronze foil. Scratching past 50% reveals; a "Reveal prize" button is always there (keyboard, screen readers, anyone who doesn't want to scratch). The card has an `aria-label` and the result is announced in a `role="status"` line. Reveal: foil fades, prize pops from 0.96 and a single copper sheen sweeps the number; reduced motion gets fades only.
-    - After the reveal: "25 points are in your wallet. They unlock on 12 Oct, when the order's 7-day return window ends." (or the no-prize line), with "Next card" (only when another is waiting) and "Done".
-    - The server draws the prize at the first scratch or the Reveal press. Until the answer arrives the face under the foil shows a skeleton; on an error the card stays unscratched with "Try again".
-    - Nudges, not in the mockup: a copper dot on the bottom-nav Rewards tab and the header points icon while a card waits, and a line on the delivered order's page linking to it. No pop-ups.
-    - Real build notes from the mockup: focus goes to the sheet title on open (the default Radix autofocus put a focus ring on Reveal); the dark-mode prize face needs the bronze ring and copper glow used in the mock; copy says "scratch the bronze foil", not "with your finger".
-  - **Proposed admin design (in the mockup):** a new "Scratch & Win" tab in Admin > Commerce settings (after Rewards). Status chip (Off / Live), on/off switch ("Off stops new cards. Cards already given can still be scratched until they expire."), Minimum order (₹), Card expires after (days), a prize table (points, weight, live chance % with a bar on desktop, remove), a fixed "Better luck next time" row, Add prize, three StatCards (average cost per card in points, ₹ and % of the minimum order; biggest prize and its odds; share of cards that win), a "How cards work" notice, "Preview card" (local draw, gives nothing) and "Save Scratch & Win".
-  - **Placeholder values (list them in `CLIENT.md` when building):** off; minimum ₹499; expiry 30 days; prizes 5 / 10 / 25 / 50 points at weights 40 / 35 / 20 / 5; better luck 0. Average 13 points (₹13 at today's point value, 2.6% of ₹499); 1 in 20 cards gets 50.
-  - Left out of the first version on purpose: admin stats of cards given and scratched (needs a collection-group query or a server action), push notifications, coupon or cashback prizes.
+- **2026-10-05: Scratch & Win is finished and merged into `main`** (`--no-ff`, local only, never pushed). It stays **off** until the client confirms the placeholder values and an admin turns it on.
+  - **Rules deployed** with the owner's OK (`node docs/handoff/deploy-rules.mjs`, ruleset `2abcb7dc-…`): the `scratchCards` read-only rule, a return request must start `pending`, and a customer can cancel a return only while it is `pending`.
+  - **Live test passed** with the owner's OK: `node docs/handoff/scratch-win-live.mjs http://127.0.0.1:5182 ../shots/scratch-win-live` (dev server on 5182). It uses the real create-order, verify-payment and notify-order code, live Firestore, the deployed rules (over REST as the test shopper) and the real storefront in Chromium. The browser's `/api/notify-order` calls go to the real handler in the script's process, because the dev server doesn't serve that route. Only Razorpay is faked. It checked:
+    - With the switch off, a delivered order gets points but no card. After the switch goes on, an order delivered more than 15 minutes earlier still gets no card. (The server allows 15 minutes either way for device clocks, which is by design.)
+    - A delivered order of ₹1,098 gets exactly one card, even after a second reconcile, and the payment is stamped with `scratchCardGivenAt`. The shopper can read the card but cannot create or change one. The prize unlocks at the same time as the order's earned points, delivery + 7 days.
+    - Scratching in the browser at 390 px with "Reveal prize" won 5 points. The ledger got `scratch_<rzp>` (earn, source scratch, active, not held), and scratching again returns the same prize.
+    - Returns: a request that starts `approved` is refused (403) and a `pending` one is accepted. The prize and the earned points are held while the return is open, the customer can't cancel once the shop approves, and when the order is returned both are voided. The dialog is told the prize was taken back.
+    - An unscratched card survives a cancelled (pending) return. Once the order is returned the card is void, and a scratch gets 409 `card_void` with no draw.
+    - The wallet and order page with live cards at 390 and 1440, light and dark, have 0 console errors and no sideways overflow. Screenshots are in `../shots/scratch-win-live/`, including the "return approved" wording on the order page and "Points taken back" on the wallet.
+    - Cleanup: the 4 test orders and their payments, cards and 5 ledger entries are deleted, and `siteSettings/scratchWin` is deleted again (it had never been set). The shopper's ledger is back to its 2 demo entries.
+  - **Verified on `main` after the merge:** `npm test` 74/74, `npm run build` passes.
+  - **Still not tested:** a real Razorpay payment (needs the owner's test keys).
+
+- **2026-10-05: Scratch & Win money-logic review done; fixes committed on `scratch-win` (`7be97a1`, `400646b`, `84df237`, docs after them; local only, not merged).** Report: `docs/superpowers/reviews/2026-10-05-scratch-win-money-review.md`.
+  - **How:** 4 reviewers (draws, returns, ownership, timing/spec) and 2 adversarial verifiers.
+  - **Result:** nothing critical. No double draw, no re-roll, no claim on another customer's card; 50 racing scratches commit one draw.
+  - **Biggest problem, fixed:** R1, high and pre-existing for earned points too. A return written without a reconcile left points and prizes spendable while the goods came back.
+    - Checkout now holds any unlocked earning or prize whose order is not at "delivered" (`holdEarnedOffDelivered` in `api/create-order.ts`).
+    - Points never unlock before `deliveredAt + 7 days` (`unlockAtMs` in `api/notify-order.ts`).
+  - **Other fixes:** one card per payment ever (`payments/<rzp>.scratchCardGivenAt`); no cards for orders delivered while the switch was off (`siteSettings/scratchWin.enabledAt`, stamped by the admin tab); create-order always INR; order-id check on every notify-order action; the dialog says when a prize was taken back; admin odds; plus tests (`npm test` 72/72).
+  - **Written, NOT deployed** (next to the `scratchCards` rule; all need the owner's OK to deploy):
+    - a customer can cancel a return only while `returnStatus` is `pending`;
+    - a customer's return request must start `pending`.
+  - **Left for before delivery partners are switched on** (rules plus emulator; listed in the report): a partner can flip a return-pickup order back to delivered; a partner can write any `deliveredAt`; the partner's own return-pickup update seems refused by the current rules.
+  - **Verified (at `84df237`):** `npm test` 74/74, `npm run build` passes, type check at baseline, ESLint unchanged on every touched file.
+    - Screenshots of the new result copy (won, taken back) at 390 and 1440, light and dark, show 0 console errors and no overflow: `../shots/scratch-win-review-fixes/`. They came from a temporary harness page, since deleted.
+  - **Check of the fixes** (3 reviewers, 3 verifiers, `git diff 2be43ae..400646b`): nothing critical or high. 9 small issues were confirmed and fixed in `84df237`; the report lists them. The main ones:
+    - The checkout hold is now a transaction per entry with no age limit, and it also labels the order and the card as held.
+    - `enabledAt` allows 15 minutes for device clocks and is stamped from the saved document.
+    - The wallet and checkout say points unlock `max(unlockDays, 7)` days after delivery.
+    - The order page says when a return was approved.
+  - **Not shown in a browser:** the wallet, checkout and order-page wording changes. They need the live test shopper.
+- **2026-10-04: Scratch & Win is built on branch `scratch-win` (11 commits from `b24cd56`, not merged, local only).** The owner approved the mockup with no changes. Spec `docs/superpowers/specs/2026-10-04-scratch-win-design.md`, plan `docs/superpowers/plans/2026-10-04-scratch-win.md`. Shipped **off**; placeholders are in `CLIENT.md` ("Scratch & Win" and "Placeholders for the client").
+  - **Server (`api/notify-order.ts`):** `reconcileRewards` now gives a card on delivery (feature and rewards on, paid online at or above the minimum, not already past its expiry), cancels an unscratched card when the order ends, restores it if reopened, and keeps a won prize in line with the order (hold, release, void, restore). It's one transaction that re-reads the order. New action `scratch-card` draws with `crypto.randomInt` inside a transaction and writes `rewardLedger/scratch_<rzp>` as `kind: 'earn', source: 'scratch'`, so `summariseRewards` treats it like earned points with no change to `rewards-core`. The card id is checked (`[\w-]`) before it's used in a path.
+  - **Shared rules:** `src/lib/scratchWin.ts`, whose `scratch-core` block is copied into `notify-order.ts`. `npm run sync:rewards` now syncs both blocks, and the parity test checks both.
+  - **Customer:** "Scratch cards" panel on `/wallet` (between the tier card and Points & cashback), the sheet/dialog with the canvas foil, a copper dot on the header Rewards icon (one shared listener per session), and a line on the order page linking to `/wallet?card=<id>`. Ticket icon for prizes in the points history. **Admin:** Commerce settings > Scratch & Win tab, and a scratch-card line on the admin order page.
+  - **Rule written, NOT deployed:** `users/{uid}/scratchCards` is read-only (owner or admin). Deploy needs the owner's OK; until then customers can't read cards (the screens stay hidden while the feature is off, and the header dot fails silently).
+  - **Verified:** `npm test` 62/62, including 12 server tests against a new in-memory Firestore stand-in (`tests/helpers/fakeFirestore.ts`, with retried transactions; there's no Java for the emulator). They cover two racing scratches (one draw), refusals, return hold/release/void/restore, and cancel/restore. `npm run build` passes. Type check is at baseline (only the old `videoCallService` 6 + `DeliveryDashboard` 1). ESLint matches `main` (251 errors; `main`'s real count, the 197 below is out of date).
+  - **Screens checked** through a temporary harness, since deleted, with fixture cards (nothing was written to live Firestore): 390 and 1440, light and dark, scratch by hand, keyboard reveal, a failed request and Try again, no prize, the admin tab and Preview. 0 console errors, no sideways overflow, title focused on open, no axe violations in the dialog. Real `/`, `/wallet` and `/admin/commerce-settings` load with 0 console errors. Screenshots are in `../shots/scratch-win-build/` (outside the repo).
+  - **Bugs found and fixed in that check** (the mockup had the first one too): the eraser inherited a 55%-opaque colour and left a translucent trail; a mouse drag selected nearby text; a failed reveal showed two buttons for the same action.
+  - **Not tested live:** a real delivered order giving a card, a real scratch, a real return. That needs the rule deployed and the owner's OK to write to the live Firestore with the test shopper.
 
 - **2026-10-04: one slide pays (`b0c7f28`, on `main`).** The owner reported that sliding "Slide to pay" on the phone opened a second checkout screen ("Payment details", with another "Slide to place order"). Desktop had the same double step ("Place order" opened a popup with a second "Pay" button). Both extra screens only repeated the bill and the single payment method, so they are removed: the slide (phone) or the "Pay ₹…" button (desktop) opens Razorpay straight away. At the owner's request the **Payment method card** (Pay online, Razorpay) now sits on the checkout step itself, above the bill on the phone and above the Pay button on desktop. If the payment is cancelled or fails, the slider resets.
   - Verified with the test shopper, `/api/create-order` stubbed to 500 in the browser (no Razorpay or Firestore writes): one slide or one click makes exactly 1 create-order call, no "Payment details" screen, the slider or button comes back, 0 page errors, page width stays 390. Screenshots at 390 and 1440, light and dark. `npm test` 32/32, build passes. A real Razorpay payment still needs the owner's test keys.
@@ -61,13 +89,18 @@ Last updated: 2026-10-04 (Scratch & Win screens mocked up, waiting for the owner
 ## Next steps (in order)
 
 1. **No redesign.** The owner likes the current design. Any future visual change: keep the product-dense e-commerce layout, show a cheap mockup of ONE screen first, and get a yes before building.
-2. **Scratch & Win, decided (owner said "just complete it", 2026-10-04).** Build after the redesign. Decisions so far:
+2. **Scratch & Win: DONE 2026-10-05** (rules deployed, live test passed, merged into `main`; see "State"). To switch it on: the client confirms the values in `CLIENT.md`, then an admin turns it on in Commerce settings > Scratch & Win. Decisions (owner said "just complete it", 2026-10-04):
    - Admin-configurable (`siteSettings.scratchWin`), shipped **off**, values marked as placeholders and listed in `CLIENT.md`.
    - One card per **delivered** online order at or above an admin minimum; created by `reconcileRewards` as `users/<uid>/scratchCards/<rzp>`.
    - Prizes: loyalty points in admin-set sizes with weights, plus "better luck next time" (weight 0 by default). No coupons or cashback for now (coupons are public and not tied to a customer; cashback is the riskiest).
    - The server draws the prize **when scratched** (new `scratch-card` action in `api/notify-order.ts`, a transaction plus `crypto` randomness); points go in as a `scratch_<rzp>` ledger entry that unlocks, freezes and voids exactly like `earn_<rzp>`. An unscratched card is voided if the order is returned; cards expire after admin `expiryDays`.
    - Customers can only read their cards; only the Admin SDK writes them. The admin page shows the average cost per card.
-   - **Screens designed (2026-10-04, mockup in "State" above). Waiting for the owner's yes or changes.** After the yes: delete the mockup, write the spec (`docs/superpowers/specs/2026-10-04-scratch-win-design.md`) and plan at effort Extra high, build on a branch `scratch-win`, then an **ultracode** money-logic review (effort Extra high). Ultracode isn't needed for the spec or the build.
+   - **Built on branch `scratch-win` (2026-10-04, see "State").** Next, in order:
+     1. ~~Money-logic review~~ **Done 2026-10-05** (see "State" and the report).
+     2. ~~Fixes and the check of the fixes~~ **Done 2026-10-05.**
+     3. ~~Rules deploy and live run with the test shopper~~ **Done 2026-10-05** (`docs/handoff/scratch-win-live.mjs`).
+     4. ~~Merge `scratch-win` into `main`~~ **Done 2026-10-05.**
+   - **Still open from the review, before delivery partners are switched on** (rules plus emulator): a partner can flip a return-pickup order back to delivered; a partner can write any `deliveredAt`; the partner's own return-pickup update seems refused by the current rules.
 3. **Smaller follow-ups:**
    - Owner to do in Admin > Commerce: set Ships From = Telangana (delivery charges still assume Andhra Pradesh).
    - **Done 2026-10-04 (`4e64b8d`):** the wishlist page shows one toast on remove; cart lines keep the order they were added in. Not checked in a browser (needs the live preview shopper).
@@ -179,7 +212,7 @@ Which next steps need ultracode:
 | Step | Ultracode? | Effort |
 |---|---|---|
 | 1. (no redesign) | - | - |
-| 2. Scratch & Win | Yes, for the money logic review | Extra high |
+| 2. Scratch & Win | Done | - |
 | 3. Small follow-ups | No | Medium |
 | 4. Dealer, Loyalty card | Yes, for the plan and the money logic review | Extra high |
 

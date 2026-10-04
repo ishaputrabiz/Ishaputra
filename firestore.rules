@@ -114,6 +114,14 @@ service cloud.firestore {
         allow read, write: if false;
       }
 
+      // --- SCRATCH CARDS (Scratch & Win) ---
+      // Given, cancelled and scratched only by api/notify-order.ts through the
+      // Admin SDK (the server draws the prize). Customers read their own.
+      match /scratchCards/{cardId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if false;
+      }
+
       // --- PAYMENT METHODS (Razorpay ready) ---
       match /paymentMethods/{methodId} {
         allow read: if isOwner(userId) || isAdmin();
@@ -469,6 +477,8 @@ service cloud.firestore {
         let deliveredAt = resource.data.get('deliveredAt', null);
         return currentStatus == 'delivered' && newStatus == 'returnRequested'
           && resource.data.get('returnCancelled', false) != true
+          // The shop decides: a request always starts pending.
+          && request.resource.data.get('returnStatus', 'pending') == 'pending'
           && deliveredAt is timestamp
           && request.time < deliveredAt + duration.value(7, 'd')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -481,6 +491,8 @@ service cloud.firestore {
       // puts the order back to delivered.
       function isValidReturnCancel() {
         return resource.data.status == 'returnRequested'
+          // Only before the shop approves it: after that the goods may be on their way back.
+          && resource.data.get('returnStatus', 'pending') == 'pending'
           && request.resource.data.status == 'delivered'
           && request.resource.data.returnCancelled == true
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([

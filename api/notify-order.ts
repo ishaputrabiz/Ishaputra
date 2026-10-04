@@ -3,7 +3,8 @@
  *
  * Endpoint:  POST /api/notify-order
  *            (also { action: 'reconcile-rewards', orderId } - see reconcileRewards,
- *             and { action: 'release-holds', razorpayOrderId? } - see releaseHolds;
+ *             { action: 'release-holds', razorpayOrderId? } - see releaseHolds,
+ *             and { action: 'scratch-card', orderId } - see scratchCard;
  *             they live here because the Hobby plan allows only 12 functions)
  * Auth:      Authorization: Bearer <Firebase ID token>
  * Body:
@@ -32,6 +33,7 @@
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
+import { randomInt } from 'node:crypto';
 
 function initAdmin() {
   if (admin.apps.length) return admin.app();
@@ -219,6 +221,197 @@ function cartKey(items: Array<{ productId?: string; quantity?: unknown }>): stri
 }
 // <<< rewards-core
 
+// ── Scratch & Win rules ───────────────────────────────────────────────────────
+// The block below is a verbatim copy of src/lib/scratchWin.ts.
+// >>> scratch-core
+interface ScratchPrize {
+  /** Loyalty points won. */
+  points: number;
+  /** Relative chance: a higher weight comes up more often. */
+  weight: number;
+}
+
+interface ScratchWinSettings {
+  enabled: boolean;
+  /** Rupees paid online at or above which a delivered order gets a card. */
+  minOrder: number;
+  /** Days from delivery before an unscratched card expires. */
+  expiryDays: number;
+  prizes: ScratchPrize[];
+  /** Weight of "better luck next time". */
+  noWinWeight: number;
+}
+
+const SCRATCH_MAX_PRIZES = 10;
+
+// TODO(client): placeholders until Ishaputra confirms them (CLIENT.md).
+const DEFAULT_SCRATCH_SETTINGS: ScratchWinSettings = {
+  enabled: false,
+  minOrder: 499,
+  expiryDays: 30,
+  prizes: [
+    { points: 5, weight: 40 },
+    { points: 10, weight: 35 },
+    { points: 25, weight: 20 },
+    { points: 50, weight: 5 },
+  ],
+  noWinWeight: 0,
+};
+
+function normaliseScratchSettings(raw: Partial<ScratchWinSettings> | null | undefined): ScratchWinSettings {
+  const whole = (v: unknown, fallback: number, min: number, max: number) => {
+    const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.floor(n))) : fallback;
+  };
+  const d = DEFAULT_SCRATCH_SETTINGS;
+  const rows: unknown[] = Array.isArray(raw?.prizes) ? (raw!.prizes as unknown[]) : d.prizes;
+  const prizes: ScratchPrize[] = [];
+  for (const row of rows) {
+    const r = (row || {}) as Partial<ScratchPrize>;
+    const points = whole(r.points, 0, 0, 10_000);
+    if (points < 1) continue;
+    prizes.push({ points, weight: whole(r.weight, 0, 0, 1_000) });
+    if (prizes.length === SCRATCH_MAX_PRIZES) break;
+  }
+  return {
+    enabled: raw?.enabled === true,
+    minOrder: whole(raw?.minOrder, d.minOrder, 0, 1_000_000),
+    expiryDays: whole(raw?.expiryDays, d.expiryDays, 1, 365),
+    prizes,
+    noWinWeight: whole(raw?.noWinWeight, d.noWinWeight, 0, 1_000),
+  };
+}
+
+function scratchTotalWeight(s: ScratchWinSettings): number {
+  return s.prizes.reduce((sum, p) => sum + p.weight, 0) + s.noWinWeight;
+}
+
+/**
+ * The points a roll wins; 0 is "better luck next time". `roll` is a whole
+ * number in [0, scratchTotalWeight(s)); anything else wins nothing.
+ */
+function drawScratchPrize(s: ScratchWinSettings, roll: number): number {
+  let r = Math.floor(roll);
+  if (!(r >= 0) || r >= scratchTotalWeight(s)) return 0;
+  for (const p of s.prizes) {
+    if (r < p.weight) return p.points;
+    r -= p.weight;
+  }
+  return 0;
+}
+
+interface ScratchTiming {
+  /** The expiry clock's start: the order's delivery time, or now when that is unknown. */
+  anchorMs: number;
+  expiresAtMs: number;
+}
+
+/**
+ * Whether an order should get its card now (null: no). Only delivered orders,
+ * only while Scratch & Win and loyalty rewards are on, only at or above the
+ * minimum paid online, never for an order delivered before the switch was
+ * last turned on (no cards for orders delivered while it was off), and never
+ * a card that would already have expired.
+ */
+function scratchCardEligible(i: {
+  status: string;
+  /** Rupees paid online for the order. */
+  amountRupees: number;
+  scratch: ScratchWinSettings;
+  rewardsEnabled: boolean;
+  /** order.deliveredAt in ms, 0 when unknown. */
+  deliveredAtMs: number;
+  /** When the switch was last turned on (siteSettings/scratchWin.enabledAt), 0 when unknown. */
+  enabledAtMs?: number;
+  nowMs: number;
+}): ScratchTiming | null {
+  if (i.status !== 'delivered' || !i.scratch.enabled || !i.rewardsEnabled) return null;
+  if (!(i.amountRupees >= i.scratch.minOrder)) return null;
+  const anchorMs = i.deliveredAtMs > 0 && i.deliveredAtMs <= i.nowMs ? i.deliveredAtMs : i.nowMs;
+  // deliveredAt comes from a device clock and enabledAt from the server's: allow a few minutes either way.
+  if (anchorMs < (i.enabledAtMs || 0) - 15 * 60_000) return null;
+  const expiresAtMs = anchorMs + i.scratch.expiryDays * 86_400_000;
+  return expiresAtMs > i.nowMs ? { anchorMs, expiresAtMs } : null;
+}
+
+interface ScratchCardState {
+  status: 'new' | 'scratched' | 'void';
+  points: number;
+  prizeState?: 'active' | 'held' | 'void';
+  voidedBy?: string;
+}
+
+interface ScratchPrizeState {
+  status: 'active' | 'void';
+  held: boolean;
+  voidedBy?: string;
+}
+
+interface ScratchReconcileInput {
+  /** The order's status. */
+  status: string;
+  /** Cancelled, returned or refunded. */
+  ended: boolean;
+  /** Delivered, or a return is open. */
+  reachedCustomer: boolean;
+  card: ScratchCardState | null;
+  /** users/{uid}/rewardLedger/scratch_{rzp}, when it exists. */
+  prize: ScratchPrizeState | null;
+  /** scratchCardEligible's answer, when no card exists yet. */
+  give: ScratchTiming | null;
+}
+
+interface ScratchReconcilePlan {
+  card: 'create' | 'void' | 'restore' | null;
+  prize: 'void' | 'restore' | 'hold' | 'release' | null;
+  /** The card's new prizeState, only when it differs. */
+  prizeState: 'active' | 'held' | 'void' | null;
+}
+
+/**
+ * What reconcile changes on an order's card and its prize entry. A won prize
+ * follows the order like earned points: spendable only while the order sits
+ * at delivered, void when it ends, restored if the shop reopens it. A prize
+ * or card voided by anyone but the server is left alone.
+ */
+function planScratchReconcile(i: ScratchReconcileInput): ScratchReconcilePlan {
+  const plan: ScratchReconcilePlan = { card: null, prize: null, prizeState: null };
+  const c = i.card;
+  if (!c) {
+    if (i.give && !i.ended) plan.card = 'create';
+    return plan;
+  }
+  if (c.status === 'new') {
+    if (i.ended) plan.card = 'void';
+    return plan;
+  }
+  if (c.status === 'void') {
+    if (c.voidedBy === 'server' && !i.ended && i.reachedCustomer) plan.card = 'restore';
+    return plan;
+  }
+  const p = i.prize;
+  if (!p || !(c.points > 0)) return plan;
+  const held = i.status !== 'delivered';
+  let next: 'active' | 'held' | 'void';
+  if (p.status === 'active') {
+    if (i.ended) {
+      plan.prize = 'void';
+      next = 'void';
+    } else {
+      if (held !== p.held) plan.prize = held ? 'hold' : 'release';
+      next = held ? 'held' : 'active';
+    }
+  } else if (p.voidedBy === 'server' && !i.ended && i.reachedCustomer) {
+    plan.prize = 'restore';
+    next = held ? 'held' : 'active';
+  } else {
+    next = 'void';
+  }
+  if (c.prizeState !== next) plan.prizeState = next;
+  return plan;
+}
+// <<< scratch-core
+
 const CURRENCIES = ['points', 'cashback'] as const;
 const ENDED_STATUSES = ['cancelled', 'returned', 'refunded'];
 const DAY_MS = 86_400_000;
@@ -248,6 +441,19 @@ async function createOnce(ref: admin.firestore.DocumentReference, data: Record<s
 const millis = (v: any): number => (typeof v?.toMillis === 'function' ? v.toMillis() : 0);
 const whole = (v: unknown) => Math.max(0, Math.floor(Number(v) || 0));
 const money = (v: unknown) => Math.max(0, Number(v) || 0);
+
+/** The customer's return window: firestore.rules isValidReturnRequest and src/lib/returnWindow.ts. */
+const RETURN_WINDOW_DAYS = 7;
+
+/**
+ * When earned points (and a scratch prize) unlock: unlockDays after the server
+ * first sees the delivery, and never before the customer's return window
+ * closes, so points can't be spent and then taken back by a return. A
+ * delivery time in the future (it is written from the shop's or the delivery
+ * partner's device) keeps returns open longer, so it delays the points too.
+ */
+const unlockAtMs = (nowMs: number, deliveredAt: unknown, unlockDays: number) =>
+  Math.max(nowMs + unlockDays * DAY_MS, millis(deliveredAt) > 0 ? millis(deliveredAt) + RETURN_WINDOW_DAYS * DAY_MS : 0);
 
 /** GET from the Razorpay API with a time limit. Throws when Razorpay cannot be asked. */
 async function razorpayGet<T>(path: string): Promise<T> {
@@ -357,6 +563,10 @@ const spendNote = (currency: RewardCurrency, amount: number) =>
  *   refund  refund_<rzp>_<currency> what the payment spent, while the order is
  *                                   cancelled / returned / refunded; taken back
  *                                   if it is reopened
+ *   scratch scratchCards/<rzp>      given on delivery (Scratch & Win), cancelled
+ *           and scratch_<rzp>       while unscratched if the order ends; a won
+ *                                   prize follows the order like earn_<rzp>
+ *                                   (see reconcileScratchCard)
  */
 export async function reconcileRewards(
   db: admin.firestore.Firestore,
@@ -463,7 +673,9 @@ export async function reconcileRewards(
       const base = Math.min(money(payment.base), money(payment.amountPaise) / 100);
       const points = pointsForBase(base, settings);
       if (points > 0) {
-        const unlockAt = admin.firestore.Timestamp.fromMillis(now.toMillis() + settings.unlockDays * DAY_MS);
+        const unlockAt = admin.firestore.Timestamp.fromMillis(
+          unlockAtMs(now.toMillis(), order.deliveredAt, settings.unlockDays),
+        );
         const wrote = await createOnce(earnRef, {
           currency: 'points',
           amount: points,
@@ -539,7 +751,10 @@ export async function reconcileRewards(
     }
   }
 
-  // 4. What the order pages show. Written only when something differs.
+  // 4. Scratch card: given on delivery, cancelled (or its prize voided) when the order ends.
+  changed.push(...(await reconcileScratchCard(db, uid, rzp, payment, settings)));
+
+  // 5. What the order pages show. Written only when something differs.
   if (order.paymentStatus === 'pending') {
     orderUpdate.paymentStatus = 'paid';
     orderUpdate.paymentVerifiedAt = now;
@@ -600,6 +815,198 @@ export async function releaseHolds(
   return out;
 }
 
+// ── Scratch & Win ─────────────────────────────────────────────────────────────
+
+const scratchRefs = (db: admin.firestore.Firestore, uid: string, rzp: string) => ({
+  card: db.collection('users').doc(uid).collection('scratchCards').doc(rzp),
+  prize: db.collection('users').doc(uid).collection('rewardLedger').doc(`scratch_${rzp}`),
+  earn: db.collection('users').doc(uid).collection('rewardLedger').doc(`earn_${rzp}`),
+  order: db.collection('orders').doc(rzp),
+  payment: db.collection('payments').doc(rzp),
+});
+
+/** siteSettings/scratchWin, and when its switch was last turned on (0 when unknown). */
+async function loadScratchSettings(
+  db: admin.firestore.Firestore,
+): Promise<{ scratch: ScratchWinSettings; enabledAtMs: number }> {
+  const snap = await db.collection('siteSettings').doc('scratchWin').get();
+  const raw = snap.exists ? snap.data() : undefined;
+  return { scratch: normaliseScratchSettings(raw as Partial<ScratchWinSettings> | undefined), enabledAtMs: millis(raw?.enabledAt) };
+}
+
+/**
+ * Give, cancel or restore an order's scratch card, and keep a won prize in
+ * line with the order (see planScratchReconcile). One transaction that also
+ * re-reads the order, so a scratch racing a status change cannot leave an
+ * active prize on an ended order. A payment gets one card ever
+ * (payments/<rzp>.scratchCardGivenAt), so a card deleted by hand never comes
+ * back for a fresh draw.
+ */
+async function reconcileScratchCard(
+  db: admin.firestore.Firestore,
+  uid: string,
+  rzp: string,
+  payment: PaymentRecord,
+  rewards: RewardSettings,
+): Promise<string[]> {
+  const refs = scratchRefs(db, uid, rzp);
+  const { scratch, enabledAtMs } = await loadScratchSettings(db);
+  return db.runTransaction(async (tx) => {
+    const orderSnap = await tx.get(refs.order);
+    const cardSnap = await tx.get(refs.card);
+    const prizeSnap = await tx.get(refs.prize);
+    const earnSnap = await tx.get(refs.earn);
+    const paymentSnap = await tx.get(refs.payment);
+    const order = orderSnap.data();
+    if (!order || order.userId !== uid) return [];
+    const status = String(order.status || '');
+    const ended = ENDED_STATUSES.includes(status);
+    const now = admin.firestore.Timestamp.now();
+    const c = cardSnap.data();
+    const p = prizeSnap.data();
+    const give =
+      c || paymentSnap.data()?.scratchCardGivenAt
+        ? null
+        : scratchCardEligible({
+            status,
+            amountRupees: whole(payment.amountPaise) / 100,
+            scratch,
+            rewardsEnabled: rewards.enabled,
+            deliveredAtMs: millis(order.deliveredAt),
+            enabledAtMs,
+            nowMs: now.toMillis(),
+          });
+    const plan = planScratchReconcile({
+      status,
+      ended,
+      reachedCustomer: status === 'delivered' || isReturnOpen(order),
+      card: c ? { status: c.status, points: whole(c.points), prizeState: c.prizeState, voidedBy: c.voidedBy } : null,
+      prize: p ? { status: p.status === 'void' ? 'void' : 'active', held: p.held === true, voidedBy: p.voidedBy } : null,
+      give,
+    });
+    const changed: string[] = [];
+    const id = `scratchCards/${rzp}`;
+    if (plan.card === 'create' && give) {
+      // The prize unlocks with the order's earned points, or as they would have.
+      const earnUnlockAt = earnSnap.data()?.unlockAt;
+      tx.create(refs.card, {
+        orderId: rzp,
+        // The display number is written by the customer's browser: kept short.
+        orderNumber: String(order.orderId || rzp).slice(0, 40),
+        orderAmount: whole(payment.amountPaise) / 100,
+        status: 'new',
+        createdAt: now,
+        deliveredAt: admin.firestore.Timestamp.fromMillis(give.anchorMs),
+        expiresAt: admin.firestore.Timestamp.fromMillis(give.expiresAtMs),
+        unlockAt:
+          millis(earnUnlockAt) > 0
+            ? earnUnlockAt
+            : admin.firestore.Timestamp.fromMillis(unlockAtMs(now.toMillis(), order.deliveredAt, rewards.unlockDays)),
+        createdBy: 'server',
+      });
+      tx.set(refs.payment, { scratchCardGivenAt: now }, { merge: true });
+      changed.push(id);
+    } else if (plan.card === 'void') {
+      tx.update(refs.card, { status: 'void', voidedAt: now, voidedBy: 'server', voidReason: `order-${status}` });
+      changed.push(`${id}:void`);
+    } else if (plan.card === 'restore') {
+      const clear = admin.firestore.FieldValue.delete();
+      tx.update(refs.card, { status: 'new', restoredAt: now, voidedAt: clear, voidedBy: clear, voidReason: clear });
+      changed.push(`${id}:restore`);
+    }
+    if (plan.prize === 'void') {
+      tx.update(refs.prize, { status: 'void', voidedAt: now, voidedBy: 'server', voidReason: `order-${status}` });
+    } else if (plan.prize === 'restore') {
+      tx.update(refs.prize, { status: 'active', held: status !== 'delivered', restoredAt: now });
+    } else if (plan.prize === 'hold' || plan.prize === 'release') {
+      tx.update(refs.prize, { held: plan.prize === 'hold' });
+    }
+    if (plan.prize) changed.push(`${id}:prize-${plan.prize}`);
+    if (plan.prizeState) {
+      tx.update(refs.card, { prizeState: plan.prizeState });
+      changed.push(`${id}:prize-state`);
+    }
+    return changed;
+  });
+}
+
+type ScratchReply = { status: 200 | 404 | 409; body: Record<string, unknown> };
+
+/**
+ * Scratch one of the caller's cards: the server draws the prize. One
+ * transaction reads the card, its order and its prize entry; the draw happens
+ * inside it, so a retried transaction draws again and only one draw is ever
+ * committed. The answer is sent after the commit, so it cannot be peeked at
+ * and abandoned. Scratching an already scratched card returns its prize.
+ * Works while Scratch & Win is off: cards already given stay scratchable.
+ */
+export async function scratchCard(
+  db: admin.firestore.Firestore,
+  uid: string,
+  cardId: string,
+  roll: (total: number) => number = (total) => randomInt(total),
+): Promise<ScratchReply> {
+  const refs = scratchRefs(db, uid, cardId);
+  const { scratch } = await loadScratchSettings(db);
+  return db.runTransaction(async (tx): Promise<ScratchReply> => {
+    const cardSnap = await tx.get(refs.card);
+    const orderSnap = await tx.get(refs.order);
+    const prizeSnap = await tx.get(refs.prize);
+    const c = cardSnap.data();
+    if (!c) return { status: 404, body: { error: 'card_not_found' } };
+    const reply = (d: admin.firestore.DocumentData): ScratchReply => ({
+      status: 200,
+      body: {
+        ok: true,
+        points: whole(d.points),
+        held: d.prizeState === 'held',
+        // 'void' when the prize was taken back (the order ended), so the page doesn't say it is in the wallet.
+        prizeState: d.prizeState ?? null,
+        unlockAtMs: millis(d.unlockAt),
+        scratchedAtMs: millis(d.scratchedAt),
+      },
+    });
+    if (c.status === 'scratched') return reply(c);
+    if (c.status !== 'new') return { status: 409, body: { error: 'card_void', reason: c.voidReason || '' } };
+    const now = admin.firestore.Timestamp.now();
+    if (millis(c.expiresAt) <= now.toMillis()) return { status: 409, body: { error: 'card_expired' } };
+
+    const order = orderSnap.data();
+    const status = String(order?.status || '');
+    if (!order || order.userId !== uid || ENDED_STATUSES.includes(status)) {
+      const reason = !order ? 'order-missing' : order.userId !== uid ? 'order-not-yours' : `order-${status}`;
+      tx.update(refs.card, { status: 'void', voidedAt: now, voidedBy: 'server', voidReason: reason });
+      return { status: 409, body: { error: 'card_void', reason } };
+    }
+
+    const held = status !== 'delivered';
+    const existing = prizeSnap.data();
+    const total = scratchTotalWeight(scratch);
+    // A prize entry without a scratched card should never exist; if one does, keep it rather than draw again.
+    const points = existing ? whole(existing.amount) : total > 0 ? drawScratchPrize(scratch, roll(total)) : 0;
+    if (points > 0 && !existing) {
+      tx.create(refs.prize, {
+        currency: 'points',
+        amount: points,
+        kind: 'earn',
+        source: 'scratch',
+        status: 'active',
+        held,
+        unlockAt: c.unlockAt,
+        orderId: cardId,
+        razorpayOrderId: cardId,
+        note: `Scratch card prize, order ${c.orderNumber || cardId}`,
+        createdAt: now,
+        createdBy: 'server',
+      });
+    }
+    const update: Record<string, unknown> = { status: 'scratched', points, scratchedAt: now };
+    if (points > 0) update.prizeState = existing?.status === 'void' ? 'void' : held ? 'held' : 'active';
+    tx.update(refs.card, update);
+    return reply({ ...c, ...update });
+  });
+}
+
 function setCors(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -649,6 +1056,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     /**
      * 'reconcile-rewards': sync this order's payment and points/cashback instead of sending a push.
      * 'release-holds': free points/cashback reserved by unpaid checkouts (no orderId needed).
+     * 'scratch-card': scratch the caller's card for orderId; the server draws the prize.
      */
     action?: string;
     orderId?: string;
@@ -670,8 +1078,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const isReconcile = body.action === 'reconcile-rewards';
   const isRelease = body.action === 'release-holds';
+  const isScratch = body.action === 'scratch-card';
   if (!orderId && !isRelease) return res.status(400).json({ error: 'orderId is required' });
-  if (!isReconcile && !isRelease) {
+  // An order id (and a card id, a document id under the caller's own user
+  // document) is one path segment: a slash would reach another document.
+  if (orderId && !/^[\w-]{1,128}$/.test(orderId)) return res.status(400).json({ error: 'invalid orderId' });
+  if (!isReconcile && !isRelease && !isScratch) {
     if (!audience || !['customer', 'admins', 'delivery'].includes(audience)) {
       return res.status(400).json({ error: 'audience must be customer|admins|delivery' });
     }
@@ -707,6 +1119,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (err: any) {
       // Holds stay in place until Razorpay can confirm the payment never happened.
       return res.status(503).json({ error: 'Could not check the payment with Razorpay', detail: err?.message || String(err) });
+    }
+  }
+
+  if (isScratch) {
+    try {
+      // Always the caller's own card: users/<callerUid>/scratchCards/<orderId>.
+      const r = await scratchCard(db, callerUid, orderId);
+      return res.status(r.status).json(r.body);
+    } catch (err) {
+      // Nothing was written: the card stays unscratched for another try.
+      console.error('[notify-order] scratch-card failed:', err instanceof Error ? err.message : err);
+      return res.status(503).json({ error: 'scratch_failed' });
     }
   }
 

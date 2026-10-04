@@ -2277,6 +2277,10 @@ export const cancelReturn = async (orderId: string): Promise<void> => {
   if (orderData.status !== 'returnRequested') {
     throw new Error('Return can only be cancelled while it is still in the requested state');
   }
+  // Once the shop approves a return the goods may already be on their way back.
+  if (orderData.returnStatus && orderData.returnStatus !== 'pending') {
+    throw new Error('This return has already been approved. Please contact us to change it.');
+  }
   const now = Timestamp.now();
   const existingHistory = orderData.statusHistory || [];
   await updateDoc(docRef, {

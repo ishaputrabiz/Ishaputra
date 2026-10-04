@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatINR, formatDate, formatDateTime, plural } from '../src/lib/format.ts';
+import { formatINR, formatDate, formatDateTime, formatDayMonth, plural } from '../src/lib/format.ts';
 
 test('formatINR groups in the Indian style with no decimals for whole rupees', () => {
   assert.equal(formatINR(1499), '₹1,499');
@@ -47,4 +47,9 @@ test('plural picks the singular only for exactly one', () => {
   assert.equal(plural(0, 'item'), '0 items');
   assert.equal(plural(2, 'box', 'boxes'), '2 boxes');
   assert.equal(plural(1200, 'point'), '1,200 points');
+});
+
+test('formatDayMonth prints day and short month', () => {
+  assert.equal(formatDayMonth(new Date(2026, 10, 4)), '4 Nov');
+  assert.equal(formatDayMonth(null), '');
 });

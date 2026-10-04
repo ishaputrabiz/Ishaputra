@@ -142,13 +142,15 @@ Raw palette classes map by role: page `bg-background`; raised `bg-card text-card
 
 Interim: `.dark .admin-panel` in `src/index.css` re-points the old gray/white/amber/blue/green/purple/red classes to these tokens so dark admin is on-brand today. Remove raw classes file by file; the last admin package deletes that CSS block.
 
+**Scratch & Win** (`src/components/scratch/`, rules in `src/lib/scratchWin.ts`): `ScratchFoil` (canvas bronze foil, erased with a round brush, reveals past 50%, `aria-hidden`), `ScratchCardStage` (the charcoal card: skeleton until the server answers, Reveal prize as the keyboard path, the result in `role="status"`, Try again after a failure), `ScratchCardDialog` (bottom Sheet below 1024px, Dialog above, title focused on open, Next card queue), `ScratchCardsPanel` (wallet panel; `ScratchCardsPanelView` takes plain data) and `ScratchCardOrderNote`. The reveal uses `.sw-pop` and `.sw-sheen` in `src/index.css` (tokens `--ease-out`, `--dur-reveal`; reduced motion fades only); `.scratch-foil` is the same bronze as a CSS gradient. The admin tab is `src/components/admin/ScratchWinSettingsTab.tsx`.
+
 ## 10. Formatting and page meta
 
 `src/lib/format.ts` (display only, never to compute a total):
 
 - `formatINR(1499)` "₹1,499" · `formatINR(1499.5)` "₹1,499.50" · missing values "₹0"
 - `formatNumber(1200)` "1,200"
-- `formatDate(ts)` "3 Oct 2026" · `formatTime(ts)` "8:01 pm" · `formatDateTime(ts)` "3 Oct 2026, 8:01 pm" (Firestore Timestamp, `{seconds}`, Date, ISO or millis; "" when missing)
+- `formatDate(ts)` "3 Oct 2026" · `formatDayMonth(ts)` "3 Oct" · `formatTime(ts)` "8:01 pm" · `formatDateTime(ts)` "3 Oct 2026, 8:01 pm" (Firestore Timestamp, `{seconds}`, Date, ISO or millis; "" when missing)
 - `plural(3, 'item')` "3 items" · `plural(2, 'box', 'boxes')`
 - `toDate(value)` for the same inputs
 

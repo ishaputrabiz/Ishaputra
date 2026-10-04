@@ -19,6 +19,7 @@ import {
   Coins,
   AlertCircle,
   RefreshCw,
+  Ticket,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +39,7 @@ import { Notice } from '@/components/ui/notice';
 import { Spinner } from '@/components/ui/spinner';
 import { FormSkeleton } from '@/components/skeletons';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { ScratchWinSettingsTab } from '@/components/admin/ScratchWinSettingsTab';
 import { fadeUp } from '@/lib/motion';
 import {
   getCouponsSettings,
@@ -937,7 +939,7 @@ const RewardsTab = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
         {field('pointsPer100', 'Points per ₹100 spent', 'On products paid for, once the order is delivered.')}
         {field('pointValue', 'Value of 1 point (₹)', 'What a point is worth at checkout.', 0.5)}
-        {field('unlockDays', 'Days until points unlock', 'Match the return window.')}
+        {field('unlockDays', 'Days until points unlock', 'Never sooner than the 7-day return window.')}
         {field('maxPointsPercent', 'Max % of products payable with points', 'Wallet cashback has no cap.')}
       </div>
       <div className="flex justify-end">
@@ -955,7 +957,7 @@ const AdminCommerceSettings = () => {
     <div className="mx-auto max-w-6xl [&>*]:max-w-4xl">
       <AdminPageHeader
         title="Commerce settings"
-        description="Delivery, GST, customer support and rewards. Rewards are applied site-wide."
+        description="Delivery, GST, customer support, rewards and Scratch & Win. Rewards are applied site-wide."
       />
 
       <Tabs defaultValue="delivery" className="w-full">
@@ -969,6 +971,9 @@ const AdminCommerceSettings = () => {
           <TabsTrigger value="rewards" className="gap-1.5">
             <Coins aria-hidden="true" className="h-4 w-4" /> Rewards
           </TabsTrigger>
+          <TabsTrigger value="scratch" className="gap-1.5">
+            <Ticket aria-hidden="true" className="h-4 w-4" /> Scratch &amp; Win
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="delivery">
@@ -979,6 +984,9 @@ const AdminCommerceSettings = () => {
         </TabsContent>
         <TabsContent value="rewards">
           <RewardsTab />
+        </TabsContent>
+        <TabsContent value="scratch">
+          <ScratchWinSettingsTab />
         </TabsContent>
       </Tabs>
     </div>

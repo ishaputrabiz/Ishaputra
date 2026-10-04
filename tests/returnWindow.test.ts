@@ -5,7 +5,14 @@ import {
   returnWindowEnd,
   isWithinReturnWindow,
   returnRequestTiming,
+  unlockDaysAfterDelivery,
 } from '../src/lib/returnWindow.ts';
+
+test('points unlock no sooner than the return window closes', () => {
+  assert.equal(unlockDaysAfterDelivery(0), RETURN_WINDOW_DAYS);
+  assert.equal(unlockDaysAfterDelivery(3), 7);
+  assert.equal(unlockDaysAfterDelivery(14), 14);
+});
 
 const DAY = 86_400_000;
 const delivered = new Date('2026-10-01T10:00:00Z');

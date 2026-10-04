@@ -49,7 +49,8 @@
     - Delivery-partner app → off (`DELIVERY_PARTNERS_ENABLED = false`); assume courier shipping.
     - Video-call shopping → reworded as "video consultation with an expert" (user may still ask to remove it).
     - Gift cards and the admin AI prompt tool → kept; rewrite the AI prompts for Ishaputra's products.
-- Build after Step 2: Scratch & Win, Dealer Membership, Loyalty Card (TODO(client): a digital tier card on `/wallet`, or a separate card?). Business rules are open questions below.
+- Build after Step 2: Dealer Membership, Loyalty Card (TODO(client): a digital tier card on `/wallet`, or a separate card?). Business rules are open questions below.
+- Scratch & Win: built 2026-10-04, money-reviewed and live-tested 2026-10-05, merged into `main`; shipped **off** (see "Scratch & Win" below). Its rules are deployed.
 
 ## Rewards (Task 8)
 Loyalty points and wallet cashback, built in Step 2B and merged into `main` on 2026-10-03. The rules are in `src/lib/rewards.ts`; `docs/HANDOFF.md` explains how they work.
@@ -74,6 +75,18 @@ Loyalty points and wallet cashback, built in Step 2B and merged into `main` on 2
     - The real fix is to create orders on the server. That is a bigger change and is not started.
     - Keep "Days until points unlock" (Admin > Commerce settings) at 7 or more. Points that unlock before the return window closes could be spent and then voided by a return.
     - Review result C, low risk, no action: someone who learned another customer's Razorpay order id could create that order first and block it. These ids can't be guessed.
+
+## Scratch & Win
+Built 2026-10-04 on branch `scratch-win` (not merged yet). Spec: `docs/superpowers/specs/2026-10-04-scratch-win-design.md`. Shipped **off**; every value is a placeholder.
+
+- **What the customer gets.** One scratch card for each online order that is delivered, when the amount paid online is at least the minimum. The card shows on `/wallet` ("Scratch cards"), with a copper dot on the header Rewards icon and a line on the order page while it waits.
+- **Prizes are loyalty points** in admin-set sizes and weights, or "better luck next time". The server draws the prize when the card is scratched, never the browser.
+- **Won points follow their order**, exactly like the points earned on it: pending until the order's unlock date, frozen while a return is open, taken back if the order is cancelled, returned or refunded. An unscratched card is cancelled if its order ends.
+- **Cards expire** a set number of days after delivery. Turning the feature off stops new cards; cards already given can still be scratched until they expire. New cards also need loyalty rewards on (Rewards tab).
+- **Settings:** Admin > Commerce settings > Scratch & Win. It shows the average cost per card, the biggest prize and its odds, and has a "Preview card" that gives nothing.
+- **Before switching it on:** the new `scratchCards` security rule must be deployed (`node docs/handoff/deploy-rules.mjs`, needs the owner's OK). Until then customers can't read their cards.
+- **Data:** `users/<uid>/scratchCards/<Razorpay order id>` (only the server writes it) and the prize as `rewardLedger/scratch_<Razorpay order id>`.
+- **Not in this version:** coupon or cashback prizes, push notifications, admin counts of cards given and scratched, cash-on-delivery orders.
 
 ## Accounts
 - Firebase: project `ishaputrabotanicals`.
@@ -116,6 +129,7 @@ Loyalty points and wallet cashback, built in Step 2B and merged into `main` on 2
     - Logo files, favicon, push icon, OG image and the empty-cart illustration all come from `node scripts/build-logo-assets.mjs`.
     - The admin AI prompt tool (`src/services/geminiService.ts` + `AdminImagePrompts.tsx`) was rewritten for men's wellness (2026-09-27): packaging fidelity, Indian male models, natural product use, brand palette, the brief's "avoid" list. It still needs `GEMINI_API_KEY` to run.
 
+- 2026-10-04: Scratch & Win built as designed in the approved mockup (owner: "just complete it", no changes to the screens). Prizes are points only; coupons are public and not tied to a customer, and cashback was the riskiest. Shipped off with placeholder values.
 - 2026-10-04: Checkout pays in one step. The phone slide and the desktop button open Razorpay directly (the separate "Payment details" screen and popup are gone); the payment method card shows on the checkout step. Owner's request.
 
 ## Design decisions
@@ -214,6 +228,7 @@ Shown or used on the site but not confirmed. Each must be replaced or confirmed 
 - **"Ships from" state** on invoices and the product page (Telangana today).
 - **Products flagged "New arrival":** 7 of the 12 demo products carry the flag, so the "New" tag shows on most cards. Set it only on real new arrivals.
 - **Category photos:** on /categories, Powders and Shilajit borrow the same product photo; each needs its own image.
+- **Scratch & Win (Admin > Commerce settings > Scratch & Win), all placeholders, feature off:** minimum order ₹499; cards expire 30 days after delivery; prizes 5 / 10 / 25 / 50 points at weights 40 / 35 / 20 / 5; "better luck next time" weight 0 (every card wins). That averages 13 points a card (₹13 at today's point value, 2.6% of ₹499), and about 1 card in 20 wins 50 points. The client should confirm the budget, the prizes and whether some cards should win nothing.
 
 ## UI pass decisions (owner, 2026-10-04)
 The full-site UI audit (295 findings) raised 14 questions. The owner approved:
@@ -232,11 +247,11 @@ Owner to do: set Ships From = Telangana in Admin > Commerce (the delivery-charge
 - [x] Step 0 safe preview (2026-09-23): home, products and product pages show demo content on Ishaputra Firebase; only the YouTube section is hidden (no videos yet)
 - [ ] Step 1 new look: done 2026-09-27, waiting for client review
 - [x] Step 2 design (2026-09-29): Home, Products, Product detail, Checkout, Profile and the remaining pages; waiting for client review
-- [ ] Step 2B features: rewards (points and cashback) merged 2026-10-03; Scratch & Win, Dealer Membership and the loyalty card still to build
+- [ ] Step 2B features: rewards (points and cashback) merged 2026-10-03; Scratch & Win merged 2026-10-05 (shipped off, values are placeholders); Dealer Membership and the loyalty card still to build
 - [ ] Step 3 accounts   - [ ] Step 4 test and publish   - [ ] Step 5 client changes
 
 ## Next step
-The world-class UI pass is built on branch `ui-world-class` (audit, foundation, 9 area packages, fresh-eyes review). Owner reviews it, then merge into `main`. Then the rest of Step 2B, which needs the open loyalty and cashback answers below.
+Scratch & Win is merged into `main` (off until the client confirms its values and an admin turns it on). Next: the rest of Step 2B (Dealer Membership, loyalty card), which needs the open answers below.
 
 ## Open questions
 - Real business details to replace the dummy ones in `src/config/brand.ts`: legal name, address, phone, WhatsApp, email, hours, GSTIN, domain, social links (blocking for launch, not for review)

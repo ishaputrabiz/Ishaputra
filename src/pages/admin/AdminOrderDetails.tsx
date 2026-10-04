@@ -17,6 +17,7 @@ import {
   Coins,
   ShieldAlert,
   TriangleAlert,
+  Ticket,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -41,6 +42,8 @@ import {
 import { toast } from 'sonner';
 import { reconcileOrderRewards, type ReconcileResult } from '@/services/rewardsService';
 import { cartKey } from '@/lib/rewards';
+import { scratchCardView, voidReasonText } from '@/lib/scratchWin';
+import { getScratchCard, type ScratchCard } from '@/services/scratchWinService';
 import { RETURN_WINDOW_DAYS, returnRequestTiming, returnWindowEnd } from '@/lib/returnWindow';
 import { subscribeToDeliveryBoys, DeliveryBoy } from '@/services/deliveryBoyService';
 import { DELIVERY_PARTNERS_ENABLED } from '@/config/features';
@@ -528,6 +531,25 @@ const AdminOrderDetails = () => {
     setReconcile({ orderId: id, from, running: false, result });
   };
 
+  // The order's scratch card (Scratch & Win), read again after a status change
+  // or a "Check payment & rewards", which are when the server changes it.
+  const [scratchCard, setScratchCard] = useState<ScratchCard | null>(null);
+  const scratchUid = order?.userId || '';
+  const scratchOrderId = order?.razorpayOrderId && order.razorpayOrderId === order.id ? order.id : '';
+  const scratchStatus = order?.status;
+  const reconcileDone = reconcile?.running === false;
+  useEffect(() => {
+    setScratchCard(null);
+    if (!scratchUid || !scratchOrderId) return;
+    let live = true;
+    getScratchCard(scratchUid, scratchOrderId).then((card) => {
+      if (live) setScratchCard(card);
+    });
+    return () => {
+      live = false;
+    };
+  }, [scratchUid, scratchOrderId, scratchStatus, reconcileDone]);
+
   const handleAssignReturnPartner = async (partnerId: string) => {
     if (!order || !partnerId) return;
     const partner = deliveryPartners.find((p) => p.id === partnerId);
@@ -792,6 +814,28 @@ const AdminOrderDetails = () => {
     pointsText = 'No points earned on this order';
   } else if (normalizedStatus === 'delivered' || RETURN_OPEN_STATUSES.includes(normalizedStatus)) {
     pointsText = 'No points recorded for this order';
+  }
+
+  // ── Scratch card, as the server last wrote it ──
+  let scratchText = '';
+  if (scratchCard) {
+    const won = `won ${plural(scratchCard.points, 'point')}`;
+    const view = scratchCardView(scratchCard, Date.now());
+    scratchText = `Scratch card: ${
+      view === 'new'
+        ? `not scratched yet, expires ${fmtDate(scratchCard.expiresAtMs)}`
+        : view === 'expired'
+          ? 'expired, not scratched'
+          : view === 'void'
+            ? `cancelled (${voidReasonText(scratchCard.voidReason)})`
+            : view === 'nowin'
+              ? 'no prize'
+              : view === 'won-held'
+                ? `${won} (on hold)`
+                : view === 'won-void'
+                  ? `${won} (voided)`
+                  : won
+    }`;
   }
 
   const reconcileRunning = !!reconcile?.running && reconcile.orderId === order.id;
@@ -1085,6 +1129,12 @@ const AdminOrderDetails = () => {
             </Button>
             {reconcileNote('rewards')}
           </div>
+          {scratchText && (
+            <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Ticket aria-hidden="true" className="size-3.5 shrink-0" />
+              {scratchText}
+            </p>
+          )}
         </div>
       </section>
 
