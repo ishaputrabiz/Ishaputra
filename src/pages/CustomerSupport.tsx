@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -48,6 +48,22 @@ const CustomerSupport = () => {
   const [support, setSupport] = useState<CustomerSupportSettings>(DEFAULT_SUPPORT);
 
   useEffect(() => subscribeCustomerSupportSettings(setSupport), []);
+
+  // Keep keyboard and screen-reader users in place: the sub-view's heading takes focus when it
+  // mounts (after the exit animation), and going back returns focus to the option that opened it.
+  type SupportOption = 'email' | 'phone' | 'message';
+  const returnToRef = useRef<SupportOption | null>(null);
+  const openOption = (option: SupportOption) => {
+    returnToRef.current = null;
+    setSelectedOption(option);
+  };
+  const focusHeading = useCallback((el: HTMLHeadingElement | null) => { el?.focus(); }, []);
+  const restoreOptionFocus = useCallback((el: HTMLDivElement | null) => {
+    const id = returnToRef.current;
+    if (!el || !id) return;
+    returnToRef.current = null;
+    el.querySelector<HTMLElement>(`[data-support-option="${id}"]`)?.focus();
+  }, []);
 
   usePageMeta({
     title: 'Customer support',
@@ -186,7 +202,7 @@ const CustomerSupport = () => {
         <button
           type="button"
           onClick={() => {
-            if (selectedOption) { setSelectedOption(null); return; }
+            if (selectedOption) { returnToRef.current = selectedOption; setSelectedOption(null); return; }
             navigate('/account');
           }}
           className="-ml-2 mb-3 inline-flex h-10 items-center gap-1.5 rounded-control px-2 text-sm font-medium text-foreground/80 transition-[color,background-color,transform] duration-hover ease-out hover:bg-muted hover:text-foreground active:scale-[0.97] lg:mb-5"
@@ -197,7 +213,7 @@ const CustomerSupport = () => {
 
         <AnimatePresence mode="wait" initial={false}>
           {!selectedOption ? (
-            <motion.div key="options" {...viewMotion}>
+            <motion.div key="options" ref={restoreOptionFocus} {...viewMotion}>
               {/* Header */}
               <div className="panel tx-sheet tx-contour mb-5 overflow-hidden px-5 py-7 text-center lg:mb-8 lg:px-8">
                 <p className="eyebrow-no eyebrow-center mb-4"><span>We&rsquo;re here to help</span></p>
@@ -225,7 +241,7 @@ const CustomerSupport = () => {
               {/* Contact options */}
               <div className="mb-5 space-y-2.5 lg:mb-8 lg:space-y-3">
                 {contactInfo.email && (
-                  <motion.button type="button" onClick={() => setSelectedOption('email')} whileTap={tap} className={OPTION_CARD}>
+                  <motion.button type="button" data-support-option="email" onClick={() => openOption('email')} whileTap={tap} className={OPTION_CARD}>
                     <div className="flex items-center gap-3 lg:gap-4">
                       <div className="grid size-10 shrink-0 place-items-center rounded-card bg-primary/[0.08] text-primary lg:size-12">
                         <Mail aria-hidden="true" className="size-5 lg:size-6" />
@@ -240,7 +256,7 @@ const CustomerSupport = () => {
                 )}
 
                 {contactInfo.phone && (
-                  <motion.button type="button" onClick={() => setSelectedOption('phone')} whileTap={tap} className={OPTION_CARD}>
+                  <motion.button type="button" data-support-option="phone" onClick={() => openOption('phone')} whileTap={tap} className={OPTION_CARD}>
                     <div className="flex items-center gap-3 lg:gap-4">
                       <div className="grid size-10 shrink-0 place-items-center rounded-card bg-primary/[0.08] text-primary lg:size-12">
                         <Phone aria-hidden="true" className="size-5 lg:size-6" />
@@ -255,7 +271,7 @@ const CustomerSupport = () => {
                 )}
 
                 {contactInfo.whatsapp && (
-                  <motion.button type="button" onClick={() => setSelectedOption('message')} whileTap={tap} className={OPTION_CARD}>
+                  <motion.button type="button" data-support-option="message" onClick={() => openOption('message')} whileTap={tap} className={OPTION_CARD}>
                     <div className="flex items-center gap-3 lg:gap-4">
                       <div className="grid size-10 shrink-0 place-items-center rounded-card bg-primary/[0.08] text-primary lg:size-12">
                         <MessageCircle aria-hidden="true" className="size-5 lg:size-6" />
@@ -326,7 +342,7 @@ const CustomerSupport = () => {
                   <Mail aria-hidden="true" className="size-5 lg:size-6" />
                 </div>
                 <div>
-                  <h1 className="font-heading text-lg font-semibold tracking-tight text-foreground lg:text-2xl">Email support</h1>
+                  <h1 ref={focusHeading} tabIndex={-1} className="font-heading text-lg font-semibold tracking-tight text-foreground outline-none lg:text-2xl">Email support</h1>
                   <p className="text-sm text-muted-foreground">Pick a question to start an email.</p>
                 </div>
               </div>
@@ -367,7 +383,7 @@ const CustomerSupport = () => {
                   <Phone aria-hidden="true" className="size-5 lg:size-6" />
                 </div>
                 <div>
-                  <h1 className="font-heading text-lg font-semibold tracking-tight text-foreground lg:text-2xl">Phone support</h1>
+                  <h1 ref={focusHeading} tabIndex={-1} className="font-heading text-lg font-semibold tracking-tight text-foreground outline-none lg:text-2xl">Phone support</h1>
                   <p className="text-sm text-muted-foreground">Speak with our team directly.</p>
                 </div>
               </div>
@@ -413,7 +429,7 @@ const CustomerSupport = () => {
                   <MessageCircle aria-hidden="true" className="size-5 lg:size-6" />
                 </div>
                 <div>
-                  <h1 className="font-heading text-lg font-semibold tracking-tight text-foreground lg:text-2xl">WhatsApp chat</h1>
+                  <h1 ref={focusHeading} tabIndex={-1} className="font-heading text-lg font-semibold tracking-tight text-foreground outline-none lg:text-2xl">WhatsApp chat</h1>
                   <p className="text-sm text-muted-foreground">Pick a message to start the chat.</p>
                 </div>
               </div>

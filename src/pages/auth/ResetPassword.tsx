@@ -11,7 +11,7 @@ import { auth } from '@/config/firebase';
 import { Button } from '@/components/ui/button';
 import { Notice } from '@/components/ui/notice';
 import { Spinner } from '@/components/ui/spinner';
-import { AuthCard } from '@/components/auth/AuthCard';
+import { AUTH_MAIN_CLASS, AuthCard } from '@/components/auth/AuthCard';
 import { AuthField } from '@/components/auth/AuthField';
 import { AuthCardSkeleton } from '@/components/skeletons';
 import { Info, Link2Off, ShieldCheck } from 'lucide-react';
@@ -165,7 +165,7 @@ const ResetPassword = () => {
     return (
       <div className="flex min-h-screen flex-col tx-paper">
         <Header />
-        <main id="main" tabIndex={-1} className="flex flex-1 items-start justify-center px-4 py-10 outline-none sm:items-center md:py-16">
+        <main id="main" tabIndex={-1} className={AUTH_MAIN_CLASS}>
           <AuthCardSkeleton label="Checking your reset link" />
         </main>
         <Footer />
@@ -178,7 +178,7 @@ const ResetPassword = () => {
     return (
       <div className="flex min-h-screen flex-col tx-paper">
         <Header />
-        <main id="main" tabIndex={-1} className="flex flex-1 items-start justify-center px-4 py-10 outline-none sm:items-center md:py-16">
+        <main id="main" tabIndex={-1} className={AUTH_MAIN_CLASS}>
           <div className="panel tx-sheet tx-contour mx-auto w-full max-w-md p-6 text-center sm:p-9">
             <div className="tx-slate mx-auto mb-5 grid h-14 w-14 place-items-center rounded-card text-highlight-soft">
               <Link2Off aria-hidden="true" className="size-6" />
@@ -204,7 +204,7 @@ const ResetPassword = () => {
     return (
       <div className="flex min-h-screen flex-col tx-paper">
         <Header />
-        <main id="main" tabIndex={-1} className="flex flex-1 items-start justify-center px-4 py-10 outline-none sm:items-center md:py-16">
+        <main id="main" tabIndex={-1} className={AUTH_MAIN_CLASS}>
           <div className="panel tx-sheet tx-contour mx-auto w-full max-w-md p-6 text-center sm:p-9">
             <div className="tx-slate mx-auto mb-5 grid h-14 w-14 place-items-center rounded-card text-highlight-soft">
               <ShieldCheck aria-hidden="true" className="size-6" />
@@ -236,7 +236,7 @@ const ResetPassword = () => {
   return (
     <div className="flex min-h-screen flex-col tx-paper">
       <Header />
-      <main id="main" tabIndex={-1} className="flex flex-1 items-start justify-center px-4 py-10 outline-none sm:items-center md:py-16">
+      <main id="main" tabIndex={-1} className={AUTH_MAIN_CLASS}>
         <AuthCard
           title="Reset your password"
           description={

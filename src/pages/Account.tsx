@@ -16,6 +16,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AuthField } from '@/components/auth/AuthField';
 import { AuthCardSkeleton, PanelSkeleton } from '@/components/skeletons';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { AUTH_MAIN_CLASS, AuthBackLink } from '@/components/auth/AuthCard';
 import { EmptyState } from '@/components/EmptyState';
 import Header from '@/components/Header';
 import CategoryIconNav from '@/components/CategoryIconNav';
@@ -55,7 +56,7 @@ const HEADING_FONT = { fontFamily: 'var(--font-heading)', fontStretch: 'var(--fo
 const SignInPlaceholder = () => (
   <div className="tx-paper flex min-h-dvh flex-col">
     <div className="h-[var(--sticky-top)] border-b border-foreground/[0.08] bg-background" />
-    <div className="flex flex-1 items-center justify-center px-4 py-8 sm:py-12">
+    <div className={AUTH_MAIN_CLASS}>
       <AuthCardSkeleton label="Signing you in" />
     </div>
   </div>
@@ -512,22 +513,15 @@ const LoginForm = ({ onLoginStart, onLoginError, onLoginComplete }: LoginFormPro
       <Header />
 
       {/* Content area */}
-      <main id="main" tabIndex={-1} className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12 outline-none">
+      <main id="main" tabIndex={-1} className={AUTH_MAIN_CLASS}>
         <motion.div
           initial={fadeUp.initial}
           animate={fadeUp.animate}
           transition={fadeUp.transition}
           className="panel tx-sheet tx-contour mx-auto w-full max-w-md p-6 sm:p-9"
         >
-          {/* Back Button */}
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="-ml-2 mb-4 inline-flex h-10 items-center gap-1.5 rounded-control px-2 text-muted-foreground transition-[color,transform] duration-press ease-out hover:text-foreground active:scale-[0.97]"
-          >
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.18em]">Back</span>
-          </button>
+          {/* Back: the same control and place as every other auth card */}
+          <AuthBackLink />
 
           {/* Tabs: the Delivery partner tab is hidden while the delivery system is off */}
           {DELIVERY_PARTNERS_ENABLED && (
@@ -898,34 +892,21 @@ const AccountPage = () => {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  /** Ask first (styled dialog), then sign out after a 5-second undo window. */
+  /** Ask first (styled dialog); once confirmed, sign out straight away (one safeguard, no extra wait). */
   const handleLogout = () => {
     signOutTriggerRef.current = document.activeElement as HTMLElement | null;
     setConfirmSignOut(true);
   };
 
-  const performLogout = () => {
-    let cancelled = false;
-    toast('Signing you out', {
-      duration: 5000,
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          cancelled = true;
-          toast('You are still signed in');
-        },
-      },
-    });
-    setTimeout(async () => {
-      if (cancelled) return;
-      try {
-        await logout();
-        toast.success('Signed out');
-      } catch (error) {
-        console.error('Logout error:', error);
-        toast.error('Unable to sign out. Try again.');
-      }
-    }, 5000);
+  const performLogout = async () => {
+    try {
+      await logout();
+      toast.success('Signed out');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Unable to sign out. Try again.');
+      throw error; // keeps the dialog open so the shopper can retry
+    }
   };
 
   const signOutDialog = (
@@ -947,7 +928,7 @@ const AccountPage = () => {
     { id: 'videocalls', label: 'My video calls', icon: Video, path: '/my-video-calls' },
     { id: 'editProfile', label: 'Edit profile', icon: Edit, path: '/account/profile-edit' },
     { id: 'addresses', label: 'Your addresses', icon: MapPin, path: '/account/addresses' },
-    { id: 'security', label: 'Login & security', icon: Shield, path: '/security' },
+    { id: 'security', label: 'Sign-in & security', icon: Shield, path: '/security' },
     { id: 'saved', label: 'Saved items', icon: Heart, path: '/wishlist' },
     { id: 'support', label: 'Customer support', icon: MessageCircle, path: '/customer-support' },
   ];
@@ -959,7 +940,7 @@ const AccountPage = () => {
     { label: 'My video calls', icon: Video, href: '/my-video-calls' },
     { label: 'Edit profile', icon: Edit, href: '/account/profile-edit' },
     { label: 'Your addresses', icon: MapPin, href: '/account/addresses' },
-    { label: 'Login & security', icon: Shield, href: '/security' },
+    { label: 'Sign-in & security', icon: Shield, href: '/security' },
     { label: 'Saved items', icon: Heart, href: '/wishlist' },
     { label: 'Customer support', icon: MessageCircle, href: '/customer-support' },
   ];

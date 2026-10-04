@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
@@ -68,6 +68,22 @@ const SecurityPage: React.FC = () => {
   // Tab & UI
   const [activeTab, setActiveTab] = useState<SecurityTab>('overview');
   const [isMobile, setIsMobile] = useState(false);
+
+  // Keyboard and screen-reader users keep their place across sub-views: opening one moves
+  // focus to its heading, going back returns focus to the row that opened it.
+  const sectionHeadingRef = useRef<HTMLHeadingElement>(null);
+  const openedFromRef = useRef<SecurityTab | null>(null);
+  const tabChangedRef = useRef(false);
+  useEffect(() => {
+    if (!tabChangedRef.current) { tabChangedRef.current = true; return; }
+    if (activeTab === 'overview') {
+      const id = openedFromRef.current;
+      const row = id ? document.querySelector<HTMLElement>(`[data-security-row="${id}"]`) : null;
+      (row ?? sectionHeadingRef.current)?.focus();
+    } else {
+      sectionHeadingRef.current?.focus();
+    }
+  }, [activeTab]);
 
   // Show success message if redirected from password reset
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
@@ -443,6 +459,27 @@ const SecurityPage: React.FC = () => {
     }
   };
 
+  const [verifyLinkSent, setVerifyLinkSent] = useState(false);
+  const handleSendVerifyLink = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    setActionLoading('verify-email');
+    try {
+      await sendEmailVerification(currentUser);
+      setVerifyLinkSent(true);
+      showMessage('success', 'Verification link sent. Check your inbox and spam folder.');
+    } catch (err: any) {
+      showMessage(
+        'error',
+        err?.code === 'auth/too-many-requests'
+          ? 'Too many attempts. Wait a few minutes and try again.'
+          : 'Unable to send the link. Try again.',
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleCancelDeletion = async () => {
     if (!user) return;
     setActionLoading('cancel-delete');
@@ -529,11 +566,11 @@ const SecurityPage: React.FC = () => {
 
   const getSectionTitle = (tab: SecurityTab) => {
     switch (tab) {
-      case 'overview': return 'Login & security';
+      case 'overview': return 'Sign-in & security';
       case 'password': return 'Change password';
-      case 'login-history': return 'Login history';
+      case 'login-history': return 'Sign-in history';
       case 'account': return 'Account settings';
-      default: return 'Login & security';
+      default: return 'Sign-in & security';
     }
   };
 
@@ -592,7 +629,7 @@ const SecurityPage: React.FC = () => {
             <ArrowLeft aria-hidden="true" className="size-4" />
             <span className="text-sm font-medium">{activeTab === 'overview' ? 'Back to account' : 'Back'}</span>
           </button>
-          <h1 className="ml-1 text-sm font-semibold text-foreground lg:sr-only">
+          <h1 ref={sectionHeadingRef} tabIndex={-1} className="ml-1 text-sm font-semibold text-foreground outline-none lg:sr-only">
             {getSectionTitle(activeTab)}
           </h1>
         </div>
@@ -675,13 +712,14 @@ const SecurityPage: React.FC = () => {
             <nav aria-label="Security settings" className="panel tx-sheet overflow-hidden divide-y divide-foreground/[0.08]">
               {[
                 { id: 'password' as SecurityTab, icon: Key, label: 'Change password', desc: 'Get a reset link by email' },
-                { id: 'login-history' as SecurityTab, icon: Clock, label: 'Login history', desc: 'See recent sign-in activity' },
+                { id: 'login-history' as SecurityTab, icon: Clock, label: 'Sign-in history', desc: 'See recent sign-in activity' },
                 { id: 'account' as SecurityTab, icon: Settings, label: 'Account settings', desc: 'Email, phone and account deletion' },
               ].map((item) => (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setActiveTab(item.id)}
+                  data-security-row={item.id}
+                  onClick={() => { openedFromRef.current = item.id; setActiveTab(item.id); }}
                   className="focus-inset flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-hover hover:bg-muted/60"
                 >
                   <item.icon aria-hidden="true" className="size-5 shrink-0 text-primary" />
@@ -834,7 +872,7 @@ const SecurityPage: React.FC = () => {
                     className="w-full"
                   >
                     {actionLoading === 'enable-2fa' ? <Spinner /> : <ShieldCheck aria-hidden="true" className="size-4" />}
-                    Turn on 2FA
+                    Turn on 2-step verification
                   </Button>
                 </motion.div>
               )}
@@ -1113,14 +1151,24 @@ const SecurityPage: React.FC = () => {
                   <span className="min-w-0 text-right text-sm font-medium text-foreground break-words [overflow-wrap:anywhere]">{user?.email}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4 py-3">
-                  <span className="text-sm text-muted-foreground">Account type</span>
-                  <span className="text-sm font-medium text-foreground capitalize">{userProfile?.role || 'User'}</span>
-                </div>
-                <div className="flex items-center justify-between gap-4 py-3">
                   <span className="text-sm text-muted-foreground">Email verified</span>
-                  {user?.emailVerified
-                    ? <StatusBadge tone="success" label="Verified" icon={CircleCheck} />
-                    : <StatusBadge tone="warning" label="Not verified" icon={AlertCircle} />}
+                  {user?.emailVerified ? (
+                    <StatusBadge tone="success" label="Verified" icon={CircleCheck} />
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <StatusBadge tone="warning" label="Not verified" icon={AlertCircle} />
+                      <button
+                        type="button"
+                        onClick={handleSendVerifyLink}
+                        disabled={actionLoading === 'verify-email'}
+                        className="-mx-1 inline-flex min-h-6 items-center gap-1.5 rounded-control px-1 text-xs font-medium text-primary underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {actionLoading === 'verify-email' && <Spinner />}
+                        {verifyLinkSent ? 'Resend link' : 'Send link'}
+                        <span className="sr-only"> to verify your email</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center justify-between gap-4 py-3">
                   <span className="text-sm text-muted-foreground">Phone verified</span>

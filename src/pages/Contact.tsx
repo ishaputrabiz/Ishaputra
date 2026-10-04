@@ -138,7 +138,7 @@ const Contact = () => {
           </motion.div>
 
           {/* Contact details */}
-          <div className="mb-14 grid gap-8 md:mb-20 md:grid-cols-3 md:gap-10">
+          <div className="mb-14 grid gap-8 sm:grid-cols-2 md:mb-20 md:gap-10 lg:grid-cols-3">
             <motion.div {...inView(1)}>
               <div className="mb-3 flex items-center gap-3">
                 <MapPin aria-hidden="true" className="size-5 shrink-0 text-primary" />
@@ -165,7 +165,7 @@ const Contact = () => {
                     <dd>
                       <a
                         href={`tel:${phone.replace(/\s+/g, "")}`}
-                        className="tabular-nums text-foreground underline-offset-4 transition-colors duration-hover hover:text-primary hover:underline"
+                        className="whitespace-nowrap tabular-nums text-foreground underline-offset-4 transition-colors duration-hover hover:text-primary hover:underline"
                       >
                         {phone}
                       </a>
@@ -175,7 +175,7 @@ const Contact = () => {
                 {BRAND.email && (
                   <>
                     <dt className="text-muted-foreground">Email</dt>
-                    <dd className="min-w-0 [overflow-wrap:anywhere]">
+                    <dd className="min-w-0 break-words">
                       <a
                         href={`mailto:${BRAND.email}`}
                         className="text-foreground underline-offset-4 transition-colors duration-hover hover:text-primary hover:underline"
@@ -196,14 +196,15 @@ const Contact = () => {
                 <h3 className="font-heading text-xl font-semibold tracking-tight text-foreground">Opening hours</h3>
               </div>
               <div className="pl-8 text-sm leading-relaxed text-muted-foreground md:text-base">
-                <p>{BRAND.hours}</p>
+                {/* Keep "7 pm" together so a time never ends on a lone "pm" */}
+                <p className="[text-wrap:balance]">{BRAND.hours.replace(/(\d)\s+(am|pm)\b/gi, "$1\u00a0$2")}</p>
                 <p>Online orders: any time</p>
               </div>
             </motion.div>
           </div>
 
-          {/* Form and map */}
-          <div className="mx-auto max-w-7xl">
+          {/* Form and map: on the same container edges as the details above */}
+          <div>
             <h2 className="mb-8 text-center font-heading text-3xl font-semibold tracking-tight text-foreground [text-wrap:balance] md:mb-12 md:text-5xl">
               Send a message
             </h2>

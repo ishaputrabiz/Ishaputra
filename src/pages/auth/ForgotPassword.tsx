@@ -4,9 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Notice } from '@/components/ui/notice';
 import { Spinner } from '@/components/ui/spinner';
-import { AuthCard } from '@/components/auth/AuthCard';
+import { AUTH_MAIN_CLASS, AuthBackLink, AuthCard } from '@/components/auth/AuthCard';
 import { AuthField } from '@/components/auth/AuthField';
-import { ArrowLeft, Info, MailCheck } from 'lucide-react';
+import { Info, MailCheck } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { usePageMeta } from '@/hooks/usePageMeta';
@@ -123,7 +123,7 @@ const ForgotPassword = () => {
   return (
     <div className="flex min-h-screen flex-col tx-paper">
       <Header />
-      <main id="main" tabIndex={-1} className="flex flex-1 items-start justify-center px-4 py-10 outline-none sm:items-center md:py-16">
+      <main id="main" tabIndex={-1} className={AUTH_MAIN_CLASS}>
         {success ? (
           /* Success state */
           <div className="panel tx-sheet tx-contour mx-auto w-full max-w-md p-6 text-center sm:p-9">
@@ -171,15 +171,7 @@ const ForgotPassword = () => {
           <AuthCard
             title="Forgot your password?"
             description="Enter your email and we'll send a reset link."
-            footer={
-              <Link
-                to="/account"
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-control px-2 font-medium text-foreground transition-colors duration-hover hover:text-primary"
-              >
-                <ArrowLeft aria-hidden="true" className="size-4" />
-                Back to sign in
-              </Link>
-            }
+            back={<AuthBackLink to="/account" label="Back to sign in" />}
           >
             {error && rateLimited && (
               <Notice tone="danger" compact className="mb-5">

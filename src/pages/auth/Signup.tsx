@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Notice } from '@/components/ui/notice';
 import { Spinner } from '@/components/ui/spinner';
-import { AuthCard } from '@/components/auth/AuthCard';
+import { AUTH_MAIN_CLASS, AuthBackLink, AuthCard } from '@/components/auth/AuthCard';
 import { AuthField } from '@/components/auth/AuthField';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -18,6 +18,9 @@ import { toast } from 'sonner';
 import PasswordStrengthMeter from './PasswordStrengthMeter';
 
 type SignupField = 'username' | 'email' | 'phone' | 'whatsapp' | 'password' | 'confirmPassword' | 'terms';
+
+/** Fields in the order they appear on the form, so the first invalid one gets focus. */
+const FIELD_ORDER: SignupField[] = ['username', 'email', 'phone', 'whatsapp', 'password', 'confirmPassword', 'terms'];
 
 /** The control to focus when a field's check fails, so the error is read with it. */
 const FIELD_IDS: Record<SignupField, string> = {
@@ -39,8 +42,10 @@ const Signup = () => {
   const [sameForWhatsApp, setSameForWhatsApp] = useState(true);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [errorField, setErrorField] = useState<SignupField | null>(null);
+  /** One message per field, all shown at once (the Contact and Addresses pattern). */
+  const [errors, setErrors] = useState<Partial<Record<SignupField, string>>>({});
+  /** Errors that belong to no single field (network, server). */
+  const [formError, setFormError] = useState('');
   const whatsappOtp = useWhatsAppOtpVerification(phone, sameForWhatsApp);
 
   const { signup } = useAuth();
@@ -48,51 +53,63 @@ const Signup = () => {
 
   usePageMeta({ title: 'Create account', noindex: true });
 
-  const fail = (message: string, field: SignupField | null = null) => {
-    setError(message);
-    setErrorField(field);
-    if (field) requestAnimationFrame(() => document.getElementById(FIELD_IDS[field])?.focus());
-    return false;
+  const showErrors = (next: Partial<Record<SignupField, string>>) => {
+    setErrors(next);
+    const first = FIELD_ORDER.find((field) => next[field]);
+    if (first) requestAnimationFrame(() => document.getElementById(FIELD_IDS[first])?.focus());
+    return !first;
+  };
+
+  /** Clear a field's message as soon as it is edited. */
+  const clearError = (...fields: SignupField[]) => {
+    if (fields.some((field) => errors[field])) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        fields.forEach((field) => delete next[field]);
+        return next;
+      });
+    }
   };
 
   // One password policy for the whole store: the same rules as password reset.
+  // Every check runs, so all problems show on the first submit.
   const validateForm = () => {
+    const next: Partial<Record<SignupField, string>> = {};
     if (username.trim().length < 3) {
-      return fail('Enter your full name, at least 3 characters.', 'username');
+      next.username = 'Enter your full name, at least 3 characters.';
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      return fail('Enter a valid email address.', 'email');
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    if (!emailValid) {
+      next.email = 'Enter a valid email address.';
     }
     const passwordCheck = validatePassword(password);
-    if (!passwordCheck.valid) {
-      return fail(`${passwordCheck.errors[0]}.`, 'password');
-    }
-    if (calculatePasswordStrength(password).score < 2) {
-      return fail('This password is too easy to guess. Choose a stronger one.', 'password');
-    }
     const emailName = email.split('@')[0].toLowerCase();
-    if (emailName && password.toLowerCase().includes(emailName)) {
-      return fail('Choose a password that does not contain your email address.', 'password');
+    if (!passwordCheck.valid) {
+      next.password = `${passwordCheck.errors[0]}.`;
+    } else if (calculatePasswordStrength(password).score < 2) {
+      next.password = 'This password is too easy to guess. Choose a stronger one.';
+    } else if (emailName && password.toLowerCase().includes(emailName)) {
+      next.password = 'Choose a password that does not contain your email address.';
     }
-    if (password !== confirmPassword) {
-      return fail('Passwords do not match.', 'confirmPassword');
+    if (password && !confirmPassword) {
+      next.confirmPassword = 'Type your password again.';
+    } else if (password !== confirmPassword) {
+      next.confirmPassword = 'Passwords do not match.';
     }
     if (phone && !/^[6-9]\d{9}$/.test(phone)) {
-      return fail('Enter a 10-digit Indian mobile number.', 'phone');
-    }
-    if (phone && sameForWhatsApp && !whatsappOtp.isVerified) {
-      return fail('Verify your WhatsApp number before using it for order updates.', 'whatsapp');
+      next.phone = 'Enter a 10-digit Indian mobile number.';
+    } else if (phone && sameForWhatsApp && !whatsappOtp.isVerified) {
+      next.whatsapp = 'Verify your WhatsApp number before using it for order updates.';
     }
     if (!agreeTerms) {
-      return fail('Agree to the Terms and Privacy Policy to continue.', 'terms');
+      next.terms = 'Agree to the Terms and Privacy Policy to continue.';
     }
-    return true;
+    return showErrors(next);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setErrorField(null);
+    setFormError('');
 
     if (!validateForm()) return;
 
@@ -105,30 +122,34 @@ const Signup = () => {
     } catch (err: any) {
       console.error('Signup error:', err);
       if (err.code === 'auth/email-already-in-use') {
-        fail('An account with this email already exists. Sign in instead.', 'email');
+        showErrors({ email: 'An account with this email already exists. Sign in instead.' });
       } else if (err.code === 'auth/invalid-email') {
-        fail('Enter a valid email address.', 'email');
+        showErrors({ email: 'Enter a valid email address.' });
       } else if (err.code === 'auth/weak-password') {
-        fail('This password is too weak. Choose a stronger one.', 'password');
+        showErrors({ password: 'This password is too weak. Choose a stronger one.' });
       } else {
-        fail('Unable to create your account. Check your connection and try again.');
+        setFormError('Unable to create your account. Check your connection and try again.');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const fieldError = (field: SignupField) => (errorField === field ? error : undefined);
+  const fieldError = (field: SignupField) => errors[field];
 
   return (
     <div className="flex min-h-[100dvh] flex-col tx-paper">
       <Header />
-      <main id="main" tabIndex={-1} className="flex flex-1 items-start justify-center px-4 py-8 outline-none sm:items-center md:py-14">
-        <AuthCard title="Create account" description="Join for rewards on every order.">
+      <main id="main" tabIndex={-1} className={AUTH_MAIN_CLASS}>
+        <AuthCard
+          title="Create account"
+          description="Join for rewards on every order."
+          back={<AuthBackLink fallback="/login" />}
+        >
           {/* Errors that belong to no single field (network, server) */}
-          {error && !errorField && (
+          {formError && (
             <Notice tone="danger" compact className="mb-5">
-              {error}
+              {formError}
             </Notice>
           )}
 
@@ -139,7 +160,7 @@ const Signup = () => {
               name="name"
               autoComplete="name"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => { setUsername(e.target.value); clearError('username'); }}
               placeholder="Your name"
               required
               disabled={loading}
@@ -154,7 +175,7 @@ const Signup = () => {
               autoComplete="email"
               inputMode="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); clearError('email'); }}
               placeholder="you@example.com"
               required
               disabled={loading}
@@ -170,16 +191,17 @@ const Signup = () => {
                 autoComplete="tel-national"
                 inputMode="numeric"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                onChange={(e) => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); clearError('phone', 'whatsapp'); }}
                 placeholder="10-digit mobile number"
                 disabled={loading}
                 error={fieldError('phone')}
+                aria-describedby={fieldError('whatsapp') ? 'signup-whatsapp-error' : undefined}
               />
               <div className="flex items-center gap-2.5">
                 <Checkbox
                   id="signup-whatsapp"
                   checked={sameForWhatsApp}
-                  onCheckedChange={(checked) => setSameForWhatsApp(checked as boolean)}
+                  onCheckedChange={(checked) => { setSameForWhatsApp(checked as boolean); clearError('whatsapp'); }}
                   disabled={loading}
                 />
                 <Label htmlFor="signup-whatsapp" className="cursor-pointer text-sm font-normal text-muted-foreground">
@@ -252,7 +274,7 @@ const Signup = () => {
                     <p role="alert" className="text-xs text-destructive">{whatsappOtp.otpError}</p>
                   )}
                   {fieldError('whatsapp') && (
-                    <p role="alert" className="text-xs text-destructive">{fieldError('whatsapp')}</p>
+                    <p id="signup-whatsapp-error" className="text-xs text-destructive">{fieldError('whatsapp')}</p>
                   )}
                 </div>
               )}
@@ -266,7 +288,7 @@ const Signup = () => {
                 name="new-password"
                 autoComplete="new-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); clearError('password'); }}
                 placeholder="Create a password"
                 required
                 disabled={loading}
@@ -283,7 +305,7 @@ const Signup = () => {
               name="confirm-password"
               autoComplete="new-password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => { setConfirmPassword(e.target.value); clearError('confirmPassword'); }}
               placeholder="Type it again"
               required
               disabled={loading}
@@ -295,10 +317,10 @@ const Signup = () => {
                 <Checkbox
                   id="signup-terms"
                   checked={agreeTerms}
-                  onCheckedChange={(checked) => setAgreeTerms(checked as boolean)}
+                  onCheckedChange={(checked) => { setAgreeTerms(checked as boolean); clearError('terms'); }}
                   disabled={loading}
-                  aria-invalid={errorField === 'terms' ? true : undefined}
-                  aria-describedby={errorField === 'terms' ? 'signup-terms-error' : undefined}
+                  aria-invalid={errors.terms ? true : undefined}
+                  aria-describedby={errors.terms ? 'signup-terms-error' : undefined}
                   className="mt-0.5"
                 />
                 <Label htmlFor="signup-terms" className="cursor-pointer text-sm font-normal leading-snug text-muted-foreground">
@@ -312,9 +334,9 @@ const Signup = () => {
                   </Link>
                 </Label>
               </div>
-              {errorField === 'terms' && (
-                <p id="signup-terms-error" role="alert" className="pl-[30px] text-xs text-destructive">
-                  {error}
+              {errors.terms && (
+                <p id="signup-terms-error" className="pl-[30px] text-xs text-destructive">
+                  {errors.terms}
                 </p>
               )}
             </div>
