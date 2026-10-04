@@ -75,7 +75,7 @@ export const validatePassword = (
   }
 
   // Check symbol
-  if (requirements.requireSymbol && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+  if (requirements.requireSymbol && !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
     errors.push('Password must contain at least one special character');
   }
 
@@ -106,7 +106,7 @@ export const calculatePasswordStrength = (password: string): PasswordStrengthRes
   const hasLower = /[a-z]/.test(password);
   const hasUpper = /[A-Z]/.test(password);
   const hasNumber = /\d/.test(password);
-  const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  const hasSymbol = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
 
   if (hasLower) score += 0.5;
   if (hasUpper) score += 0.5;
@@ -313,7 +313,7 @@ export const getPasswordRequirementChecks = (
   if (requirements.requireSymbol) {
     checks.push({
       label: 'One special character (!@#$%^&*)',
-      met: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+      met: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
     });
   }
   return checks;

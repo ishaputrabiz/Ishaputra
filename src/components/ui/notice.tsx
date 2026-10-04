@@ -48,7 +48,7 @@ export interface NoticeProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 
  * Errors (tone="danger") are announced with role="alert"; the rest with
  * role="status". Override with `role` when a notice is static page content.
  *
- *   <Notice tone="warning" title="Delivery attempted">We'll try again tomorrow.</Notice>
+ *   <Notice tone="warning" title="Delivery failed">We'll try again tomorrow.</Notice>
  */
 export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
   ({ tone = "info", title, icon, action, compact = false, className, children, role, ...props }, ref) => {

@@ -81,7 +81,7 @@ Rules: animate only `transform` and `opacity`; name the properties (`transition-
 
 ## 4. Status and feedback
 
-**`getOrderStatus(status, order?)`** (`src/lib/orderStatus.ts`) returns `{ label, tone, icon }` for every Order status: pending (warning), processing/packed/shipped/outForDelivery (info), delivered/refunded (success), cancelled/deliveryFailed "Delivery attempted" (danger), returnRequested/returnScheduled/picked/returned (returns). Pass the order to get "Pending, COD", "Needs review" (danger, for `needsManualReview`), outbound `picked` as "Out for delivery", and "Late return" (neutral) when a return came after the 7-day window. `ORDER_STATUSES` lists them in order. `getProductStatus({ isActive, stock })` gives Live / Hidden / Sold out.
+**`getOrderStatus(status, order?)`** (`src/lib/orderStatus.ts`) returns `{ label, tone, icon }` for every Order status: pending (warning), processing/packed/shipped/outForDelivery (info), delivered/refunded (success), cancelled/deliveryFailed "Delivery failed" (danger), returnRequested/returnScheduled/picked/returned (returns). Pass the order to get "Pending, COD", "Needs review" (danger, for `needsManualReview`), outbound `picked` as "Out for delivery", and "Late return" (neutral) when a return came after the 7-day window. `ORDER_STATUSES` lists them in order. `getProductStatus({ isActive, stock })` gives Live / Hidden / Sold out.
 
 **`<StatusBadge tone label icon? dot? pulse? />`** (`ui/status-badge`): 24px chip, icon + label. `<OrderStatusBadge status={o.status} order={o} />` wraps the map. `STATUS_TONE_CLASSES[tone]` gives the chip classes for custom rows.
 
@@ -113,7 +113,7 @@ Sizes: `default` h-11, `sm` h-9 (12px semibold, normal case), `lg` h-12, `icon` 
 
 **`<IconButton label variant="ghost"|"solid"|"onPhoto" size="default"|"sm"|"lg" tooltip? asChild?>`** (`ui/icon-button`): every icon-only control. `label` is required and becomes `aria-label` ("Close", "Open menu", "Add Shilajit to cart"); `tooltip` (true or a string) shows it on hover/focus. Round; default 44px on touch, 40px with a mouse; an invisible 4px ring extends the hit area. `asChild` to render a `<Link>`. Pass the icon as the child: `<IconButton label="Close"><X /></IconButton>` (the icon is sized by the button).
 
-**`<WishlistToggle name saved onToggle variant? size? />`** (`src/components/WishlistToggle.tsx`): the heart. Controlled: the parent calls `useWishlist()` once (each instance syncs with Firestore, so never one per card) and passes `saved={isInWishlist(id)}` and `onToggle={() => toggleWishlist(id, name)}`. Labels "Save {name} to wishlist" / "Remove {name} from wishlist", `aria-pressed`, copper filled heart when saved. It stops click propagation, so it works inside a card link.
+**`<WishlistToggle name saved onToggle variant? size? />`** (`src/components/WishlistToggle.tsx`): the heart. Controlled: the parent calls `useWishlist()` once (each instance syncs with Firestore, so never one per card) and passes `saved={isInWishlist(id)}` and `onToggle={() => toggleWishlist(id, name)}`. One label, "Save {name} to wishlist"; `aria-pressed` carries the saved state; copper filled heart when saved. It stops click propagation, so it works inside a card link.
 
 ## 7. Product card
 
@@ -136,7 +136,7 @@ Sizes: `default` h-11, `sm` h-9 (12px semibold, normal case), `lg` h-12, `icon` 
 
 ## 9. Admin
 
-**`<AdminPageHeader title eyebrow? description? actions? leading?>{children}</AdminPageHeader>`** (`src/components/admin/AdminPageHeader.tsx`): the page's h1 in the heading font, muted description, actions on the right (one filled Button at most), `leading` for a back IconButton, `children` after the title for counts, Live indicators (`<StatusBadge tone="success" label="Live" dot pulse />`).
+**`<AdminPageHeader title eyebrow? description? actions? leading?>{children}</AdminPageHeader>`** (`src/components/admin/AdminPageHeader.tsx`): the page's h1 in the heading font, muted description, actions on the right (one filled Button at most), `leading` for a back IconButton, `children` after the title for counts, Live indicators (`<StatusBadge tone="success" label="Live" dot pulse />`). Stat tiles use `<StatCard>` (`src/components/admin/StatCard.tsx`); inline add/edit forms move focus into themselves with `useInlineFormFocus` (`src/components/admin/useInlineFormFocus.tsx`). Admin order numbers read `ORD-<number>` everywhere (`orderLabel`).
 
 Raw palette classes map by role: page `bg-background`; raised `bg-card text-card-foreground`; inset `bg-muted`; row hover `hover:bg-muted/60`; borders `border-border`, inputs `border-input`; text gray-900/800 `text-foreground`, 700/600 `text-foreground/80`, 500/400 `text-muted-foreground`; primary actions `<Button>`; links `text-primary`; overlays `bg-charcoal/60`; statuses StatusBadge; category/stat chips `bg-muted text-foreground/70`.
 
