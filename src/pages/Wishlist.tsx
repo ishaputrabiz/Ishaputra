@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, ShoppingBag, ArrowLeft, ArrowRight, ChevronRight } from "lucide-react";
-import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import MobileHeader from "@/components/MobileHeader";
@@ -47,7 +46,7 @@ const Breadcrumb = ({ onPhoto = false }: { onPhoto?: boolean }) => (
 
 const Wishlist = () => {
   const navigate = useNavigate();
-  const { wishlist, removeFromWishlist, addToWishlist, isLoaded } = useWishlist();
+  const { wishlist, removeFromWishlist, isLoaded } = useWishlist();
   const [products, setProducts] = useState<UIProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery] = useState("");
@@ -73,14 +72,9 @@ const Wishlist = () => {
     loadWishlistProducts();
   }, [wishlist, isLoaded]);
 
-  /** Remove, then offer to put it back. */
+  /** Remove; the hook's toast offers Undo. */
   const handleRemove = (productId: string, productTitle: string) => {
     removeFromWishlist(productId, productTitle);
-    // Replace the hook's plain "Removed" toast with one that can undo.
-    toast.dismiss();
-    toast(`Removed ${productTitle} from your wishlist`, {
-      action: { label: "Undo", onClick: () => addToWishlist(productId, productTitle) },
-    });
   };
 
   // Advanced search filter - searches across multiple fields

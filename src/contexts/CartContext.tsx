@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { doc, setDoc, getDoc, onSnapshot, updateDoc, deleteField } from 'firebase/firestore';
+import { sortCartLines } from '@/lib/cartOrder';
 import { db, auth } from '@/config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +22,8 @@ export interface CartItem {
   category?: string;
   weight?: string;
   purity?: string;
+  /** When the line was first added (ms), so the cart keeps that order. */
+  addedAt?: number;
 }
 
 // Cart Context Interface
@@ -278,7 +281,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (pendingOpRef.current) return;
         if (snapshot.exists()) {
           const data = snapshot.data();
-          const cartItems: CartItem[] = data.items ? Object.values(data.items) : [];
+          const cartItems: CartItem[] = data.items ? sortCartLines(Object.values(data.items)) : [];
           setItems(cartItems);
         } else {
           setItems([]);
@@ -323,6 +326,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return false;
     }
 
+    const addedAt = Date.now();
     setItems((prev) => {
       const current = prev.find((cartItem) => cartItem.id === item.id);
       if (current) {
@@ -337,7 +341,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         );
       }
 
-      return [...prev, { ...item, quantity, stock: item.stock }];
+      return [...prev, { ...item, quantity, stock: item.stock, addedAt }];
     });
 
     if (currentUserId) {
@@ -357,7 +361,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               updatedItems[item.id].stock = item.stock;
             }
           } else {
-            updatedItems[item.id] = { ...item, quantity, stock: item.stock };
+            updatedItems[item.id] = { ...item, quantity, stock: item.stock, addedAt };
           }
 
           await setDoc(cartRef, {
