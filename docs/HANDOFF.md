@@ -11,7 +11,7 @@ Last updated: 2026-10-04.
 
 ## State
 
-- **2026-10-04: the world-class UI pass is built on branch `ui-world-class`** (22 commits after `main`'s `46aba50`; local only, never pushed, not merged). It waits for the owner's review.
+- **2026-10-04: the world-class UI pass is merged into `main`** (`f3205c3`, `--no-ff` from `ui-world-class`; local only, never pushed). The owner reviewed and approved it. After the merge: `npm test` 29/29, `npm run build` passes.
   - **How it was done:** a full-site audit (8 auditors + 1 synthesis, 295 findings, screenshots at 390 / 768 / 1440 in light and dark, `playwright-cli` checks), the owner's 14 decisions (recorded in `CLIENT.md`, "UI pass decisions"), a shared foundation (`488317e`), 9 area packages in two waves, a fresh-eyes review (70 issues, no regressions) and a fix round that closed all 70.
   - **The design system** for this and future clients is documented in `docs/ui-system.md`: tokens (motion, status, radius, z-index), skeletons, StatusBadge / `lib/orderStatus`, Notice, EmptyState, ConfirmDialog (with `returnFocusRef`), IconButton, WishlistToggle, ProductCard, AuthCard / AuthField, AdminPageHeader, StatCard, format helpers, `usePageMeta`.
   - **Behaviour changes the owner approved** are listed in `CLIENT.md` ("UI pass decisions"): old Sreerasthu URLs open `/products`; desktop `/search`; one password policy; Buy again at today's price; new visitors follow the system theme; confirmations before irreversible actions; contact form opens a prefilled email; analytics loads lazily; and more.
@@ -33,7 +33,7 @@ Last updated: 2026-10-04.
 
 ## Next steps (in order)
 
-1. **Owner reviews the UI pass** on branch `ui-world-class` (run `npx vite --port 5182 --strictPort --host 127.0.0.1`; light, dark and system; phone and desktop). Then merge locally: `git checkout main && git merge --no-ff ui-world-class`.
+1. **UI pass merged (2026-10-04).** Remaining follow-ups:
    - Owner to do in Admin > Commerce: set Ships From = Telangana (delivery charges still assume Andhra Pradesh).
    - Small leftovers, none blocking: `useWishlist`'s own toast and the wishlist page's toast could be merged; cart lines could keep the order they were added in (needs an `addedAt` on cart lines in `CartContext`); generate `public/sitemap.xml` once the domain is real (`robots.txt` points at it, marked TODO(client)); set `VITE_SITE_URL` on Vercel so `og:image` is absolute; PERF-14's `initializeAuth` part (needs a full sign-in regression test).
    - Client placeholders to confirm are listed in `CLIENT.md` ("Placeholders for the client").
@@ -133,7 +133,7 @@ Which next steps need ultracode:
 
 | Step | Ultracode? | Effort |
 |---|---|---|
-| 1. Owner review of the UI pass, then merge | No | Medium |
+| 1. UI pass follow-ups (small) | No | Medium |
 | 2. Toolbox | No | Medium |
 | 3. Step 2B features (Scratch & Win, Dealer, Loyalty card) | Yes, for the plan and the money logic review | Extra high for rewards / money logic |
 
