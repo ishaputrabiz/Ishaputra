@@ -288,7 +288,7 @@ export function DealersView({ records, error, onRetry, onReview }: DealersViewPr
         className="pb-0"
         actions={
           <Button variant="outline" size="sm" asChild className="h-11 sm:h-9">
-            <Link to="/admin/commerce-settings">
+            <Link to="/admin/commerce-settings?tab=dealers">
               <Settings aria-hidden="true" />
               Dealer settings
             </Link>

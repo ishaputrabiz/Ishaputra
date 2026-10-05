@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
@@ -19,6 +20,7 @@ import {
   Coins,
   AlertCircle,
   RefreshCw,
+  Store,
   Ticket,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,7 +41,10 @@ import { Notice } from '@/components/ui/notice';
 import { Spinner } from '@/components/ui/spinner';
 import { FormSkeleton } from '@/components/skeletons';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { DealerSettingsTab } from '@/components/admin/DealerSettingsTab';
+import { LoyaltyTiersSection } from '@/components/admin/LoyaltyTiersSection';
 import { ScratchWinSettingsTab } from '@/components/admin/ScratchWinSettingsTab';
+import { hasTierErrors, rewardSettingsAdjusted } from '@/lib/loyaltyTiersForm';
 import { fadeUp } from '@/lib/motion';
 import {
   getCouponsSettings,
@@ -900,13 +905,18 @@ const RewardsTab = () => {
     </div>
   );
 
+  // Equal or falling thresholds would make a tier unreachable: no save until they rise.
+  const tiersInvalid = hasTierErrors(s.tiers);
+
   const save = async () => {
+    if (tiersInvalid) return;
     setSaving(true);
     try {
       // What is written: out-of-range values are clamped, so show those afterwards.
       const clean = normaliseRewardSettings(s);
       await saveRewardSettings(clean);
-      const adjusted = (Object.keys(clean) as (keyof RewardSettings)[]).some((k) => clean[k] !== s[k]);
+      // tiers is a new array every time, so compare it by value.
+      const adjusted = rewardSettingsAdjusted(s, clean);
       // Keep anything typed while the save was running.
       setS((current) => (current === s ? clean : current));
       toast.success(
@@ -922,45 +932,57 @@ const RewardsTab = () => {
   };
 
   return (
-    <Section
-      title="Loyalty points and cashback"
-      subtitle="Placeholder values until the client confirms its loyalty rules."
-      icon={Coins}
-    >
-      <div className="flex items-center justify-between gap-4 mb-5">
-        <div>
-          <Label htmlFor="rw-enabled" className="text-sm font-medium text-foreground">Rewards on</Label>
-          <p id="rw-enabled-hint" className="text-xs text-muted-foreground">
-            Off hides the checkout toggles and stops new points. Balances are kept.
-          </p>
+    <div className="space-y-6">
+      <Section
+        title="Loyalty points and cashback"
+        subtitle="Placeholder values until the client confirms its loyalty rules."
+        icon={Coins}
+      >
+        <div className="flex items-center justify-between gap-4 mb-5">
+          <div>
+            <Label htmlFor="rw-enabled" className="text-sm font-medium text-foreground">Rewards on</Label>
+            <p id="rw-enabled-hint" className="text-xs text-muted-foreground">
+              Off hides the checkout toggles and stops new points. Balances are kept.
+            </p>
+          </div>
+          <Switch id="rw-enabled" aria-describedby="rw-enabled-hint" checked={s.enabled} onCheckedChange={(v) => setS({ ...s, enabled: v })} />
         </div>
-        <Switch id="rw-enabled" aria-describedby="rw-enabled-hint" checked={s.enabled} onCheckedChange={(v) => setS({ ...s, enabled: v })} />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-        {field('pointsPer100', 'Points per ₹100 spent', 'On products paid for, once the order is delivered.')}
-        {field('pointValue', 'Value of 1 point (₹)', 'What a point is worth at checkout.', 0.5)}
-        {field('unlockDays', 'Days until points unlock', 'Never sooner than the 7-day return window.')}
-        {field('maxPointsPercent', 'Max % of products payable with points', 'Wallet cashback has no cap.')}
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {field('pointsPer100', 'Points per ₹100 spent', 'On products paid for, once the order is delivered.')}
+          {field('pointValue', 'Value of 1 point (₹)', 'What a point is worth at checkout.', 0.5)}
+          {field('unlockDays', 'Days until points unlock', 'Never sooner than the 7-day return window.')}
+          {field('maxPointsPercent', 'Max % of products payable with points', 'Wallet cashback has no cap.')}
+        </div>
+      </Section>
+
+      <LoyaltyTiersSection tiers={s.tiers} onChange={(tiers) => setS({ ...s, tiers })} pointsPer100={s.pointsPer100} />
+
       <div className="flex justify-end">
-        <Button onClick={save} disabled={saving || !s}>
+        <Button onClick={save} disabled={saving || tiersInvalid}>
           {saving ? <Spinner /> : <Save aria-hidden="true" />}
           Save rewards
         </Button>
       </div>
-    </Section>
+    </div>
   );
 };
 
+const COMMERCE_TABS = ['delivery', 'support', 'rewards', 'scratch', 'dealers'] as const;
+
 const AdminCommerceSettings = () => {
+  // /admin/commerce-settings?tab=dealers opens that tab (Admin > Dealers links here).
+  const [params] = useSearchParams();
+  const requested = params.get('tab');
+  const initialTab = COMMERCE_TABS.find((t) => t === requested) ?? 'delivery';
+
   return (
     <div className="mx-auto max-w-6xl [&>*]:max-w-4xl">
       <AdminPageHeader
         title="Commerce settings"
-        description="Delivery, GST, customer support, rewards and Scratch & Win. Rewards are applied site-wide."
+        description="Delivery, GST, customer support, rewards, Scratch & Win and dealers. Rewards are applied site-wide."
       />
 
-      <Tabs defaultValue="delivery" className="w-full">
+      <Tabs defaultValue={initialTab} className="w-full">
         <TabsList className="mb-6 w-full justify-start overflow-x-auto sm:w-auto">
           <TabsTrigger value="delivery" className="gap-1.5">
             <Truck aria-hidden="true" className="h-4 w-4" /> Delivery and GST
@@ -973,6 +995,9 @@ const AdminCommerceSettings = () => {
           </TabsTrigger>
           <TabsTrigger value="scratch" className="gap-1.5">
             <Ticket aria-hidden="true" className="h-4 w-4" /> Scratch &amp; Win
+          </TabsTrigger>
+          <TabsTrigger value="dealers" className="gap-1.5">
+            <Store aria-hidden="true" className="h-4 w-4" /> Dealers
           </TabsTrigger>
         </TabsList>
 
@@ -987,6 +1012,9 @@ const AdminCommerceSettings = () => {
         </TabsContent>
         <TabsContent value="scratch">
           <ScratchWinSettingsTab />
+        </TabsContent>
+        <TabsContent value="dealers">
+          <DealerSettingsTab />
         </TabsContent>
       </Tabs>
     </div>
