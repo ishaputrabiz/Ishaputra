@@ -12,6 +12,7 @@ import {
   where,
   writeBatch,
   type DocumentData,
+  type DocumentSnapshot,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import {
@@ -71,8 +72,23 @@ const dealerRef = (uid: string) => doc(db, 'dealers', uid);
 const settingsRef = doc(db, 'siteSettings', 'dealer');
 const pricingRef = doc(db, 'dealerPricing', 'current');
 
-export function subscribeOwnDealer(uid: string, onNext: (r: DealerRecord | null) => void, onError: (e: Error) => void) {
-  return onSnapshot(dealerRef(uid), (s) => onNext(s.exists() ? toRecord(s.id, s.data({ serverTimestamps: 'estimate' })) : null), onError);
+/**
+ * The three subscriptions below tell the caller whether the snapshot is an
+ * answer. A document that is missing in a snapshot that came only from the
+ * cache (Firestore is offline, or cannot reach the server) is not "this
+ * document does not exist": `answered` is false. includeMetadataChanges makes
+ * the server's answer arrive afterwards even when it says the same thing.
+ */
+const answered = (s: DocumentSnapshot) => !s.metadata.fromCache || s.exists();
+const LIVE = { includeMetadataChanges: true } as const;
+
+export function subscribeOwnDealer(uid: string, onNext: (r: DealerRecord | null, answered: boolean) => void, onError: (e: Error) => void) {
+  return onSnapshot(
+    dealerRef(uid),
+    LIVE,
+    (s) => onNext(s.exists() ? toRecord(s.id, s.data({ serverTimestamps: 'estimate' })) : null, answered(s)),
+    onError,
+  );
 }
 
 /** A new application, or a fresh one after a rejection (the rules allow exactly these writes). */
@@ -84,12 +100,13 @@ export async function applyAsDealer(uid: string, input: DealerApplicationInput, 
 
 export const withdrawDealerApplication = (uid: string) => deleteDoc(dealerRef(uid));
 
-export function subscribeDealerSettings(onNext: (s: DealerSettings) => void, onError: (e: Error) => void) {
-  return onSnapshot(settingsRef, (s) => onNext(normaliseDealerSettings(s.exists() ? s.data() : null)), onError);
+export function subscribeDealerSettings(onNext: (s: DealerSettings, answered: boolean) => void, onError: (e: Error) => void) {
+  return onSnapshot(settingsRef, LIVE, (s) => onNext(normaliseDealerSettings(s.exists() ? s.data() : null), answered(s)), onError);
 }
 
-export function subscribeDealerPricing(onNext: (p: DealerPricing) => void, onError: (e: Error) => void) {
-  return onSnapshot(pricingRef, (s) => onNext(normaliseDealerPricing(s.exists() ? s.data() : null)), onError);
+/** A missing prices document is the default percent only when `answered` (the server uses the same default). */
+export function subscribeDealerPricing(onNext: (p: DealerPricing, answered: boolean) => void, onError: (e: Error) => void) {
+  return onSnapshot(pricingRef, LIVE, (s) => onNext(normaliseDealerPricing(s.exists() ? s.data() : null), answered(s)), onError);
 }
 
 export async function loadDealerAdminSettings(): Promise<{ settings: DealerSettings; pricing: DealerPricing }> {

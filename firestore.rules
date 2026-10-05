@@ -427,6 +427,21 @@ service cloud.firestore {
         return exists(payment) && get(payment).data.uid == request.auth.uid;
       }
 
+      // Helper: the dealer fields of a new order. A retail order has none of
+      // them. A dealer-priced order is an approved dealer's own, for the
+      // business name and GSTIN the shop approved (the invoice prints them).
+      function hasValidDealerFields() {
+        let d = request.resource.data;
+        let dealer = /databases/$(database)/documents/dealers/$(request.auth.uid);
+        return !d.keys().hasAny(['pricing', 'regularSubtotal', 'dealerSavings', 'buyerBusiness'])
+          || (d.get('pricing', '') == 'dealer'
+            && exists(dealer)
+            && get(dealer).data.status == 'approved'
+            && (!('buyerBusiness' in d)
+              || (d.buyerBusiness.name == get(dealer).data.businessName
+                && d.buyerBusiness.gstin == get(dealer).data.gstin)));
+      }
+
       // Helper: what a customer may create. One order per payment: an online
       // order lives at orders/<razorpay order id>, and may say it is paid only
       // when the server has a verified payment for that id in the customer's
@@ -438,6 +453,7 @@ service cloud.firestore {
           && d.get('status', '') == 'pending'
           && d.get('razorpayOrderId', orderId) == orderId
           && (d.get('paymentStatus', 'pending') != 'paid' || isVerifiedPaymentForCaller())
+          && hasValidDealerFields()
           && !d.keys().hasAny([
             'deliveredAt', 'pickedAt', 'outForDeliveryAt', 'returnedAt',
             'delivery_boy_id', 'delivery_boy_name', 'delivery_partner_id', 'delivery_partner_name', 'deliveryBoyId',

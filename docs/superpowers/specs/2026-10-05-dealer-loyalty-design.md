@@ -39,6 +39,14 @@ ships **off**.
   gets no scratch card. Delivery and GST are worked out as usual on the dealer subtotal. An order below the
   threshold is a normal retail order in every way.
 - **Invoice:** a dealer-priced order prints the dealer's business name and GSTIN (when given) in the buyer block.
+  The order-create rule only lets an approved dealer write `pricing: 'dealer'` (with `regularSubtotal`,
+  `dealerSavings`, `buyerBusiness`), and `buyerBusiness` must equal the dealer's own `businessName` and `gstin`; a
+  retail order carries none of these fields.
+- **When the dealer state cannot be read** (the settings, the customer's own application, or the dealer prices fail
+  or answer "missing" only from the offline cache): this is `unavailable`, never "not a dealer" and never a default
+  percent. Checkout shows the notice with Retry and holds payment only for a cart worth at least the dealer minimum
+  at regular prices (the last known minimum; with none known, payment is never held). A customer whose own
+  application read succeeded with no document is simply not a dealer.
 - **Privacy:** dealer prices are readable only by admins and approved dealers. The apply page does not show the %.
 
 ### Tiers and the loyalty card

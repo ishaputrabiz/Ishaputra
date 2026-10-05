@@ -40,7 +40,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCheckoutPricing } from '@/hooks/useCheckoutPricing';
-import { retryDealerPricing, useDealer, useDealerQuote } from '@/hooks/useDealer';
+import { retryDealer, useDealer, useDealerQuote } from '@/hooks/useDealer';
+import { dealerPayHold, dealerPricingUncertain } from '@/lib/dealerState';
 import { DealerAppliedNotice, DealerLinePrice, DealerNudge, DealerPricingErrorNotice } from '@/components/checkout/DealerCheckoutNotices';
 import { SmartImage } from "@/components/ui/smart-image";
 import { formatINR, plural } from '@/lib/format';
@@ -198,14 +199,6 @@ const PaymentMethodCard = ({
     </label>
   </fieldset>
 );
-
-/**
- * Why payment waits on the dealer state, or null. While it loads, a dealer who
- * could pay would send regular prices and be refused; if an approved dealer's
- * prices cannot be read, the same would happen on every try.
- */
-const dealerPayHold = (d: { ready: boolean; pricingError: boolean }) =>
-  !d.ready ? 'Checking your prices…' : d.pricingError ? 'Dealer prices unavailable' : null;
 
 /** Stands in for the slider or the Pay button while payment is held (busy while prices load). */
 const PayHeldButton = ({ label, busy, className }: { label: string; busy: boolean; className: string }) => (
@@ -1056,8 +1049,12 @@ const MobileCheckout = () => {
   // gets the cart's own subtotal, untouched. Dealer prices take no coupon,
   // points or cashback.
   const dealer = useDealer();
-  const payHold = dealerPayHold(dealer);
   const dealerCart = useDealerQuote(items);
+  // Payment waits while the dealer state loads, and when it could not be read
+  // for a cart a dealer could be priced differently on (from the dealer
+  // minimum up: below it the server charges regular prices to everyone).
+  const dealerUncertain = dealerPricingUncertain(dealer, dealerCart.quote.regularSubtotal);
+  const payHold = dealerPayHold(dealer, dealerCart.quote.regularSubtotal);
   const dealerApplies = dealerCart.quote.applies;
   // An approved dealer under the minimum sees the nudge; it has its own "Add more items" link.
   const showDealerNudge = !dealerApplies && dealerCart.active && dealerCart.quote.shortBy > 0;
@@ -1587,10 +1584,10 @@ const MobileCheckout = () => {
               </AnimatePresence>
             </ul>
 
-            {/* An approved dealer's prices could not be read: payment is held until they load */}
-            {dealer.pricingError && (
+            {/* The dealer prices could not be confirmed for this cart: payment is held until they load */}
+            {dealerUncertain && (
               <div className="mx-4 mb-4">
-                <DealerPricingErrorNotice onRetry={retryDealerPricing} />
+                <DealerPricingErrorNotice onRetry={retryDealer} />
               </div>
             )}
 
@@ -1802,9 +1799,9 @@ const MobileCheckout = () => {
           )}
         </div>
 
-        {dealer.pricingError && (
+        {dealerUncertain && (
           <div className="mx-4 mt-3">
-            <DealerPricingErrorNotice onRetry={retryDealerPricing} />
+            <DealerPricingErrorNotice onRetry={retryDealer} />
           </div>
         )}
 
@@ -2295,8 +2292,12 @@ const Checkout = () => {
   // gets the cart's own subtotal, untouched. Dealer prices take no coupon,
   // points or cashback.
   const dealer = useDealer();
-  const payHold = dealerPayHold(dealer);
   const dealerCart = useDealerQuote(items);
+  // Payment waits while the dealer state loads, and when it could not be read
+  // for a cart a dealer could be priced differently on (from the dealer
+  // minimum up: below it the server charges regular prices to everyone).
+  const dealerUncertain = dealerPricingUncertain(dealer, dealerCart.quote.regularSubtotal);
+  const payHold = dealerPayHold(dealer, dealerCart.quote.regularSubtotal);
   const dealerApplies = dealerCart.quote.applies;
   const pricedSubtotal = dealerApplies ? dealerCart.quote.subtotal : subtotal;
   const pricing = useCheckoutPricing(pricedSubtotal, items.length === 0, selectedPaymentMethod, {
@@ -2962,8 +2963,8 @@ const Checkout = () => {
 
           {/* Right Column - Coupons & Price Details */}
           <div className="space-y-6">
-            {/* An approved dealer's prices could not be read: payment is held until they load */}
-            {dealer.pricingError && <DealerPricingErrorNotice onRetry={retryDealerPricing} />}
+            {/* The dealer prices could not be confirmed for this cart: payment is held until they load */}
+            {dealerUncertain && <DealerPricingErrorNotice onRetry={retryDealer} />}
 
             {/* Dealer prices: how far off they are, or that they apply */}
             {dealerApplies ? (

@@ -140,9 +140,10 @@ interface DealerPricingErrorNoticeProps {
 }
 
 /**
- * An approved dealer whose prices could not be read. Payment is held while this
- * shows: the server still prices them as a dealer, so a page that cannot see
- * the prices must not send regular ones.
+ * The dealer state (the programme, the customer's application or the dealer
+ * prices) could not be confirmed for a cart worth the dealer minimum. Payment
+ * is held while this shows: the server may price it as a dealer order, so a
+ * page that cannot tell must not send regular prices.
  */
 export const DealerPricingErrorNotice = ({ onRetry, className }: DealerPricingErrorNoticeProps) => (
   <Notice
@@ -154,7 +155,7 @@ export const DealerPricingErrorNotice = ({ onRetry, className }: DealerPricingEr
       </button>
     }
   >
-    We couldn't load your dealer prices. Check your connection and try again.
+    We couldn't confirm your dealer prices. Check your connection and try again.
   </Notice>
 );
 
