@@ -35,6 +35,7 @@ export function useLoyaltyStatus(uid: string | null | undefined) {
     }
     let live = true;
     setLoading(true);
+    setSpend(0);
     setError(null);
     Promise.all([
       getDocs(query(collection(db, 'payments'), where('uid', '==', uid))),

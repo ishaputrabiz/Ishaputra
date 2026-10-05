@@ -22,7 +22,7 @@ import {
   type DealerPricing,
   type DealerSettings,
 } from '@/lib/dealer';
-import type { DealerApplicationInput } from '@/lib/dealerForm';
+import { cleanDealerApplication, type DealerApplicationInput } from '@/lib/dealerForm';
 
 /*
  * Dealer Membership data. dealers/<uid> holds one application per customer;
@@ -72,12 +72,12 @@ const settingsRef = doc(db, 'siteSettings', 'dealer');
 const pricingRef = doc(db, 'dealerPricing', 'current');
 
 export function subscribeOwnDealer(uid: string, onNext: (r: DealerRecord | null) => void, onError: (e: Error) => void) {
-  return onSnapshot(dealerRef(uid), (s) => onNext(s.exists() ? toRecord(s.id, s.data()) : null), onError);
+  return onSnapshot(dealerRef(uid), (s) => onNext(s.exists() ? toRecord(s.id, s.data({ serverTimestamps: 'estimate' })) : null), onError);
 }
 
 /** A new application, or a fresh one after a rejection (the rules allow exactly these writes). */
 export async function applyAsDealer(uid: string, input: DealerApplicationInput, reapply: boolean) {
-  const fields = { ...input, status: 'pending', appliedAt: serverTimestamp(), updatedAt: serverTimestamp() };
+  const fields = { ...cleanDealerApplication(input), status: 'pending', appliedAt: serverTimestamp(), updatedAt: serverTimestamp() };
   if (reapply) await updateDoc(dealerRef(uid), fields);
   else await setDoc(dealerRef(uid), { uid, ...fields });
 }
@@ -125,6 +125,7 @@ export async function getProductDealerPrice(productId: string): Promise<{ price:
 
 /** Set or clear (null) one product's fixed dealer price. */
 export async function setProductDealerPrice(productId: string, price: number | null) {
+  if (price !== null && !(Number.isFinite(price) && price > 0)) throw new Error('Dealer price must be a number above 0');
   await setDoc(
     pricingRef,
     { productPrices: { [productId]: price === null ? deleteField() : Math.round(price * 100) / 100 }, updatedAt: serverTimestamp() },
@@ -135,7 +136,7 @@ export async function setProductDealerPrice(productId: string, price: number | n
 export function subscribeDealerApplications(onNext: (rows: DealerRecord[]) => void, onError: (e: Error) => void) {
   return onSnapshot(
     collection(db, 'dealers'),
-    (snap) => onNext(snap.docs.map((d) => toRecord(d.id, d.data())).sort((a, b) => b.appliedAtMs - a.appliedAtMs)),
+    (snap) => onNext(snap.docs.map((d) => toRecord(d.id, d.data({ serverTimestamps: 'estimate' }))).sort((a, b) => b.appliedAtMs - a.appliedAtMs)),
     onError,
   );
 }
@@ -146,7 +147,7 @@ export function subscribePendingDealerCount(onNext: (n: number) => void, onError
 
 export async function getDealerRecord(uid: string): Promise<DealerRecord | null> {
   const s = await getDoc(dealerRef(uid));
-  return s.exists() ? toRecord(s.id, s.data()) : null;
+  return s.exists() ? toRecord(s.id, s.data({ serverTimestamps: 'estimate' })) : null;
 }
 
 const NEXT: Record<'approve' | 'reject' | 'suspend' | 'reinstate', DealerStatus> = {

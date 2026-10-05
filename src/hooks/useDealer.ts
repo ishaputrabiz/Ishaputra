@@ -44,6 +44,10 @@ const EMPTY: DealerState = {
   showEntry: false,
 };
 
+// Returned for the render between a uid change and its effect starting the
+// listeners, so one customer's record or prices never show for another.
+const LOADING: DealerState = { ...EMPTY, ready: false, signedIn: true };
+
 let currentUid: string | null = null;
 let stops: Array<() => void> = [];
 let stopPricing: (() => void) | null = null;
@@ -150,7 +154,10 @@ export function useDealer(): DealerState {
   const { user } = useAuth();
   const uid = user?.uid ?? null;
   useEffect(() => watch(uid), [uid]);
-  return useSyncExternalStore(subscribe, () => state, () => EMPTY);
+  const snap = useSyncExternalStore(subscribe, () => state, () => EMPTY);
+  if (uid && currentUid !== uid) return LOADING;
+  if (!uid) return EMPTY;
+  return snap;
 }
 
 /** This product's dealer unit price for an active dealer, or null (regular price shown). */
