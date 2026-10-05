@@ -74,6 +74,7 @@ const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminImagePrompts = lazy(() => import("./pages/admin/AdminImagePrompts"));
 const AdminCustomers = lazy(() => import("./pages/admin/AdminCustomers"));
 const AdminCustomerDetails = lazy(() => import("./pages/admin/AdminCustomerDetails"));
+const AdminDealers = lazy(() => import("./pages/admin/AdminDealers"));
 const AdminSiteSettings = lazy(() => import("./pages/admin/AdminSiteSettings"));
 const AdminSilverRate = lazy(() => import("./pages/admin/AdminSilverRate"));
 const AdminCommerceSettings = lazy(() => import("./pages/admin/AdminCommerceSettings"));
@@ -361,6 +362,7 @@ const App = () => {
                 <Route path="settings" element={<AdminSettings />} />
                 <Route path="customers" element={<AdminCustomers />} />
                 <Route path="customers/:customerId" element={<AdminCustomerDetails />} />
+                <Route path="dealers" element={<AdminDealers />} />
                 <Route path="newsletter" element={<AdminNewsletterSubscriptions />} />
                 <Route path="storage" element={<AdminStorage />} />
               </Route>

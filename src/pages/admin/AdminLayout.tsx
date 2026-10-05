@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePageMeta } from '@/hooks/usePageMeta';
 import { useToast } from '@/hooks/use-toast';
 import { onCatalogPublishFailure } from '@/services/catalogPublisher';
+import { subscribePendingDealerCount } from '@/services/dealerService';
 import { DELIVERY_PARTNERS_ENABLED, SILVER_PRICING_ENABLED } from '@/config/features';
 import {
   LayoutDashboard,
@@ -56,7 +57,7 @@ import {
 const lightModeLogo = "/black_logo.png";
 const darkModeLogo = "/white_logo.png";
 
-type NavItem = { path: string; icon: LucideIcon; label: string };
+type NavItem = { path: string; icon: LucideIcon; label: string; /** Applications waiting, shown as a badge when above 0. */ count?: number };
 
 /** One look for every sidebar row: links, the Content & Media toggle and Logout. */
 const NAV_ROW =
@@ -69,6 +70,7 @@ const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [contentMediaOpen, setContentMediaOpen] = React.useState(false);
   const [headerQuery, setHeaderQuery] = React.useState('');
+  const [pendingDealers, setPendingDealers] = React.useState(0);
   const { userProfile, logout } = useAuth();
   const { resolvedTheme } = useTheme();
   const navigate = useNavigate();
@@ -89,6 +91,14 @@ const AdminLayout = () => {
         toast({ title: 'Storefront not updated', description: message, variant: 'destructive' }),
       ),
     [toast],
+  );
+
+  // Dealer applications waiting for review: one listener for the whole admin area.
+  // On an error the badge simply stays hidden; the Dealers page reports the problem itself.
+  React.useEffect(
+    () =>
+      subscribePendingDealerCount(setPendingDealers, () => setPendingDealers(0)),
+    [],
   );
 
   // The drawer only exists below lg; close it if the window grows past that.
@@ -132,6 +142,7 @@ const AdminLayout = () => {
       ? [{ path: '/admin/delivery-boys', icon: Truck, label: 'Delivery boys' }]
       : []),
     { path: '/admin/customers', icon: Users2, label: 'Customers' },
+    { path: '/admin/dealers', icon: Store, label: 'Dealers', count: pendingDealers },
     { path: '/admin/coupons', icon: Ticket, label: 'Coupons' },
     { path: '/admin/gift-cards', icon: Gift, label: 'Gift cards' },
     { path: '/admin/video-calls', icon: Video, label: 'Video calls' },
@@ -201,6 +212,13 @@ const AdminLayout = () => {
               <NavLink to={item.path} onClick={() => setSidebarOpen(false)} className={navLinkClass}>
                 <item.icon aria-hidden="true" className="size-4 shrink-0" />
                 <span className="truncate">{item.label}</span>
+                {item.count ? (
+                  <span className="ml-auto rounded-chip bg-status-warning-bg px-1.5 text-xs font-semibold tabular-nums text-status-warning-fg">
+                    <span className="sr-only">, </span>
+                    {item.count}
+                    <span className="sr-only"> pending</span>
+                  </span>
+                ) : null}
               </NavLink>
             </li>
           ))}
