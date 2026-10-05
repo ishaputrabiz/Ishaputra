@@ -62,6 +62,9 @@ export const BRAND = {
     { label: 'Above ₹2,000', min: 2000, max: Infinity },
   ],
 
+  /** Prefix of the loyalty card's member number ("IB 2005 5564 1996"). */
+  memberPrefix: 'IB',
+
   /**
    * Loyalty tiers on /wallet, reached by total spent on delivered orders (rupees).
    * TODO(client): names and thresholds. DUMMY values sized to this catalogue;
