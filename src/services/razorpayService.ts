@@ -12,6 +12,7 @@
  */
 
 import { auth } from '@/config/firebase';
+import { dealerPricingChangeMessage } from '@/lib/dealerOrderError';
 import { releaseRewardHolds } from '@/services/rewardsService';
 
 const CHECKOUT_SCRIPT_SRC = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -241,19 +242,11 @@ async function createOrder(options: RazorpayCheckoutOptions): Promise<CreateOrde
   if (res.status === 409 && data.code === 'rewards_changed') {
     throw new RewardsChangedError(data.error || 'Your points or cashback balance just changed.');
   }
-  if (
-    (res.status === 409 && data.code === 'dealer_pricing_changed') ||
-    (res.status === 400 && data.code === 'dealer_no_extras') ||
-    (res.status === 503 && data.code === 'dealer_unavailable')
-  ) {
-    throw new DealerPricingChangedError(data.error || 'Your dealer prices changed. Check the new total and pay again.');
-  }
-  // A dealer-priced total the server will not match (the dealer discount was
-  // edited between this page's price and the payment): re-price instead of
-  // failing hard. Retail orders keep the generic error below.
-  if (options.pricing === 'dealer' && res.status === 400 && /order total mismatch/i.test(data.error || '')) {
-    throw new DealerPricingChangedError('Your dealer prices changed. Check the new total and pay again.');
-  }
+  // Dealer pricing the server did not expect (including a dealer-priced total it
+  // will not match): nothing was charged, checkout re-prices. A retail mismatch
+  // keeps the generic error below.
+  const dealerChange = dealerPricingChangeMessage(res.status, data, options.pricing);
+  if (dealerChange) throw new DealerPricingChangedError(dealerChange);
   if (!res.ok || !data.order_id) {
     const detail =
       data.error ||

@@ -548,12 +548,14 @@ export function dealerCheck(
  * Read with the Admin SDK: dealers/<uid> and dealerPricing/current are not
  * public. Throws when they cannot be read.
  */
-async function loadDealer(
+export async function loadDealer(
   uid: string | null,
   settings: DealerSettings,
+  // Tests pass an in-memory database; the handler leaves it out.
+  injectedDb?: Pick<firestore.Firestore, 'collection'>,
 ): Promise<{ approved: boolean; pricing: DealerPricing | null }> {
   if (!uid || !settings.enabled) return { approved: false, pricing: null };
-  const { db } = await adminSdk();
+  const db = injectedDb ?? (await adminSdk()).db;
   const dealer = await withTimeout(db.collection('dealers').doc(uid).get(), ADMIN_TIMEOUT_MS, 'Dealer check');
   if (dealer.data()?.status !== 'approved') return { approved: false, pricing: null };
   const pricing = await withTimeout(db.collection('dealerPricing').doc('current').get(), ADMIN_TIMEOUT_MS, 'Dealer prices');
