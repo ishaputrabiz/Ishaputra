@@ -4,6 +4,7 @@ import { Check, Copy, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { couponHeadline, couponTerms, couponTermsShort, type Coupon } from '@/services/couponService';
 import { toSlug } from '@/services/categoryService';
+import { useDealer } from '@/hooks/useDealer';
 import { copyOfferCode, useBannerCoupons } from './useBannerCoupons';
 
 /**
@@ -42,6 +43,7 @@ const readDismissed = () => {
 const OfferRibbon = () => {
   const { pathname } = useLocation();
   const offers = useBannerCoupons();
+  const dealer = useDealer();
   const reduceMotion = useReducedMotion();
 
   const [index, setIndex] = useState(0);
@@ -65,6 +67,8 @@ const OfferRibbon = () => {
   }, [index, offers.length]);
 
   if (HIDDEN_ON.some((p) => pathname.startsWith(p))) return null;
+  // Dealer-priced orders take no coupons, so an active dealer is not shown any.
+  if (dealer.active) return null;
   if (offers.length === 0 || dismissed === signature) return null;
 
   const offer: Coupon = offers[Math.min(index, offers.length - 1)];

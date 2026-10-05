@@ -29,7 +29,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = (req.body && typeof req.body === 'object' ? req.body : {}) as { otpRef?: string; otp?: string };
   const otpRef = String(body.otpRef || '');
   const otp = String(body.otp || '').trim();
-  if (!otpRef || !/^\d{4,8}$/.test(otp)) {
+  // otpRef is whatsappOtps/<phone>_<time>: one path segment, so no slash or dot segment.
+  if (!/^[\w+-]{1,128}$/.test(otpRef) || !/^\d{4,8}$/.test(otp)) {
     return res.status(400).json({ ok: false, error: 'Invalid input' });
   }
 

@@ -170,3 +170,40 @@ Prices and stats use `tabular-nums` (`price-now` and `chip-off` already do).
 ## 12. Theme
 
 Light / Dark / System (default System for new visitors). `index.html` applies the saved theme before first paint (`ishaputra-theme` in localStorage) and sets `color-scheme`; `ThemeContext` keeps the `dark`/`light` class, `color-scheme` and the `theme-color` metas in sync, and switches all transitions off for one frame during a swap so the page snaps instead of smearing. `useTheme()` gives `{ theme, setTheme, resolvedTheme }`. Every colour needs a light and a dark value; use tokens, not `dark:` overrides.
+
+## 13. Dealer Membership and Loyalty card
+
+New UI here follows the Scratch & Win pattern: a pure `...View` (props only, no Firestore, so every state can be checked with fixture data) plus a thin container or hook that reads the data. Rules live in `src/lib/dealer.ts` (dealer-core, copied into `api/create-order.ts`) and `src/lib/rewards.ts`; the browser only displays what the server will charge.
+
+**Loyalty card** (`src/components/loyalty/MemberCard.tsx`):
+- `MemberCardView({ name, memberNumber, memberSince?, tierIndex, tiers, points, pointsWorth, dealer? })`: the charcoal member card (tier metal edge from `tierStyle(index)`, wordmark, tier chip and a Dealer chip, member number with a Copy IconButton, name, member since, points and their worth, the tier's multiplier line). `points` is `null` when the balance could not load (never shown as 0).
+- `TierChip({ index, name, multiplier?, onPaper? })`: the tier's chip, on charcoal by default, `onPaper` on paper (metal disc). Tier looks are keyed by position 0 to 3 (steel, gold, platinum, copper) because admins can rename tiers. Screen readers also hear that it is a member tier and its multiplier.
+- `TierSteps({ spend, tierIndex, tiers })`: the progress bar and the four steps with thresholds and multipliers. The bar fills gap by gap (equal spacing), not by spend divided by the top threshold.
+- `LoyaltyStatusPanelView` and its container `LoyaltyStatusPanel({ uid, name, createdAt })` make the `/wallet` status panel. The account page card uses `TierChip` and the member number too.
+- `useLoyaltyStatus(uid)` (`src/hooks/useLoyaltyStatus.ts`) returns `{ loading, error, spend, tierIndex, tiers, settings, retry }`: tier spend worked out like the server (`tierSpend` in rewards-core: rupees paid online, from the server-written `payments`, on orders now delivered, not dealer-priced). Used by `/wallet`, the account page and the admin customer page.
+- Member numbers: `formatMemberNumber(memberDigits(uid), BRAND.memberPrefix)` from `src/lib/loyaltyCard.ts` ("IB 4821 7730 1956"). Nothing is stored.
+
+**Dealer state** (`src/hooks/useDealer.ts`; one set of listeners shared by the whole session, guests read nothing, any read error means regular prices):
+- `useDealer()` returns `{ ready, signedIn, settings, record, pricing, active, showEntry }`. `active` is true only for an approved dealer while the programme is on and the private prices have loaded. `showEntry` shows the "Dealer programme" menu item (programme on, or the customer has an application).
+- `useDealerUnit(productId, regularPrice)` returns `{ unit, percentOff }` for an active dealer, or `null` (show the regular price). Every product surface calls it and swaps its price row when it returns a price.
+- `useDealerQuote(items)` returns `{ active, quote, pricing: 'dealer' | 'retail', potentialSavings, minOrder, discountPercent }`; `quote` is the same `dealerQuote` the server runs (`applies`, `regularSubtotal`, `subtotal`, `savings`, `shortBy`, `units[]`). The cart and checkout send `pricing` to `create-order`, which answers 409 `dealer_pricing_changed` or 503 `dealer_unavailable` when they disagree.
+
+**Dealer prices on product surfaces** (`src/components/dealer/DealerPrice.tsx`):
+- `DealerPriceInline({ unit, regular, percentOff, size?, tone?, stacked?, reserveChipLine? })`: price, struck regular price and a "Dealer −N%" chip (hidden when the saving rounds to 0). `size` `sm | md | lg | xl`; `tone="dark"` for charcoal or photo scrims; `stacked` puts the chip on its own line (`reserveChipLine` keeps that line so cards in a row share a baseline).
+- `DealerPriceBlock({ unit, regular, percentOff, minOrder })`: the product page's block ("Dealer price" eyebrow, big price, struck regular price, chip, and the "applies on orders of ₹X or more at regular prices" line).
+
+**Cart and checkout** (`src/components/checkout/DealerCheckoutNotices.tsx`):
+- `DealerNudge({ regularSubtotal, minOrder, shortBy, potentialSavings, compact?, className? })`: below the minimum, a progress bar with "Add ₹X more to unlock dealer prices" and what the items would save. `compact` is one line for the cart drawer.
+- `DealerAppliedNotice({ regularSubtotal, savings, compact?, className? })`: the "Dealer prices applied" notice. It sits with the disabled coupon field ("Coupons, points and cashback don't apply to dealer-priced orders"); the rewards card is hidden.
+- `DealerLinePrice({ unit, regular, layout? })`: one cart line's price, `layout` `stacked | inline | each`. A line with no saving shows its plain price.
+
+**The /dealer page** (`src/components/dealer/DealerViews.tsx`, container `src/pages/DealerProgramme.tsx`): `DealerPageView` picks one of `DealerApplyForm`, `DealerPendingPanel`, `DealerAccountCard` with `DealerTerms`, `DealerRejectedNotice` (Apply again, details prefilled) or the paused state, under `DealerBand` and `HowItWorks`. Form rules are pure in `src/lib/dealerForm.ts`; the states list is the shared Indian states file `src/lib/indianStates.ts`.
+
+**Admin** (`src/components/admin/`):
+- `DealerApplicationSheet`: Admin > Dealers sheet (pure view): the full application, customer account link, a note to the applicant, and Approve, Reject, Suspend or Reinstate (`DealerAction`). Suspend asks for confirmation. `src/pages/admin/AdminDealers.tsx` owns the list, filter, search and the writes.
+- `DealerSettingsTab`: Commerce settings > Dealers (status chip, switch, dealer discount %, "Dealer prices from" ₹, an example line, counts, the "How dealer prices work" notice). It loads before it is editable, shows a danger Notice with Retry on a failed read, and saves both documents in one batch.
+- `LoyaltyTiersSection({ tiers, onChange, pointsPer100 })`: four editable tier rows (name, spend from, multiplier, points on a sample order) inside the Rewards tab, saved with it. Rules in `src/lib/loyaltyTiersForm.ts`.
+- `DealerPriceField` (`DealerPriceFieldView`): the optional "Dealer price (₹)" under Price on the product form, with the store-wide price as the hint. Rules in `src/lib/dealerPriceForm.ts`.
+- `CustomerMembership` (`CustomerMembershipView({ memberNumber, onCopy, loyalty, dealer, onRetry })`) with its container hook `useCustomerMembership(customerId)`: the member number, tier chip and progress, and the dealer record, on the admin customer page.
+- `DealerOrderRows`: `DealerOrderChip` ("Dealer order") beside the payment status and `DealerOrderTotalsRows` ("Items at regular prices", "Dealer prices −₹X") in the order totals.
+- Commerce settings tabs open from a link: `/admin/commerce-settings?tab=delivery|support|rewards|scratch|dealers` (anything else opens Delivery and GST).

@@ -269,7 +269,11 @@ export const generateInvoicePDF = async (order: Order): Promise<void> => {
   sellerLines.forEach((line, idx) => doc.text(line, sellerX, y + 5 + idx * 4));
 
   const ship = order.shippingAddress;
+  // A dealer-priced order is billed to the business: its name leads the block
+  // and its GSTIN (when it gave one) closes it. Every other order is unchanged.
+  const dealerBuyer = order.pricing === 'dealer' && order.buyerBusiness?.name ? order.buyerBusiness : null;
   const buyerLines = [
+    ...(dealerBuyer ? [dealerBuyer.name] : []),
     ship?.fullName || order.userName || '',
     ship?.address || '',
     ship?.locality ? `${ship.locality}` : '',
@@ -277,6 +281,7 @@ export const generateInvoicePDF = async (order: Order): Promise<void> => {
     `PIN: ${ship?.pincode || ''}`,
     `Phone: ${ship?.mobile || ''}`,
     `Place of Supply: ${ship?.state || ''}`,
+    ...(dealerBuyer?.gstin ? [`GSTIN: ${dealerBuyer.gstin}`] : []),
   ].filter(Boolean);
   buyerLines.forEach((line, idx) => doc.text(line, buyerX, y + 5 + idx * 4));
 

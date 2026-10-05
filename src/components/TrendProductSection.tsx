@@ -13,7 +13,9 @@ import { IconButton } from "@/components/ui/icon-button";
 import { ProductRowSkeleton } from "@/components/skeletons";
 import ProductCard from "@/components/ProductCard";
 import { WishlistToggle } from "@/components/WishlistToggle";
+import { DealerPriceInline } from "@/components/dealer/DealerPrice";
 import Reveal from "@/components/Reveal";
+import { useDealerUnit } from "@/hooks/useDealer";
 import { formatINR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { subscribeToActiveProductsByFlag } from '@/services/productCache';
@@ -23,6 +25,34 @@ const INERT = { inert: "" } as Record<string, string>;
 const TRENDING_LINK = "/products?tag=trending";
 /** Bento: 0 = big (2x2), 1 = top-right wide (2x1), 2 and 3 = bottom-right (1x1 each). */
 const TILE_LAYOUT = ["col-span-2 row-span-2", "col-span-2 row-span-1", "col-span-1 row-span-1", "col-span-1 row-span-1"];
+
+/** A mosaic tile's price on its photo: an approved dealer's price while the programme is on, otherwise the usual row. */
+const TilePrice = ({ product, isBig }: { product: UIProduct; isBig: boolean }) => {
+  const dealer = useDealerUnit(product.id, product.price);
+  if (dealer) {
+    return (
+      <DealerPriceInline
+        unit={dealer.unit}
+        regular={product.price}
+        percentOff={dealer.percentOff}
+        size={isBig ? "lg" : "sm"}
+        tone="dark"
+        className="on-photo"
+      />
+    );
+  }
+  return (
+    <p className="on-photo flex min-w-0 flex-wrap items-baseline gap-x-2">
+      <span className={cn("font-bold tabular-nums", isBig ? "text-lg" : "text-sm")}>{formatINR(product.price)}</span>
+      {product.oldPrice && product.oldPrice > product.price && (
+        <span className="text-xs tabular-nums text-charcoal-foreground/75 line-through">
+          <span className="sr-only">Was </span>
+          {formatINR(product.oldPrice)}
+        </span>
+      )}
+    </p>
+  );
+};
 
 const Heading = () => (
   <h2 className="text-xl font-semibold text-foreground [text-wrap:balance] md:text-3xl lg:text-4xl" style={HEADING_FONT}>
@@ -237,15 +267,7 @@ const TrendProductSection = () => {
                       </Link>
                     </h3>
                     <div className="flex items-center justify-between gap-2">
-                      <p className="on-photo flex min-w-0 flex-wrap items-baseline gap-x-2">
-                        <span className={cn("font-bold tabular-nums", isBig ? "text-lg" : "text-sm")}>{formatINR(product.price)}</span>
-                        {product.oldPrice && product.oldPrice > product.price && (
-                          <span className="text-xs tabular-nums text-charcoal-foreground/75 line-through">
-                            <span className="sr-only">Was </span>
-                            {formatINR(product.oldPrice)}
-                          </span>
-                        )}
-                      </p>
+                      <TilePrice product={product} isBig={isBig} />
                       <IconButton
                         label={`Add ${product.title} to cart`}
                         variant="onPhoto"

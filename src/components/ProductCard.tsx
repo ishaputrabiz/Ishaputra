@@ -9,6 +9,8 @@ import { useSilverRate, computeSilverOriginalPrice } from "@/contexts/SilverRate
 import { SmartImage } from "@/components/ui/smart-image";
 import { IconButton } from "@/components/ui/icon-button";
 import { WishlistToggle } from "@/components/WishlistToggle";
+import { DealerPriceInline } from "@/components/dealer/DealerPrice";
+import { useDealerUnit } from "@/hooks/useDealer";
 import { formatINR } from "@/lib/format";
 import { EASE_OUT, staggerDelay } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -79,6 +81,8 @@ const ProductCard = ({ product, index = 0, size = "grid", showEmptyRating = true
     : product.price;
   const displayDiscount = !sp?.enabled && (product.discount ?? 0) > 0 ? (product.discount ?? 0) : null;
   const displayOldPrice = !sp?.enabled && (product.oldPrice ?? 0) > displayPrice ? (product.oldPrice as number) : null;
+  // An approved dealer's unit price, or null (guests, non-dealers, programme off): today's price row then renders.
+  const dealer = useDealerUnit(product.id, displayPrice);
 
   const reviews = product.reviews ?? 0;
   const showRating = !isRow && (reviews > 0 || showEmptyRating);
@@ -210,7 +214,15 @@ const ProductCard = ({ product, index = 0, size = "grid", showEmptyRating = true
 
           {/* Price (+ round cart button on row cards) */}
           <div className={cn("flex gap-2", isRow ? "mt-auto items-end justify-between pt-1" : "items-center pb-2.5 pt-0.5 lg:pb-3 lg:pt-1")}>
-            {isRow ? (
+            {dealer ? (
+              <DealerPriceInline
+                unit={dealer.unit}
+                regular={displayPrice}
+                percentOff={dealer.percentOff}
+                stacked={isRow}
+                reserveChipLine
+              />
+            ) : isRow ? (
               /* Row cards sit side by side: price on one fixed line and the chip on its
                  own reserved line, so every price in a row shares one baseline. */
               <p className="flex min-w-0 flex-col gap-1">

@@ -11,6 +11,14 @@
 type RewardCurrency = 'points' | 'cashback';
 type RewardKind = 'earn' | 'spend' | 'refund' | 'adjust';
 
+interface LoyaltyTier {
+  name: string;
+  /** Rupees paid online on delivered orders from which the tier starts. */
+  minSpend: number;
+  /** Points multiplier for orders delivered while the customer is in this tier. */
+  multiplier: number;
+}
+
 interface RewardSettings {
   enabled: boolean;
   /** Points earned per ₹100 paid for products. */
@@ -21,7 +29,17 @@ interface RewardSettings {
   unlockDays: number;
   /** Share of the product amount (after coupon) that points may cover, in percent. */
   maxPointsPercent: number;
+  /** Exactly 4, sorted by minSpend; the first starts at ₹0. */
+  tiers: LoyaltyTier[];
 }
+
+// TODO(client): tier names, thresholds and multipliers.
+const DEFAULT_TIERS: LoyaltyTier[] = [
+  { name: 'Silver', minSpend: 0, multiplier: 1 },
+  { name: 'Gold', minSpend: 5000, multiplier: 1.25 },
+  { name: 'Platinum', minSpend: 15000, multiplier: 1.5 },
+  { name: 'Premium', minSpend: 30000, multiplier: 2 },
+];
 
 // TODO(client): placeholders until Ishaputra confirms its rules.
 const DEFAULT_REWARD_SETTINGS: RewardSettings = {
@@ -30,6 +48,7 @@ const DEFAULT_REWARD_SETTINGS: RewardSettings = {
   pointValue: 1,
   unlockDays: 7,
   maxPointsPercent: 20,
+  tiers: DEFAULT_TIERS,
 };
 
 interface LedgerLike {
@@ -48,6 +67,22 @@ interface RewardBalances {
   cashback: { available: number; pending: number };
 }
 
+/** Four tiers: missing or bad values fall back to the defaults, the first starts at ₹0, sorted by minSpend. */
+function normaliseTiers(raw: unknown): LoyaltyTier[] {
+  const rows = Array.isArray(raw) ? raw : [];
+  const num = (v: unknown) => (typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN);
+  const tiers = DEFAULT_TIERS.map((d, i) => {
+    const r = (rows[i] && typeof rows[i] === 'object' ? rows[i] : {}) as Record<string, unknown>;
+    const name = typeof r.name === 'string' && r.name.trim() ? r.name.trim().slice(0, 24) : d.name;
+    const min = num(r.minSpend);
+    const minSpend = i === 0 ? 0 : Number.isFinite(min) ? Math.round(Math.min(10_000_000, Math.max(0, min))) : d.minSpend;
+    const m = num(r.multiplier);
+    const multiplier = Number.isFinite(m) ? Math.round(Math.min(5, Math.max(1, m)) * 100) / 100 : d.multiplier;
+    return { name, minSpend, multiplier };
+  });
+  return tiers.sort((a, b) => a.minSpend - b.minSpend);
+}
+
 function normaliseRewardSettings(raw: Partial<RewardSettings> | null | undefined): RewardSettings {
   const num = (v: unknown, fallback: number, min: number, max: number) => {
     const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
@@ -60,6 +95,7 @@ function normaliseRewardSettings(raw: Partial<RewardSettings> | null | undefined
     pointValue: num(raw?.pointValue, d.pointValue, 0, 100),
     unlockDays: num(raw?.unlockDays, d.unlockDays, 0, 365),
     maxPointsPercent: num(raw?.maxPointsPercent, d.maxPointsPercent, 0, 100),
+    tiers: normaliseTiers((raw as { tiers?: unknown } | null | undefined)?.tiers),
   };
 }
 
@@ -151,11 +187,45 @@ function earnBase(i: EarnBaseInput): number {
   return Math.floor(((paid * 100) / (100 + rate)) * 100 + 1e-6) / 100;
 }
 
-/** Points earned on a base from earnBase. */
-function pointsForBase(base: number, s: RewardSettings): number {
+/** Points earned on a base from earnBase, times the customer's tier multiplier (1 to 5, in hundredths). */
+function pointsForBase(base: number, s: RewardSettings, multiplier = 1): number {
   if (!s.enabled || !(base > 0)) return 0;
+  const hundredths = Math.round(Math.min(5, Math.max(1, Number(multiplier) || 1)) * 100);
   // Multiply before dividing, with a hair of tolerance: ₹820 at 15 per ₹100 is 123, not 122.
-  return Math.max(0, Math.floor((base * s.pointsPer100) / 100 + 1e-9));
+  return Math.max(0, Math.floor((base * s.pointsPer100 * hundredths) / 10_000 + 1e-9));
+}
+
+/** The customer's tier: the highest one whose minSpend they have reached. */
+function tierIndexForSpend(spend: number, tiers: LoyaltyTier[]): number {
+  let index = 0;
+  for (let i = 0; i < tiers.length; i++) if (spend >= tiers[i].minSpend) index = i;
+  return index;
+}
+
+interface TierSpendRow {
+  /** The Razorpay order id (payments/<id>, orders/<id>). */
+  id: string;
+  amountPaise: number;
+  /** A dealer-priced order (payments/<id>.dealer). */
+  dealer?: boolean;
+  /** orders/<id>.status now. */
+  orderStatus: string;
+}
+
+/**
+ * What tiers count: rupees paid online for delivered orders that were not
+ * dealer-priced, from the server's payment records (never order.total, which
+ * the browser writes). A returned or cancelled order drops out with its
+ * status. excludeId leaves out the order being earned on.
+ */
+function tierSpend(rows: TierSpendRow[], excludeId = ''): number {
+  let paise = 0;
+  for (const r of rows) {
+    if (r.id === excludeId || r.dealer === true || r.orderStatus !== 'delivered') continue;
+    const p = Number(r.amountPaise);
+    if (Number.isFinite(p) && p > 0) paise += Math.round(p);
+  }
+  return paise / 100;
 }
 
 /**
@@ -178,19 +248,24 @@ function cartKey(items: Array<{ productId?: string; quantity?: unknown }>): stri
 export type {
   RewardCurrency,
   RewardKind,
+  LoyaltyTier,
   RewardSettings,
   LedgerLike,
   RewardBalances,
   RedemptionInput,
   Redemption,
   EarnBaseInput,
+  TierSpendRow,
 };
 export {
+  DEFAULT_TIERS,
   DEFAULT_REWARD_SETTINGS,
   normaliseRewardSettings,
   summariseRewards,
   computeRedemption,
   earnBase,
   pointsForBase,
+  tierIndexForSpend,
+  tierSpend,
   cartKey,
 };

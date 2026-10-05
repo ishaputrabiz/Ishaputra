@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Users,
   Heart,
+  Store,
 } from 'lucide-react';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/config/firebase';
@@ -22,6 +23,9 @@ import { normalizeOrderStatus, type Order } from '@/services/orderService';
 import { UIProduct, adaptFirebaseToUI } from '@/lib/productAdapter';
 import { SmartImage } from "@/components/ui/smart-image";
 import { RewardsAdminPanel } from '@/components/admin/RewardsAdminPanel';
+import { CustomerMembershipView } from '@/components/admin/CustomerMembership';
+import { TierChip } from '@/components/loyalty/MemberCard';
+import { useCustomerMembership } from '@/hooks/useCustomerMembership';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { StatCard } from '@/components/admin/StatCard';
 import { IconButton } from '@/components/ui/icon-button';
@@ -38,6 +42,8 @@ interface CustomerOrder {
   total: number;
   items: any[];
   createdAt: any;
+  /** An approved dealer's order, charged dealer prices (the order's own `pricing` field). */
+  dealer: boolean;
   /** The fields the shared status map reads (COD, late return, return pickup). */
   statusContext: OrderStatusContext & { returnScheduledAt?: unknown };
 }
@@ -79,6 +85,7 @@ const AdminCustomerDetails = () => {
   const { customerId } = useParams();
   const [customer, setCustomer] = useState<CustomerDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const membership = useCustomerMembership(customerId);
 
   useEffect(() => {
     const loadCustomer = async () => {
@@ -120,6 +127,7 @@ const AdminCustomerDetails = () => {
               total: data.total || 0,
               items: data.items || [],
               createdAt: data.createdAt,
+              dealer: data.pricing === 'dealer',
               statusContext: {
                 paymentMethod: data.paymentMethod,
                 deliveredAt: data.deliveredAt,
@@ -225,7 +233,11 @@ const AdminCustomerDetails = () => {
               }
               title={customer.name || customer.username}
               className="pb-0"
-            />
+            >
+              {membership.tier && (
+                <TierChip index={membership.tier.index} name={membership.tier.name} multiplier={membership.tier.multiplier} onPaper />
+              )}
+            </AdminPageHeader>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
               <span className="inline-flex min-w-0 items-center gap-1.5">
                 <Mail aria-hidden="true" className="size-3.5 shrink-0" /><span className="truncate">{customer.email}</span>
@@ -241,6 +253,8 @@ const AdminCustomerDetails = () => {
             </div>
           </div>
         </div>
+
+        <CustomerMembershipView {...membership.view} />
       </div>
 
       <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
@@ -279,6 +293,7 @@ const AdminCustomerDetails = () => {
                           {order.orderNumber ? orderLabel(order.orderNumber) : `Order ${order.id.slice(0, 8).toUpperCase()}`}
                         </Link>
                         <StatusBadge tone={s.tone} label={s.label} icon={s.icon} />
+                        {order.dealer && <StatusBadge tone="neutral" icon={Store} label="Dealer prices" />}
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
                         {plural(order.items.length, 'item')} · {formatDate(order.createdAt)}

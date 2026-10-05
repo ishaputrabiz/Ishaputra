@@ -25,3 +25,11 @@ test('api copy of scratch-core matches src/lib/scratchWin.ts', () => {
     'api/notify-order.ts has drifted from src/lib/scratchWin.ts',
   );
 });
+
+test('api copy of dealer-core matches src/lib/dealer.ts', () => {
+  assert.equal(
+    marked('api/create-order.ts', 'dealer-core'),
+    marked('src/lib/dealer.ts', 'dealer-core'),
+    'api/create-order.ts has drifted from src/lib/dealer.ts',
+  );
+});

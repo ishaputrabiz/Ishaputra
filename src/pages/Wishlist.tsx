@@ -8,6 +8,8 @@ import MobileHeader from "@/components/MobileHeader";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileSearchBar from "@/components/MobileSearchBar";
 import { useWishlist } from "@/hooks/useWishlist";
+import { useDealerUnit } from "@/hooks/useDealer";
+import { DealerPriceInline } from "@/components/dealer/DealerPrice";
 import { getProduct } from "@/services/productService";
 import { UIProduct, adaptFirebaseToUI } from "@/lib/productAdapter";
 import { SmartImage } from "@/components/ui/smart-image";
@@ -20,6 +22,56 @@ import { DUR, EASE_OUT, staggerDelay } from "@/lib/motion";
 /** Percentage saved, only when the product really has a higher old price. */
 const percentOff = (p: UIProduct) =>
   p.oldPrice && p.oldPrice > p.price ? Math.round(((p.oldPrice - p.price) / p.oldPrice) * 100) : 0;
+
+/**
+ * The price row of a wishlist card. A component of its own so each card reads
+ * its own dealer price (a hook cannot run inside the parent's .map); without a
+ * dealer price it is exactly the usual row. "desktop" is the wide card, "mobile" the 2-up one.
+ */
+const WishlistPrice = ({ product, off, layout }: { product: UIProduct; off: number; layout: "desktop" | "mobile" }) => {
+  const dealer = useDealerUnit(product.id, product.price);
+  if (dealer) {
+    return (
+      <DealerPriceInline
+        unit={dealer.unit}
+        regular={product.price}
+        percentOff={dealer.percentOff}
+        size={layout === "desktop" ? "md" : "sm"}
+        className={layout === "mobile" ? "mb-2.5" : undefined}
+      />
+    );
+  }
+  if (layout === "desktop") {
+    return (
+      <p className="flex flex-wrap items-center gap-2">
+        <span className="price-now text-base">{formatINR(product.price)}</span>
+        {off > 0 && (
+          <>
+            <span className="price-was text-sm">
+              <span className="sr-only">Was </span>
+              {formatINR(product.oldPrice)}
+            </span>
+            <span className="chip-off">{off}% off</span>
+          </>
+        )}
+      </p>
+    );
+  }
+  return (
+    <p className="mb-2.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+      <span className="price-now text-sm">{formatINR(product.price)}</span>
+      {off > 0 && (
+        <>
+          <span className="price-was text-[11px]">
+            <span className="sr-only">Was </span>
+            {formatINR(product.oldPrice)}
+          </span>
+          <span className="chip-off">{off}% off</span>
+        </>
+      )}
+    </p>
+  );
+};
 
 const Breadcrumb = ({ onPhoto = false }: { onPhoto?: boolean }) => (
   <nav aria-label="Breadcrumb">
@@ -213,18 +265,7 @@ const Wishlist = () => {
                             </h2>
                           </div>
 
-                          <p className="flex flex-wrap items-center gap-2">
-                            <span className="price-now text-base">{formatINR(product.price)}</span>
-                            {off > 0 && (
-                              <>
-                                <span className="price-was text-sm">
-                                  <span className="sr-only">Was </span>
-                                  {formatINR(product.oldPrice)}
-                                </span>
-                                <span className="chip-off">{off}% off</span>
-                              </>
-                            )}
-                          </p>
+                          <WishlistPrice product={product} off={off} layout="desktop" />
 
                           <Link to={`/product/${product.id}`} className="btn-line mt-auto h-11 w-full text-foreground">
                             View product
@@ -311,18 +352,7 @@ const Wishlist = () => {
                             <Link to={`/product/${product.id}`}>{product.title}</Link>
                           </h2>
 
-                          <p className="mb-2.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
-                            <span className="price-now text-sm">{formatINR(product.price)}</span>
-                            {off > 0 && (
-                              <>
-                                <span className="price-was text-[11px]">
-                                  <span className="sr-only">Was </span>
-                                  {formatINR(product.oldPrice)}
-                                </span>
-                                <span className="chip-off">{off}% off</span>
-                              </>
-                            )}
-                          </p>
+                          <WishlistPrice product={product} off={off} layout="mobile" />
 
                           <Link to={`/product/${product.id}`} className="btn-copper mt-auto h-10 w-full !px-3 !text-[10px] !tracking-[0.16em]">
                             View product

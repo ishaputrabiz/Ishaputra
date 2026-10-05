@@ -66,6 +66,9 @@ import { SmartImage } from "@/components/ui/smart-image";
 import { describeError } from '@/lib/errorMessage';
 import { formatINR, plural } from '@/lib/format';
 import { SILVER_PRICING_ENABLED } from '@/config/features';
+import { DealerPriceFieldView, type DealerPriceLoad } from '@/components/admin/DealerPriceField';
+import { dealerPriceError, parseDealerPrice } from '@/lib/dealerPriceForm';
+import { getProductDealerPrice, setProductDealerPrice } from '@/services/dealerService';
 
 // YouTube helpers
 function extractYouTubeId(url: string): string | null {
@@ -273,6 +276,43 @@ const ProductForm = () => {
       delete next[field];
       return next;
     });
+
+  /**
+   * Dealer price: a fixed price for approved dealers, kept in
+   * dealerPricing/current (not on the product) and written after the product
+   * saves. A failed read disables only this field, and nothing is written for
+   * it, so a blank that was never loaded cannot clear the stored price.
+   */
+  const [dealerPrice, setDealerPrice] = useState('');
+  const [dealerLoad, setDealerLoad] = useState<DealerPriceLoad>('loading');
+  /** The store-wide dealer discount, in percent, for the hint under the field. */
+  const [dealerPercent, setDealerPercent] = useState<number | null>(null);
+  /** The price stored when the form opened ('' = none). Saving writes only a change to it. */
+  const loadedDealerPriceRef = useRef('');
+  /** The id of a product this form created, so a second Save updates it instead of making another. */
+  const createdIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    setDealerLoad('loading');
+    // A new product has no id yet: the empty id has no fixed price, and still returns the store-wide percent.
+    getProductDealerPrice(productId ?? '')
+      .then(({ price, discountPercent }) => {
+        if (!live) return;
+        const text = price === null ? '' : String(price);
+        loadedDealerPriceRef.current = text;
+        setDealerPrice(text);
+        setDealerPercent(discountPercent);
+        setDealerLoad('ready');
+      })
+      .catch((error: unknown) => {
+        console.error('Error fetching the dealer price:', error);
+        if (live) setDealerLoad('error');
+      });
+    return () => {
+      live = false;
+    };
+  }, [productId]);
 
   /**
    * Per-product delivery override.
@@ -640,6 +680,11 @@ const ProductForm = () => {
       errors.price = 'Enter a price greater than 0';
     }
 
+    if (dealerLoad === 'ready') {
+      const dealerError = dealerPriceError(dealerPrice, parseFloat(formData.price));
+      if (dealerError) errors.dealerPrice = dealerError;
+    }
+
     if (images.length === 0) errors.images = 'Add at least one product image';
     else if (images.length > MAX_PRODUCT_IMAGES) {
       errors.images = `A product can have at most ${MAX_PRODUCT_IMAGES} photos. Remove ${images.length - MAX_PRODUCT_IMAGES}`;
@@ -659,6 +704,7 @@ const ProductForm = () => {
     name: 'Product name',
     category: 'Category',
     price: 'Price',
+    dealerPrice: 'Dealer price',
     weightGrams: 'Silver weight',
     silverRate: 'Silver rate',
     images: 'Product images',
@@ -692,6 +738,8 @@ const ProductForm = () => {
     }
     setFieldErrors({});
 
+    // A product this form already created (its dealer price failed to save) is updated, not created again.
+    const existingId = productId ?? createdIdRef.current;
     setLoading(true);
     try {
       specifications.forEach((spec) => {
@@ -759,12 +807,35 @@ const ProductForm = () => {
         } : { enabled: false },
       } as any;
 
-      if (isEditing) {
-        await updateProduct(productId!, productData);
+      let savedId = existingId;
+      if (savedId) {
+        await updateProduct(savedId, productData);
       } else {
-        await createProduct(productData, user!.uid);
+        savedId = await createProduct(productData, user!.uid);
+        createdIdRef.current = savedId;
       }
-      if (hiddenForStock) {
+
+      // The dealer price is written once the product exists, and only when it
+      // changed. If this fails the product is still saved: say so, and stay.
+      let dealerPriceSaved = true;
+      const dealerValue = parseDealerPrice(dealerPrice);
+      if (dealerLoad === 'ready' && dealerValue !== parseDealerPrice(loadedDealerPriceRef.current)) {
+        try {
+          await setProductDealerPrice(savedId, dealerValue);
+          loadedDealerPriceRef.current = dealerPrice;
+        } catch (dealerError) {
+          console.error('Error saving the dealer price:', dealerError);
+          dealerPriceSaved = false;
+        }
+      }
+
+      if (!dealerPriceSaved) {
+        toast({
+          title: "Product saved, but the dealer price wasn't. Try saving again.",
+          description: hiddenForStock ? `${formData.name} has 0 in stock, so it is hidden from the store.` : formData.name,
+          variant: 'destructive',
+        });
+      } else if (hiddenForStock) {
         // Say so plainly - a product that "saved" but no longer shows on the
         // storefront otherwise looks like a failed save.
         toast({
@@ -773,18 +844,22 @@ const ProductForm = () => {
           variant: 'destructive',
         });
       } else {
-        toast({ title: isEditing ? 'Product saved' : 'Product created', description: formData.name });
+        toast({ title: existingId ? 'Product saved' : 'Product created', description: formData.name });
       }
-      savedRef.current = true;
+      // Staying on the form (dealer price failed): the saved photos are the new baseline, and
+      // photos uploaded from here on are still cleaned up if the form is left unsaved.
+      savedRef.current = dealerPriceSaved;
       const dropped = [...loadedImagesRef.current, ...sessionUploadsRef.current].filter((url) => !images.includes(url));
       if (dropped.length) void releaseProductImages(dropped);
-      navigate('/admin/products');
+      loadedImagesRef.current = images;
+      sessionUploadsRef.current = [];
+      if (dealerPriceSaved) navigate('/admin/products');
     } catch (error) {
       console.error('Error saving product:', error);
       // Show what actually went wrong. A bare "Failed to update product" left
       // no way to tell a permission problem from a bad field or a quota limit.
       toast({
-        title: isEditing ? 'Could not save the product' : 'Could not create the product',
+        title: existingId ? 'Could not save the product' : 'Could not create the product',
         description: describeError(error),
         variant: 'destructive',
       });
@@ -1387,6 +1462,20 @@ const ProductForm = () => {
                   </div>
                 </div>
               )}
+
+              <DealerPriceFieldView
+                value={dealerPrice}
+                onChange={(value) => { clearFieldError('dealerPrice'); setDealerPrice(value); }}
+                onBlur={() => {
+                  const message = dealerPriceError(dealerPrice, parseFloat(formData.price));
+                  if (message) setFieldErrors((prev) => ({ ...prev, dealerPrice: message }));
+                }}
+                regularPrice={parseFloat(formData.price) || 0}
+                storeWidePercent={dealerPercent}
+                load={dealerLoad}
+                // Once flagged (on leaving the field or on Save) the live message shows while it is still wrong.
+                error={fieldErrors.dealerPrice ? dealerPriceError(dealerPrice, parseFloat(formData.price)) : undefined}
+              />
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>

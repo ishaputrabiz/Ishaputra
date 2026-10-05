@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth, UserProfile } from '@/contexts/AuthContext';
@@ -11,10 +11,11 @@ import { IconButton } from '@/components/ui/icon-button';
 import { Notice } from '@/components/ui/notice';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
-import { OrderStatusBadge } from '@/components/ui/status-badge';
+import { OrderStatusBadge, StatusBadge } from '@/components/ui/status-badge';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AuthField } from '@/components/auth/AuthField';
 import { AuthCardSkeleton, PanelSkeleton } from '@/components/skeletons';
+import { DealerChip, TierChip } from '@/components/loyalty/MemberCard';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { AUTH_MAIN_CLASS, AuthBackLink } from '@/components/auth/AuthCard';
 import { EmptyState } from '@/components/EmptyState';
@@ -24,6 +25,10 @@ import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import { subscribeToUserOrders, Order } from '@/services/orderService';
 import { useWhatsAppOtpVerification } from '@/hooks/useWhatsAppOtpVerification';
+import { useLoyaltyStatus } from '@/hooks/useLoyaltyStatus';
+import { useDealer } from '@/hooks/useDealer';
+import { BRAND } from '@/config/brand';
+import { formatMemberNumber, memberDigits } from '@/lib/loyaltyCard';
 import { getSecuritySettings, generateDeviceFingerprint, updateSecuritySettings } from '@/services/securityService';
 import { validatePassword } from '@/lib/passwordValidation';
 import { formatINR, formatDateTime } from '@/lib/format';
@@ -47,6 +52,8 @@ import {
   Video,
   Wallet,
   SunMoon,
+  Store,
+  BadgeCheck,
 } from 'lucide-react';
 import { SmartImage } from "@/components/ui/smart-image";
 
@@ -850,6 +857,16 @@ const AccountPage = () => {
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const signOutTriggerRef = useRef<HTMLElement | null>(null);
 
+  // Loyalty tier and member number for the member card (the tier counts paid, delivered orders)
+  const loyalty = useLoyaltyStatus(user?.uid);
+  const dealer = useDealer();
+  const approvedDealer = dealer.record?.status === 'approved';
+  const memberNumber = useMemo(
+    () => (user?.uid ? formatMemberNumber(memberDigits(user.uid), BRAND.memberPrefix) : ''),
+    [user?.uid],
+  );
+  const tier = loyalty.tiers[loyalty.tierIndex];
+
   // Update avatar URL when user or userProfile changes
   useEffect(() => {
     setAvatarUrl(userProfile?.avatar || user?.photoURL || null);
@@ -925,6 +942,7 @@ const AccountPage = () => {
   const menuItems = [
     { id: 'orders', label: 'My orders', icon: Package, path: '/account' },
     { id: 'wallet', label: 'Wallet & rewards', icon: Wallet, path: '/wallet' },
+    ...(dealer.showEntry ? [{ id: 'dealer', label: 'Dealer programme', icon: Store, path: '/dealer' }] : []),
     { id: 'videocalls', label: 'My video calls', icon: Video, path: '/my-video-calls' },
     { id: 'editProfile', label: 'Edit profile', icon: Edit, path: '/account/profile-edit' },
     { id: 'addresses', label: 'Your addresses', icon: MapPin, path: '/account/addresses' },
@@ -934,9 +952,10 @@ const AccountPage = () => {
   ];
 
   // Drawer-style menu for the mobile account page
-  const accountMenu = [
+  const accountMenu: { label: string; icon: typeof Package; href: string; approved?: boolean }[] = [
     { label: 'My orders', icon: Package, href: '/account/orders' },
     { label: 'Wallet & rewards', icon: Wallet, href: '/wallet' },
+    ...(dealer.showEntry ? [{ label: 'Dealer programme', icon: Store, href: '/dealer', approved: approvedDealer }] : []),
     { label: 'My video calls', icon: Video, href: '/my-video-calls' },
     { label: 'Edit profile', icon: Edit, href: '/account/profile-edit' },
     { label: 'Your addresses', icon: MapPin, href: '/account/addresses' },
@@ -971,7 +990,7 @@ const AccountPage = () => {
             {/* Member card */}
             <div className="mb-4 mt-1 relative">
               <div className="tx-slate tx-contour relative overflow-hidden rounded-panel p-5 flex items-center gap-4 text-charcoal-foreground shadow-[var(--shadow-panel)] dark:ring-1 dark:ring-highlight-soft/20">
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 self-start">
                   {avatarUrl ? (
                     <SmartImage
                       key={`avatar-${avatarUrl}-${user?.uid}`}
@@ -990,11 +1009,24 @@ const AccountPage = () => {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="eyebrow-no on-dark mb-1.5 !text-[9px]"><span>Ishaputra member</span></p>
+                  <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                    {loyalty.loading ? (
+                      <Skeleton className="h-6 w-20 rounded-chip bg-charcoal-foreground/10" />
+                    ) : (
+                      !loyalty.error && tier && (
+                        <TierChip index={loyalty.tierIndex} name={tier.name} multiplier={tier.multiplier} />
+                      )
+                    )}
+                    {approvedDealer && <DealerChip onDark />}
+                  </div>
                   <h1 className="text-xl font-semibold leading-tight break-words [overflow-wrap:anywhere]" style={HEADING_FONT}>
                     Hi, {displayName}
                   </h1>
-                  <p className="text-charcoal-foreground/70 text-xs mt-0.5 mb-3 break-words [overflow-wrap:anywhere]">{user?.email}</p>
+                  <p className="text-charcoal-foreground/70 text-xs mt-0.5 mb-1 break-words [overflow-wrap:anywhere]">{user?.email}</p>
+                  <p className="mb-3 text-xs font-semibold tabular-nums tracking-[0.08em] text-charcoal-foreground/85">
+                    <span className="sr-only">Member number </span>
+                    {memberNumber}
+                  </p>
                   <Link
                     to="/account/profile-edit"
                     className="link-arrow relative !text-charcoal-foreground after:absolute after:-inset-y-3 after:inset-x-0 after:content-['']"
@@ -1011,6 +1043,7 @@ const AccountPage = () => {
                 <Link key={item.label} to={item.href} className={rowClass}>
                   <item.icon aria-hidden="true" className="size-[22px] shrink-0 text-primary" />
                   <span className="text-[15px] font-medium text-foreground flex-1 tracking-wide">{item.label}</span>
+                  {item.approved && <StatusBadge tone="success" label="Approved" icon={BadgeCheck} />}
                   <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
                 </Link>
               ))}
@@ -1068,10 +1101,23 @@ const AccountPage = () => {
               <div className="panel tx-sheet p-6 sticky top-[var(--sticky-top)]">
                 {/* User Info */}
                 <div className="mb-6">
-                  <p className="eyebrow-no mb-3"><span>Ishaputra member</span></p>
+                  <div className="mb-3 flex flex-wrap items-center gap-1.5">
+                    {loyalty.loading ? (
+                      <Skeleton className="h-6 w-20 rounded-chip" />
+                    ) : (
+                      !loyalty.error && tier && (
+                        <TierChip index={loyalty.tierIndex} name={tier.name} multiplier={tier.multiplier} onPaper />
+                      )
+                    )}
+                    {approvedDealer && <DealerChip />}
+                  </div>
                   <h1 className="text-2xl font-semibold text-foreground mb-1" style={HEADING_FONT}>Your account</h1>
                   <p className="text-sm text-muted-foreground font-medium break-words [overflow-wrap:anywhere]">{userProfile?.username || 'User'}</p>
                   <p className="text-xs text-muted-foreground mt-0.5 break-words [overflow-wrap:anywhere]">{userProfile?.email || user?.email}</p>
+                  <p className="mt-2 text-xs font-semibold tabular-nums tracking-[0.08em] text-foreground/80">
+                    <span className="sr-only">Member number </span>
+                    {memberNumber}
+                  </p>
                 </div>
 
                 {/* Menu Items */}
@@ -1090,7 +1136,13 @@ const AccountPage = () => {
                         }`}
                       >
                         <item.icon aria-hidden="true" className="size-5 shrink-0" />
-                        {item.label}
+                        <span className="flex-1">{item.label}</span>
+                        {item.id === 'dealer' && approvedDealer && (
+                          <>
+                            <BadgeCheck aria-hidden="true" className="size-4 text-status-success-fg" />
+                            <span className="sr-only">, approved</span>
+                          </>
+                        )}
                       </Link>
                     );
                   })}

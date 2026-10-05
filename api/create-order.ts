@@ -17,7 +17,8 @@ import { createHash } from 'node:crypto';
  * coupons, silver rate) is server-controlled data.
  *
  * Body:    { items: [{ productId, quantity }], paymentMethod?, couponCode?,
- *            usePoints?, useCashback?, currency?, receipt?, notes?,
+ *            usePoints?, useCashback?, pricing? ('dealer' | 'retail': how the browser
+ *            priced the cart), currency?, receipt?, notes?,
  *            amount? (client's claim, checked),
  *            amountBeforeRewards? (client's claim before points/cashback, checked) }
  * Header:  Authorization: Bearer <Firebase ID token> (sent whenever signed in)
@@ -28,6 +29,8 @@ import { createHash } from 'node:crypto';
  *   rw_uid    the signed-in customer (from the verified ID token)
  *   rw_base   rupees paid for products, which points are earned on (earnBase)
  *   rw_cart   SHA-256 of the cart (cartKey), to compare with the order later
+ *   rw_dealer  '1' when the order was charged dealer prices; its points base (rw_base) is then 0
+ *   rw_regular the cart at regular prices (rupees), written with rw_dealer
  *   rw_points / rw_pv / rw_cashback   points spent, their rupee value, cashback spent
  * api/verify-payment.ts copies them into payments/<razorpay order id>, the
  * record an order document must be created against.
@@ -95,7 +98,13 @@ function decodeFields(fields: Record<string, any>): Record<string, any> {
   return out;
 }
 
-/** Returns the document's data, or null when it does not exist. */
+/** A document id taken from the request: one path segment, never "..", "/" or "%". */
+const SAFE_DOC_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
+/**
+ * Returns the document's data, or null when it does not exist. `path` is
+ * built from fixed names and ids that passed SAFE_DOC_ID (encoded anyway).
+ */
 async function getDoc(path: string): Promise<Record<string, any> | null> {
   const resp = await fetch(`${firestoreBase()}/${path}?key=${WEB_API_KEY}`);
   if (resp.status === 404) return null;
@@ -118,6 +127,14 @@ function setCors(res: VercelResponse) {
 type RewardCurrency = 'points' | 'cashback';
 type RewardKind = 'earn' | 'spend' | 'refund' | 'adjust';
 
+interface LoyaltyTier {
+  name: string;
+  /** Rupees paid online on delivered orders from which the tier starts. */
+  minSpend: number;
+  /** Points multiplier for orders delivered while the customer is in this tier. */
+  multiplier: number;
+}
+
 interface RewardSettings {
   enabled: boolean;
   /** Points earned per ₹100 paid for products. */
@@ -128,7 +145,17 @@ interface RewardSettings {
   unlockDays: number;
   /** Share of the product amount (after coupon) that points may cover, in percent. */
   maxPointsPercent: number;
+  /** Exactly 4, sorted by minSpend; the first starts at ₹0. */
+  tiers: LoyaltyTier[];
 }
+
+// TODO(client): tier names, thresholds and multipliers.
+const DEFAULT_TIERS: LoyaltyTier[] = [
+  { name: 'Silver', minSpend: 0, multiplier: 1 },
+  { name: 'Gold', minSpend: 5000, multiplier: 1.25 },
+  { name: 'Platinum', minSpend: 15000, multiplier: 1.5 },
+  { name: 'Premium', minSpend: 30000, multiplier: 2 },
+];
 
 // TODO(client): placeholders until Ishaputra confirms its rules.
 const DEFAULT_REWARD_SETTINGS: RewardSettings = {
@@ -137,6 +164,7 @@ const DEFAULT_REWARD_SETTINGS: RewardSettings = {
   pointValue: 1,
   unlockDays: 7,
   maxPointsPercent: 20,
+  tiers: DEFAULT_TIERS,
 };
 
 interface LedgerLike {
@@ -155,6 +183,22 @@ interface RewardBalances {
   cashback: { available: number; pending: number };
 }
 
+/** Four tiers: missing or bad values fall back to the defaults, the first starts at ₹0, sorted by minSpend. */
+function normaliseTiers(raw: unknown): LoyaltyTier[] {
+  const rows = Array.isArray(raw) ? raw : [];
+  const num = (v: unknown) => (typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN);
+  const tiers = DEFAULT_TIERS.map((d, i) => {
+    const r = (rows[i] && typeof rows[i] === 'object' ? rows[i] : {}) as Record<string, unknown>;
+    const name = typeof r.name === 'string' && r.name.trim() ? r.name.trim().slice(0, 24) : d.name;
+    const min = num(r.minSpend);
+    const minSpend = i === 0 ? 0 : Number.isFinite(min) ? Math.round(Math.min(10_000_000, Math.max(0, min))) : d.minSpend;
+    const m = num(r.multiplier);
+    const multiplier = Number.isFinite(m) ? Math.round(Math.min(5, Math.max(1, m)) * 100) / 100 : d.multiplier;
+    return { name, minSpend, multiplier };
+  });
+  return tiers.sort((a, b) => a.minSpend - b.minSpend);
+}
+
 function normaliseRewardSettings(raw: Partial<RewardSettings> | null | undefined): RewardSettings {
   const num = (v: unknown, fallback: number, min: number, max: number) => {
     const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
@@ -167,6 +211,7 @@ function normaliseRewardSettings(raw: Partial<RewardSettings> | null | undefined
     pointValue: num(raw?.pointValue, d.pointValue, 0, 100),
     unlockDays: num(raw?.unlockDays, d.unlockDays, 0, 365),
     maxPointsPercent: num(raw?.maxPointsPercent, d.maxPointsPercent, 0, 100),
+    tiers: normaliseTiers((raw as { tiers?: unknown } | null | undefined)?.tiers),
   };
 }
 
@@ -258,11 +303,45 @@ function earnBase(i: EarnBaseInput): number {
   return Math.floor(((paid * 100) / (100 + rate)) * 100 + 1e-6) / 100;
 }
 
-/** Points earned on a base from earnBase. */
-function pointsForBase(base: number, s: RewardSettings): number {
+/** Points earned on a base from earnBase, times the customer's tier multiplier (1 to 5, in hundredths). */
+function pointsForBase(base: number, s: RewardSettings, multiplier = 1): number {
   if (!s.enabled || !(base > 0)) return 0;
+  const hundredths = Math.round(Math.min(5, Math.max(1, Number(multiplier) || 1)) * 100);
   // Multiply before dividing, with a hair of tolerance: ₹820 at 15 per ₹100 is 123, not 122.
-  return Math.max(0, Math.floor((base * s.pointsPer100) / 100 + 1e-9));
+  return Math.max(0, Math.floor((base * s.pointsPer100 * hundredths) / 10_000 + 1e-9));
+}
+
+/** The customer's tier: the highest one whose minSpend they have reached. */
+function tierIndexForSpend(spend: number, tiers: LoyaltyTier[]): number {
+  let index = 0;
+  for (let i = 0; i < tiers.length; i++) if (spend >= tiers[i].minSpend) index = i;
+  return index;
+}
+
+interface TierSpendRow {
+  /** The Razorpay order id (payments/<id>, orders/<id>). */
+  id: string;
+  amountPaise: number;
+  /** A dealer-priced order (payments/<id>.dealer). */
+  dealer?: boolean;
+  /** orders/<id>.status now. */
+  orderStatus: string;
+}
+
+/**
+ * What tiers count: rupees paid online for delivered orders that were not
+ * dealer-priced, from the server's payment records (never order.total, which
+ * the browser writes). A returned or cancelled order drops out with its
+ * status. excludeId leaves out the order being earned on.
+ */
+function tierSpend(rows: TierSpendRow[], excludeId = ''): number {
+  let paise = 0;
+  for (const r of rows) {
+    if (r.id === excludeId || r.dealer === true || r.orderStatus !== 'delivered') continue;
+    const p = Number(r.amountPaise);
+    if (Number.isFinite(p) && p > 0) paise += Math.round(p);
+  }
+  return paise / 100;
 }
 
 /**
@@ -281,6 +360,123 @@ function cartKey(items: Array<{ productId?: string; quantity?: unknown }>): stri
     .join('|');
 }
 // <<< rewards-core
+
+// >>> dealer-core
+interface DealerSettings {
+  /** The programme switch. Off: no dealer prices, and /dealer is hidden from customers with no application. */
+  enabled: boolean;
+  /** Dealer prices apply when the cart is worth at least this much at regular prices (rupees). */
+  minOrder: number;
+}
+
+interface DealerPricing {
+  /** Store-wide discount off the regular price, in percent. */
+  discountPercent: number;
+  /** Fixed dealer unit prices by product id (rupees). A product without one uses the percent. */
+  productPrices: Record<string, number>;
+}
+
+// TODO(client): placeholders until Ishaputra confirms its dealer terms.
+const DEFAULT_DEALER_SETTINGS: DealerSettings = { enabled: false, minOrder: 2000 };
+const DEFAULT_DEALER_PRICING: DealerPricing = { discountPercent: 20, productPrices: {} };
+
+interface DealerLine {
+  productId: string;
+  /** Regular unit price, rupees. */
+  unit: number;
+  quantity: number;
+}
+
+interface DealerQuote {
+  /** True when this cart is charged dealer prices. */
+  applies: boolean;
+  regularSubtotal: number;
+  /** The cart at dealer prices (the regular subtotal for a customer who is not a dealer). */
+  dealerSubtotal: number;
+  /** What the products are charged: dealerSubtotal when applies, otherwise regularSubtotal. */
+  subtotal: number;
+  /** regularSubtotal - subtotal. */
+  savings: number;
+  /** Rupees more, at regular prices, before dealer prices apply. 0 once met, and for non-dealers. */
+  shortBy: number;
+  /** The charged unit price of each line, in line order. */
+  units: number[];
+}
+
+const dealerMoney = (n: number) => Math.round(n * 100) / 100;
+
+function dealerNum(v: unknown, fallback: number, min: number, max: number): number {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+}
+
+function normaliseDealerSettings(raw: Partial<DealerSettings> | null | undefined): DealerSettings {
+  return {
+    enabled: raw?.enabled === true,
+    minOrder: Math.round(dealerNum(raw?.minOrder, DEFAULT_DEALER_SETTINGS.minOrder, 0, 10_000_000)),
+  };
+}
+
+function normaliseDealerPricing(raw: Partial<DealerPricing> | null | undefined): DealerPricing {
+  const productPrices: Record<string, number> = {};
+  const source = raw?.productPrices && typeof raw.productPrices === 'object' ? raw.productPrices : {};
+  for (const [id, v] of Object.entries(source)) {
+    if (id && typeof v === 'number' && Number.isFinite(v) && v > 0) productPrices[id] = dealerMoney(v);
+  }
+  const percent = dealerNum(raw?.discountPercent, DEFAULT_DEALER_PRICING.discountPercent, 0, 90);
+  return { discountPercent: Math.round(percent * 100) / 100, productPrices };
+}
+
+/**
+ * One product's dealer unit price. A fixed dealer price wins, capped at the
+ * regular price (a later sale never makes it dearer than the regular price).
+ * Otherwise the store-wide percent off, in whole rupees, never above the
+ * regular price and never below ₹1 unless the regular price is.
+ */
+function dealerUnitPrice(productId: string, regularUnit: number, p: DealerPricing): number {
+  const regular = Number(regularUnit);
+  if (!(regular > 0)) return Math.max(0, regular || 0);
+  const fixed = p.productPrices[productId];
+  if (typeof fixed === 'number' && fixed > 0) return Math.min(regular, dealerMoney(fixed));
+  const off = Math.round((regular * (100 - p.discountPercent)) / 100);
+  return Math.min(regular, Math.max(Math.min(1, regular), off));
+}
+
+/**
+ * A cart priced for this customer. Dealer prices apply only to an approved
+ * dealer, while the programme is on, when the cart is worth at least minOrder
+ * at regular prices and the dealer total is lower.
+ */
+function dealerQuote(
+  lines: DealerLine[],
+  s: DealerSettings,
+  p: DealerPricing | null,
+  approved: boolean,
+): DealerQuote {
+  let regular = 0;
+  for (const l of lines) regular += l.unit * l.quantity;
+  regular = dealerMoney(regular);
+  const regularUnits = lines.map((l) => l.unit);
+  if (!approved || !s.enabled || !p) {
+    return { applies: false, regularSubtotal: regular, dealerSubtotal: regular, subtotal: regular, savings: 0, shortBy: 0, units: regularUnits };
+  }
+  const units = lines.map((l) => dealerUnitPrice(l.productId, l.unit, p));
+  let dealer = 0;
+  for (let i = 0; i < lines.length; i++) dealer += units[i] * lines[i].quantity;
+  dealer = dealerMoney(dealer);
+  const met = regular >= s.minOrder;
+  const applies = met && dealer < regular;
+  return {
+    applies,
+    regularSubtotal: regular,
+    dealerSubtotal: dealer,
+    subtotal: applies ? dealer : regular,
+    savings: applies ? dealerMoney(regular - dealer) : 0,
+    shortBy: met ? 0 : dealerMoney(s.minOrder - regular),
+    units: applies ? units : regularUnits,
+  };
+}
+// <<< dealer-core
 
 /** Reject when `p` takes longer than `ms`, so a slow Admin SDK call cannot hang checkout. */
 function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
@@ -316,6 +512,66 @@ async function customerUid(req: VercelRequest): Promise<string | null> {
   const { uid } = await withTimeout(admin.auth(app).verifyIdToken(idToken), ADMIN_TIMEOUT_MS, 'Sign-in check');
   return uid;
 }
+
+/**
+ * What the dealer step decides for a priced cart: an error reply, or null to
+ * go on. The browser says how it priced the cart (pricing); when the server
+ * disagrees the customer must see the new total before paying. Dealer prices
+ * take no coupon, points or cashback. Exported for tests.
+ */
+export function dealerCheck(
+  quote: DealerQuote,
+  body: { pricing?: unknown; couponCode?: unknown; usePoints?: unknown; useCashback?: unknown },
+): { status: number; body: Record<string, unknown> } | null {
+  const server = quote.applies ? 'dealer' : 'retail';
+  if ((body.pricing === 'dealer' || body.pricing === 'retail') && body.pricing !== server) {
+    return {
+      status: 409,
+      body: {
+        code: 'dealer_pricing_changed',
+        pricing: server,
+        error:
+          server === 'dealer'
+            ? 'Dealer prices now apply to this order. Check the new total and pay again.'
+            : 'Dealer prices no longer apply to this order. Check the new total and pay again.',
+      },
+    };
+  }
+  if (quote.applies) {
+    const coupon = typeof body.couponCode === 'string' && body.couponCode.trim() !== '';
+    if (coupon || body.usePoints === true || body.useCashback === true) {
+      return {
+        status: 400,
+        body: { code: 'dealer_no_extras', error: "Coupons, points and cashback don't apply to dealer-priced orders." },
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Whether the customer is an approved dealer, and the private dealer prices.
+ * Read with the Admin SDK: dealers/<uid> and dealerPricing/current are not
+ * public. Throws when they cannot be read.
+ */
+export async function loadDealer(
+  uid: string | null,
+  settings: DealerSettings,
+  // Tests pass an in-memory database; the handler leaves it out.
+  injectedDb?: Pick<firestore.Firestore, 'collection'>,
+): Promise<{ approved: boolean; pricing: DealerPricing | null }> {
+  if (!uid || !settings.enabled) return { approved: false, pricing: null };
+  const db = injectedDb ?? (await adminSdk()).db;
+  const dealer = await withTimeout(db.collection('dealers').doc(uid).get(), ADMIN_TIMEOUT_MS, 'Dealer check');
+  if (dealer.data()?.status !== 'approved') return { approved: false, pricing: null };
+  const pricing = await withTimeout(db.collection('dealerPricing').doc('current').get(), ADMIN_TIMEOUT_MS, 'Dealer prices');
+  return { approved: true, pricing: normaliseDealerPricing(pricing.exists ? (pricing.data() as Partial<DealerPricing>) : null) };
+}
+
+const DEALER_UNAVAILABLE = {
+  code: 'dealer_unavailable',
+  error: "We couldn't confirm your dealer prices just now. Nothing was charged. Please try again.",
+};
 
 type LedgerDoc = { data: () => Record<string, any> };
 
@@ -646,6 +902,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     usePoints?: boolean;
     /** Spend available wallet cashback. */
     useCashback?: boolean;
+    /** How the browser priced the cart: dealer prices or regular ones. */
+    pricing?: unknown;
     amount?: unknown;
     /** The browser's total before points/cashback, so a cart problem is told apart from a rewards one. */
     amountBeforeRewards?: unknown;
@@ -671,17 +929,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Firebase project id / web API key are not configured' });
   }
 
-  // Validate every cart line before spending any network calls on it.
+  // Validate every cart line before spending any network calls on it. A
+  // product id is one path segment of the REST read below: a slash or dot
+  // segment would reach another document (fetch removes "../" and "%2e%2e/"),
+  // e.g. a review the customer wrote, so anything else is refused before any read.
   for (const line of items) {
     const quantity = Number(line.quantity);
-    if (!line.productId || !Number.isInteger(quantity) || quantity < 1 || quantity > 100) {
-      return res
-        .status(400)
-        .json({ error: `Invalid cart line for product ${String(line.productId || '')}` });
+    if (typeof line.productId !== 'string' || !SAFE_DOC_ID.test(line.productId)) {
+      return res.status(400).json({ error: 'Invalid cart line: unknown product id' });
+    }
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100) {
+      return res.status(400).json({ error: `Invalid cart line for product ${line.productId}` });
     }
   }
 
+  // ── Who is paying ── (before pricing: an approved dealer pays dealer prices)
+  // Sent whenever the customer is signed in. It binds the payment to them
+  // (rw_uid), which is what lets an order be recorded as paid and earn points.
+  // A failed check is only fatal for rewards and dealer prices: otherwise the
+  // customer can still pay, and the order is recorded for a manual check.
+  const claimsDealer = body.pricing === 'dealer';
+  let uid: string | null = null;
+  let uidError: string | null = null;
+  try {
+    uid = await customerUid(req);
+  } catch (error: unknown) {
+    uidError = error instanceof Error ? error.message : 'Sign-in check failed';
+  }
+  if (uidError && claimsDealer) return res.status(503).json({ ...DEALER_UNAVAILABLE, detail: uidError });
+
   let serverTotal: number;
+  let quote: DealerQuote;
   // Kept for the rewards step, which prices after the coupon and delivery.
   let parts = {
     subtotal: 0,
@@ -692,10 +970,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   };
   try {
     // ── Settings (admin-managed documents, never client-supplied) ──
-    const [deliveryDoc, gstDoc, silverDoc] = await Promise.all([
+    const [deliveryDoc, gstDoc, silverDoc, dealerDoc] = await Promise.all([
       getDoc('siteSettings/delivery'),
       getDoc('siteSettings/gst'),
       getDoc('siteSettings/silverRate'),
+      getDoc('siteSettings/dealer'),
     ]);
     const delivery = normalizeDelivery(deliveryDoc);
     const gst = { ...DEFAULT_GST, ...(gstDoc || {}) };
@@ -703,10 +982,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── Subtotal from stored product prices ──
     const products = await Promise.all(
-      items.map((line) => getDoc(`products/${String(line.productId)}`)),
+      items.map((line) => getDoc(`products/${encodeURIComponent(String(line.productId))}`)),
     );
 
-    let subtotal = 0;
+    const lines: DealerLine[] = [];
     for (let i = 0; i < items.length; i++) {
       const productId = String(items[i].productId);
       const p = products[i];
@@ -737,8 +1016,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!Number.isFinite(unit) || unit < 0) {
         return res.status(400).json({ error: `Product ${productId} has no valid price` });
       }
-      subtotal += unit * Number(items[i].quantity);
+      lines.push({ productId, unit, quantity: Number(items[i].quantity) });
     }
+
+    // ── Dealer prices (approved dealers, programme on, big enough at regular prices) ──
+    let dealer: { approved: boolean; pricing: DealerPricing | null } = { approved: false, pricing: null };
+    try {
+      dealer = await loadDealer(uid, normaliseDealerSettings(dealerDoc as Partial<DealerSettings> | null));
+    } catch (error: unknown) {
+      if (claimsDealer) {
+        return res.status(503).json({ ...DEALER_UNAVAILABLE, detail: error instanceof Error ? error.message : undefined });
+      }
+      console.warn('[create-order] dealer check failed, pricing at regular prices:', error instanceof Error ? error.message : error);
+    }
+    quote = dealerQuote(lines, normaliseDealerSettings(dealerDoc as Partial<DealerSettings> | null), dealer.pricing, dealer.approved);
+    const refusal = dealerCheck(quote, body);
+    if (refusal) return res.status(refusal.status).json(refusal.body);
+    const subtotal = quote.subtotal;
 
     // ── Coupon, re-validated server-side ──
     let discount = 0;
@@ -822,17 +1116,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  // ── Who is paying ──
-  // Sent whenever the customer is signed in. It binds the payment to them
-  // (rw_uid), which is what lets an order be recorded as paid and earn points.
-  // Without rewards a failed check is not fatal: the customer can still pay,
-  // the order is then recorded for a manual payment check.
-  let uid: string | null = null;
-  try {
-    uid = await customerUid(req);
-  } catch (error: unknown) {
-    if (wantsRewards) return conflict('rewards_unavailable', error instanceof Error ? error.message : undefined);
-    console.warn('[create-order] could not verify the customer:', error instanceof Error ? error.message : error);
+  if (uidError) {
+    if (wantsRewards) return conflict('rewards_unavailable', uidError);
+    console.warn('[create-order] could not verify the customer:', uidError);
   }
   if (wantsRewards && !uid) return conflict('rewards_unavailable', 'Sign in again to use your rewards');
 
@@ -878,20 +1164,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // The server's facts about this payment. Only this function writes rw_* notes;
   // verify-payment copies them into payments/<razorpay order id>.
-  const base = earnBase({
-    subtotal: parts.subtotal,
-    couponDiscount: parts.discount,
-    pointsValue: redemption.pointsValue,
-    cashback: redemption.cashback,
-    gstEnabled: parts.gst.enabled,
-    gstInclusive: parts.gst.inclusive,
-    gstRate: parts.gst.rate,
-  });
+  const base = quote.applies
+    ? 0
+    : earnBase({
+        subtotal: parts.subtotal,
+        couponDiscount: parts.discount,
+        pointsValue: redemption.pointsValue,
+        cashback: redemption.cashback,
+        gstEnabled: parts.gst.enabled,
+        gstInclusive: parts.gst.inclusive,
+        gstRate: parts.gst.rate,
+      });
   const notes: Record<string, string> = {
     ...clientNotes(body.notes),
     rw_base: String(base),
     rw_cart: createHash('sha256').update(cartKey(items)).digest('hex'),
     ...(uid ? { rw_uid: uid } : {}),
+    ...(quote.applies ? { rw_dealer: '1', rw_regular: String(quote.regularSubtotal) } : {}),
     ...(spendsRewards
       ? {
           rw_points: String(redemption.points),

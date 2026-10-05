@@ -58,6 +58,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSilverRate, computeSilverOriginalPrice } from "@/contexts/SilverRateContext";
 import { SmartImage } from "@/components/ui/smart-image";
 import { BRAND } from "@/config/brand";
+import { DealerPriceInline } from "@/components/dealer/DealerPrice";
+import { useDealerUnit } from "@/hooks/useDealer";
 
 // ─── helpers ──────────────────────────────────────────
 const priceRanges = BRAND.priceRanges;
@@ -110,6 +112,8 @@ const CategoryProductCard = memo(function CategoryProductCard({
   const displayOldPrice = !sp?.enabled && displayDiscount
     ? (product.oldPrice ?? null)
     : null;
+  // An approved dealer's unit price, or null (guests, non-dealers, programme off): today's price row then renders.
+  const dealer = useDealerUnit(product.id, displayPrice);
   const href = `/product/${product.id}`;
   return (
     <article
@@ -181,6 +185,14 @@ const CategoryProductCard = memo(function CategoryProductCard({
             <span aria-hidden="true" className="text-xs tabular-nums text-muted-foreground">({product.reviews})</span>
           )}
         </div>
+        {dealer ? (
+          <DealerPriceInline
+            unit={dealer.unit}
+            regular={displayPrice}
+            percentOff={dealer.percentOff}
+            className="pb-3"
+          />
+        ) : (
         <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-3">
           <span className="price-now text-[15px]">{formatINR(displayPrice)}</span>
           {displayOldPrice && displayOldPrice > product.price && (
@@ -197,6 +209,7 @@ const CategoryProductCard = memo(function CategoryProductCard({
             </span>
           )}
         </p>
+        )}
         <button
           type="button"
           onClick={() => onAddToCart(product)}

@@ -12,6 +12,7 @@
  */
 
 import { auth } from '@/config/firebase';
+import { dealerPricingChangeMessage } from '@/lib/dealerOrderError';
 import { releaseRewardHolds } from '@/services/rewardsService';
 
 const CHECKOUT_SCRIPT_SRC = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -80,6 +81,8 @@ export interface RazorpayCheckoutOptions {
   /** Spend loyalty points / wallet cashback. Priced server-side from the ledger. */
   usePoints?: boolean;
   useCashback?: boolean;
+  /** How this page priced the cart; the server refuses a payment priced differently. */
+  pricing?: 'dealer' | 'retail';
   /** Defaults to INR. */
   currency?: string;
   /** Receipt id stored against the Razorpay order (e.g. the internal order number). */
@@ -126,6 +129,20 @@ export class RewardsChangedError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'RewardsChangedError';
+  }
+}
+
+/**
+ * The server priced the cart differently for dealer prices (409
+ * dealer_pricing_changed), refused extras on dealer prices (400
+ * dealer_no_extras), or could not confirm them (503 dealer_unavailable).
+ * Nothing was charged; checkout refreshes the dealer state and the customer
+ * checks the new total.
+ */
+export class DealerPricingChangedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DealerPricingChangedError';
   }
 }
 
@@ -196,6 +213,7 @@ async function createOrder(options: RazorpayCheckoutOptions): Promise<CreateOrde
         couponCode: options.couponCode,
         usePoints: options.usePoints === true,
         useCashback: options.useCashback === true,
+        pricing: options.pricing,
         amount: amountInPaise,
         ...(options.amountBeforeRewards != null
           ? { amountBeforeRewards: Math.round(options.amountBeforeRewards * 100) }
@@ -224,6 +242,11 @@ async function createOrder(options: RazorpayCheckoutOptions): Promise<CreateOrde
   if (res.status === 409 && data.code === 'rewards_changed') {
     throw new RewardsChangedError(data.error || 'Your points or cashback balance just changed.');
   }
+  // Dealer pricing the server did not expect (including a dealer-priced total it
+  // will not match): nothing was charged, checkout re-prices. A retail mismatch
+  // keeps the generic error below.
+  const dealerChange = dealerPricingChangeMessage(res.status, data, options.pricing);
+  if (dealerChange) throw new DealerPricingChangedError(dealerChange);
   if (!res.ok || !data.order_id) {
     const detail =
       data.error ||

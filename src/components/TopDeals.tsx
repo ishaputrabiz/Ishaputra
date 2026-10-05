@@ -8,7 +8,9 @@ import { SmartImage } from "@/components/ui/smart-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductRowSkeleton } from "@/components/skeletons";
 import ProductCard from "@/components/ProductCard";
+import { DealerPriceInline } from "@/components/dealer/DealerPrice";
 import Reveal from "@/components/Reveal";
+import { useDealerUnit } from "@/hooks/useDealer";
 import { formatINR } from "@/lib/format";
 import { subscribeToActiveProductsByFlag } from '@/services/productCache';
 
@@ -39,6 +41,38 @@ const Header = ({ children }: { children?: React.ReactNode }) => (
     {children}
   </div>
 );
+
+/** The deal of the week's price on its photo: an approved dealer's price while the programme is on, otherwise the usual row. */
+const FeaturedPrice = ({ product }: { product: UIProduct }) => {
+  const dealer = useDealerUnit(product.id, product.price);
+  if (dealer) {
+    return (
+      <DealerPriceInline
+        unit={dealer.unit}
+        regular={product.price}
+        percentOff={dealer.percentOff}
+        size="lg"
+        tone="dark"
+        className="on-photo mb-6 gap-x-3"
+      />
+    );
+  }
+  const hasDealPrice = product.oldPrice && product.oldPrice > product.price;
+  return (
+    <p className="on-photo mb-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <span className="text-xl font-bold tabular-nums">{formatINR(product.price)}</span>
+      {hasDealPrice && (
+        <span className="text-sm tabular-nums text-charcoal-foreground/75 line-through">
+          <span className="sr-only">Was </span>
+          {formatINR(product.oldPrice as number)}
+        </span>
+      )}
+      {(product.discount ?? 0) > 0 && (
+        <span className="chip-off !border-highlight-soft/60 !text-highlight-soft">{product.discount}% off</span>
+      )}
+    </p>
+  );
+};
 
 const TopDeals = () => {
   const [products, setProducts] = useState<UIProduct[]>([]);
@@ -106,8 +140,6 @@ const TopDeals = () => {
   }
 
   if (products.length === 0) return null;
-
-  const hasDealPrice = featuredProduct.oldPrice && featuredProduct.oldPrice > featuredProduct.price;
 
   return (
     <Reveal>
@@ -178,18 +210,7 @@ const TopDeals = () => {
               <h3 className="on-photo mb-2 text-2xl font-semibold [text-wrap:balance]" style={HEADING_FONT}>
                 {featuredProduct.title}
               </h3>
-              <p className="on-photo mb-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="text-xl font-bold tabular-nums">{formatINR(featuredProduct.price)}</span>
-                {hasDealPrice && (
-                  <span className="text-sm tabular-nums text-charcoal-foreground/75 line-through">
-                    <span className="sr-only">Was </span>
-                    {formatINR(featuredProduct.oldPrice as number)}
-                  </span>
-                )}
-                {(featuredProduct.discount ?? 0) > 0 && (
-                  <span className="chip-off !border-highlight-soft/60 !text-highlight-soft">{featuredProduct.discount}% off</span>
-                )}
-              </p>
+              <FeaturedPrice product={featuredProduct} />
               <Link
                 to={`/product/${featuredProduct.id}`}
                 className="btn-line w-fit text-charcoal-foreground after:absolute after:inset-0 after:content-[''] group-hover:bg-charcoal-foreground group-hover:text-charcoal"

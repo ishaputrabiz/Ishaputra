@@ -1,11 +1,14 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight, ShieldCheck, RotateCcw, Truck, ChevronDown, Heart, Search, Check, Tag } from 'lucide-react';
+import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight, ShieldCheck, RotateCcw, Truck, ChevronDown, Heart, Search, Check, Tag, Info } from 'lucide-react';
 import { useCart, type CartItem } from '@/contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCheckoutPricing } from '@/hooks/useCheckoutPricing';
+import { useDealerQuote } from '@/hooks/useDealer';
+import { useToast } from '@/hooks/use-toast';
+import { DealerAppliedNotice, DealerLinePrice, DealerNudge } from '@/components/checkout/DealerCheckoutNotices';
 import { SmartImage } from "@/components/ui/smart-image";
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { IconButton } from '@/components/ui/icon-button';
@@ -73,9 +76,23 @@ const ShoppingCart = () => {
   // Shared pricing engine — same source of truth as Checkout. No address is
   // chosen yet, so delivery is quoted at the home-state rate and re-priced at
   // checkout once the shipping state is known.
-  const pricing = useCheckoutPricing(subtotal, items.length === 0, 'Razorpay', {
+  // Approved dealers see dealer prices once the cart is worth the dealer
+  // minimum at regular prices; anyone else gets the cart's own subtotal.
+  // Dealer prices take no coupon (checkout applies the same rule).
+  const dealerCart = useDealerQuote(items);
+  const dealerApplies = dealerCart.quote.applies;
+  const pricedSubtotal = dealerApplies ? dealerCart.quote.subtotal : subtotal;
+  const pricing = useCheckoutPricing(pricedSubtotal, items.length === 0, 'Razorpay', {
     productIds: items.map((i) => i.id),
   });
+  // A coupon applied before the cart reached dealer prices comes off.
+  const { toast } = useToast();
+  useEffect(() => {
+    if (dealerApplies && pricing.appliedCoupon) {
+      pricing.removeCoupon();
+      toast({ title: 'Coupon removed', description: "Coupons don't apply to dealer-priced orders." });
+    }
+  }, [dealerApplies, pricing, toast]);
 
   // On mobile, redirect to /checkout instead of opening the drawer
   useEffect(() => {
@@ -293,7 +310,12 @@ const ShoppingCart = () => {
                   {/* Fixed order: the cart is a Firestore map, which keeps none (display only). */}
                   {[...items]
                     .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
-                    .map((item) => (
+                    .map((item) => {
+                    // A dealer unit below the regular price is what this line is charged.
+                    const unitIndex = dealerApplies ? items.findIndex((x) => x.id === item.id) : -1;
+                    const unit = unitIndex >= 0 ? dealerCart.quote.units[unitIndex] : item.price;
+                    const dealerLine = unit < item.price;
+                    return (
                     <motion.li
                       key={item.id}
                       initial={{ opacity: 0 }}
@@ -335,12 +357,16 @@ const ShoppingCart = () => {
                         <div className="mt-2.5 flex items-end justify-between">
                           <div>
                             <span className="block text-base font-bold tabular-nums text-foreground">
-                              {formatINR(item.price * item.quantity)}
+                              {formatINR(unit * item.quantity)}
                             </span>
-                            {item.quantity > 1 && (
-                              <span className="text-[11px] tabular-nums text-muted-foreground">
-                                {formatINR(item.price)} each
-                              </span>
+                            {dealerLine ? (
+                              <DealerLinePrice unit={unit} regular={item.price} layout="each" />
+                            ) : (
+                              item.quantity > 1 && (
+                                <span className="text-[11px] tabular-nums text-muted-foreground">
+                                  {formatINR(item.price)} each
+                                </span>
+                              )
                             )}
                           </div>
 
@@ -376,7 +402,8 @@ const ShoppingCart = () => {
                         </div>
                       </div>
                     </motion.li>
-                  ))}
+                    );
+                    })}
                 </AnimatePresence>
               </ul>
 
@@ -385,6 +412,21 @@ const ShoppingCart = () => {
                 <h3 className="font-heading text-lg font-semibold tracking-tight text-foreground">
                   Order summary
                 </h3>
+
+                {/* Dealer prices: how far off they are, or that they apply */}
+                {dealerApplies ? (
+                  <DealerAppliedNotice compact regularSubtotal={dealerCart.quote.regularSubtotal} savings={dealerCart.quote.savings} />
+                ) : (
+                  dealerCart.active && dealerCart.quote.shortBy > 0 && (
+                    <DealerNudge
+                      compact
+                      regularSubtotal={dealerCart.quote.regularSubtotal}
+                      minOrder={dealerCart.minOrder}
+                      shortBy={dealerCart.quote.shortBy}
+                      potentialSavings={dealerCart.potentialSavings}
+                    />
+                  )
+                )}
 
                 {/* Apply Coupon Section */}
                 <div className="overflow-hidden rounded-card border border-border bg-background">
@@ -450,22 +492,29 @@ const ShoppingCart = () => {
                                 autoCapitalize="characters"
                                 autoComplete="off"
                                 spellCheck={false}
+                                disabled={dealerApplies}
                                 aria-invalid={showCouponError || undefined}
-                                aria-describedby={showCouponError ? `${couponId}-error` : undefined}
+                                aria-describedby={dealerApplies ? `${couponId}-note` : showCouponError ? `${couponId}-error` : undefined}
                                 className="h-10 min-w-0 rounded-control border border-input bg-background px-3 text-sm uppercase text-foreground placeholder:normal-case placeholder:text-muted-foreground transition-[border-color,box-shadow] duration-hover ease-out focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 aria-[invalid=true]:border-destructive"
                               />
                               <button
                                 type="submit"
-                                disabled={couponLoading || !couponInput.trim()}
+                                disabled={dealerApplies || couponLoading || !couponInput.trim()}
                                 className="inline-flex h-10 items-center justify-center gap-1.5 rounded-control bg-primary px-4 text-[11px] font-bold uppercase tracking-[0.16em] text-primary-foreground transition-[background-color,transform] duration-press ease-out hover:bg-primary/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 {couponLoading && <Spinner size={14} />}
                                 Apply
                               </button>
                             </div>
-                            {showCouponError && (
+                            {showCouponError && !dealerApplies && (
                               <p id={`${couponId}-error`} role="alert" className="mt-2 text-xs text-destructive">
                                 {pricing.couponError}
+                              </p>
+                            )}
+                            {dealerApplies && (
+                              <p id={`${couponId}-note`} className="mt-2.5 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+                                <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                                Coupons, points and cashback don't apply to dealer-priced orders.
                               </p>
                             )}
                           </form>
@@ -479,7 +528,15 @@ const ShoppingCart = () => {
                 <dl className="space-y-3.5 pt-1 text-sm">
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Item total</dt>
-                    <dd className="tabular-nums text-foreground">{formatINR(subtotal)}</dd>
+                    <dd className="tabular-nums text-foreground">
+                      {dealerApplies && (
+                        <s className="mr-1.5 text-muted-foreground">
+                          <span className="sr-only">Regular price </span>
+                          {formatINR(dealerCart.quote.regularSubtotal)}
+                        </s>
+                      )}
+                      {formatINR(pricedSubtotal)}
+                    </dd>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between">

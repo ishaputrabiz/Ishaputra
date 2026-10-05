@@ -121,6 +121,7 @@ async function recordPayment(
         pointsValue: money(notes.rw_pv),
         cashback: want.cashback,
         cartHash: String(notes.rw_cart || ''),
+        ...(notes.rw_dealer === '1' ? { dealer: true, regularSubtotal: money(notes.rw_regular) } : {}),
         status: 'verified',
         verifiedAt: now,
         source: 'verify-payment',
@@ -183,6 +184,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       verified: false,
       error: 'razorpay_order_id, razorpay_payment_id and razorpay_signature are required',
     });
+  }
+
+  // The order id becomes the payments/<id> document id (one path segment).
+  if (typeof orderId !== 'string' || !/^[\w-]{1,128}$/.test(orderId)) {
+    return res.status(400).json({ verified: false, error: 'invalid razorpay_order_id' });
   }
 
   const keySecret = process.env.RAZORPAY_KEY_SECRET;

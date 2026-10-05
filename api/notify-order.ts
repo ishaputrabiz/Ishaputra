@@ -57,6 +57,14 @@ function initAdmin() {
 type RewardCurrency = 'points' | 'cashback';
 type RewardKind = 'earn' | 'spend' | 'refund' | 'adjust';
 
+interface LoyaltyTier {
+  name: string;
+  /** Rupees paid online on delivered orders from which the tier starts. */
+  minSpend: number;
+  /** Points multiplier for orders delivered while the customer is in this tier. */
+  multiplier: number;
+}
+
 interface RewardSettings {
   enabled: boolean;
   /** Points earned per ₹100 paid for products. */
@@ -67,7 +75,17 @@ interface RewardSettings {
   unlockDays: number;
   /** Share of the product amount (after coupon) that points may cover, in percent. */
   maxPointsPercent: number;
+  /** Exactly 4, sorted by minSpend; the first starts at ₹0. */
+  tiers: LoyaltyTier[];
 }
+
+// TODO(client): tier names, thresholds and multipliers.
+const DEFAULT_TIERS: LoyaltyTier[] = [
+  { name: 'Silver', minSpend: 0, multiplier: 1 },
+  { name: 'Gold', minSpend: 5000, multiplier: 1.25 },
+  { name: 'Platinum', minSpend: 15000, multiplier: 1.5 },
+  { name: 'Premium', minSpend: 30000, multiplier: 2 },
+];
 
 // TODO(client): placeholders until Ishaputra confirms its rules.
 const DEFAULT_REWARD_SETTINGS: RewardSettings = {
@@ -76,6 +94,7 @@ const DEFAULT_REWARD_SETTINGS: RewardSettings = {
   pointValue: 1,
   unlockDays: 7,
   maxPointsPercent: 20,
+  tiers: DEFAULT_TIERS,
 };
 
 interface LedgerLike {
@@ -94,6 +113,22 @@ interface RewardBalances {
   cashback: { available: number; pending: number };
 }
 
+/** Four tiers: missing or bad values fall back to the defaults, the first starts at ₹0, sorted by minSpend. */
+function normaliseTiers(raw: unknown): LoyaltyTier[] {
+  const rows = Array.isArray(raw) ? raw : [];
+  const num = (v: unknown) => (typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN);
+  const tiers = DEFAULT_TIERS.map((d, i) => {
+    const r = (rows[i] && typeof rows[i] === 'object' ? rows[i] : {}) as Record<string, unknown>;
+    const name = typeof r.name === 'string' && r.name.trim() ? r.name.trim().slice(0, 24) : d.name;
+    const min = num(r.minSpend);
+    const minSpend = i === 0 ? 0 : Number.isFinite(min) ? Math.round(Math.min(10_000_000, Math.max(0, min))) : d.minSpend;
+    const m = num(r.multiplier);
+    const multiplier = Number.isFinite(m) ? Math.round(Math.min(5, Math.max(1, m)) * 100) / 100 : d.multiplier;
+    return { name, minSpend, multiplier };
+  });
+  return tiers.sort((a, b) => a.minSpend - b.minSpend);
+}
+
 function normaliseRewardSettings(raw: Partial<RewardSettings> | null | undefined): RewardSettings {
   const num = (v: unknown, fallback: number, min: number, max: number) => {
     const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
@@ -106,6 +141,7 @@ function normaliseRewardSettings(raw: Partial<RewardSettings> | null | undefined
     pointValue: num(raw?.pointValue, d.pointValue, 0, 100),
     unlockDays: num(raw?.unlockDays, d.unlockDays, 0, 365),
     maxPointsPercent: num(raw?.maxPointsPercent, d.maxPointsPercent, 0, 100),
+    tiers: normaliseTiers((raw as { tiers?: unknown } | null | undefined)?.tiers),
   };
 }
 
@@ -197,11 +233,45 @@ function earnBase(i: EarnBaseInput): number {
   return Math.floor(((paid * 100) / (100 + rate)) * 100 + 1e-6) / 100;
 }
 
-/** Points earned on a base from earnBase. */
-function pointsForBase(base: number, s: RewardSettings): number {
+/** Points earned on a base from earnBase, times the customer's tier multiplier (1 to 5, in hundredths). */
+function pointsForBase(base: number, s: RewardSettings, multiplier = 1): number {
   if (!s.enabled || !(base > 0)) return 0;
+  const hundredths = Math.round(Math.min(5, Math.max(1, Number(multiplier) || 1)) * 100);
   // Multiply before dividing, with a hair of tolerance: ₹820 at 15 per ₹100 is 123, not 122.
-  return Math.max(0, Math.floor((base * s.pointsPer100) / 100 + 1e-9));
+  return Math.max(0, Math.floor((base * s.pointsPer100 * hundredths) / 10_000 + 1e-9));
+}
+
+/** The customer's tier: the highest one whose minSpend they have reached. */
+function tierIndexForSpend(spend: number, tiers: LoyaltyTier[]): number {
+  let index = 0;
+  for (let i = 0; i < tiers.length; i++) if (spend >= tiers[i].minSpend) index = i;
+  return index;
+}
+
+interface TierSpendRow {
+  /** The Razorpay order id (payments/<id>, orders/<id>). */
+  id: string;
+  amountPaise: number;
+  /** A dealer-priced order (payments/<id>.dealer). */
+  dealer?: boolean;
+  /** orders/<id>.status now. */
+  orderStatus: string;
+}
+
+/**
+ * What tiers count: rupees paid online for delivered orders that were not
+ * dealer-priced, from the server's payment records (never order.total, which
+ * the browser writes). A returned or cancelled order drops out with its
+ * status. excludeId leaves out the order being earned on.
+ */
+function tierSpend(rows: TierSpendRow[], excludeId = ''): number {
+  let paise = 0;
+  for (const r of rows) {
+    if (r.id === excludeId || r.dealer === true || r.orderStatus !== 'delivered') continue;
+    const p = Number(r.amountPaise);
+    if (Number.isFinite(p) && p > 0) paise += Math.round(p);
+  }
+  return paise / 100;
 }
 
 /**
@@ -502,6 +572,9 @@ interface PaymentRecord {
   points: number;
   pointsValue: number;
   cashback: number;
+  /** A dealer-priced order: earns nothing and gets no scratch card. */
+  dealer?: boolean;
+  regularSubtotal?: number;
 }
 
 /** payments/<rzp> from a paid Razorpay order's notes (what verify-payment writes). */
@@ -521,6 +594,7 @@ async function writePaymentRecord(
     pointsValue: money(notes.rw_pv),
     cashback: whole(notes.rw_cashback),
     cartHash: String(notes.rw_cart || ''),
+    ...(notes.rw_dealer === '1' ? { dealer: true, regularSubtotal: money(notes.rw_regular) } : {}),
     status: 'verified',
     verifiedAt: admin.firestore.Timestamp.now(),
     source: 'reconcile',
@@ -545,6 +619,100 @@ const spendNote = (currency: RewardCurrency, amount: number) =>
   currency === 'points' ? `Used ${amount} points on an order` : `Used ₹${amount} wallet cashback on an order`;
 
 /**
+ * The customer's payment records with the status each order is at now, the
+ * rows tierSpend (rewards-core) works on. Server records only: never order.total.
+ */
+async function tierRows(db: admin.firestore.Firestore, uid: string): Promise<Array<TierSpendRow & { base: number }>> {
+  const payments = await db.collection('payments').where('uid', '==', uid).get();
+  if (payments.docs.length === 0) return [];
+  const orders = await db.getAll(...payments.docs.map((d) => db.collection('orders').doc(d.id)));
+  return payments.docs.map((d, i) => {
+    const p = d.data() || {};
+    return { id: d.id, amountPaise: Number(p.amountPaise) || 0, base: money(p.base), dealer: p.dealer === true, orderStatus: String(orders[i].data()?.status || '') };
+  });
+}
+
+/**
+ * The customer's tier spend without this order: rupees paid online for their
+ * other delivered orders that were not dealer-priced, from the server's
+ * payment records (tierSpend in rewards-core).
+ */
+async function tierSpendBefore(db: admin.firestore.Firestore, uid: string, rzp: string): Promise<number> {
+  return tierSpend(await tierRows(db, uid), rzp);
+}
+
+/**
+ * An order that ended (returned, cancelled, refunded) no longer counts toward
+ * tier spend, so it must stop lifting the multiplier of the orders it helped.
+ * An earn already booked at a multiplier above 1 is taken back to the tier the
+ * customer would have had without the ended order:
+ *   - only down, never up, and only when taking this order out lowers the
+ *     tier (so editing the tier thresholds later, or an order that lifted
+ *     nothing, moves no earn);
+ *   - only the boost goes: the amount is worked out again from the payment's
+ *     base at the lower multiplier (when the points rate is unchanged since
+ *     the earn; otherwise it keeps the ratio newMultiplier / oldMultiplier);
+ *   - the earn keeps its status (active or held); voided earns are left alone.
+ * Such an earn unlocks after the return window of the order that lifted it
+ * closed, so the points have not been spendable yet.
+ */
+async function removeTierBoost(
+  db: admin.firestore.Firestore,
+  uid: string,
+  endedRzp: string,
+  endedPaise: number,
+  settings: RewardSettings,
+  now: admin.firestore.Timestamp,
+): Promise<string[]> {
+  const ledger = db.collection('users').doc(uid).collection('rewardLedger');
+  const boosted = (await ledger.get()).docs.filter((d) => {
+    const x = d.data();
+    return x.kind === 'earn' && x.status !== 'void' && Number(x.multiplier) > 1 && x.razorpayOrderId && x.razorpayOrderId !== endedRzp;
+  });
+  if (!boosted.length) return [];
+  const rows = await tierRows(db, uid);
+  const changed: string[] = [];
+  for (const d of boosted) {
+    const x = d.data();
+    const rzp = String(x.razorpayOrderId);
+    const spend = tierSpend(rows, rzp);
+    const index = tierIndexForSpend(spend, settings.tiers);
+    if (tierIndexForSpend(spend + endedPaise / 100, settings.tiers) <= index) continue;
+    const tier = settings.tiers[index];
+    const from = Math.round(Number(x.multiplier) * 100);
+    const to = Math.round(Math.min(Number(x.multiplier), tier.multiplier) * 100);
+    if (!(to < from)) continue;
+    const row = rows.find((r) => r.id === rzp);
+    const base = row ? Math.min(row.base, row.amountPaise / 100) : 0;
+    const amount =
+      pointsForBase(base, settings, from / 100) === Number(x.amount)
+        ? pointsForBase(base, settings, to / 100)
+        : Math.floor((Number(x.amount) * to) / from + 1e-9);
+    // Re-read in a transaction so a void or a second return at the same time is not overwritten.
+    const did = await db.runTransaction(async (tx) => {
+      const cur = (await tx.get(d.ref)).data();
+      if (!cur || cur.status === 'void' || Number(cur.multiplier) !== Number(x.multiplier) || Number(cur.amount) !== Number(x.amount)) return false;
+      tx.update(d.ref, {
+        amount,
+        multiplier: to / 100,
+        tierName: tier.name,
+        amountBefore: cur.amountBefore ?? cur.amount,
+        boostRemovedAt: now,
+        boostRemovedBy: endedRzp,
+      });
+      return true;
+    });
+    if (!did) continue;
+    changed.push(`${d.ref.id}:tier`);
+    // What the order page shows; reconciling that order repairs it if this fails.
+    await db.collection('orders').doc(rzp).update({ pointsEarned: amount }).catch((err: unknown) => {
+      console.warn('[notify-order] points shown on order', rzp, 'not updated:', err instanceof Error ? err.message : err);
+    });
+  }
+  return changed;
+}
+
+/**
  * Bring a customer's reward ledger in line with one order. Idempotent: entry
  * ids are fixed per payment and each step moves an entry to the state the
  * order calls for, so running it twice changes nothing.
@@ -559,7 +727,13 @@ const spendNote = (currency: RewardCurrency, amount: number) =>
  *   earn    earn_<rzp>              created on first delivery, unlocking
  *                                   unlockDays later; frozen while a return is
  *                                   open; void when the order ends; restored if
- *                                   the shop reopens it
+ *                                   the shop reopens it; records tierName /
+ *                                   multiplier (the tier before this order).
+ *                                   When an order that helped lift that tier
+ *                                   ends, the boost is taken off (see
+ *                                   removeTierBoost).
+ *                                   Dealer-priced orders (payments.dealer) earn
+ *                                   nothing (base 0) and get no scratch card
  *   refund  refund_<rzp>_<currency> what the payment spent, while the order is
  *                                   cancelled / returned / refunded; taken back
  *                                   if it is reopened
@@ -669,9 +843,12 @@ export async function reconcileRewards(
     : null;
   const reachedCustomer = status === 'delivered' || returnOpen;
   if (!e) {
-    if (reachedCustomer && settings.enabled) {
+    // Dealer-priced orders earn nothing, even if rw_base ever stops being 0.
+    if (reachedCustomer && settings.enabled && payment.dealer !== true) {
       const base = Math.min(money(payment.base), money(payment.amountPaise) / 100);
-      const points = pointsForBase(base, settings);
+      // The tier the customer had reached before this order sets its multiplier.
+      const tier = base > 0 ? settings.tiers[tierIndexForSpend(await tierSpendBefore(db, uid, rzp), settings.tiers)] : settings.tiers[0];
+      const points = pointsForBase(base, settings, tier.multiplier);
       if (points > 0) {
         const unlockAt = admin.firestore.Timestamp.fromMillis(
           unlockAtMs(now.toMillis(), order.deliveredAt, settings.unlockDays),
@@ -680,6 +857,8 @@ export async function reconcileRewards(
           currency: 'points',
           amount: points,
           kind: 'earn',
+          tierName: tier.name,
+          multiplier: tier.multiplier,
           status: 'active',
           held: returnOpen,
           unlockAt,
@@ -715,6 +894,11 @@ export async function reconcileRewards(
       changed.push(`${earnRef.id}:${held ? 'hold' : 'release'}`);
       earn!.state = held ? 'held' : 'active';
     }
+  }
+
+  // 2b. An order that ended no longer lifts the multiplier of the orders it helped.
+  if (ended && payment.dealer !== true && order.deliveredAt) {
+    changed.push(...(await removeTierBoost(db, uid, rzp, Number(payment.amountPaise) || 0, settings, now)));
   }
 
   // 3. Refunds of what the payment spent.
@@ -840,7 +1024,8 @@ async function loadScratchSettings(
  * re-reads the order, so a scratch racing a status change cannot leave an
  * active prize on an ended order. A payment gets one card ever
  * (payments/<rzp>.scratchCardGivenAt), so a card deleted by hand never comes
- * back for a fresh draw.
+ * back for a fresh draw. Dealer-priced orders (payments/<rzp>.dealer) never
+ * get a card.
  */
 async function reconcileScratchCard(
   db: admin.firestore.Firestore,
@@ -864,8 +1049,9 @@ async function reconcileScratchCard(
     const now = admin.firestore.Timestamp.now();
     const c = cardSnap.data();
     const p = prizeSnap.data();
+    // One card per payment ever, and none for dealer-priced orders (no stacking).
     const give =
-      c || paymentSnap.data()?.scratchCardGivenAt
+      c || paymentSnap.data()?.scratchCardGivenAt || paymentSnap.data()?.dealer === true
         ? null
         : scratchCardEligible({
             status,
@@ -1114,6 +1300,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (isRelease) {
     const uid = isAdmin && body.uid ? String(body.uid) : callerUid;
     const rzp = body.razorpayOrderId ? String(body.razorpayOrderId) : undefined;
+    // An admin-supplied uid and the order id end up in document paths
+    // (users/<uid>/..., payments/<rzp>): one path segment each. The caller's
+    // own uid comes from the verified token.
+    const segment = /^[\w-]{1,128}$/;
+    if ((isAdmin && body.uid && !segment.test(uid)) || (rzp !== undefined && !segment.test(rzp))) {
+      return res.status(400).json({ error: 'invalid uid or razorpayOrderId' });
+    }
     try {
       return res.status(200).json({ ok: true, ...(await releaseHolds(db, uid, rzp)) });
     } catch (err: any) {
