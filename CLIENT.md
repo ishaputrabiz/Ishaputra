@@ -49,7 +49,7 @@
     - Delivery-partner app → off (`DELIVERY_PARTNERS_ENABLED = false`); assume courier shipping.
     - Video-call shopping → reworded as "video consultation with an expert" (user may still ask to remove it).
     - Gift cards and the admin AI prompt tool → kept; rewrite the AI prompts for Ishaputra's products.
-- Build after Step 2: Dealer Membership, Loyalty Card (TODO(client): a digital tier card on `/wallet`, or a separate card?). Business rules are open questions below.
+- Dealer Membership and Loyalty card: built 2026-10-05 on branch `dealer-loyalty`, merge pending the live test; shipped **off** (see "Dealer Membership and Loyalty card" below). Every value is a placeholder.
 - Scratch & Win: built 2026-10-04, money-reviewed and live-tested 2026-10-05, merged into `main`; shipped **off** (see "Scratch & Win" below). Its rules are deployed.
 
 ## Rewards (Task 8)
@@ -87,6 +87,28 @@ Built 2026-10-04 on branch `scratch-win` (not merged yet). Spec: `docs/superpowe
 - **Before switching it on:** the new `scratchCards` security rule must be deployed (`node docs/handoff/deploy-rules.mjs`, needs the owner's OK). Until then customers can't read their cards.
 - **Data:** `users/<uid>/scratchCards/<Razorpay order id>` (only the server writes it) and the prize as `rewardLedger/scratch_<Razorpay order id>`.
 - **Not in this version:** coupon or cashback prizes, push notifications, admin counts of cards given and scratched, cash-on-delivery orders.
+
+## Dealer Membership and Loyalty card
+Built 2026-10-05 on branch `dealer-loyalty` (merge pending the live test). Spec: `docs/superpowers/specs/2026-10-05-dealer-loyalty-design.md`. The dealer programme ships **off**; every value is a placeholder.
+
+**Loyalty card**
+- **What the customer gets.** A digital member card at the top of `/wallet` and on the phone account page: tier, member number, name, "Member since" and points. Under it, a progress bar and the four tier steps with their spend thresholds and points multipliers. No QR code and no physical card.
+- **Member number.** `IB` and 12 digits, worked out from the customer's account. Nothing is stored. It is a support reference, not a login.
+- **What sets the tier.** The money the customer paid online on orders that are now **delivered**. Returned or cancelled orders stop counting. Dealer-priced orders don't count. It is worked out from the server's payment records, so it can't be faked.
+- **What the tier gives.** A points multiplier. It applies to the points earned when an order is delivered, using the tier from the customer's other delivered orders. Scratch & Win prizes are not multiplied. The history shows "Gold 1.25x" (for example) on earned points.
+- **Settings:** Admin > Commerce settings > Rewards > "Loyalty tiers": a name, "spend from" and multiplier for each of the 4 tiers. Admin > Customers > one customer shows the member number, tier and progress.
+
+**Dealer membership**
+- **Applying.** A signed-in customer applies on `/dealer` (business name and type, contact name, phone, city, state, optional GSTIN, optional message). They see their application's state there: pending (they can withdraw), approved, rejected (with the team's note, and they can apply again) or suspended. A customer can't approve themselves.
+- **Reviewing.** Admin > Dealers (the nav item shows the number waiting): filter by status, search by name, phone or GSTIN, open an application, add a note for the applicant, then Approve, Reject, Suspend or Reinstate.
+- **Dealer prices.** Approved dealers see a dealer price (regular price struck, "Dealer −N%") on product cards, search, wishlist and the product page, while the programme is on. At checkout, dealer prices apply when the cart is worth at least the minimum **at regular prices**. Below it they are charged regular prices and see how much more to add. The server works out and charges the dealer price, so changing the browser can't get it.
+- **No stacking.** A dealer-priced order takes no coupon, points or cashback, earns no points and gets no scratch card. Delivery and GST are worked out as usual. An order below the minimum is a normal retail order in every way.
+- **Invoices.** A dealer-priced order prints the dealer's business name and GSTIN (when they gave one) in the buyer block. On the admin order page it shows a "Dealer order" chip and the dealer saving.
+- **Privacy.** Dealer prices can be read only by admins and approved dealers. The apply page doesn't show the percentage.
+- **Settings:** Admin > Commerce settings > Dealers: the on/off switch, the dealer discount (%) and "Dealer prices from" (₹). Per product, an optional "Dealer price (₹)" in the product form; blank uses the store-wide discount. Switching the programme off hides `/dealer` from customers with no application and stops dealer prices; approved dealers keep their status.
+- **Before switching it on:** the new `dealers` and `dealerPricing` security rules must be deployed (`node docs/handoff/deploy-rules.mjs`, owner's OK given 2026-10-05, done as part of the live test). Until then customers can't send applications.
+- **Data:** `dealers/<account id>` (the application), `siteSettings/dealer` (public: switch and minimum), `dealerPricing/current` (private: discount and per-product prices), `siteSettings/rewards` (the tiers), and `payments/<Razorpay order id>` marks a dealer-priced order.
+- **Not in this version:** dealer-only products, per-dealer levels, credit terms (dealers pay online like everyone else), email or WhatsApp notices about applications, quantity price breaks, a physical or QR card, searching customers by member number.
 
 ## Accounts
 - Firebase: project `ishaputrabotanicals`.
@@ -130,6 +152,7 @@ Built 2026-10-04 on branch `scratch-win` (not merged yet). Spec: `docs/superpowe
     - The admin AI prompt tool (`src/services/geminiService.ts` + `AdminImagePrompts.tsx`) was rewritten for men's wellness (2026-09-27): packaging fidelity, Indian male models, natural product use, brand palette, the brief's "avoid" list. It still needs `GEMINI_API_KEY` to run.
 
 - 2026-10-04: Scratch & Win built as designed in the approved mockup (owner: "just complete it", no changes to the screens). Prizes are points only; coupons are public and not tied to a customer, and cashback was the riskiest. Shipped off with placeholder values.
+- 2026-10-05: Dealer Membership and the Loyalty card built as designed in the approved mockup (owner approved with no changes and asked for placeholder defaults for every number). The dealer programme ships off. Dealer orders take no coupon, points or cashback and earn nothing, because stacking them on a 20% price is the riskiest part.
 - 2026-10-04: Checkout pays in one step. The phone slide and the desktop button open Razorpay directly (the separate "Payment details" screen and popup are gone); the payment method card shows on the checkout step. Owner's request.
 
 ## Design decisions
@@ -197,7 +220,7 @@ Built 2026-10-04 on branch `scratch-win` (not merged yet). Spec: `docs/superpowe
         - Empty states use a charcoal icon tile with copper buttons. This replaces the pink heart and gray "Tanishq style" drawing on the wishlist.
     - **Wallet (`/wallet`):**
         - The loyalty tier is now a charcoal-stone card: metal-toned tier badges, copper top tier, and each tier's threshold shown under it.
-        - Tiers now live in `BRAND.loyaltyTiers`, with DUMMY wellness-sized thresholds (₹0 / ₹5,000 / ₹15,000 / ₹30,000). The jewellery store's started at ₹50,000.
+        - Tiers are now an admin setting (Admin > Commerce settings > Rewards > Loyalty tiers), with DUMMY wellness-sized thresholds (₹0 / ₹5,000 / ₹15,000 / ₹30,000). They used to live in `BRAND.loyaltyTiers`; the jewellery store's started at ₹50,000.
         - "Total investment" is renamed "Total spent".
         - Its "View all" link went to `/orders`, which doesn't exist; fixed.
     - **Customer support:** WhatsApp no longer falls back to the phone number. The option shows only once a WhatsApp number is set in Admin > Customer support.
@@ -223,12 +246,14 @@ Shown or used on the site but not confirmed. Each must be replaced or confirmed 
 - **Demo testimonials:** the 3 seeded testimonials (`demo: true`). Remove with `node scripts/seed-demo.mjs --remove`.
 - **Claims to confirm or remove:** "24 h support" / "Within 24 hours" response time, "100% secure", "Insured" delivery, "wellness experts", "video consultation with an expert".
 - **Policies:** policy dates, and the return and replacement wording (7-day window) on the policy pages and checkout.
-- **Wallet tier benefits** and tier thresholds (`BRAND.loyaltyTiers`).
+- **Loyalty tiers (Admin > Commerce settings > Rewards > Loyalty tiers), all placeholders:** Silver ₹0 at 1x, Gold ₹5,000 at 1.25x, Platinum ₹15,000 at 1.5x, Premium ₹30,000 at 2x (names, spend thresholds and points multipliers). The client should confirm them and whether a tier should give anything besides the multiplier.
 - **GST rate** and whether prices include GST (Admin > Commerce settings).
 - **"Ships from" state** on invoices and the product page (Telangana today).
 - **Products flagged "New arrival":** 7 of the 12 demo products carry the flag, so the "New" tag shows on most cards. Set it only on real new arrivals.
 - **Category photos:** on /categories, Powders and Shilajit borrow the same product photo; each needs its own image.
 - **Scratch & Win (Admin > Commerce settings > Scratch & Win), all placeholders, feature off:** minimum order ₹499; cards expire 30 days after delivery; prizes 5 / 10 / 25 / 50 points at weights 40 / 35 / 20 / 5; "better luck next time" weight 0 (every card wins). That averages 13 points a card (₹13 at today's point value, 2.6% of ₹499), and about 1 card in 20 wins 50 points. The client should confirm the budget, the prizes and whether some cards should win nothing.
+- **Dealer Membership (Admin > Commerce settings > Dealers), all placeholders, programme off:** dealer prices from ₹2,000 at regular prices; 20% off the regular price store-wide; no per-product dealer prices (none set); dealer orders take no coupon, points or cashback and earn no points or scratch card (no stacking). The client should confirm the discount, the minimum, whether some products need their own fixed dealer price, and whether stacking should stay off.
+- **Dealer programme, other wording to confirm:** the "How it works" list and the terms on `/dealer`, and which business types the form offers (retail, ayurvedic, salon, gym, online, distributor, other).
 
 ## UI pass decisions (owner, 2026-10-04)
 The full-site UI audit (295 findings) raised 14 questions. The owner approved:
@@ -247,19 +272,19 @@ Owner to do: set Ships From = Telangana in Admin > Commerce (the delivery-charge
 - [x] Step 0 safe preview (2026-09-23): home, products and product pages show demo content on Ishaputra Firebase; only the YouTube section is hidden (no videos yet)
 - [ ] Step 1 new look: done 2026-09-27, waiting for client review
 - [x] Step 2 design (2026-09-29): Home, Products, Product detail, Checkout, Profile and the remaining pages; waiting for client review
-- [ ] Step 2B features: rewards (points and cashback) merged 2026-10-03; Scratch & Win merged 2026-10-05 (shipped off, values are placeholders); Dealer Membership and the loyalty card still to build
+- [ ] Step 2B features: rewards (points and cashback) merged 2026-10-03; Scratch & Win merged 2026-10-05 (shipped off, values are placeholders); Dealer Membership and the Loyalty card built 2026-10-05 (shipped off, values are placeholders), merge pending the live test. Step 2B is complete once that merge is done.
 - [ ] Step 3 accounts   - [ ] Step 4 test and publish   - [ ] Step 5 client changes
 
 ## Next step
-Scratch & Win is merged into `main` (off until the client confirms its values and an admin turns it on). Next: the rest of Step 2B (Dealer Membership, loyalty card), which needs the open answers below.
+Scratch & Win is merged into `main` (off until the client confirms its values and an admin turns it on). Dealer Membership and the Loyalty card are built on `dealer-loyalty`; next: the money-logic review, the rules deploy and live test, then the merge into `main`. The dealer programme stays off until the client confirms its values and an admin turns it on.
 
 ## Open questions
 - Real business details to replace the dummy ones in `src/config/brand.ts`: legal name, address, phone, WhatsApp, email, hours, GSTIN, domain, social links (blocking for launch, not for review)
 - GST: which rate(s) apply (Ayurvedic medicines and cosmetics differ), are prices GST-inclusive, and should the GST line show at checkout? Set in Admin > Commerce settings; GST is off until then (blocking for launch, not for review)
 - Vector (SVG/AI) logo file? A transparent PNG is in; a vector would give a sharper favicon (not blocking)
 - Category tree correct? (not blocking)
-- Loyalty card: a digital tier card or a physical/QR card? (Step 2B)
+- Loyalty card: built as a digital card on `/wallet` and the account page, with no QR code and no physical card (placeholder choice, to confirm). (Step 2B)
 - Scratch & Win: when a card is earned, prizes (points, coupon, cashback), odds, daily limit (Step 2B)
-- Dealer membership: dealer pricing (separate price or % off), how dealers apply and get approved, minimum order, dealer-only products (Step 2B)
-- Loyalty tiers: names and spend thresholds (dummy now: Silver ₹0, Gold ₹5,000, Platinum ₹15,000, Premium ₹30,000 in `BRAND.loyaltyTiers`), and what each tier gets (Step 2B)
+- Dealer membership: built with placeholder choices, to confirm: 20% off the regular price store-wide (with an optional fixed price per product), dealers apply on `/dealer` and an admin approves them, dealer prices from ₹2,000 at regular prices, no dealer-only products, no stacking with coupons, points or cashback. (Step 2B)
+- Loyalty tiers: names, spend thresholds and what each tier gets (placeholders now: Silver ₹0 at 1x, Gold ₹5,000 at 1.25x, Platinum ₹15,000 at 1.5x, Premium ₹30,000 at 2x; editable in Admin > Commerce settings > Rewards > Loyalty tiers). The multiplier is the only benefit built. (Step 2B)
 - Cashback and loyalty points rules: earn rate, value per point, expiry, caps (Step 2B, before touching the wallet)
