@@ -618,7 +618,12 @@ export const DealerTerms = ({
         </Button>
         <p className="text-xs text-muted-foreground">
           To change your business details,{' '}
-          <Link to={SUPPORT_PATH} className="font-semibold text-primary underline-offset-4 hover:underline">contact support</Link>.
+          <Link
+            to={SUPPORT_PATH}
+            className="relative font-semibold text-primary underline-offset-4 after:absolute after:-inset-x-2 after:-inset-y-3 after:content-[''] hover:underline"
+          >
+            contact support
+          </Link>.
         </p>
       </div>
     </section>
@@ -640,6 +645,8 @@ export interface DealerPageViewProps {
   reapplying: boolean;
   /** Prefill for a first application (name and phone from the profile). */
   prefill: DealerApplicationInput;
+  /** What was typed when a write failed. Wins over the prefill and the old application. */
+  draft?: DealerApplicationInput | null;
   submitting: boolean;
   onSubmit: (application: DealerApplicationInput) => void | Promise<void>;
   onReapply: () => void;
@@ -669,6 +676,7 @@ export const DealerPageView = ({
   minOrder,
   reapplying,
   prefill,
+  draft = null,
   submitting,
   onSubmit,
   onReapply,
@@ -709,7 +717,7 @@ export const DealerPageView = ({
           <motion.div {...enter(0.08)}>
             <DealerApplyForm
               key={again ? 'again' : 'new'}
-              initial={record ? toInput(record) : prefill}
+              initial={draft ?? (record ? toInput(record) : prefill)}
               heading={again ? 'Apply again' : undefined}
               submitting={submitting}
               onSubmit={onSubmit}

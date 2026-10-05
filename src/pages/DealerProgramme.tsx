@@ -22,7 +22,7 @@ import type { DealerApplicationInput } from '@/lib/dealerForm';
 import { applyAsDealer, withdrawDealerApplication } from '@/services/dealerService';
 
 /** Wallet-style chrome (PurchaseSummary's shell): desktop Header and Footer, phone sticky title bar and bottom nav. */
-export const DealerShell = ({ children }: { children: React.ReactNode }) => {
+const DealerShell = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   return (
     <div className="min-h-dvh tx-paper">
@@ -52,6 +52,12 @@ const DealerProgramme: React.FC = () => {
   const dealer = useDealer();
   const [submitting, setSubmitting] = useState(false);
   const [reapplying, setReapplying] = useState(false);
+  /**
+   * What the customer sent, kept until the write is confirmed. The Firestore listener fires
+   * a local snapshot on the write, so the page moves to Pending and the form unmounts at once;
+   * if the server then rejects the write, the form comes back with this, not an empty one.
+   */
+  const [draft, setDraft] = useState<DealerApplicationInput | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const withdrawRef = useRef<HTMLButtonElement>(null);
   /** Where focus goes when the withdraw dialog closes: the button on Cancel, the page once it is gone. */
@@ -104,12 +110,18 @@ const DealerProgramme: React.FC = () => {
   const handleSubmit = useCallback(
     async (application: DealerApplicationInput) => {
       if (!user) return;
+      const reapply = status === 'rejected';
+      setDraft(application);
       setSubmitting(true);
       try {
-        await applyAsDealer(user.uid, application, status === 'rejected');
+        await applyAsDealer(user.uid, application, reapply);
+        setDraft(null);
         toast.success('Application sent');
       } catch (e) {
         toast.error(describeError(e));
+        // The local snapshot already reset `reapplying` (the status went to pending); once it
+        // reverts to rejected, show the form again, not the rejected notice.
+        if (reapply) setReapplying(true);
       } finally {
         setSubmitting(false);
       }
@@ -139,11 +151,13 @@ const DealerProgramme: React.FC = () => {
         minOrder={settings.minOrder}
         reapplying={reapplying}
         prefill={prefill}
+        draft={draft}
         submitting={submitting}
         onSubmit={handleSubmit}
         onReapply={() => setReapplying(true)}
         onCancelReapply={() => {
           focusReapplyAfterCancel.current = true;
+          setDraft(null);
           setReapplying(false);
         }}
         onWithdraw={() => {
