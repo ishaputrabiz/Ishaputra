@@ -47,7 +47,9 @@ export function LoyaltyTiersSection({ tiers, onChange, pointsPer100 }: LoyaltyTi
         </div>
         <div className="min-w-0 flex-1">
           <h2 id="tiers-title" className="text-base font-semibold text-foreground">Loyalty tiers</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Placeholder values until the client confirms its tiers.</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Customers see their tier on the member card at the top of the wallet. Placeholder values until the client confirms its tiers.
+          </p>
         </div>
       </div>
 

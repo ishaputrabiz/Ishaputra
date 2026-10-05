@@ -767,6 +767,15 @@ const AdminOrderDetails = () => {
     if ((record.uid || '') !== (order.userId || '')) {
       paymentIssues.push("Paid from a different customer account than this order's");
     }
+    // Which price list was charged, either way round: an order saved as dealer-priced that
+    // was paid at regular prices (or the other way) was changed after the payment.
+    const chargedDealer = record.dealer === true;
+    const savedDealer = order.pricing === 'dealer';
+    if (chargedDealer !== savedDealer) {
+      paymentIssues.push(
+        `Pricing mismatch: the payment was charged at ${chargedDealer ? 'dealer' : 'regular'} prices but the order says ${savedDealer ? 'dealer' : 'regular'} prices.`,
+      );
+    }
   }
   const itemsUnchecked = !!record?.cartHash && orderHash === null;
   let paymentCheck: 'none' | 'loading' | 'error' | 'verified' | 'mismatch' | 'missing' | 'legacy' | 'unlinked';

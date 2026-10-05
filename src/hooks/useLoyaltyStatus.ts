@@ -43,6 +43,12 @@ export function useLoyaltyStatus(uid: string | null | undefined) {
     ])
       .then(([payments, orders]) => {
         if (!live) return;
+        // Offline with nothing cached comes back as an empty answer from the cache, which
+        // would read as "no spend yet" and show Silver. That is not an answer: say unknown.
+        if ((payments.metadata.fromCache && payments.empty) || (orders.metadata.fromCache && orders.empty)) {
+          setError('You appear to be offline. Reconnect and try again.');
+          return;
+        }
         const status = new Map(orders.docs.map((o) => [o.id, String(o.data().status || '')]));
         setSpend(
           tierSpend(

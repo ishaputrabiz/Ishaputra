@@ -35,6 +35,7 @@ import {
   HardDrive,
   Search,
   Store,
+  Handshake,
   LayoutPanelTop,
   GalleryHorizontal,
   type LucideIcon,
@@ -142,7 +143,7 @@ const AdminLayout = () => {
       ? [{ path: '/admin/delivery-boys', icon: Truck, label: 'Delivery boys' }]
       : []),
     { path: '/admin/customers', icon: Users2, label: 'Customers' },
-    { path: '/admin/dealers', icon: Store, label: 'Dealers', count: pendingDealers },
+    { path: '/admin/dealers', icon: Handshake, label: 'Dealers', count: pendingDealers },
     { path: '/admin/coupons', icon: Ticket, label: 'Coupons' },
     { path: '/admin/gift-cards', icon: Gift, label: 'Gift cards' },
     { path: '/admin/video-calls', icon: Video, label: 'Video calls' },
