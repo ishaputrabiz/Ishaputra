@@ -42,6 +42,8 @@ import {
 import { toast } from 'sonner';
 import { reconcileOrderRewards, type ReconcileResult } from '@/services/rewardsService';
 import { cartKey } from '@/lib/rewards';
+import { dealerOrderTotals } from '@/lib/dealerPriceForm';
+import { DealerOrderChip, DealerOrderTotalsRows } from '@/components/admin/DealerOrderRows';
 import { scratchCardView, voidReasonText } from '@/lib/scratchWin';
 import { getScratchCard, type ScratchCard } from '@/services/scratchWinService';
 import { RETURN_WINDOW_DAYS, returnRequestTiming, returnWindowEnd } from '@/lib/returnWindow';
@@ -187,6 +189,10 @@ interface PaymentRecord {
   pointsValue?: number;
   cashback?: number;
   cartHash?: string;
+  /** Dealer-priced orders only: the server charged an approved dealer's prices. */
+  dealer?: boolean;
+  /** Dealer-priced orders only: what the items would have cost at regular prices. */
+  regularSubtotal?: number;
 }
 
 type PaymentLookup =
@@ -790,6 +796,14 @@ const AdminOrderDetails = () => {
                 className: isPaid ? 'text-status-success-fg' : 'text-status-warning-fg',
               };
 
+  // ── Dealer order: the server's record of the payment says so (written from what
+  // api/create-order.ts charged). Where that record is not read (still loading, none,
+  // or a failed read) the order's own fields stand in, for display only.
+  const dealerOrder = record ? record.dealer === true : order.pricing === 'dealer';
+  const dealerTotals = dealerOrder
+    ? dealerOrderTotals(record ? record.regularSubtotal : order.regularSubtotal, order.subtotal)
+    : null;
+
   // ── Points earned, as the reconcile action last wrote them on the order ──
   const earned = toNumber(order.pointsEarned);
   const earnedLabel = `${earned} point${earned === 1 ? '' : 's'}`;
@@ -908,7 +922,10 @@ const AdminOrderDetails = () => {
             {/* Cash on Delivery was retired, but historic orders still carry it,
                 so the label follows the order rather than assuming COD. An
                 online payment's label follows the server's record (below). */}
-            <dd className={cn('text-xs font-medium', paymentLabel.className)}>{paymentLabel.text}</dd>
+            <dd className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className={cn('text-xs font-medium', paymentLabel.className)}>{paymentLabel.text}</span>
+              {dealerOrder && <DealerOrderChip />}
+            </dd>
             {order.paymentCollectedAt && (
               <dd className="mt-1 text-xs text-muted-foreground">
                 Collected {formatDateTime(order.paymentCollectedAt)}
@@ -1059,6 +1076,7 @@ const AdminOrderDetails = () => {
           Pricing breakdown
         </h2>
         <div className="space-y-1.5 text-sm tabular-nums">
+          {dealerTotals && <DealerOrderTotalsRows totals={dealerTotals} />}
           <div className="flex justify-between text-foreground/80">
             <span>Subtotal</span>
             <span>{formatPrice(order.subtotal || 0)}</span>
