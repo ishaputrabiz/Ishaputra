@@ -15,11 +15,40 @@ import LoyaltyPointsButton from "./LoyaltyPointsButton";
 import { SILVER_PRICING_ENABLED } from "@/config/features";
 import { SmartImage } from "@/components/ui/smart-image";
 import { IconButton } from "@/components/ui/icon-button";
+import { DealerPriceInline } from "@/components/dealer/DealerPrice";
+import { useDealerUnit } from "@/hooks/useDealer";
 import { formatINR, plural } from "@/lib/format";
 import { EASE_OUT } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 const MAX_RESULTS = 8;
+
+/**
+ * The price at the end of a search result. A component of its own so every
+ * result reads its own dealer price (a hook cannot run inside the .map);
+ * without a dealer price it is exactly the plain price.
+ */
+const ResultPrice = ({ product, active }: { product: UIProduct; active: boolean }) => {
+  const dealer = useDealerUnit(product.id, product.price);
+  if (dealer) {
+    return (
+      <DealerPriceInline
+        unit={dealer.unit}
+        regular={product.price}
+        percentOff={dealer.percentOff}
+        size="sm"
+        stacked
+        // The chip's copper on the highlighted row's tint is 4.4:1; foreground text clears 4.5:1.
+        className={cn("shrink-0 items-end pl-2", active && "[&_.chip-off]:border-foreground/40 [&_.chip-off]:text-foreground")}
+      />
+    );
+  }
+  return (
+    <p className="shrink-0 pl-2 text-sm font-semibold tabular-nums text-foreground">
+      {formatINR(product.price)}
+    </p>
+  );
+};
 
 /** Dropdown: grows out of the field, exits faster than it enters. */
 const panelMotion = {
@@ -293,9 +322,7 @@ const Header = () => {
                                       <p className="truncate text-xs text-muted-foreground">{product.category}</p>
                                     )}
                                   </div>
-                                  <p className="shrink-0 pl-2 text-sm font-semibold tabular-nums text-foreground">
-                                    {formatINR(product.price)}
-                                  </p>
+                                  <ResultPrice product={product} active={active} />
                                 </li>
                               );
                             })}

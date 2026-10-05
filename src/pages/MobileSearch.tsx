@@ -8,6 +8,8 @@ import { UIProduct, adaptFirebaseToUI } from "@/lib/productAdapter";
 import { SmartImage } from "@/components/ui/smart-image";
 import { IconButton } from "@/components/ui/icon-button";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useDealerUnit } from "@/hooks/useDealer";
+import { DealerPriceInline } from "@/components/dealer/DealerPrice";
 import { formatINR } from "@/lib/format";
 import { EASE_OUT } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -25,6 +27,44 @@ const matchesQuery = (searchText: string, query: string) => {
   if (words.length === 0) return false;
   const hayWords = searchText.split(/[^a-z0-9]+/);
   return words.every((w) => (w.length === 1 ? hayWords.some((hw) => hw.startsWith(w)) : searchText.includes(w)));
+};
+
+/**
+ * The price at the end of a suggestion row. A component of its own so every row
+ * reads its own dealer price (a hook cannot run inside the parent's .map);
+ * without a dealer price it is exactly the plain price.
+ */
+const SuggestionPrice = ({ product }: { product: UIProduct }) => {
+  const dealer = useDealerUnit(product.id, product.price);
+  if (dealer) {
+    return (
+      <DealerPriceInline
+        unit={dealer.unit}
+        regular={product.price}
+        percentOff={dealer.percentOff}
+        size="sm"
+        stacked
+        className="shrink-0 items-end"
+      />
+    );
+  }
+  return <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatINR(product.price)}</p>;
+};
+
+/** The price under a "Shop the range" tile: the same, one hook per tile. */
+const RangePrice = ({ product }: { product: UIProduct }) => {
+  const dealer = useDealerUnit(product.id, product.price);
+  if (dealer) {
+    return (
+      <DealerPriceInline
+        unit={dealer.unit}
+        regular={product.price}
+        percentOff={dealer.percentOff}
+        className="mt-1"
+      />
+    );
+  }
+  return <p className="price-now mt-1 text-[15px]">{formatINR(product.price)}</p>;
 };
 
 // Speech Recognition types
@@ -377,7 +417,7 @@ const MobileSearch = () => {
                       <p className="truncate text-sm font-medium text-foreground">{product.title}</p>
                       <p className="truncate text-xs text-muted-foreground">{product.category}</p>
                     </div>
-                    <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatINR(product.price)}</p>
+                    <SuggestionPrice product={product} />
                   </button>
                 </li>
               ))}
@@ -510,7 +550,7 @@ const MobileSearch = () => {
                           <p title={product.title} className="line-clamp-2 min-h-[2.6em] text-[13px] font-semibold leading-[1.3] text-foreground transition-colors duration-hover ease-out group-hover:text-primary md:text-sm">
                             {product.title}
                           </p>
-                          <p className="price-now mt-1 text-[15px]">{formatINR(product.price)}</p>
+                          <RangePrice product={product} />
                         </div>
                       </Link>
                     </li>

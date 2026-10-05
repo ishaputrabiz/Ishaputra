@@ -11,6 +11,8 @@ import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useWishlist } from "@/hooks/useWishlist";
+import { useDealer, useDealerUnit } from "@/hooks/useDealer";
+import { DealerPriceBlock } from "@/components/dealer/DealerPrice";
 import { getProductReviews, getProductReviewStats, hasUserPurchasedProduct, getUserProductReview, voteReviewHelpful, Review } from "@/services/reviewService";
 import logo from "@/assets/dark.png";
 import Header from "@/components/Header";
@@ -607,6 +609,17 @@ const ProductDetail = () => {
         : null,
   });
 
+  // An approved dealer's unit price for this product, or null (guests,
+  // non-dealers, programme off, no saving): the usual price block then renders.
+  // Called before the loading and not-found returns so the hook order never changes.
+  const regularPrice = product
+    ? product.silverPricing?.enabled && ratePerGram > 0
+      ? computeSilverOriginalPrice(product.silverPricing, ratePerGram)
+      : product.price
+    : 0;
+  const dealer = useDealerUnit(product?.id ?? "", regularPrice);
+  const { settings: dealerSettings } = useDealer();
+
   // The loading and not-found states use the same frame as the loaded page
   // (desktop header + category row, phone header + search bar), so the chrome
   // does not jump when loading finishes.
@@ -996,7 +1009,15 @@ const ProductDetail = () => {
 
                 {/* Price */}
                 <div className="mb-1">
-                  {(() => {
+                  {dealer && (
+                    <DealerPriceBlock
+                      unit={dealer.unit}
+                      regular={regularPrice}
+                      percentOff={dealer.percentOff}
+                      minOrder={dealerSettings.minOrder}
+                    />
+                  )}
+                  {!dealer && (() => {
                     // Compute live MRP for silver-priced products
                     const sp = product.silverPricing;
                     const livePriceDisplay = sp?.enabled && ratePerGram > 0
@@ -1028,9 +1049,11 @@ const ProductDetail = () => {
                       </div>
                     );
                   })()}
-                  <p className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mt-2">
-                    MRP inclusive of all taxes
-                  </p>
+                  {!dealer && (
+                    <p className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground mt-2">
+                      MRP inclusive of all taxes
+                    </p>
+                  )}
                   {!isUnavailable(product) && (
                     <ProductOfferTag
                       // The same figure the price above shows: the live silver
@@ -1458,7 +1481,7 @@ const ProductDetail = () => {
             whileTap={tap}
             className="btn-copper flex-1 h-12 !px-3 tabular-nums"
           >
-            Buy at {formatINR(product.price)}
+            {dealer ? "Buy now" : <>Buy at {formatINR(product.price)}</>}
           </motion.button>
         </div>
           )}
