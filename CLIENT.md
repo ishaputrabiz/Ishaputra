@@ -49,7 +49,7 @@
     - Delivery-partner app → off (`DELIVERY_PARTNERS_ENABLED = false`); assume courier shipping.
     - Video-call shopping → reworded as "video consultation with an expert" (user may still ask to remove it).
     - Gift cards and the admin AI prompt tool → kept; rewrite the AI prompts for Ishaputra's products.
-- Dealer Membership and Loyalty card: built 2026-10-05 on branch `dealer-loyalty`, merge pending the live test; shipped **off** (see "Dealer Membership and Loyalty card" below). Every value is a placeholder.
+- Dealer Membership and Loyalty card: merged into `main` 2026-10-05 after a passing live test; shipped **off** (see "Dealer Membership and Loyalty card" below). Every value is a placeholder.
 - Scratch & Win: built 2026-10-04, money-reviewed and live-tested 2026-10-05, merged into `main`; shipped **off** (see "Scratch & Win" below). Its rules are deployed.
 
 ## Rewards (Task 8)
@@ -89,7 +89,7 @@ Built 2026-10-04 on branch `scratch-win` (not merged yet). Spec: `docs/superpowe
 - **Not in this version:** coupon or cashback prizes, push notifications, admin counts of cards given and scratched, cash-on-delivery orders.
 
 ## Dealer Membership and Loyalty card
-Built 2026-10-05 on branch `dealer-loyalty` (merge pending the live test). Spec: `docs/superpowers/specs/2026-10-05-dealer-loyalty-design.md`. The dealer programme ships **off**; every value is a placeholder.
+Built 2026-10-05 and merged into `main` the same day after the rules deploy and a passing live test. Spec: `docs/superpowers/specs/2026-10-05-dealer-loyalty-design.md`. The dealer programme ships **off**; every value is a placeholder.
 
 **Loyalty card**
 - **What the customer gets.** A digital member card at the top of `/wallet` and on the phone account page: tier, member number, name, "Member since" and points. Under it, a progress bar and the four tier steps with their spend thresholds and points multipliers. No QR code and no physical card.
@@ -106,7 +106,7 @@ Built 2026-10-05 on branch `dealer-loyalty` (merge pending the live test). Spec:
 - **Invoices.** A dealer-priced order prints the dealer's business name and GSTIN (when they gave one) in the buyer block. On the admin order page it shows a "Dealer order" chip and the dealer saving.
 - **Privacy.** Dealer prices can be read only by admins and approved dealers. The apply page doesn't show the percentage.
 - **Settings:** Admin > Commerce settings > Dealers: the on/off switch, the dealer discount (%) and "Dealer prices from" (₹). Per product, an optional "Dealer price (₹)" in the product form; blank uses the store-wide discount. Switching the programme off hides `/dealer` from customers with no application and stops dealer prices; approved dealers keep their status.
-- **Before switching it on:** the new `dealers` and `dealerPricing` security rules must be deployed (`node docs/handoff/deploy-rules.mjs`, owner's OK given 2026-10-05, done as part of the live test). Until then customers can't send applications.
+- **Security rules:** the `dealers` and `dealerPricing` rules are deployed (2026-10-05, ruleset `61bbb448-…`), so it can be switched on once the client confirms the values.
 - **Data:** `dealers/<account id>` (the application), `siteSettings/dealer` (public: switch and minimum), `dealerPricing/current` (private: discount and per-product prices), `siteSettings/rewards` (the tiers), and `payments/<Razorpay order id>` marks a dealer-priced order.
 - **Not in this version:** dealer-only products, per-dealer levels, credit terms (dealers pay online like everyone else), email or WhatsApp notices about applications, quantity price breaks, a physical or QR card, searching customers by member number.
 
@@ -272,11 +272,11 @@ Owner to do: set Ships From = Telangana in Admin > Commerce (the delivery-charge
 - [x] Step 0 safe preview (2026-09-23): home, products and product pages show demo content on Ishaputra Firebase; only the YouTube section is hidden (no videos yet)
 - [ ] Step 1 new look: done 2026-09-27, waiting for client review
 - [x] Step 2 design (2026-09-29): Home, Products, Product detail, Checkout, Profile and the remaining pages; waiting for client review
-- [ ] Step 2B features: rewards (points and cashback) merged 2026-10-03; Scratch & Win merged 2026-10-05 (shipped off, values are placeholders); Dealer Membership and the Loyalty card built 2026-10-05 (shipped off, values are placeholders), merge pending the live test. Step 2B is complete once that merge is done.
+- [x] Step 2B features (2026-10-05): rewards (points and cashback) merged 2026-10-03; Scratch & Win merged 2026-10-05 (shipped off, values are placeholders); Dealer Membership and the Loyalty card merged 2026-10-05 after the rules deploy and a passing live test (shipped off, values are placeholders).
 - [ ] Step 3 accounts   - [ ] Step 4 test and publish   - [ ] Step 5 client changes
 
 ## Next step
-Scratch & Win is merged into `main` (off until the client confirms its values and an admin turns it on). Dealer Membership and the Loyalty card are built on `dealer-loyalty`; next: the money-logic review, the rules deploy and live test, then the merge into `main`. The dealer programme stays off until the client confirms its values and an admin turns it on.
+Step 2B is done. Scratch & Win and the dealer programme stay off until the client confirms their values and an admin turns them on. Next: Step 3 accounts (send the client `docs/client-checklist-steps-3-5.md`).
 
 ## Open questions
 - Real business details to replace the dummy ones in `src/config/brand.ts`: legal name, address, phone, WhatsApp, email, hours, GSTIN, domain, social links (blocking for launch, not for review)

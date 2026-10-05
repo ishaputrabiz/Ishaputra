@@ -7,9 +7,15 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-05 (Dealer + Loyalty card: all 15 tasks, fix wave, money check and its fixes done on `dealer-loyalty`; rules deploy, live test and merge waiting for the owner's permission).
+Last updated: 2026-10-05 (Dealer + Loyalty card: rules deployed, live test passed, merged into `main`. Step 2B is done.)
 
 ## State
+
+- **2026-10-05 (end): Dealer + Loyalty card DONE and merged into `main`** (`5e083ec`, `--no-ff`, local only, never pushed). Ships **off**; values are placeholders in `CLIENT.md`.
+  - **Rules deployed** with the owner's OK: `node docs/handoff/deploy-rules.mjs`, ruleset `61bbb448-4e54-4d30-b9ec-3c6e8cf1ea56` (`dealers`, `dealerPricing`, the dealer-fields orders rule).
+  - **Live test passed: 265/265** (`node docs/handoff/dealer-loyalty-live.mjs http://127.0.0.1:5182 ../shots/dealer-loyalty-live`). Cleanup complete: 3 test orders, 3 payments, 2 ledger entries and 2 scratch cards deleted; `siteSettings/dealer`, `dealerPricing/current`, `siteSettings/rewards`, `siteSettings/scratchWin`, `dealers/<shopper>` and the reward lock deleted again (none existed before); cart and addresses restored. 36 screenshots (390/1440, light/dark) in `../shots/dealer-loyalty-live/`, 0 console errors, no sideways overflow.
+  - **Verified on `main` after the merge:** `npm test` 167/167, `npm run build` passes. `CLIENT.md` Step 2B ticked.
+  - **Still not tested live:** admin UI screens (Admin > Dealers, Commerce Dealers tab, tiers editor; needs an admin login), the invoice buyer block, and a real Razorpay payment (needs the owner's test keys).
 
 - **2026-10-05 (later): Dealer + Loyalty card BUILT and money-checked on `dealer-loyalty` (HEAD `66e7e83`, not merged). Waiting on the owner to run the rules deploy (the permission checker blocked it for Claude).**
   - Lean mode (owner): one Sonnet builder per task; only Task 11 (checkout) reviewed (approved, no Critical/Important). Tasks 11-15 `6b72171`, `bab257d`, `a72838b`, `4bf08a0`, `966f847`; fix wave `2020821`, `920968d`, `ec1820b`.
@@ -131,7 +137,7 @@ Last updated: 2026-10-05 (Dealer + Loyalty card: all 15 tasks, fix wave, money c
    - **Done 2026-10-04 (`4e64b8d`):** the wishlist page shows one toast on remove; cart lines keep the order they were added in. Not checked in a browser (needs the live preview shopper).
    - Generate `public/sitemap.xml` once the domain is real; set `VITE_SITE_URL` on Vercel; PERF-14's `initializeAuth` part.
    - Client placeholders: `CLIENT.md` ("Placeholders for the client").
-4. **Dealer + Loyalty card: finish on `dealer-loyalty`** (see "State"). Owner runs, or allows Claude to run: (a) `node docs/handoff/deploy-rules.mjs`; (b) dev server on 5182, then `node docs/handoff/dealer-loyalty-live.mjs http://127.0.0.1:5182 ../shots/dealer-loyalty-live`; (c) if all PASS, merge `dealer-loyalty` into `main` with `--no-ff`, `npm test` + `npm run build` on `main`, tick Step 2B in `CLIENT.md`. To let Claude do (a) and (b), add a Bash allow rule for those two commands in `.claude/settings.local.json`.
+4. **Dealer + Loyalty card: DONE 2026-10-05** (rules deployed, live test 265/265, merged into `main`; see "State"). To switch it on: the client confirms the values in `CLIENT.md`, then an admin turns it on in Commerce settings > Dealers.
 5. **Then Step 3 accounts:** send the client `docs/client-checklist-steps-3-5.md`.
 
 ## Review result
@@ -240,6 +246,7 @@ Which next steps need ultracode:
 | 1. (no redesign) | - | - |
 | 2. Scratch & Win | Done | - |
 | 3. Small follow-ups | No | Medium |
-| 4. Dealer, Loyalty card | Yes, for the plan and the money logic review | Extra high |
+| 4. Dealer, Loyalty card | Done | - |
+| 5. Step 3 accounts | No | Medium |
 
 **Context:** read file ranges, not whole large files. `ssecommerce/CLAUDE.md` is 27 KB and loads into every session in this folder, so trimming it would cut the cost of every turn.
