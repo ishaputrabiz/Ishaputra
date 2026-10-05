@@ -36,15 +36,17 @@ test('earlier delivered spend sets the multiplier; this order and other statuses
   const db = shop();
   order(db, 'p1', 3000, 'delivered');
   order(db, 'p2', 2500, 'delivered');
-  order(db, 'p3', 9000, 'returned');
-  order(db, 'p4', 9000, 'shipped');
-  order(db, 'p5', 9000, 'delivered', { dealer: true, base: 0 });
-  order(db, 'o2', 1650, 'delivered');
+  // Each excluded order is large enough that counting any one of them (or the
+  // order itself) would reach Platinum (15,000) instead of Gold (5,000).
+  order(db, 'p3', 9500, 'returned');
+  order(db, 'p4', 9500, 'shipped');
+  order(db, 'p5', 9500, 'delivered', { dealer: true, base: 0 });
+  order(db, 'o2', 9500, 'delivered');
   await reconcile(db, 'o2');
   const e = db.read(`users/${UID}/rewardLedger/earn_o2`)!;
   assert.equal(e.tierName, 'Gold', 'p1 + p2 = 5,500 reaches Gold');
   assert.equal(e.multiplier, 1.25);
-  assert.equal(e.amount, 20);
+  assert.equal(e.amount, 118);
 });
 
 test('a dealer-priced order earns no points and gets no scratch card', async () => {
@@ -54,6 +56,13 @@ test('a dealer-priced order earns no points and gets no scratch card', async () 
   assert.equal(db.read(`users/${UID}/rewardLedger/earn_d1`), undefined);
   assert.equal(db.read(`users/${UID}/scratchCards/d1`), undefined);
   assert.ok(!r.changed.some((c) => c.includes('scratchCards')), r.changed.join(' '));
+});
+
+test('a dealer-priced order earns nothing even if its base is non-zero', async () => {
+  const db = shop();
+  order(db, 'd2', 2400, 'delivered', { dealer: true, base: 2400 });
+  await reconcile(db, 'd2');
+  assert.equal(db.read(`users/${UID}/rewardLedger/earn_d2`), undefined);
 });
 
 test('a retail order still gets its scratch card', async () => {

@@ -765,7 +765,8 @@ export async function reconcileRewards(
     : null;
   const reachedCustomer = status === 'delivered' || returnOpen;
   if (!e) {
-    if (reachedCustomer && settings.enabled) {
+    // Dealer-priced orders earn nothing, even if rw_base ever stops being 0.
+    if (reachedCustomer && settings.enabled && payment.dealer !== true) {
       const base = Math.min(money(payment.base), money(payment.amountPaise) / 100);
       // The tier the customer had reached before this order sets its multiplier.
       const tier = base > 0 ? settings.tiers[tierIndexForSpend(await tierSpendBefore(db, uid, rzp), settings.tiers)] : settings.tiers[0];
@@ -940,7 +941,8 @@ async function loadScratchSettings(
  * re-reads the order, so a scratch racing a status change cannot leave an
  * active prize on an ended order. A payment gets one card ever
  * (payments/<rzp>.scratchCardGivenAt), so a card deleted by hand never comes
- * back for a fresh draw.
+ * back for a fresh draw. Dealer-priced orders (payments/<rzp>.dealer) never
+ * get a card.
  */
 async function reconcileScratchCard(
   db: admin.firestore.Firestore,
