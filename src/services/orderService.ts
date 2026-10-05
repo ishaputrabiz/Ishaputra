@@ -223,6 +223,13 @@ export interface Order {
   couponType?: 'percent' | 'flat';
   couponValue?: number;
   couponDiscount?: number;
+  // Dealer-priced orders only (an approved dealer's cart at dealer prices): the
+  // items and subtotal above are at dealer prices; these say what it would have
+  // cost at regular prices and who bought. Absent on every retail order.
+  pricing?: 'dealer';
+  regularSubtotal?: number;
+  dealerSavings?: number;
+  buyerBusiness?: { name: string; gstin: string };
   // GST snapshot — same rationale as coupon snapshot above.
   gstRate?: number;
   gstInclusive?: boolean;

@@ -80,6 +80,8 @@ export interface RazorpayCheckoutOptions {
   /** Spend loyalty points / wallet cashback. Priced server-side from the ledger. */
   usePoints?: boolean;
   useCashback?: boolean;
+  /** How this page priced the cart; the server refuses a payment priced differently. */
+  pricing?: 'dealer' | 'retail';
   /** Defaults to INR. */
   currency?: string;
   /** Receipt id stored against the Razorpay order (e.g. the internal order number). */
@@ -126,6 +128,20 @@ export class RewardsChangedError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'RewardsChangedError';
+  }
+}
+
+/**
+ * The server priced the cart differently for dealer prices (409
+ * dealer_pricing_changed), refused extras on dealer prices (400
+ * dealer_no_extras), or could not confirm them (503 dealer_unavailable).
+ * Nothing was charged; checkout refreshes the dealer state and the customer
+ * checks the new total.
+ */
+export class DealerPricingChangedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DealerPricingChangedError';
   }
 }
 
@@ -196,6 +212,7 @@ async function createOrder(options: RazorpayCheckoutOptions): Promise<CreateOrde
         couponCode: options.couponCode,
         usePoints: options.usePoints === true,
         useCashback: options.useCashback === true,
+        pricing: options.pricing,
         amount: amountInPaise,
         ...(options.amountBeforeRewards != null
           ? { amountBeforeRewards: Math.round(options.amountBeforeRewards * 100) }
@@ -223,6 +240,19 @@ async function createOrder(options: RazorpayCheckoutOptions): Promise<CreateOrde
   }
   if (res.status === 409 && data.code === 'rewards_changed') {
     throw new RewardsChangedError(data.error || 'Your points or cashback balance just changed.');
+  }
+  if (
+    (res.status === 409 && data.code === 'dealer_pricing_changed') ||
+    (res.status === 400 && data.code === 'dealer_no_extras') ||
+    (res.status === 503 && data.code === 'dealer_unavailable')
+  ) {
+    throw new DealerPricingChangedError(data.error || 'Your dealer prices changed. Check the new total and pay again.');
+  }
+  // A dealer-priced total the server will not match (the dealer discount was
+  // edited between this page's price and the payment): re-price instead of
+  // failing hard. Retail orders keep the generic error below.
+  if (options.pricing === 'dealer' && res.status === 400 && /order total mismatch/i.test(data.error || '')) {
+    throw new DealerPricingChangedError('Your dealer prices changed. Check the new total and pay again.');
   }
   if (!res.ok || !data.order_id) {
     const detail =

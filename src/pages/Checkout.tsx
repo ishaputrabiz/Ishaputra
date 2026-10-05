@@ -20,7 +20,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import MobileHeader from '@/components/MobileHeader';
 import MobileSearchBar from '@/components/MobileSearchBar';
-import { ArrowLeft, Tag, ChevronDown, ChevronRight, Plus, Minus, CreditCard, MapPin, Sparkles, ShoppingBag, Truck, X, Trash2, Check, ShieldCheck, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Tag, ChevronDown, ChevronRight, Plus, Minus, CreditCard, MapPin, Sparkles, ShoppingBag, Truck, X, Trash2, Check, ShieldCheck, RotateCcw, Info } from 'lucide-react';
 import { getActiveProductsCached } from '@/services/productCache';
 import { adaptFirebaseToUI, UIProduct } from '@/lib/productAdapter';
 import { getUserAddresses, getDefaultAddress, Address, addAddress, AddressFormData } from '@/services/addressService';
@@ -28,6 +28,7 @@ import { createPaidOrder, preflightCart, generateOrderNumber, OrderFormData, Ord
 import {
   payWithRazorpay,
   PaymentCancelledError,
+  DealerPricingChangedError,
   RewardsChangedError,
   RewardsUnavailableError,
   type VerifiedPayment,
@@ -39,6 +40,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCheckoutPricing } from '@/hooks/useCheckoutPricing';
+import { useDealer, useDealerQuote } from '@/hooks/useDealer';
+import { DealerAppliedNotice, DealerLinePrice, DealerNudge } from '@/components/checkout/DealerCheckoutNotices';
 import { SmartImage } from "@/components/ui/smart-image";
 import { formatINR, plural } from '@/lib/format';
 import { DUR, EASE_DRAWER, EASE_OUT } from '@/lib/motion';
@@ -149,6 +152,16 @@ const UnavailableTag = ({ reason }: { reason?: string }) =>
  */
 const sortLines = <T extends { id: string; name: string }>(list: T[]): T[] =>
   [...list].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+
+/** What one cart line is charged per unit: its dealer unit when dealer prices apply, else the cart's own price. Display only. */
+const lineUnit = (applies: boolean, units: number[], items: CartItem[], item: CartItem) => {
+  if (!applies) return item.price;
+  const i = items.findIndex((x) => x.id === item.id);
+  return i >= 0 ? units[i] : item.price;
+};
+
+/** Why the coupon field is off on a dealer-priced order. */
+const DEALER_NO_EXTRAS_NOTE = "Coupons, points and cashback don't apply to dealer-priced orders.";
 
 /** How the customer pays. Razorpay is the only method today, shown selected. */
 const PaymentMethodCard = ({
@@ -343,6 +356,8 @@ const CheckoutStepper = ({ step }: { step: number }) => (
  */
 const BillRows = ({
   subtotal,
+  regularSubtotal,
+  dealerSavings,
   deliveryCharge,
   deliveryBeforeFree = 0,
   discount,
@@ -358,6 +373,9 @@ const BillRows = ({
   amountClassName = 'text-lg',
 }: {
   subtotal: number;
+  /** With dealerSavings: the cart at regular prices. Both set (a dealer-priced cart) print two rows in place of "Item total". */
+  regularSubtotal?: number;
+  dealerSavings?: number;
   deliveryCharge: number;
   deliveryBeforeFree?: number;
   discount: number;
@@ -373,10 +391,23 @@ const BillRows = ({
   amountClassName?: string;
 }) => (
   <div className="space-y-2.5 text-sm">
-    <div className="flex justify-between gap-3">
-      <span className="text-muted-foreground">Item total</span>
-      <span className="font-medium tabular-nums text-foreground">{formatINR(subtotal)}</span>
-    </div>
+    {regularSubtotal != null && dealerSavings != null ? (
+      <>
+        <div className="flex justify-between gap-3">
+          <span className="text-muted-foreground">Items at regular prices</span>
+          <span className="font-medium tabular-nums text-foreground">{formatINR(regularSubtotal)}</span>
+        </div>
+        <div className="flex justify-between gap-3">
+          <span className="text-primary">Dealer prices</span>
+          <span className="font-medium tabular-nums text-primary">−{formatINR(dealerSavings)}</span>
+        </div>
+      </>
+    ) : (
+      <div className="flex justify-between gap-3">
+        <span className="text-muted-foreground">Item total</span>
+        <span className="font-medium tabular-nums text-foreground">{formatINR(subtotal)}</span>
+      </div>
+    )}
     <div className="flex justify-between gap-3">
       <span className="text-muted-foreground">Delivery</span>
       {deliveryCharge === 0 ? (
@@ -681,6 +712,7 @@ const CouponForm = ({
   onApply,
   loading,
   error,
+  disabledNote,
 }: {
   id: string;
   value: string;
@@ -688,10 +720,12 @@ const CouponForm = ({
   onApply: () => void;
   loading: boolean;
   error: string | null;
+  /** Set while coupons cannot be used (dealer prices): disables the field and Apply, and shows this note. */
+  disabledNote?: string;
 }) => {
   // Hide the last error as soon as the code is edited.
   const [errorHidden, setErrorHidden] = useState(false);
-  const showError = !!error && !errorHidden;
+  const showError = !!error && !errorHidden && !disabledNote;
   return (
     <form
       onSubmit={(e) => {
@@ -714,13 +748,14 @@ const CouponForm = ({
           autoCapitalize="characters"
           autoComplete="off"
           spellCheck={false}
+          disabled={!!disabledNote}
           aria-invalid={showError || undefined}
-          aria-describedby={showError ? `${id}-error` : undefined}
+          aria-describedby={disabledNote ? `${id}-note` : showError ? `${id}-error` : undefined}
           className="h-10 min-w-0 placeholder:normal-case"
         />
         <button
           type="submit"
-          disabled={loading || !value.trim()}
+          disabled={!!disabledNote || loading || !value.trim()}
           className="inline-flex h-10 items-center justify-center gap-1.5 rounded-control bg-primary px-4 text-[11px] font-bold uppercase tracking-[0.16em] text-primary-foreground transition-[background-color,transform] duration-press ease-out hover:bg-primary/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading && <Spinner size={14} />}
@@ -730,6 +765,12 @@ const CouponForm = ({
       {showError && (
         <p id={`${id}-error`} role="alert" className="mt-2 text-xs text-destructive">
           {error}
+        </p>
+      )}
+      {disabledNote && (
+        <p id={`${id}-note`} className="mt-2.5 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+          <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-primary" />
+          {disabledNote}
         </p>
       )}
     </form>
@@ -994,7 +1035,15 @@ const MobileCheckout = () => {
   const rewardsState = useRewards(user?.uid);
   const [usePoints, setUsePoints] = useState(false);
   const [useCashback, setUseCashback] = useState(false);
-  const pricing = useCheckoutPricing(subtotal, items.length === 0, selectedPaymentMethod, {
+  // Approved dealers pay dealer prices once the cart is worth the dealer minimum
+  // at regular prices (the same rule api/create-order.ts applies). Anyone else
+  // gets the cart's own subtotal, untouched. Dealer prices take no coupon,
+  // points or cashback.
+  const dealer = useDealer();
+  const dealerCart = useDealerQuote(items);
+  const dealerApplies = dealerCart.quote.applies;
+  const pricedSubtotal = dealerApplies ? dealerCart.quote.subtotal : subtotal;
+  const pricing = useCheckoutPricing(pricedSubtotal, items.length === 0, selectedPaymentMethod, {
     productIds: items.map((i) => i.id),
     destinationState: selectedAddress?.state,
     // Needed for category-restricted coupons and for `perUserLimit` /
@@ -1003,8 +1052,17 @@ const MobileCheckout = () => {
     userId: user?.uid,
     // Apply the code the customer tapped in the offer ribbon.
     applyRememberedCode: true,
-    rewards: { balances: rewardsState.balances, settings: rewardsState.settings, usePoints, useCashback },
+    rewards: {
+      balances: rewardsState.balances,
+      settings: rewardsState.settings,
+      usePoints: dealerApplies ? false : usePoints,
+      useCashback: dealerApplies ? false : useCashback,
+    },
   });
+  // A coupon applied before the cart reached dealer prices comes off.
+  useEffect(() => {
+    if (dealerApplies && pricing.appliedCoupon) pricing.removeCoupon();
+  }, [dealerApplies, pricing]);
   const deliveryCharge = pricing.deliveryCharge;
   const taxAmount = pricing.gstAmount;
   const gstLabel = `GST (${pricing.gst.rate}%${pricing.gst.inclusive ? ' included' : ''})`;
@@ -1039,11 +1097,11 @@ const MobileCheckout = () => {
 
     try {
       // Convert cart items to order items
-      const orderItems: OrderItem[] = items.map(item => ({
+      const orderItems: OrderItem[] = items.map((item, i) => ({
         productId: item.id,
         name: item.name,
         image: item.image,
-        price: item.price,
+        price: dealerApplies ? dealerCart.quote.units[i] : item.price,
         quantity: item.quantity,
       }));
 
@@ -1099,9 +1157,11 @@ const MobileCheckout = () => {
           lineItems: items.map((i) => ({ productId: i.id, quantity: i.quantity })),
           paymentMethod: selectedPaymentMethod,
           shippingState: selectedAddress.state,
-          couponCode: pricing.appliedCoupon?.code,
-          usePoints: pricing.pointsApplied > 0,
-          useCashback: pricing.cashbackApplied > 0,
+          couponCode: dealerApplies ? undefined : pricing.appliedCoupon?.code,
+          usePoints: dealerApplies ? false : pricing.pointsApplied > 0,
+          useCashback: dealerApplies ? false : pricing.cashbackApplied > 0,
+          // How this page priced the cart; the server refuses a payment priced differently.
+          pricing: dealerCart.pricing,
           receipt: orderId,
           name: 'Ishaputra Botanicals',
           description: `Order ${orderId}`,
@@ -1127,12 +1187,21 @@ const MobileCheckout = () => {
         userName: userProfile?.username || user.displayName || 'Guest',
         userPhone: userProfile?.whatsappNumber || userProfile?.phone || '',
         items: orderItems,
-        subtotal: subtotal,
+        subtotal: pricedSubtotal,
         deliveryCharge: deliveryCharge,
         taxAmount: taxAmount,
-        discount: discount,
+        discount: dealerApplies ? 0 : discount,
         total: total,
-        ...(pricing.appliedCoupon ? {
+        // Dealer-priced orders only: no coupon or rewards fields, and who bought.
+        ...(dealerApplies
+          ? {
+              pricing: 'dealer' as const,
+              regularSubtotal: dealerCart.quote.regularSubtotal,
+              dealerSavings: dealerCart.quote.savings,
+              ...(dealer.record ? { buyerBusiness: { name: dealer.record.businessName, gstin: dealer.record.gstin } } : {}),
+            }
+          : {}),
+        ...(pricing.appliedCoupon && !dealerApplies ? {
           couponCode: pricing.appliedCoupon.code,
           couponId: pricing.appliedCoupon.id,
           couponDescription: pricing.appliedCoupon.description || '',
@@ -1161,10 +1230,10 @@ const MobileCheckout = () => {
           razorpayOrderId: verifiedPayment.razorpayOrderId,
           razorpaySignature: verifiedPayment.razorpaySignature,
         } : {}),
-        ...(verifiedPayment?.pointsApplied
+        ...(verifiedPayment?.pointsApplied && !dealerApplies
           ? { pointsUsed: verifiedPayment.pointsApplied, pointsValue: verifiedPayment.pointsValue }
           : {}),
-        ...(verifiedPayment?.cashbackApplied ? { cashbackUsed: verifiedPayment.cashbackApplied } : {}),
+        ...(verifiedPayment?.cashbackApplied && !dealerApplies ? { cashbackUsed: verifiedPayment.cashbackApplied } : {}),
         status: 'pending',
       };
 
@@ -1186,7 +1255,7 @@ const MobileCheckout = () => {
       }
 
       // Snapshot items BEFORE clearing the cart
-      const snapshotItems = [...items];
+      const snapshotItems = dealerApplies ? items.map((it, i) => ({ ...it, price: dealerCart.quote.units[i] })) : [...items];
       setOrderedItems(snapshotItems);
       setLastOrderedProductId(snapshotItems[0]?.id || null);
 
@@ -1212,6 +1281,11 @@ const MobileCheckout = () => {
       if (error instanceof RewardsChangedError) {
         // The live ledger has already updated the total on this page.
         toast({ title: 'Your rewards balance changed', description: error.message });
+        return;
+      }
+      if (error instanceof DealerPricingChangedError) {
+        // The dealer state is live, so the page re-prices by itself; nothing was charged.
+        sonnerToast.error(error.message);
         return;
       }
       if (error instanceof PaymentCancelledError) {
@@ -1242,7 +1316,8 @@ const MobileCheckout = () => {
 
   // Same rows in every bill block (display only).
   const billProps = {
-    subtotal,
+    subtotal: pricedSubtotal,
+    ...(dealerApplies ? { regularSubtotal: dealerCart.quote.regularSubtotal, dealerSavings: dealerCart.quote.savings } : {}),
     deliveryCharge,
     deliveryBeforeFree: pricing.deliveryBeforeFree,
     discount,
@@ -1406,6 +1481,9 @@ const MobileCheckout = () => {
                 {lines.map((item) => {
                   // Show the strike-through MRP only when the product genuinely has one.
                   const origPrice = item.originalPrice && item.originalPrice > item.price ? item.originalPrice : null;
+                  // What this line is charged per unit; a dealer unit below the regular price shows as a dealer price.
+                  const unit = lineUnit(dealerApplies, dealerCart.quote.units, items, item);
+                  const dealerLine = dealerApplies && unit < item.price;
                   return (
                     <motion.li
                       key={item.id}
@@ -1421,18 +1499,22 @@ const MobileCheckout = () => {
                       <div className="min-w-0 flex-1">
                         <h2 className="line-clamp-2 text-base font-semibold leading-snug text-foreground">{item.name}</h2>
                         <UnavailableTag reason={unavailable[item.id]} />
-                        <div className="mt-1.5">
-                          <span className="whitespace-nowrap text-base font-bold tabular-nums text-foreground">{formatPrice(item.price)}</span>
-                          {origPrice && (
-                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                              <span className="price-was whitespace-nowrap text-xs">
-                                <span className="sr-only">Was </span>
-                                {formatPrice(origPrice)}
-                              </span>
-                              <span className="chip-off">{Math.round((1 - item.price / origPrice) * 100)}% off</span>
-                            </div>
-                          )}
-                        </div>
+                        {dealerLine ? (
+                          <DealerLinePrice unit={unit} regular={item.price} layout="stacked" />
+                        ) : (
+                          <div className="mt-1.5">
+                            <span className="whitespace-nowrap text-base font-bold tabular-nums text-foreground">{formatPrice(item.price)}</span>
+                            {origPrice && (
+                              <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                                <span className="price-was whitespace-nowrap text-xs">
+                                  <span className="sr-only">Was </span>
+                                  {formatPrice(origPrice)}
+                                </span>
+                                <span className="chip-off">{Math.round((1 - item.price / origPrice) * 100)}% off</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         <div className="mt-2 flex items-center gap-1.5">
                           <button
                             type="button"
@@ -1469,9 +1551,9 @@ const MobileCheckout = () => {
                           <Trash2 aria-hidden="true" />
                         </IconButton>
                         <div className="text-right">
-                          <p className="whitespace-nowrap text-sm font-bold tabular-nums text-foreground">{formatPrice(item.price * item.quantity)}</p>
+                          <p className="whitespace-nowrap text-sm font-bold tabular-nums text-foreground">{formatPrice(unit * item.quantity)}</p>
                           {item.quantity > 1 && (
-                            <p className="whitespace-nowrap text-[11px] tabular-nums text-muted-foreground">{item.quantity} × {formatPrice(item.price)}</p>
+                            <p className="whitespace-nowrap text-[11px] tabular-nums text-muted-foreground">{item.quantity} × {formatPrice(unit)}</p>
                           )}
                         </div>
                       </div>
@@ -1480,6 +1562,24 @@ const MobileCheckout = () => {
                 })}
               </AnimatePresence>
             </ul>
+
+            {/* Dealer prices: how far off they are, or that they apply */}
+            {dealerApplies ? (
+              <div className="mx-4 mb-4">
+                <DealerAppliedNotice regularSubtotal={dealerCart.quote.regularSubtotal} savings={dealerCart.quote.savings} />
+              </div>
+            ) : (
+              dealerCart.active && dealerCart.quote.shortBy > 0 && (
+                <div className="mx-4 mb-4">
+                  <DealerNudge
+                    regularSubtotal={dealerCart.quote.regularSubtotal}
+                    minOrder={dealerCart.minOrder}
+                    shortBy={dealerCart.quote.shortBy}
+                    potentialSavings={dealerCart.potentialSavings}
+                  />
+                </div>
+              )
+            )}
 
             {/* Add more items */}
             <div className="mx-4 mb-4">
@@ -1493,8 +1593,8 @@ const MobileCheckout = () => {
               </button>
             </div>
 
-            {/* Available Offers */}
-            {pricing.redeemableCoupons.length > 0 && (() => {
+            {/* Available Offers (coupons don't apply to dealer-priced orders) */}
+            {!dealerApplies && pricing.redeemableCoupons.length > 0 && (() => {
               const activeOffers = pricing.redeemableCoupons;
               const visibleMobileOffers = showAllOffers ? activeOffers : activeOffers.slice(0, 2);
               return (
@@ -1587,25 +1687,28 @@ const MobileCheckout = () => {
                     onApply={handleApplyCoupon}
                     loading={pricing.couponLoading}
                     error={pricing.couponError}
+                    disabledNote={dealerApplies ? DEALER_NO_EXTRAS_NOTE : undefined}
                   />
                 )}
               </div>
             </div>
 
-            {/* Loyalty points / wallet cashback */}
-            <div className="mx-4 mb-4">
-              <RewardsRedeemCard
-                balances={rewardsState.balances}
-                settings={rewardsState.settings}
-                usePoints={usePoints}
-                useCashback={useCashback}
-                onUsePoints={setUsePoints}
-                onUseCashback={setUseCashback}
-                pointsApplied={pricing.pointsApplied}
-                pointsValue={pricing.pointsValue}
-                cashbackApplied={pricing.cashbackApplied}
-              />
-            </div>
+            {/* Loyalty points / wallet cashback (not on dealer-priced orders) */}
+            {!dealerApplies && (
+              <div className="mx-4 mb-4">
+                <RewardsRedeemCard
+                  balances={rewardsState.balances}
+                  settings={rewardsState.settings}
+                  usePoints={usePoints}
+                  useCashback={useCashback}
+                  onUsePoints={setUsePoints}
+                  onUseCashback={setUseCashback}
+                  pointsApplied={pricing.pointsApplied}
+                  pointsValue={pricing.pointsValue}
+                  cashbackApplied={pricing.cashbackApplied}
+                />
+              </div>
+            )}
 
             {/* Bill Summary */}
             <div className="mx-4 mb-4">
@@ -2146,7 +2249,15 @@ const Checkout = () => {
   const rewardsState = useRewards(user?.uid);
   const [usePoints, setUsePoints] = useState(false);
   const [useCashback, setUseCashback] = useState(false);
-  const pricing = useCheckoutPricing(subtotal, items.length === 0, selectedPaymentMethod, {
+  // Approved dealers pay dealer prices once the cart is worth the dealer minimum
+  // at regular prices (the same rule api/create-order.ts applies). Anyone else
+  // gets the cart's own subtotal, untouched. Dealer prices take no coupon,
+  // points or cashback.
+  const dealer = useDealer();
+  const dealerCart = useDealerQuote(items);
+  const dealerApplies = dealerCart.quote.applies;
+  const pricedSubtotal = dealerApplies ? dealerCart.quote.subtotal : subtotal;
+  const pricing = useCheckoutPricing(pricedSubtotal, items.length === 0, selectedPaymentMethod, {
     productIds: items.map((i) => i.id),
     destinationState: selectedAddress?.state,
     // Needed for category-restricted coupons and for `perUserLimit` /
@@ -2155,8 +2266,17 @@ const Checkout = () => {
     userId: user?.uid,
     // Apply the code the customer tapped in the offer ribbon.
     applyRememberedCode: true,
-    rewards: { balances: rewardsState.balances, settings: rewardsState.settings, usePoints, useCashback },
+    rewards: {
+      balances: rewardsState.balances,
+      settings: rewardsState.settings,
+      usePoints: dealerApplies ? false : usePoints,
+      useCashback: dealerApplies ? false : useCashback,
+    },
   });
+  // A coupon applied before the cart reached dealer prices comes off.
+  useEffect(() => {
+    if (dealerApplies && pricing.appliedCoupon) pricing.removeCoupon();
+  }, [dealerApplies, pricing]);
   const deliveryCharge = pricing.deliveryCharge;
   const taxAmount = pricing.gstAmount;
   const gstLabel = `GST (${pricing.gst.rate}%${pricing.gst.inclusive ? ' included' : ''})`;
@@ -2189,11 +2309,11 @@ const Checkout = () => {
 
     try {
       // Convert cart items to order items
-      const orderItems: OrderItem[] = items.map(item => ({
+      const orderItems: OrderItem[] = items.map((item, i) => ({
         productId: item.id,
         name: item.name,
         image: item.image,
-        price: item.price,
+        price: dealerApplies ? dealerCart.quote.units[i] : item.price,
         quantity: item.quantity,
       }));
 
@@ -2249,9 +2369,11 @@ const Checkout = () => {
           lineItems: items.map((i) => ({ productId: i.id, quantity: i.quantity })),
           paymentMethod: selectedPaymentMethod,
           shippingState: selectedAddress.state,
-          couponCode: pricing.appliedCoupon?.code,
-          usePoints: pricing.pointsApplied > 0,
-          useCashback: pricing.cashbackApplied > 0,
+          couponCode: dealerApplies ? undefined : pricing.appliedCoupon?.code,
+          usePoints: dealerApplies ? false : pricing.pointsApplied > 0,
+          useCashback: dealerApplies ? false : pricing.cashbackApplied > 0,
+          // How this page priced the cart; the server refuses a payment priced differently.
+          pricing: dealerCart.pricing,
           receipt: orderId,
           name: 'Ishaputra Botanicals',
           description: `Order ${orderId}`,
@@ -2277,12 +2399,21 @@ const Checkout = () => {
         userName: userProfile?.username || user.displayName || 'Guest',
         userPhone: userProfile?.whatsappNumber || userProfile?.phone || '',
         items: orderItems,
-        subtotal: subtotal,
+        subtotal: pricedSubtotal,
         deliveryCharge: deliveryCharge,
         taxAmount: taxAmount,
-        discount: discount,
+        discount: dealerApplies ? 0 : discount,
         total: total,
-        ...(pricing.appliedCoupon ? {
+        // Dealer-priced orders only: no coupon or rewards fields, and who bought.
+        ...(dealerApplies
+          ? {
+              pricing: 'dealer' as const,
+              regularSubtotal: dealerCart.quote.regularSubtotal,
+              dealerSavings: dealerCart.quote.savings,
+              ...(dealer.record ? { buyerBusiness: { name: dealer.record.businessName, gstin: dealer.record.gstin } } : {}),
+            }
+          : {}),
+        ...(pricing.appliedCoupon && !dealerApplies ? {
           couponCode: pricing.appliedCoupon.code,
           couponId: pricing.appliedCoupon.id,
           couponDescription: pricing.appliedCoupon.description || '',
@@ -2311,10 +2442,10 @@ const Checkout = () => {
           razorpayOrderId: verifiedPayment.razorpayOrderId,
           razorpaySignature: verifiedPayment.razorpaySignature,
         } : {}),
-        ...(verifiedPayment?.pointsApplied
+        ...(verifiedPayment?.pointsApplied && !dealerApplies
           ? { pointsUsed: verifiedPayment.pointsApplied, pointsValue: verifiedPayment.pointsValue }
           : {}),
-        ...(verifiedPayment?.cashbackApplied ? { cashbackUsed: verifiedPayment.cashbackApplied } : {}),
+        ...(verifiedPayment?.cashbackApplied && !dealerApplies ? { cashbackUsed: verifiedPayment.cashbackApplied } : {}),
         status: 'pending',
       };
 
@@ -2338,7 +2469,7 @@ const Checkout = () => {
       // Capture first product id BEFORE clearing the cart so DONE can return to it,
       // and snapshot the lines so the success dialog can list what was ordered.
       setLastOrderedProductId(items[0]?.id || null);
-      setOrderedItems([...items]);
+      setOrderedItems(dealerApplies ? items.map((it, i) => ({ ...it, price: dealerCart.quote.units[i] })) : [...items]);
 
       // Clear cart
       clearCart();
@@ -2357,6 +2488,11 @@ const Checkout = () => {
       if (error instanceof RewardsChangedError) {
         // The live ledger has already updated the total on this page.
         toast({ title: 'Your rewards balance changed', description: error.message });
+        return;
+      }
+      if (error instanceof DealerPricingChangedError) {
+        // The dealer state is live, so the page re-prices by itself; nothing was charged.
+        sonnerToast.error(error.message);
         return;
       }
       if (error instanceof PaymentCancelledError) {
@@ -2417,7 +2553,8 @@ const Checkout = () => {
 
   // Same rows in every bill block (display only).
   const billProps = {
-    subtotal,
+    subtotal: pricedSubtotal,
+    ...(dealerApplies ? { regularSubtotal: dealerCart.quote.regularSubtotal, dealerSavings: dealerCart.quote.savings } : {}),
     deliveryCharge,
     deliveryBeforeFree: pricing.deliveryBeforeFree,
     discount,
@@ -2592,8 +2729,8 @@ const Checkout = () => {
               </DialogContent>
             </Dialog>
 
-            {/* Available Offers */}
-            {pricing.redeemableCoupons.length > 0 && (
+            {/* Available Offers (coupons don't apply to dealer-priced orders) */}
+            {!dealerApplies && pricing.redeemableCoupons.length > 0 && (
               <section className={panel}>
                 <button
                   type="button"
@@ -2680,7 +2817,11 @@ const Checkout = () => {
               </div>
 
               <ul className="space-y-6">
-                {lines.map((item) => (
+                {lines.map((item) => {
+                  // What this line is charged per unit; a dealer unit below the regular price shows as a dealer price.
+                  const unit = lineUnit(dealerApplies, dealerCart.quote.units, items, item);
+                  const dealerLine = dealerApplies && unit < item.price;
+                  return (
                   <li key={item.id} className="flex gap-4">
                     <div className="size-24 flex-shrink-0 overflow-hidden rounded-card bg-muted">
                       <SmartImage src={item.image} alt="" className="h-full w-full object-cover" preset="thumb" />
@@ -2691,18 +2832,22 @@ const Checkout = () => {
                       {item.category && (
                         <p className="mb-2 text-sm text-muted-foreground">Sold by Ishaputra Botanicals</p>
                       )}
-                      <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <span className="price-now">{formatPrice(item.price)}</span>
-                        {item.originalPrice && item.originalPrice > item.price && (
-                          <>
-                            <span className="price-was text-sm">
-                              <span className="sr-only">Was </span>
-                              {formatPrice(item.originalPrice)}
-                            </span>
-                            <span className="chip-off">{Math.round((1 - item.price / item.originalPrice) * 100)}% off</span>
-                          </>
-                        )}
-                      </p>
+                      {dealerLine ? (
+                        <DealerLinePrice unit={unit} regular={item.price} layout="inline" />
+                      ) : (
+                        <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <span className="price-now">{formatPrice(item.price)}</span>
+                          {item.originalPrice && item.originalPrice > item.price && (
+                            <>
+                              <span className="price-was text-sm">
+                                <span className="sr-only">Was </span>
+                                {formatPrice(item.originalPrice)}
+                              </span>
+                              <span className="chip-off">{Math.round((1 - item.price / item.originalPrice) * 100)}% off</span>
+                            </>
+                          )}
+                        </p>
+                      )}
                       <div className="mt-3 flex flex-wrap items-center gap-3">
                         {/*
                           Real controls, matching the cart drawer. Changing a
@@ -2750,6 +2895,11 @@ const Checkout = () => {
                             {item.stock === 1 ? 'Last one left' : `Only ${item.stock} left`}
                           </span>
                         )}
+                        {dealerLine && item.quantity > 1 && (
+                          <span className="text-sm tabular-nums text-muted-foreground">
+                            {item.quantity} × {formatPrice(unit)} = <span className="font-semibold text-foreground">{formatPrice(unit * item.quantity)}</span>
+                          </span>
+                        )}
                       </div>
                       <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
                         <RotateCcw aria-hidden="true" className="size-4 text-primary" />
@@ -2757,13 +2907,28 @@ const Checkout = () => {
                       </p>
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </section>
           </div>
 
           {/* Right Column - Coupons & Price Details */}
           <div className="space-y-6">
+            {/* Dealer prices: how far off they are, or that they apply */}
+            {dealerApplies ? (
+              <DealerAppliedNotice regularSubtotal={dealerCart.quote.regularSubtotal} savings={dealerCart.quote.savings} />
+            ) : (
+              dealerCart.active && dealerCart.quote.shortBy > 0 && (
+                <DealerNudge
+                  regularSubtotal={dealerCart.quote.regularSubtotal}
+                  minOrder={dealerCart.minOrder}
+                  shortBy={dealerCart.quote.shortBy}
+                  potentialSavings={dealerCart.potentialSavings}
+                />
+              )
+            )}
+
             {/* Coupons */}
             <section className={panel}>
               <div className="mb-4 flex items-center gap-2">
@@ -2785,6 +2950,7 @@ const Checkout = () => {
                   onChange={setCouponCode}
                   loading={pricing.couponLoading}
                   error={pricing.couponError}
+                  disabledNote={dealerApplies ? DEALER_NO_EXTRAS_NOTE : undefined}
                   onApply={async () => {
                     const code = couponCode.trim().toUpperCase();
                     const r = await pricing.applyCoupon(couponCode);
@@ -2795,19 +2961,21 @@ const Checkout = () => {
               )}
             </section>
 
-            {/* Loyalty points / wallet cashback */}
-            <RewardsRedeemCard
-              balances={rewardsState.balances}
-              settings={rewardsState.settings}
-              usePoints={usePoints}
-              useCashback={useCashback}
-              onUsePoints={setUsePoints}
-              onUseCashback={setUseCashback}
-              pointsApplied={pricing.pointsApplied}
-              pointsValue={pricing.pointsValue}
-              cashbackApplied={pricing.cashbackApplied}
-              className="rounded-panel px-6 py-4"
-            />
+            {/* Loyalty points / wallet cashback (not on dealer-priced orders) */}
+            {!dealerApplies && (
+              <RewardsRedeemCard
+                balances={rewardsState.balances}
+                settings={rewardsState.settings}
+                usePoints={usePoints}
+                useCashback={useCashback}
+                onUsePoints={setUsePoints}
+                onUseCashback={setUseCashback}
+                pointsApplied={pricing.pointsApplied}
+                pointsValue={pricing.pointsValue}
+                cashbackApplied={pricing.cashbackApplied}
+                className="rounded-panel px-6 py-4"
+              />
+            )}
 
             {/* Price Details */}
             <section aria-labelledby="price-title" className={`${panel} lg:sticky lg:top-[var(--sticky-top)]`}>
