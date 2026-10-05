@@ -7,7 +7,7 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-05 (Step 2B rest: Dealer Membership + Loyalty card being designed; mockup next).
+Last updated: 2026-10-05 (Dealer Membership + Loyalty card mocked up; waiting for the owner's yes).
 
 ## State
 
@@ -19,6 +19,10 @@ Last updated: 2026-10-05 (Step 2B rest: Dealer Membership + Loyalty card being d
   - **Placeholder defaults chosen (shown in the mockup; the owner can change any):**
     - Dealer: shipped **off**. Signed-in customers apply on `/dealer` (business name, type, contact, phone, city, state, optional GSTIN, message); an admin approves, rejects, suspends or reinstates in a new Admin > Dealers page. Dealer price = 20% off the regular price store-wide, or an optional fixed dealer price per product (product form). Dealer prices are private (only approved dealers and admins can read them). They apply when the order is worth Rs 2,000+ at regular prices; below that, regular prices and a nudge. No stacking: dealer-priced orders take no coupon, no points or cashback, earn no points and get no scratch card. Delivery and GST as usual. Dealer orders print the business name and GSTIN on the invoice. Not in v1: dealer-only products, per-dealer levels, credit terms, email or WhatsApp notices, quantity price breaks.
     - Loyalty card: a digital member card at the top of `/wallet` (tier metal, name, member number derived from the account id, member since, points worth, tier benefit), keeping the progress bar and tier steps; tier and number also on the phone account card and the admin customer page. Tier benefit: a points multiplier (placeholder Silver 1x, Gold 1.25x, Platinum 1.5x, Premium 2x at Rs 0 / 5,000 / 15,000 / 30,000), moved from `BRAND.loyaltyTiers` into an admin setting. Tier = money paid online on delivered, not-returned orders, from the server's `payments` records; the server applies the multiplier when the order earns points. No QR or physical card (no scan target for an online shop).
+  - **Mockup done, waiting for the owner's yes (no feature code yet).** Screenshots (0 console errors, no sideways scroll) in `../shots/dealer-loyalty-mockup/`: start with `board-customer-light.png`, `board-customer-dark.png`, `board-admin-light.png`, `board-admin-phone-dark.png`. Built and then critiqued by a 4-agent workflow.
+    - Dev-only pages: `src/pages/__mock/DealerLoyaltyMock.tsx` and `DealerAdminMock.tsx` (git-ignored via `.git/info/exclude`) plus uncommitted `import.meta.env.DEV` routes in `src/App.tsx` marked "MOCKUP, do not commit". Open `/__mock/dealer-loyalty` (index of views) and `/__mock/dealer-admin?view=dealers|settings|tiers|product|customer`. **Delete both files and the App.tsx lines when the real build starts.** Shot scripts: scratchpad `dl-shots.cjs`, `shoot-dealer-admin.cjs` (session-only).
+    - Found while mocking (fix in the build): the live `/wallet` progress bar fills by spend / top threshold, so a Gold member's fill stops short of the Gold step; the mock fills it step by step.
+    - After the yes: spec `docs/superpowers/specs/2026-10-05-dealer-loyalty-design.md`, plan, build on branch `dealer-loyalty`, money review (workflow), rules deploy + live test (owner's OK), merge.
 
 - **2026-10-05: Scratch & Win is finished and merged into `main`** (`--no-ff`, local only, never pushed). It stays **off** until the client confirms the placeholder values and an admin turns it on.
   - **Rules deployed** with the owner's OK (`node docs/handoff/deploy-rules.mjs`, ruleset `2abcb7dc-…`): the `scratchCards` read-only rule, a return request must start `pending`, and a customer can cancel a return only while it is `pending`.
