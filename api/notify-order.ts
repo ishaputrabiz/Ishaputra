@@ -619,22 +619,97 @@ const spendNote = (currency: RewardCurrency, amount: number) =>
   currency === 'points' ? `Used ${amount} points on an order` : `Used ₹${amount} wallet cashback on an order`;
 
 /**
+ * The customer's payment records with the status each order is at now, the
+ * rows tierSpend (rewards-core) works on. Server records only: never order.total.
+ */
+async function tierRows(db: admin.firestore.Firestore, uid: string): Promise<Array<TierSpendRow & { base: number }>> {
+  const payments = await db.collection('payments').where('uid', '==', uid).get();
+  if (payments.docs.length === 0) return [];
+  const orders = await db.getAll(...payments.docs.map((d) => db.collection('orders').doc(d.id)));
+  return payments.docs.map((d, i) => {
+    const p = d.data() || {};
+    return { id: d.id, amountPaise: Number(p.amountPaise) || 0, base: money(p.base), dealer: p.dealer === true, orderStatus: String(orders[i].data()?.status || '') };
+  });
+}
+
+/**
  * The customer's tier spend without this order: rupees paid online for their
  * other delivered orders that were not dealer-priced, from the server's
  * payment records (tierSpend in rewards-core).
  */
 async function tierSpendBefore(db: admin.firestore.Firestore, uid: string, rzp: string): Promise<number> {
-  const payments = await db.collection('payments').where('uid', '==', uid).get();
-  const others = payments.docs.filter((d) => d.id !== rzp);
-  if (others.length === 0) return 0;
-  const orders = await db.getAll(...others.map((d) => db.collection('orders').doc(d.id)));
-  return tierSpend(
-    others.map((d, i) => {
-      const p = d.data() || {};
-      return { id: d.id, amountPaise: Number(p.amountPaise) || 0, dealer: p.dealer === true, orderStatus: String(orders[i].data()?.status || '') };
-    }),
-    rzp,
-  );
+  return tierSpend(await tierRows(db, uid), rzp);
+}
+
+/**
+ * An order that ended (returned, cancelled, refunded) no longer counts toward
+ * tier spend, so it must stop lifting the multiplier of the orders it helped.
+ * An earn already booked at a multiplier above 1 is taken back to the tier the
+ * customer would have had without the ended order:
+ *   - only down, never up, and only when taking this order out lowers the
+ *     tier (so editing the tier thresholds later, or an order that lifted
+ *     nothing, moves no earn);
+ *   - only the boost goes: the amount is worked out again from the payment's
+ *     base at the lower multiplier (when the points rate is unchanged since
+ *     the earn; otherwise it keeps the ratio newMultiplier / oldMultiplier);
+ *   - the earn keeps its status (active or held); voided earns are left alone.
+ * Such an earn unlocks after the return window of the order that lifted it
+ * closed, so the points have not been spendable yet.
+ */
+async function removeTierBoost(
+  db: admin.firestore.Firestore,
+  uid: string,
+  endedRzp: string,
+  endedPaise: number,
+  settings: RewardSettings,
+  now: admin.firestore.Timestamp,
+): Promise<string[]> {
+  const ledger = db.collection('users').doc(uid).collection('rewardLedger');
+  const boosted = (await ledger.get()).docs.filter((d) => {
+    const x = d.data();
+    return x.kind === 'earn' && x.status !== 'void' && Number(x.multiplier) > 1 && x.razorpayOrderId && x.razorpayOrderId !== endedRzp;
+  });
+  if (!boosted.length) return [];
+  const rows = await tierRows(db, uid);
+  const changed: string[] = [];
+  for (const d of boosted) {
+    const x = d.data();
+    const rzp = String(x.razorpayOrderId);
+    const spend = tierSpend(rows, rzp);
+    const index = tierIndexForSpend(spend, settings.tiers);
+    if (tierIndexForSpend(spend + endedPaise / 100, settings.tiers) <= index) continue;
+    const tier = settings.tiers[index];
+    const from = Math.round(Number(x.multiplier) * 100);
+    const to = Math.round(Math.min(Number(x.multiplier), tier.multiplier) * 100);
+    if (!(to < from)) continue;
+    const row = rows.find((r) => r.id === rzp);
+    const base = row ? Math.min(row.base, row.amountPaise / 100) : 0;
+    const amount =
+      pointsForBase(base, settings, from / 100) === Number(x.amount)
+        ? pointsForBase(base, settings, to / 100)
+        : Math.floor((Number(x.amount) * to) / from + 1e-9);
+    // Re-read in a transaction so a void or a second return at the same time is not overwritten.
+    const did = await db.runTransaction(async (tx) => {
+      const cur = (await tx.get(d.ref)).data();
+      if (!cur || cur.status === 'void' || Number(cur.multiplier) !== Number(x.multiplier) || Number(cur.amount) !== Number(x.amount)) return false;
+      tx.update(d.ref, {
+        amount,
+        multiplier: to / 100,
+        tierName: tier.name,
+        amountBefore: cur.amountBefore ?? cur.amount,
+        boostRemovedAt: now,
+        boostRemovedBy: endedRzp,
+      });
+      return true;
+    });
+    if (!did) continue;
+    changed.push(`${d.ref.id}:tier`);
+    // What the order page shows; reconciling that order repairs it if this fails.
+    await db.collection('orders').doc(rzp).update({ pointsEarned: amount }).catch((err: unknown) => {
+      console.warn('[notify-order] points shown on order', rzp, 'not updated:', err instanceof Error ? err.message : err);
+    });
+  }
+  return changed;
 }
 
 /**
@@ -654,6 +729,9 @@ async function tierSpendBefore(db: admin.firestore.Firestore, uid: string, rzp: 
  *                                   open; void when the order ends; restored if
  *                                   the shop reopens it; records tierName /
  *                                   multiplier (the tier before this order).
+ *                                   When an order that helped lift that tier
+ *                                   ends, the boost is taken off (see
+ *                                   removeTierBoost).
  *                                   Dealer-priced orders (payments.dealer) earn
  *                                   nothing (base 0) and get no scratch card
  *   refund  refund_<rzp>_<currency> what the payment spent, while the order is
@@ -816,6 +894,11 @@ export async function reconcileRewards(
       changed.push(`${earnRef.id}:${held ? 'hold' : 'release'}`);
       earn!.state = held ? 'held' : 'active';
     }
+  }
+
+  // 2b. An order that ended no longer lifts the multiplier of the orders it helped.
+  if (ended && payment.dealer !== true && order.deliveredAt) {
+    changed.push(...(await removeTierBoost(db, uid, rzp, Number(payment.amountPaise) || 0, settings, now)));
   }
 
   // 3. Refunds of what the payment spent.

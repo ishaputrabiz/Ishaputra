@@ -50,7 +50,12 @@ ships **off**.
 - **Tier** = the highest tier whose `minSpend` ≤ tier spend. Exactly 4 tiers; the first always starts at ₹0.
 - **Multiplier:** when an order first earns points (on delivery), the server uses the tier from the customer's
   **other** delivered orders (this one excluded) and earns `floor(base × pointsPer100 × multiplier / 100)`. The
-  earn entry stores `tierName` and `multiplier`. Scratch prizes are not multiplied.
+  earn entry stores `tierName` and `multiplier`. Scratch prizes are not multiplied. The multiplier is fixed at that
+  moment, with one exception: when a delivered order later ends (returned, cancelled, refunded), the earns of the
+  customer's other orders that it helped lift above 1x are taken back to the tier they would have had without it
+  (never up, and only when removing it lowers the tier). The earn keeps its status; its `amountBefore`,
+  `boostRemovedAt` and `boostRemovedBy` record the change. Orders delivered close together may still count each
+  other: that is accepted.
 - **Member number:** 12 digits derived from the account id (64-bit FNV-1a of the uid, mod 10¹², zero-padded),
   shown as `IB 4821 7730 1956` (prefix `BRAND.memberPrefix`). Nothing is stored. Collisions are possible in theory
   (about 1 in 10¹² per pair) and harmless: it is a support reference, not a key.
