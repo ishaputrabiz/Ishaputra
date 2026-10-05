@@ -12,8 +12,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ProductRowSkeleton } from "@/components/skeletons";
 import ProductCard from "@/components/ProductCard";
 import { WishlistToggle } from "@/components/WishlistToggle";
+import { DealerPriceInline } from "@/components/dealer/DealerPrice";
 import { EmptyState } from "@/components/EmptyState";
 import Reveal from "@/components/Reveal";
+import { useDealerUnit } from "@/hooks/useDealer";
 import { formatINR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { subscribeToActiveProductsByFlag } from '@/services/productCache';
@@ -31,6 +33,26 @@ const RankTag = ({ rank, className }: { rank: number; className?: string }) => (
     {rankLabel(rank)}
   </span>
 );
+
+/** The spotlight's price: an approved dealer's price while the programme is on, otherwise the usual row. */
+const SpotlightPrice = ({ product }: { product: UIProduct }) => {
+  const dealer = useDealerUnit(product.id, product.price);
+  if (dealer) {
+    return <DealerPriceInline unit={dealer.unit} regular={product.price} percentOff={dealer.percentOff} size="lg" />;
+  }
+  return (
+    <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+      <span className="price-now text-lg">{formatINR(product.price)}</span>
+      {product.oldPrice && product.oldPrice > product.price && (
+        <span className="price-was text-xs">
+          <span className="sr-only">Was </span>
+          {formatINR(product.oldPrice)}
+        </span>
+      )}
+      {(product.discount ?? 0) > 0 && <span className="chip-off">{product.discount}% off</span>}
+    </p>
+  );
+};
 
 /**
  * A row card with its rank on the photo. Loop copies (the second set that makes
@@ -234,16 +256,7 @@ const BestSellers = () => {
                               {spotlight.title}
                             </Link>
                           </h3>
-                          <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                            <span className="price-now text-lg">{formatINR(spotlight.price)}</span>
-                            {spotlight.oldPrice && spotlight.oldPrice > spotlight.price && (
-                              <span className="price-was text-xs">
-                                <span className="sr-only">Was </span>
-                                {formatINR(spotlight.oldPrice)}
-                              </span>
-                            )}
-                            {(spotlight.discount ?? 0) > 0 && <span className="chip-off">{spotlight.discount}% off</span>}
-                          </p>
+                          <SpotlightPrice product={spotlight} />
                         </div>
                         <div className="relative z-raised flex items-center gap-2">
                           <button

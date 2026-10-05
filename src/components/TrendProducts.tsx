@@ -12,8 +12,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ProductRowSkeleton } from "@/components/skeletons";
 import ProductCard from "@/components/ProductCard";
 import { WishlistToggle } from "@/components/WishlistToggle";
+import { DealerPriceInline } from "@/components/dealer/DealerPrice";
 import { EmptyState } from "@/components/EmptyState";
 import Reveal from "@/components/Reveal";
+import { useDealerUnit } from "@/hooks/useDealer";
 import { formatINR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { subscribeToActiveProductsByFlag } from '@/services/productCache';
@@ -21,6 +23,25 @@ import { subscribeToActiveProductsByFlag } from '@/services/productCache';
 const HEADING_FONT = { fontFamily: "var(--font-heading)", fontStretch: "var(--font-heading-stretch)" };
 const INERT = { inert: "" } as Record<string, string>;
 const NEW_ARRIVALS_LINK = "/products?tag=new-arrivals";
+
+/** The spotlight's price on its photo: an approved dealer's price while the programme is on, otherwise the usual row. */
+const SpotlightPrice = ({ product }: { product: UIProduct }) => {
+  const dealer = useDealerUnit(product.id, product.price);
+  if (dealer) {
+    return <DealerPriceInline unit={dealer.unit} regular={product.price} percentOff={dealer.percentOff} tone="dark" className="on-photo" />;
+  }
+  return (
+    <p className="on-photo flex flex-wrap items-baseline gap-x-2">
+      <span className="text-base font-bold tabular-nums">{formatINR(product.price)}</span>
+      {product.oldPrice && product.oldPrice > product.price && (
+        <span className="text-xs tabular-nums text-charcoal-foreground/75 line-through">
+          <span className="sr-only">Was </span>
+          {formatINR(product.oldPrice)}
+        </span>
+      )}
+    </p>
+  );
+};
 
 /** New arrivals: a wide spotlight and a drifting row on phones, one drifting row on larger screens. */
 const TrendProducts = () => {
@@ -193,15 +214,7 @@ const TrendProducts = () => {
                         </Link>
                       </h3>
                       <div className="flex items-center justify-between gap-3">
-                        <p className="on-photo flex flex-wrap items-baseline gap-x-2">
-                          <span className="text-base font-bold tabular-nums">{formatINR(spotlight.price)}</span>
-                          {spotlight.oldPrice && spotlight.oldPrice > spotlight.price && (
-                            <span className="text-xs tabular-nums text-charcoal-foreground/75 line-through">
-                              <span className="sr-only">Was </span>
-                              {formatINR(spotlight.oldPrice)}
-                            </span>
-                          )}
-                        </p>
+                        <SpotlightPrice product={spotlight} />
                         <button
                           type="button"
                           onClick={() => handleAddToCart(spotlight)}

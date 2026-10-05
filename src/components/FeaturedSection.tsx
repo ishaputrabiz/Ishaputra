@@ -11,7 +11,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { IconButton } from "@/components/ui/icon-button";
 import ProductCard from "@/components/ProductCard";
 import { WishlistToggle } from "@/components/WishlistToggle";
+import { DealerPriceInline } from "@/components/dealer/DealerPrice";
 import Reveal from "@/components/Reveal";
+import { useDealerUnit } from "@/hooks/useDealer";
 import { formatINR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { subscribeToActiveProductsByFlag } from '@/services/productCache';
@@ -21,6 +23,42 @@ const FEATURED_LINK = "/products?tag=featured";
 /** A card is outlined when its title link has keyboard focus (the link covers the whole card). */
 const CARD_FOCUS =
   "has-[a[data-card-link]:focus-visible]:outline has-[a[data-card-link]:focus-visible]:outline-2 has-[a[data-card-link]:focus-visible]:outline-offset-2 has-[a[data-card-link]:focus-visible]:outline-highlight-soft";
+
+/** Dealer price sizes for the tile sizes below: the dealer price keeps the hierarchy the usual price has. */
+const DEALER_SIZE = { sm: "md", md: "lg", lg: "xl" } as const;
+
+/**
+ * A tile's price on its photo, shared by the hero and every other tile: an
+ * approved dealer's price while the programme is on, otherwise the usual row.
+ */
+const TilePrice = ({ product, size }: { product: UIProduct; size: "sm" | "md" | "lg" }) => {
+  const dealer = useDealerUnit(product.id, product.price);
+  if (dealer) {
+    return (
+      <DealerPriceInline
+        unit={dealer.unit}
+        regular={product.price}
+        percentOff={dealer.percentOff}
+        size={DEALER_SIZE[size]}
+        tone="dark"
+        className="on-photo"
+      />
+    );
+  }
+  return (
+    <p className="on-photo flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+      <span className={cn("font-bold tabular-nums", size === "lg" ? "text-2xl" : size === "md" ? "text-lg" : "text-base")}>
+        {formatINR(product.price)}
+      </span>
+      {product.oldPrice && product.oldPrice > product.price && (
+        <span className="text-xs tabular-nums text-charcoal-foreground/75 line-through md:text-sm">
+          <span className="sr-only">Was </span>
+          {formatINR(product.oldPrice)}
+        </span>
+      )}
+    </p>
+  );
+};
 
 const Shell = ({ children, busy }: { children: React.ReactNode; busy?: boolean }) => (
   <section className="relative py-8 md:py-12" aria-busy={busy || undefined}>
@@ -126,20 +164,6 @@ const FeaturedSection = () => {
   const upperProducts = visibleProducts.slice(0, 2);
   const lowerProducts = visibleProducts.slice(2, 4);
 
-  const priceRow = (product: UIProduct, size: "sm" | "md" | "lg") => (
-    <p className="on-photo flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
-      <span className={cn("font-bold tabular-nums", size === "lg" ? "text-2xl" : size === "md" ? "text-lg" : "text-base")}>
-        {formatINR(product.price)}
-      </span>
-      {product.oldPrice && product.oldPrice > product.price && (
-        <span className="text-xs tabular-nums text-charcoal-foreground/75 line-through md:text-sm">
-          <span className="sr-only">Was </span>
-          {formatINR(product.oldPrice)}
-        </span>
-      )}
-    </p>
-  );
-
   const titleLink = (product: UIProduct) => (
     <Link
       to={`/product/${product.id}`}
@@ -188,7 +212,7 @@ const FeaturedSection = () => {
           {titleLink(product)}
         </h3>
         <div className="flex items-center justify-between gap-2">
-          {priceRow(product, compact ? "sm" : "md")}
+          <TilePrice product={product} size={compact ? "sm" : "md"} />
           <IconButton
             label={`Add ${product.title} to cart`}
             variant="onPhoto"
@@ -260,7 +284,7 @@ const FeaturedSection = () => {
               <h3 title={featuredProduct.title} className="on-photo mb-2 line-clamp-2 text-2xl font-semibold [text-wrap:pretty]" style={HEADING_FONT}>
                 {titleLink(featuredProduct)}
               </h3>
-              {priceRow(featuredProduct, "md")}
+              <TilePrice product={featuredProduct} size="md" />
             </div>
           </article>
 
@@ -304,7 +328,7 @@ const FeaturedSection = () => {
                 <h3 title={featuredProduct.title} className="on-photo mb-3 line-clamp-2 text-3xl font-semibold [text-wrap:balance]" style={HEADING_FONT}>
                   {titleLink(featuredProduct)}
                 </h3>
-                <div className="mb-6">{priceRow(featuredProduct, "lg")}</div>
+                <div className="mb-6"><TilePrice product={featuredProduct} size="lg" /></div>
                 <span
                   aria-hidden="true"
                   className="btn-line text-charcoal-foreground group-hover:bg-charcoal-foreground group-hover:text-charcoal"

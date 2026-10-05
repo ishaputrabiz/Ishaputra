@@ -1054,7 +1054,8 @@ const ProductDetail = () => {
                       MRP inclusive of all taxes
                     </p>
                   )}
-                  {!isUnavailable(product) && (
+                  {/* Coupons do not apply to dealer-priced orders, so no ticket under a dealer price. */}
+                  {!dealer && !isUnavailable(product) && (
                     <ProductOfferTag
                       // The same figure the price above shows: the live silver
                       // price for silver-priced pieces, the stored price otherwise.
