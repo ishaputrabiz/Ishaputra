@@ -17,7 +17,8 @@ import { createHash } from 'node:crypto';
  * coupons, silver rate) is server-controlled data.
  *
  * Body:    { items: [{ productId, quantity }], paymentMethod?, couponCode?,
- *            usePoints?, useCashback?, currency?, receipt?, notes?,
+ *            usePoints?, useCashback?, pricing? ('dealer' | 'retail': how the browser
+ *            priced the cart), currency?, receipt?, notes?,
  *            amount? (client's claim, checked),
  *            amountBeforeRewards? (client's claim before points/cashback, checked) }
  * Header:  Authorization: Bearer <Firebase ID token> (sent whenever signed in)
@@ -28,6 +29,8 @@ import { createHash } from 'node:crypto';
  *   rw_uid    the signed-in customer (from the verified ID token)
  *   rw_base   rupees paid for products, which points are earned on (earnBase)
  *   rw_cart   SHA-256 of the cart (cartKey), to compare with the order later
+ *   rw_dealer  '1' when the order was charged dealer prices; its points base (rw_base) is then 0
+ *   rw_regular the cart at regular prices (rupees), written with rw_dealer
  *   rw_points / rw_pv / rw_cashback   points spent, their rupee value, cashback spent
  * api/verify-payment.ts copies them into payments/<razorpay order id>, the
  * record an order document must be created against.
@@ -504,6 +507,64 @@ async function customerUid(req: VercelRequest): Promise<string | null> {
   return uid;
 }
 
+/**
+ * What the dealer step decides for a priced cart: an error reply, or null to
+ * go on. The browser says how it priced the cart (pricing); when the server
+ * disagrees the customer must see the new total before paying. Dealer prices
+ * take no coupon, points or cashback. Exported for tests.
+ */
+export function dealerCheck(
+  quote: DealerQuote,
+  body: { pricing?: unknown; couponCode?: unknown; usePoints?: unknown; useCashback?: unknown },
+): { status: number; body: Record<string, unknown> } | null {
+  const server = quote.applies ? 'dealer' : 'retail';
+  if ((body.pricing === 'dealer' || body.pricing === 'retail') && body.pricing !== server) {
+    return {
+      status: 409,
+      body: {
+        code: 'dealer_pricing_changed',
+        pricing: server,
+        error:
+          server === 'dealer'
+            ? 'Dealer prices now apply to this order. Check the new total and pay again.'
+            : 'Dealer prices no longer apply to this order. Check the new total and pay again.',
+      },
+    };
+  }
+  if (quote.applies) {
+    const coupon = typeof body.couponCode === 'string' && body.couponCode.trim() !== '';
+    if (coupon || body.usePoints === true || body.useCashback === true) {
+      return {
+        status: 400,
+        body: { code: 'dealer_no_extras', error: "Coupons, points and cashback don't apply to dealer-priced orders." },
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Whether the customer is an approved dealer, and the private dealer prices.
+ * Read with the Admin SDK: dealers/<uid> and dealerPricing/current are not
+ * public. Throws when they cannot be read.
+ */
+async function loadDealer(
+  uid: string | null,
+  settings: DealerSettings,
+): Promise<{ approved: boolean; pricing: DealerPricing | null }> {
+  if (!uid || !settings.enabled) return { approved: false, pricing: null };
+  const { db } = await adminSdk();
+  const dealer = await withTimeout(db.collection('dealers').doc(uid).get(), ADMIN_TIMEOUT_MS, 'Dealer check');
+  if (dealer.data()?.status !== 'approved') return { approved: false, pricing: null };
+  const pricing = await withTimeout(db.collection('dealerPricing').doc('current').get(), ADMIN_TIMEOUT_MS, 'Dealer prices');
+  return { approved: true, pricing: normaliseDealerPricing(pricing.exists ? (pricing.data() as Partial<DealerPricing>) : null) };
+}
+
+const DEALER_UNAVAILABLE = {
+  code: 'dealer_unavailable',
+  error: "We couldn't confirm your dealer prices just now. Nothing was charged. Please try again.",
+};
+
 type LedgerDoc = { data: () => Record<string, any> };
 
 const toLedgerLike = (d: LedgerDoc): LedgerLike => {
@@ -833,6 +894,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     usePoints?: boolean;
     /** Spend available wallet cashback. */
     useCashback?: boolean;
+    /** How the browser priced the cart: dealer prices or regular ones. */
+    pricing?: unknown;
     amount?: unknown;
     /** The browser's total before points/cashback, so a cart problem is told apart from a rewards one. */
     amountBeforeRewards?: unknown;
@@ -868,7 +931,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // ── Who is paying ── (before pricing: an approved dealer pays dealer prices)
+  // Sent whenever the customer is signed in. It binds the payment to them
+  // (rw_uid), which is what lets an order be recorded as paid and earn points.
+  // A failed check is only fatal for rewards and dealer prices: otherwise the
+  // customer can still pay, and the order is recorded for a manual check.
+  const claimsDealer = body.pricing === 'dealer';
+  let uid: string | null = null;
+  let uidError: string | null = null;
+  try {
+    uid = await customerUid(req);
+  } catch (error: unknown) {
+    uidError = error instanceof Error ? error.message : 'Sign-in check failed';
+  }
+  if (uidError && claimsDealer) return res.status(503).json({ ...DEALER_UNAVAILABLE, detail: uidError });
+
   let serverTotal: number;
+  let quote: DealerQuote;
   // Kept for the rewards step, which prices after the coupon and delivery.
   let parts = {
     subtotal: 0,
@@ -879,10 +958,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   };
   try {
     // ── Settings (admin-managed documents, never client-supplied) ──
-    const [deliveryDoc, gstDoc, silverDoc] = await Promise.all([
+    const [deliveryDoc, gstDoc, silverDoc, dealerDoc] = await Promise.all([
       getDoc('siteSettings/delivery'),
       getDoc('siteSettings/gst'),
       getDoc('siteSettings/silverRate'),
+      getDoc('siteSettings/dealer'),
     ]);
     const delivery = normalizeDelivery(deliveryDoc);
     const gst = { ...DEFAULT_GST, ...(gstDoc || {}) };
@@ -893,7 +973,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       items.map((line) => getDoc(`products/${String(line.productId)}`)),
     );
 
-    let subtotal = 0;
+    const lines: DealerLine[] = [];
     for (let i = 0; i < items.length; i++) {
       const productId = String(items[i].productId);
       const p = products[i];
@@ -924,8 +1004,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!Number.isFinite(unit) || unit < 0) {
         return res.status(400).json({ error: `Product ${productId} has no valid price` });
       }
-      subtotal += unit * Number(items[i].quantity);
+      lines.push({ productId, unit, quantity: Number(items[i].quantity) });
     }
+
+    // ── Dealer prices (approved dealers, programme on, big enough at regular prices) ──
+    let dealer: { approved: boolean; pricing: DealerPricing | null } = { approved: false, pricing: null };
+    try {
+      dealer = await loadDealer(uid, normaliseDealerSettings(dealerDoc as Partial<DealerSettings> | null));
+    } catch (error: unknown) {
+      if (claimsDealer) {
+        return res.status(503).json({ ...DEALER_UNAVAILABLE, detail: error instanceof Error ? error.message : undefined });
+      }
+      console.warn('[create-order] dealer check failed, pricing at regular prices:', error instanceof Error ? error.message : error);
+    }
+    quote = dealerQuote(lines, normaliseDealerSettings(dealerDoc as Partial<DealerSettings> | null), dealer.pricing, dealer.approved);
+    const refusal = dealerCheck(quote, body);
+    if (refusal) return res.status(refusal.status).json(refusal.body);
+    const subtotal = quote.subtotal;
 
     // ── Coupon, re-validated server-side ──
     let discount = 0;
@@ -1009,17 +1104,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  // ── Who is paying ──
-  // Sent whenever the customer is signed in. It binds the payment to them
-  // (rw_uid), which is what lets an order be recorded as paid and earn points.
-  // Without rewards a failed check is not fatal: the customer can still pay,
-  // the order is then recorded for a manual payment check.
-  let uid: string | null = null;
-  try {
-    uid = await customerUid(req);
-  } catch (error: unknown) {
-    if (wantsRewards) return conflict('rewards_unavailable', error instanceof Error ? error.message : undefined);
-    console.warn('[create-order] could not verify the customer:', error instanceof Error ? error.message : error);
+  if (uidError) {
+    if (wantsRewards) return conflict('rewards_unavailable', uidError);
+    console.warn('[create-order] could not verify the customer:', uidError);
   }
   if (wantsRewards && !uid) return conflict('rewards_unavailable', 'Sign in again to use your rewards');
 
@@ -1065,20 +1152,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // The server's facts about this payment. Only this function writes rw_* notes;
   // verify-payment copies them into payments/<razorpay order id>.
-  const base = earnBase({
-    subtotal: parts.subtotal,
-    couponDiscount: parts.discount,
-    pointsValue: redemption.pointsValue,
-    cashback: redemption.cashback,
-    gstEnabled: parts.gst.enabled,
-    gstInclusive: parts.gst.inclusive,
-    gstRate: parts.gst.rate,
-  });
+  const base = quote.applies
+    ? 0
+    : earnBase({
+        subtotal: parts.subtotal,
+        couponDiscount: parts.discount,
+        pointsValue: redemption.pointsValue,
+        cashback: redemption.cashback,
+        gstEnabled: parts.gst.enabled,
+        gstInclusive: parts.gst.inclusive,
+        gstRate: parts.gst.rate,
+      });
   const notes: Record<string, string> = {
     ...clientNotes(body.notes),
     rw_base: String(base),
     rw_cart: createHash('sha256').update(cartKey(items)).digest('hex'),
     ...(uid ? { rw_uid: uid } : {}),
+    ...(quote.applies ? { rw_dealer: '1', rw_regular: String(quote.regularSubtotal) } : {}),
     ...(spendsRewards
       ? {
           rw_points: String(redemption.points),
