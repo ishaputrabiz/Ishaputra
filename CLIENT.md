@@ -276,7 +276,7 @@ Owner to do: set Ships From = Telangana in Admin > Commerce (the delivery-charge
 - [ ] Step 3 accounts   - [ ] Step 4 test and publish   - [ ] Step 5 client changes
 
 ## Next step
-Step 2B is done. Scratch & Win and the dealer programme stay off until the client confirms their values and an admin turns them on. Next: Step 3 accounts (send the client `docs/client-checklist-steps-3-5.md`).
+Step 2B is done. Scratch & Win and the dealer programme stay off until the client confirms their values and an admin turns them on. Step 3 started 2026-10-05: the checklist (`docs/client-checklist-steps-3-5.pdf`) is ready to send. Next: collect the client's answers and accounts.
 
 ## Open questions
 - Real business details to replace the dummy ones in `src/config/brand.ts`: legal name, address, phone, WhatsApp, email, hours, GSTIN, domain, social links (blocking for launch, not for review)
