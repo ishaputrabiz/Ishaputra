@@ -581,6 +581,58 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // --- DEALERS (Dealer Membership) ---
+    // One application per customer (doc id = uid). The customer creates it as
+    // 'pending' with only the application fields, may withdraw it while it is
+    // pending, and may re-apply after a rejection. Only an admin approves,
+    // rejects, suspends or reinstates. api/create-order.ts reads the status
+    // with the Admin SDK before charging dealer prices.
+    match /dealers/{uid} {
+      function dealerAppKeys() {
+        return ['businessName', 'businessType', 'contactName', 'phone', 'city', 'state', 'gstin', 'message'];
+      }
+      function validDealerApp(d) {
+        return d.businessName is string && d.businessName.size() >= 2 && d.businessName.size() <= 80
+          && d.businessType in ['retail', 'ayurvedic', 'salon', 'gym', 'online', 'distributor', 'other']
+          && d.contactName is string && d.contactName.size() >= 2 && d.contactName.size() <= 60
+          && d.phone is string && d.phone.matches('^[+]?[0-9 ]{10,15}$')
+          && d.city is string && d.city.size() >= 2 && d.city.size() <= 60
+          && d.state is string && d.state.size() >= 2 && d.state.size() <= 40
+          && d.gstin is string
+          && (d.gstin == '' || d.gstin.matches('^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$'))
+          && d.message is string && d.message.size() <= 500;
+      }
+      allow get: if isOwner(uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(dealerAppKeys().concat(['uid', 'status', 'appliedAt', 'updatedAt']))
+        && request.resource.data.keys().hasAll(dealerAppKeys().concat(['uid', 'status', 'appliedAt']))
+        && request.resource.data.uid == uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.appliedAt == request.time
+        && validDealerApp(request.resource.data);
+      allow update: if isAdmin()
+        || (isOwner(uid)
+          && resource.data.status == 'rejected'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(dealerAppKeys().concat(['status', 'appliedAt', 'updatedAt']))
+          && request.resource.data.appliedAt == request.time
+          && validDealerApp(request.resource.data));
+      allow delete: if isAdmin() || (isOwner(uid) && resource.data.status == 'pending');
+    }
+
+    // --- DEALER PRICES (private) ---
+    // The store-wide dealer discount and per-product dealer prices. Only admins
+    // and approved dealers can read them; only admins write them.
+    match /dealerPricing/{docId} {
+      allow read: if isAdmin()
+        || (isAuthenticated()
+          && exists(/databases/$(database)/documents/dealers/$(request.auth.uid))
+          && get(/databases/$(database)/documents/dealers/$(request.auth.uid)).data.status == 'approved');
+      allow write: if isAdmin();
+    }
+
     // --- USER FCM TOKENS (web push) ---
     // Document ID = the FCM registration token; data: { uid, token, platform, userAgent, createdAt, updatedAt }
     match /userTokens/{token} {
