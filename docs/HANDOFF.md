@@ -7,10 +7,18 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-05 (Dealer + Loyalty card: building on branch `dealer-loyalty`, Tasks 1-10b done; paused for usage).
+Last updated: 2026-10-05 (Dealer + Loyalty card: all 15 tasks, fix wave, money check and its fixes done on `dealer-loyalty`; rules deploy, live test and merge waiting for the owner's permission).
 
 ## State
 
+- **2026-10-05 (later): Dealer + Loyalty card BUILT and money-checked on `dealer-loyalty` (HEAD `66e7e83`, not merged). Waiting on the owner to run the rules deploy (the permission checker blocked it for Claude).**
+  - Lean mode (owner): one Sonnet builder per task; only Task 11 (checkout) reviewed (approved, no Critical/Important). Tasks 11-15 `6b72171`, `bab257d`, `a72838b`, `4bf08a0`, `966f847`; fix wave `2020821`, `920968d`, `ec1820b`.
+  - **Money check (2 Opus agents):** reports `.superpowers/sdd/money-review-A.md` (server + rules) and `money-review-B.md` (browser/server parity). 0 Critical. **1 High, pre-existing on `main`: product id path traversal in `api/create-order.ts`** (`../reviews/<id>` let a customer price their own "product"); fixed `073db6c` (id must match `^[A-Za-z0-9_-]{1,128}$`, path encoded; same check in the other `api/*.ts`). Not live anywhere: Vercel isn't set up yet. Also fixed: L1 a returned order no longer lifts other orders' multiplier (`7c8a3e3`); orders rule: dealer fields only for an approved dealer's own business name and GSTIN; B1/B3 payment hold only at or above the dealer minimum, read errors become an explicit "unavailable" state (`ff7fb97`). Fix report `.superpowers/sdd/money-fix-report.md`. `npm test` 167/167, build passes, type check baseline.
+
+  - **Live test script ready, not run:** `docs/handoff/dealer-loyalty-live.mjs` (rules over REST as the shopper incl. the new orders rule, real create-order/verify/notify with fake Razorpay, tier multiplier, browser screens at 390/1440 light/dark, full snapshot + restore in `finally`). It turns the dealer programme, rewards and Scratch & Win on for a few minutes, so run it when the shop is quiet. Not covered: admin UI screens (needs an admin login) and the invoice buyer block.
+  - Dev server restarted with fresh deps (`--force`; the old one served 3 React copies and crashed Radix Switch/Tabs/Select).
+  - Client checklist for Steps 3-5: `docs/client-checklist-steps-3-5.md`.
+  - Owner notes: pre-existing `ProductForm` blanks `inventory.sku` on every update; ConfirmDialog sits under Sheet (z-index), Admin > Dealers works around it.
 - **2026-10-05: Dealer Membership and Loyalty card (rest of Step 2B): designing, no feature code yet.** The owner asked for placeholder defaults, mockups first for a yes, then build, money review, live test and merge. Code map of what they touch: 5 read-only agents (results summarised here).
   - **Map facts that drive the design:**
     - `api/create-order.ts` re-prices every order from public `products` (REST, public key) and cross-checks the browser's total within Rs 1, so dealer prices must be applied there (uid verified **before** pricing; dealer record read with the Admin SDK) and mirrored in the browser (`useCheckoutPricing`, cart), or checkout fails "Order total mismatch".
@@ -123,7 +131,8 @@ Last updated: 2026-10-05 (Dealer + Loyalty card: building on branch `dealer-loya
    - **Done 2026-10-04 (`4e64b8d`):** the wishlist page shows one toast on remove; cart lines keep the order they were added in. Not checked in a browser (needs the live preview shopper).
    - Generate `public/sitemap.xml` once the domain is real; set `VITE_SITE_URL` on Vercel; PERF-14's `initializeAuth` part.
    - Client placeholders: `CLIENT.md` ("Placeholders for the client").
-4. **Later:** Dealer Membership, Loyalty Card (rest of Step 2B), then Step 3 accounts.
+4. **Dealer + Loyalty card: finish on `dealer-loyalty`** (see "State"). Owner runs, or allows Claude to run: (a) `node docs/handoff/deploy-rules.mjs`; (b) dev server on 5182, then `node docs/handoff/dealer-loyalty-live.mjs http://127.0.0.1:5182 ../shots/dealer-loyalty-live`; (c) if all PASS, merge `dealer-loyalty` into `main` with `--no-ff`, `npm test` + `npm run build` on `main`, tick Step 2B in `CLIENT.md`. To let Claude do (a) and (b), add a Bash allow rule for those two commands in `.claude/settings.local.json`.
+5. **Then Step 3 accounts:** send the client `docs/client-checklist-steps-3-5.md`.
 
 ## Review result
 
