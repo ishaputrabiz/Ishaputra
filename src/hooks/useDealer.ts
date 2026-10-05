@@ -20,8 +20,11 @@ import {
  * session (one set of listeners, module state): the public programme
  * settings, their own application, and, only once they are an approved dealer
  * while the programme is on, the private dealer prices. Guests read nothing.
- * Any read error just means regular prices; the server charges what it works
- * out itself either way.
+ * A settings or application read error just means regular prices. A pricing
+ * read error for an approved dealer is different: the server (Admin SDK) still
+ * prices them as a dealer, so a page that sent regular prices would be refused
+ * every time. It is retried once on its own, then reported as pricingError so
+ * checkout can block payment and offer a retry (retryDealerPricing).
  */
 
 export interface DealerState {
@@ -31,6 +34,8 @@ export interface DealerState {
   record: DealerRecord | null;
   pricing: DealerPricing | null;
   active: boolean;
+  /** An approved dealer's prices could not be read (after one retry): do not take payment at regular prices. */
+  pricingError: boolean;
   showEntry: boolean;
 }
 
@@ -41,6 +46,7 @@ const EMPTY: DealerState = {
   record: null,
   pricing: null,
   active: false,
+  pricingError: false,
   showEntry: false,
 };
 
@@ -56,35 +62,94 @@ let record: DealerRecord | null = null;
 let pricing: DealerPricing | null = null;
 let gotSettings = false;
 let gotRecord = false;
-// True once the pricing listener has answered, with prices or with an error
-// (an error leaves pricing null, so regular prices, but must not keep us "loading").
+// True once the pricing listener has answered with prices, or has failed for
+// good (an automatic retry in flight keeps us "loading").
 let gotPricing = false;
+// The pricing listener failed, including its one automatic retry.
+let pricingFailed = false;
+// The automatic retry has been used for the current failure streak.
+let pricingRetried = false;
+let pricingRetryTimer: ReturnType<typeof setTimeout> | null = null;
+// Lets a stopped or replaced listener's late callbacks be ignored.
+let pricingGen = 0;
 let state: DealerState = EMPTY;
 const listeners = new Set<() => void>();
+
+const PRICING_RETRY_MS = 2000;
+
+function clearPricingRetry() {
+  if (pricingRetryTimer) clearTimeout(pricingRetryTimer);
+  pricingRetryTimer = null;
+}
+
+function stopPricingListener() {
+  clearPricingRetry();
+  pricingGen += 1;
+  stopPricing?.();
+  stopPricing = null;
+  pricing = null;
+  gotPricing = false;
+  pricingFailed = false;
+  pricingRetried = false;
+}
+
+/** (Re)start the private-prices listener. A failure is retried once after a short delay, then reported. */
+function startPricing() {
+  clearPricingRetry();
+  stopPricing?.();
+  const gen = ++pricingGen;
+  gotPricing = false;
+  pricingFailed = false;
+  stopPricing = subscribeDealerPricing(
+    (p) => {
+      if (gen !== pricingGen) return;
+      pricing = p;
+      gotPricing = true;
+      pricingFailed = false;
+      pricingRetried = false;
+      publish();
+    },
+    () => {
+      if (gen !== pricingGen) return;
+      pricing = null;
+      if (!pricingRetried) {
+        // Not ready while the one automatic retry is pending: no payment at regular prices meanwhile.
+        gotPricing = false;
+        pricingRetried = true;
+        pricingRetryTimer = setTimeout(() => {
+          pricingRetryTimer = null;
+          if (gen === pricingGen && stopPricing) {
+            startPricing();
+            publish();
+          }
+        }, PRICING_RETRY_MS);
+      } else {
+        gotPricing = true;
+        pricingFailed = true;
+      }
+      publish();
+    },
+  );
+}
+
+/** Checkout's "Retry" after an approved dealer's prices could not be read: subscribe again. */
+export function retryDealerPricing() {
+  if (!stopPricing || !pricingFailed) return;
+  // This is the customer's own retry; it gets no further automatic one.
+  pricingRetried = true;
+  startPricing();
+  publish();
+}
 
 function publish() {
   const signedIn = currentUid !== null;
   const approved = record?.status === 'approved';
   const wantPricing = signedIn && approved && settings.enabled;
   if (wantPricing && !stopPricing) {
-    gotPricing = false;
-    stopPricing = subscribeDealerPricing(
-      (p) => {
-        pricing = p;
-        gotPricing = true;
-        publish();
-      },
-      () => {
-        pricing = null;
-        gotPricing = true;
-        publish();
-      },
-    );
+    pricingRetried = false;
+    startPricing();
   } else if (!wantPricing && stopPricing) {
-    stopPricing();
-    stopPricing = null;
-    pricing = null;
-    gotPricing = false;
+    stopPricingListener();
   }
   state = signedIn
     ? {
@@ -94,6 +159,7 @@ function publish() {
         record,
         pricing: wantPricing ? pricing : null,
         active: wantPricing && pricing !== null,
+        pricingError: wantPricing && gotPricing && pricingFailed,
         showEntry: settings.enabled || record !== null,
       }
     : EMPTY;
@@ -104,15 +170,13 @@ function watch(uid: string | null) {
   if (uid === currentUid) return;
   stops.forEach((s) => s());
   stops = [];
-  stopPricing?.();
-  stopPricing = null;
+  stopPricingListener();
   currentUid = uid;
   settings = DEFAULT_DEALER_SETTINGS;
   record = null;
   pricing = null;
   gotSettings = false;
   gotRecord = false;
-  gotPricing = false;
   if (uid) {
     stops.push(
       subscribeDealerSettings(

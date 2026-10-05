@@ -40,8 +40,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCheckoutPricing } from '@/hooks/useCheckoutPricing';
-import { useDealer, useDealerQuote } from '@/hooks/useDealer';
-import { DealerAppliedNotice, DealerLinePrice, DealerNudge } from '@/components/checkout/DealerCheckoutNotices';
+import { retryDealerPricing, useDealer, useDealerQuote } from '@/hooks/useDealer';
+import { DealerAppliedNotice, DealerLinePrice, DealerNudge, DealerPricingErrorNotice } from '@/components/checkout/DealerCheckoutNotices';
 import { SmartImage } from "@/components/ui/smart-image";
 import { formatINR, plural } from '@/lib/format';
 import { DUR, EASE_DRAWER, EASE_OUT } from '@/lib/motion';
@@ -197,6 +197,22 @@ const PaymentMethodCard = ({
       />
     </label>
   </fieldset>
+);
+
+/**
+ * Why payment waits on the dealer state, or null. While it loads, a dealer who
+ * could pay would send regular prices and be refused; if an approved dealer's
+ * prices cannot be read, the same would happen on every try.
+ */
+const dealerPayHold = (d: { ready: boolean; pricingError: boolean }) =>
+  !d.ready ? 'Checking your prices…' : d.pricingError ? 'Dealer prices unavailable' : null;
+
+/** Stands in for the slider or the Pay button while payment is held (busy while prices load). */
+const PayHeldButton = ({ label, busy, className }: { label: string; busy: boolean; className: string }) => (
+  <button type="button" disabled aria-busy={busy} className={`btn-copper w-full !text-[12px] ${className}`}>
+    {busy && <Spinner size={16} />}
+    {label}
+  </button>
 );
 
 const SlideToPayButton = ({
@@ -1040,8 +1056,11 @@ const MobileCheckout = () => {
   // gets the cart's own subtotal, untouched. Dealer prices take no coupon,
   // points or cashback.
   const dealer = useDealer();
+  const payHold = dealerPayHold(dealer);
   const dealerCart = useDealerQuote(items);
   const dealerApplies = dealerCart.quote.applies;
+  // An approved dealer under the minimum sees the nudge; it has its own "Add more items" link.
+  const showDealerNudge = !dealerApplies && dealerCart.active && dealerCart.quote.shortBy > 0;
   const pricedSubtotal = dealerApplies ? dealerCart.quote.subtotal : subtotal;
   const pricing = useCheckoutPricing(pricedSubtotal, items.length === 0, selectedPaymentMethod, {
     productIds: items.map((i) => i.id),
@@ -1061,8 +1080,11 @@ const MobileCheckout = () => {
   });
   // A coupon applied before the cart reached dealer prices comes off.
   useEffect(() => {
-    if (dealerApplies && pricing.appliedCoupon) pricing.removeCoupon();
-  }, [dealerApplies, pricing]);
+    if (dealerApplies && pricing.appliedCoupon) {
+      pricing.removeCoupon();
+      toast({ title: 'Coupon removed', description: "Coupons don't apply to dealer-priced orders." });
+    }
+  }, [dealerApplies, pricing, toast]);
   const deliveryCharge = pricing.deliveryCharge;
   const taxAmount = pricing.gstAmount;
   const gstLabel = `GST (${pricing.gst.rate}%${pricing.gst.inclusive ? ' included' : ''})`;
@@ -1083,6 +1105,8 @@ const MobileCheckout = () => {
 
   // Handle order placement
   const handlePlaceOrder = async () => {
+    // Dealer prices still loading, or unreadable: this page would send the wrong pricing.
+    if (payHold) return;
     if (!user || !selectedAddress) {
       toast({ title: 'Add a delivery address to continue', variant: 'destructive' });
       return;
@@ -1285,7 +1309,7 @@ const MobileCheckout = () => {
       }
       if (error instanceof DealerPricingChangedError) {
         // The dealer state is live, so the page re-prices by itself; nothing was charged.
-        sonnerToast.error(error.message);
+        toast({ title: 'Payment not started', description: error.message });
         return;
       }
       if (error instanceof PaymentCancelledError) {
@@ -1563,13 +1587,20 @@ const MobileCheckout = () => {
               </AnimatePresence>
             </ul>
 
+            {/* An approved dealer's prices could not be read: payment is held until they load */}
+            {dealer.pricingError && (
+              <div className="mx-4 mb-4">
+                <DealerPricingErrorNotice onRetry={retryDealerPricing} />
+              </div>
+            )}
+
             {/* Dealer prices: how far off they are, or that they apply */}
             {dealerApplies ? (
               <div className="mx-4 mb-4">
                 <DealerAppliedNotice regularSubtotal={dealerCart.quote.regularSubtotal} savings={dealerCart.quote.savings} />
               </div>
             ) : (
-              dealerCart.active && dealerCart.quote.shortBy > 0 && (
+              showDealerNudge && (
                 <div className="mx-4 mb-4">
                   <DealerNudge
                     regularSubtotal={dealerCart.quote.regularSubtotal}
@@ -1581,17 +1612,19 @@ const MobileCheckout = () => {
               )
             )}
 
-            {/* Add more items */}
-            <div className="mx-4 mb-4">
-              <button
-                type="button"
-                onClick={() => navigate('/')}
-                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-card border border-dashed border-foreground/15 bg-card py-3 transition-[background-color,transform] duration-press ease-out hover:bg-foreground/[0.04] active:scale-[0.97]"
-              >
-                <span className="text-sm text-muted-foreground">Missed something?</span>
-                <span className="text-sm font-semibold text-primary">Add more items</span>
-              </button>
-            </div>
+            {/* Add more items (the dealer nudge above already has this link, to the same place) */}
+            {!showDealerNudge && (
+              <div className="mx-4 mb-4">
+                <button
+                  type="button"
+                  onClick={() => navigate('/products')}
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-card border border-dashed border-foreground/15 bg-card py-3 transition-[background-color,transform] duration-press ease-out hover:bg-foreground/[0.04] active:scale-[0.97]"
+                >
+                  <span className="text-sm text-muted-foreground">Missed something?</span>
+                  <span className="text-sm font-semibold text-primary">Add more items</span>
+                </button>
+              </div>
+            )}
 
             {/* Available Offers (coupons don't apply to dealer-priced orders) */}
             {!dealerApplies && pricing.redeemableCoupons.length > 0 && (() => {
@@ -1769,6 +1802,12 @@ const MobileCheckout = () => {
           )}
         </div>
 
+        {dealer.pricingError && (
+          <div className="mx-4 mt-3">
+            <DealerPricingErrorNotice onRetry={retryDealerPricing} />
+          </div>
+        )}
+
         {/* Compact Order Summary (step 2 — no duplicate full items list) */}
         <div className="mx-4 mb-3 mt-3">
           <div className="tx-sheet flex items-center gap-3 rounded-card border border-foreground/[0.08] px-4 py-3 shadow-panel">
@@ -1901,6 +1940,8 @@ const MobileCheckout = () => {
               <ChevronRight aria-hidden="true" className="size-4" />
             </button>
           )
+        ) : payHold ? (
+          <PayHeldButton label={payHold} busy={!dealer.ready} className="h-14" />
         ) : (
           <SlideToPayButton
             key={slideResetKey}
@@ -2254,6 +2295,7 @@ const Checkout = () => {
   // gets the cart's own subtotal, untouched. Dealer prices take no coupon,
   // points or cashback.
   const dealer = useDealer();
+  const payHold = dealerPayHold(dealer);
   const dealerCart = useDealerQuote(items);
   const dealerApplies = dealerCart.quote.applies;
   const pricedSubtotal = dealerApplies ? dealerCart.quote.subtotal : subtotal;
@@ -2275,8 +2317,11 @@ const Checkout = () => {
   });
   // A coupon applied before the cart reached dealer prices comes off.
   useEffect(() => {
-    if (dealerApplies && pricing.appliedCoupon) pricing.removeCoupon();
-  }, [dealerApplies, pricing]);
+    if (dealerApplies && pricing.appliedCoupon) {
+      pricing.removeCoupon();
+      toast({ title: 'Coupon removed', description: "Coupons don't apply to dealer-priced orders." });
+    }
+  }, [dealerApplies, pricing, toast]);
   const deliveryCharge = pricing.deliveryCharge;
   const taxAmount = pricing.gstAmount;
   const gstLabel = `GST (${pricing.gst.rate}%${pricing.gst.inclusive ? ' included' : ''})`;
@@ -2295,6 +2340,8 @@ const Checkout = () => {
 
   // Handle order placement
   const handlePlaceOrder = async () => {
+    // Dealer prices still loading, or unreadable: this page would send the wrong pricing.
+    if (payHold) return;
     if (!user || !selectedAddress) {
       toast({ title: 'Add a delivery address to continue', variant: 'destructive' });
       return;
@@ -2492,7 +2539,7 @@ const Checkout = () => {
       }
       if (error instanceof DealerPricingChangedError) {
         // The dealer state is live, so the page re-prices by itself; nothing was charged.
-        sonnerToast.error(error.message);
+        toast({ title: 'Payment not started', description: error.message });
         return;
       }
       if (error instanceof PaymentCancelledError) {
@@ -2915,6 +2962,9 @@ const Checkout = () => {
 
           {/* Right Column - Coupons & Price Details */}
           <div className="space-y-6">
+            {/* An approved dealer's prices could not be read: payment is held until they load */}
+            {dealer.pricingError && <DealerPricingErrorNotice onRetry={retryDealerPricing} />}
+
             {/* Dealer prices: how far off they are, or that they apply */}
             {dealerApplies ? (
               <DealerAppliedNotice regularSubtotal={dealerCart.quote.regularSubtotal} savings={dealerCart.quote.savings} />
@@ -3007,12 +3057,18 @@ const Checkout = () => {
                 className="btn-copper mt-6 h-12 w-full !text-[12px]"
                 // One click pays: it opens Razorpay straight away.
                 onClick={handlePlaceOrder}
-                disabled={isPlacingOrder}
+                disabled={isPlacingOrder || !!payHold}
+                aria-busy={isPlacingOrder || !dealer.ready}
               >
                 {isPlacingOrder ? (
                   <>
                     <Spinner size={16} />
                     Processing
+                  </>
+                ) : payHold ? (
+                  <>
+                    {!dealer.ready && <Spinner size={16} />}
+                    {payHold}
                   </>
                 ) : (
                   <span className="tabular-nums">Pay {formatPrice(total)}</span>

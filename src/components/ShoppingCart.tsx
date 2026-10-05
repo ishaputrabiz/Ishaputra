@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCheckoutPricing } from '@/hooks/useCheckoutPricing';
 import { useDealerQuote } from '@/hooks/useDealer';
+import { useToast } from '@/hooks/use-toast';
 import { DealerAppliedNotice, DealerLinePrice, DealerNudge } from '@/components/checkout/DealerCheckoutNotices';
 import { SmartImage } from "@/components/ui/smart-image";
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
@@ -85,9 +86,13 @@ const ShoppingCart = () => {
     productIds: items.map((i) => i.id),
   });
   // A coupon applied before the cart reached dealer prices comes off.
+  const { toast } = useToast();
   useEffect(() => {
-    if (dealerApplies && pricing.appliedCoupon) pricing.removeCoupon();
-  }, [dealerApplies, pricing]);
+    if (dealerApplies && pricing.appliedCoupon) {
+      pricing.removeCoupon();
+      toast({ title: 'Coupon removed', description: "Coupons don't apply to dealer-priced orders." });
+    }
+  }, [dealerApplies, pricing, toast]);
 
   // On mobile, redirect to /checkout instead of opening the drawer
   useEffect(() => {

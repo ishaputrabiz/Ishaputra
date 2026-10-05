@@ -133,6 +133,31 @@ export const DealerAppliedNotice = ({ regularSubtotal, savings, compact = false,
   );
 };
 
+interface DealerPricingErrorNoticeProps {
+  /** Subscribe to the dealer prices again. */
+  onRetry: () => void;
+  className?: string;
+}
+
+/**
+ * An approved dealer whose prices could not be read. Payment is held while this
+ * shows: the server still prices them as a dealer, so a page that cannot see
+ * the prices must not send regular ones.
+ */
+export const DealerPricingErrorNotice = ({ onRetry, className }: DealerPricingErrorNoticeProps) => (
+  <Notice
+    tone="warning"
+    className={className}
+    action={
+      <button type="button" onClick={onRetry} className="btn-copper h-11 !px-5 !text-[10px]">
+        Retry
+      </button>
+    }
+  >
+    We couldn't load your dealer prices. Check your connection and try again.
+  </Notice>
+);
+
 interface DealerLinePriceProps {
   /** The charged (dealer) unit price, rupees. */
   unit: number;
