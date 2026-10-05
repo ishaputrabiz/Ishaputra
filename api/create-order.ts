@@ -98,7 +98,13 @@ function decodeFields(fields: Record<string, any>): Record<string, any> {
   return out;
 }
 
-/** Returns the document's data, or null when it does not exist. */
+/** A document id taken from the request: one path segment, never "..", "/" or "%". */
+const SAFE_DOC_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
+/**
+ * Returns the document's data, or null when it does not exist. `path` is
+ * built from fixed names and ids that passed SAFE_DOC_ID (encoded anyway).
+ */
 async function getDoc(path: string): Promise<Record<string, any> | null> {
   const resp = await fetch(`${firestoreBase()}/${path}?key=${WEB_API_KEY}`);
   if (resp.status === 404) return null;
@@ -923,13 +929,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Firebase project id / web API key are not configured' });
   }
 
-  // Validate every cart line before spending any network calls on it.
+  // Validate every cart line before spending any network calls on it. A
+  // product id is one path segment of the REST read below: a slash or dot
+  // segment would reach another document (fetch removes "../" and "%2e%2e/"),
+  // e.g. a review the customer wrote, so anything else is refused before any read.
   for (const line of items) {
     const quantity = Number(line.quantity);
-    if (!line.productId || !Number.isInteger(quantity) || quantity < 1 || quantity > 100) {
-      return res
-        .status(400)
-        .json({ error: `Invalid cart line for product ${String(line.productId || '')}` });
+    if (typeof line.productId !== 'string' || !SAFE_DOC_ID.test(line.productId)) {
+      return res.status(400).json({ error: 'Invalid cart line: unknown product id' });
+    }
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100) {
+      return res.status(400).json({ error: `Invalid cart line for product ${line.productId}` });
     }
   }
 
@@ -972,7 +982,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── Subtotal from stored product prices ──
     const products = await Promise.all(
-      items.map((line) => getDoc(`products/${String(line.productId)}`)),
+      items.map((line) => getDoc(`products/${encodeURIComponent(String(line.productId))}`)),
     );
 
     const lines: DealerLine[] = [];

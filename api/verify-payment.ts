@@ -186,6 +186,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
+  // The order id becomes the payments/<id> document id (one path segment).
+  if (typeof orderId !== 'string' || !/^[\w-]{1,128}$/.test(orderId)) {
+    return res.status(400).json({ verified: false, error: 'invalid razorpay_order_id' });
+  }
+
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   if (!keySecret) {
     return res.status(500).json({ verified: false, error: 'RAZORPAY_KEY_SECRET is not configured' });

@@ -42,6 +42,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = (req.body || {}) as { callId?: string; callerName?: string };
   const callId = String(body.callId || '').trim();
   if (!callId) return res.status(400).json({ error: 'callId is required' });
+  // One path segment of videoCalls/<callId>: a slash would reach another document.
+  if (!/^[\w-]{1,128}$/.test(callId)) return res.status(400).json({ error: 'invalid callId' });
 
   try {
     const app = initAdmin();

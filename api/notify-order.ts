@@ -1217,6 +1217,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (isRelease) {
     const uid = isAdmin && body.uid ? String(body.uid) : callerUid;
     const rzp = body.razorpayOrderId ? String(body.razorpayOrderId) : undefined;
+    // An admin-supplied uid and the order id end up in document paths
+    // (users/<uid>/..., payments/<rzp>): one path segment each. The caller's
+    // own uid comes from the verified token.
+    const segment = /^[\w-]{1,128}$/;
+    if ((isAdmin && body.uid && !segment.test(uid)) || (rzp !== undefined && !segment.test(rzp))) {
+      return res.status(400).json({ error: 'invalid uid or razorpayOrderId' });
+    }
     try {
       return res.status(200).json({ ok: true, ...(await releaseHolds(db, uid, rzp)) });
     } catch (err: any) {
