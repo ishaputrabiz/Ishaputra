@@ -7,9 +7,18 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-05 (Scratch & Win: rules deployed, live test passed, merged into `main`).
+Last updated: 2026-10-05 (Step 2B rest: Dealer Membership + Loyalty card being designed; mockup next).
 
 ## State
+
+- **2026-10-05: Dealer Membership and Loyalty card (rest of Step 2B): designing, no feature code yet.** The owner asked for placeholder defaults, mockups first for a yes, then build, money review, live test and merge. Code map of what they touch: 5 read-only agents (results summarised here).
+  - **Map facts that drive the design:**
+    - `api/create-order.ts` re-prices every order from public `products` (REST, public key) and cross-checks the browser's total within Rs 1, so dealer prices must be applied there (uid verified **before** pricing; dealer record read with the Admin SDK) and mirrored in the browser (`useCheckoutPricing`, cart), or checkout fails "Order total mismatch".
+    - A customer can write **any** field on their own `users/<uid>` except `role`/`accountStatus` (rules 44-50). So dealer status can't live there: use an admin-write-only `dealers/<uid>` doc.
+    - Tiers today are browser-only and display-only, from `order.total` of delivered orders (a client-written field, so forgeable). No member number exists. No QR library.
+  - **Placeholder defaults chosen (shown in the mockup; the owner can change any):**
+    - Dealer: shipped **off**. Signed-in customers apply on `/dealer` (business name, type, contact, phone, city, state, optional GSTIN, message); an admin approves, rejects, suspends or reinstates in a new Admin > Dealers page. Dealer price = 20% off the regular price store-wide, or an optional fixed dealer price per product (product form). Dealer prices are private (only approved dealers and admins can read them). They apply when the order is worth Rs 2,000+ at regular prices; below that, regular prices and a nudge. No stacking: dealer-priced orders take no coupon, no points or cashback, earn no points and get no scratch card. Delivery and GST as usual. Dealer orders print the business name and GSTIN on the invoice. Not in v1: dealer-only products, per-dealer levels, credit terms, email or WhatsApp notices, quantity price breaks.
+    - Loyalty card: a digital member card at the top of `/wallet` (tier metal, name, member number derived from the account id, member since, points worth, tier benefit), keeping the progress bar and tier steps; tier and number also on the phone account card and the admin customer page. Tier benefit: a points multiplier (placeholder Silver 1x, Gold 1.25x, Platinum 1.5x, Premium 2x at Rs 0 / 5,000 / 15,000 / 30,000), moved from `BRAND.loyaltyTiers` into an admin setting. Tier = money paid online on delivered, not-returned orders, from the server's `payments` records; the server applies the multiplier when the order earns points. No QR or physical card (no scan target for an online shop).
 
 - **2026-10-05: Scratch & Win is finished and merged into `main`** (`--no-ff`, local only, never pushed). It stays **off** until the client confirms the placeholder values and an admin turns it on.
   - **Rules deployed** with the owner's OK (`node docs/handoff/deploy-rules.mjs`, ruleset `2abcb7dc-…`): the `scratchCards` read-only rule, a return request must start `pending`, and a customer can cancel a return only while it is `pending`.
