@@ -47,6 +47,7 @@ const MobileSearch = lazy(() => import("./pages/MobileSearch"));
 const SearchResults = lazy(() => import("./pages/SearchResults"));
 // Purchase Summary & Security Pages
 const PurchaseSummary = lazy(() => import("./pages/PurchaseSummary"));
+const DealerProgramme = lazy(() => import("./pages/DealerProgramme"));
 const SecurityPage = lazy(() => import("./pages/SecurityPage"));
 // Auth Pages
 const Signup = lazy(() => import("./pages/auth/Signup"));
@@ -269,6 +270,11 @@ const App = () => {
               <Route path="/purchase-summary" element={
                 <ProtectedRoute requireEmailVerification={false}>
                   <PurchaseSummary />
+                </ProtectedRoute>
+              } />
+              <Route path="/dealer" element={
+                <ProtectedRoute requireEmailVerification={false}>
+                  <DealerProgramme />
                 </ProtectedRoute>
               } />
               <Route path="/security" element={
