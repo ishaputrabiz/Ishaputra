@@ -27,6 +27,7 @@ import CategoryIconNav from '@/components/CategoryIconNav';
 import Footer from '@/components/Footer';
 import { useToast } from '@/hooks/use-toast';
 import { EASE_OUT, staggerDelay } from '@/lib/motion';
+import { INDIAN_STATES } from '@/lib/indianStates';
 import {
   getUserAddresses,
   addAddress,
@@ -47,15 +48,6 @@ import {
   MoreVertical,
   ExternalLink,
 } from 'lucide-react';
-
-const INDIAN_STATES = [
-  'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana',
-  'Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur',
-  'Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana',
-  'Tripura','Uttar Pradesh','Uttarakhand','West Bengal',
-  'Andaman and Nicobar Islands','Chandigarh','Dadra and Nagar Haveli and Daman and Diu','Delhi',
-  'Jammu and Kashmir','Ladakh','Lakshadweep','Puducherry',
-];
 
 type FieldName = 'fullName' | 'phoneNumber' | 'pinCode' | 'address' | 'city' | 'state';
 type FieldErrors = Partial<Record<FieldName, string>>;
