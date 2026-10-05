@@ -69,6 +69,29 @@ class FakeCollection {
       .map((p) => new FakeSnap(new FakeDoc(this.db, p), this.db.read(p)));
     return { docs, empty: docs.length === 0, size: docs.length };
   }
+  /** Equality filters only (all the server code uses). */
+  where(field: string, op: '==', value: unknown) {
+    if (op !== '==') throw new Error(`FakeFirestore supports only == queries, not ${op}`);
+    return new FakeQuery(this, [[field, value]]);
+  }
+}
+
+class FakeQuery {
+  coll: FakeCollection;
+  filters: Array<[string, unknown]>;
+  constructor(coll: FakeCollection, filters: Array<[string, unknown]>) {
+    this.coll = coll;
+    this.filters = filters;
+  }
+  where(field: string, op: '==', value: unknown) {
+    if (op !== '==') throw new Error(`FakeFirestore supports only == queries, not ${op}`);
+    return new FakeQuery(this.coll, [...this.filters, [field, value]]);
+  }
+  async get() {
+    const all = await this.coll.get();
+    const docs = all.docs.filter((d) => this.filters.every(([f, v]) => d.data()?.[f] === v));
+    return { docs, empty: docs.length === 0, size: docs.length };
+  }
 }
 
 type Write = { kind: 'create' | 'set' | 'update'; path: string; data: Data; merge?: boolean };

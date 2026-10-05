@@ -572,6 +572,9 @@ interface PaymentRecord {
   points: number;
   pointsValue: number;
   cashback: number;
+  /** A dealer-priced order: earns nothing and gets no scratch card. */
+  dealer?: boolean;
+  regularSubtotal?: number;
 }
 
 /** payments/<rzp> from a paid Razorpay order's notes (what verify-payment writes). */
@@ -591,6 +594,7 @@ async function writePaymentRecord(
     pointsValue: money(notes.rw_pv),
     cashback: whole(notes.rw_cashback),
     cartHash: String(notes.rw_cart || ''),
+    ...(notes.rw_dealer === '1' ? { dealer: true, regularSubtotal: money(notes.rw_regular) } : {}),
     status: 'verified',
     verifiedAt: admin.firestore.Timestamp.now(),
     source: 'reconcile',
@@ -615,6 +619,25 @@ const spendNote = (currency: RewardCurrency, amount: number) =>
   currency === 'points' ? `Used ${amount} points on an order` : `Used ₹${amount} wallet cashback on an order`;
 
 /**
+ * The customer's tier spend without this order: rupees paid online for their
+ * other delivered orders that were not dealer-priced, from the server's
+ * payment records (tierSpend in rewards-core).
+ */
+async function tierSpendBefore(db: admin.firestore.Firestore, uid: string, rzp: string): Promise<number> {
+  const payments = await db.collection('payments').where('uid', '==', uid).get();
+  const others = payments.docs.filter((d) => d.id !== rzp);
+  if (others.length === 0) return 0;
+  const orders = await db.getAll(...others.map((d) => db.collection('orders').doc(d.id)));
+  return tierSpend(
+    others.map((d, i) => {
+      const p = d.data() || {};
+      return { id: d.id, amountPaise: Number(p.amountPaise) || 0, dealer: p.dealer === true, orderStatus: String(orders[i].data()?.status || '') };
+    }),
+    rzp,
+  );
+}
+
+/**
  * Bring a customer's reward ledger in line with one order. Idempotent: entry
  * ids are fixed per payment and each step moves an entry to the state the
  * order calls for, so running it twice changes nothing.
@@ -629,7 +652,10 @@ const spendNote = (currency: RewardCurrency, amount: number) =>
  *   earn    earn_<rzp>              created on first delivery, unlocking
  *                                   unlockDays later; frozen while a return is
  *                                   open; void when the order ends; restored if
- *                                   the shop reopens it
+ *                                   the shop reopens it; records tierName /
+ *                                   multiplier (the tier before this order).
+ *                                   Dealer-priced orders (payments.dealer) earn
+ *                                   nothing (base 0) and get no scratch card
  *   refund  refund_<rzp>_<currency> what the payment spent, while the order is
  *                                   cancelled / returned / refunded; taken back
  *                                   if it is reopened
@@ -741,7 +767,9 @@ export async function reconcileRewards(
   if (!e) {
     if (reachedCustomer && settings.enabled) {
       const base = Math.min(money(payment.base), money(payment.amountPaise) / 100);
-      const points = pointsForBase(base, settings);
+      // The tier the customer had reached before this order sets its multiplier.
+      const tier = base > 0 ? settings.tiers[tierIndexForSpend(await tierSpendBefore(db, uid, rzp), settings.tiers)] : settings.tiers[0];
+      const points = pointsForBase(base, settings, tier.multiplier);
       if (points > 0) {
         const unlockAt = admin.firestore.Timestamp.fromMillis(
           unlockAtMs(now.toMillis(), order.deliveredAt, settings.unlockDays),
@@ -750,6 +778,8 @@ export async function reconcileRewards(
           currency: 'points',
           amount: points,
           kind: 'earn',
+          tierName: tier.name,
+          multiplier: tier.multiplier,
           status: 'active',
           held: returnOpen,
           unlockAt,
@@ -934,8 +964,9 @@ async function reconcileScratchCard(
     const now = admin.firestore.Timestamp.now();
     const c = cardSnap.data();
     const p = prizeSnap.data();
+    // One card per payment ever, and none for dealer-priced orders (no stacking).
     const give =
-      c || paymentSnap.data()?.scratchCardGivenAt
+      c || paymentSnap.data()?.scratchCardGivenAt || paymentSnap.data()?.dealer === true
         ? null
         : scratchCardEligible({
             status,
