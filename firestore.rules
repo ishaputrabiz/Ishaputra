@@ -595,7 +595,7 @@ service cloud.firestore {
         return d.businessName is string && d.businessName.size() >= 2 && d.businessName.size() <= 80
           && d.businessType in ['retail', 'ayurvedic', 'salon', 'gym', 'online', 'distributor', 'other']
           && d.contactName is string && d.contactName.size() >= 2 && d.contactName.size() <= 60
-          && d.phone is string && d.phone.matches('^[+]?[0-9 ]{10,15}$')
+          && d.phone is string && d.phone.matches('^[+]?[0-9][0-9 ]{9,14}$')
           && d.city is string && d.city.size() >= 2 && d.city.size() <= 60
           && d.state is string && d.state.size() >= 2 && d.state.size() <= 40
           && d.gstin is string
@@ -610,6 +610,7 @@ service cloud.firestore {
         && request.resource.data.uid == uid
         && request.resource.data.status == 'pending'
         && request.resource.data.appliedAt == request.time
+        && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time)
         && validDealerApp(request.resource.data);
       allow update: if isAdmin()
         || (isOwner(uid)
@@ -618,6 +619,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(dealerAppKeys().concat(['status', 'appliedAt', 'updatedAt']))
           && request.resource.data.appliedAt == request.time
+          && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time)
           && validDealerApp(request.resource.data));
       allow delete: if isAdmin() || (isOwner(uid) && resource.data.status == 'pending');
     }

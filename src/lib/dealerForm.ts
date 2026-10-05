@@ -27,7 +27,7 @@ export interface DealerApplicationInput {
 }
 
 export const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-export const PHONE_PATTERN = /^\+?[0-9 ]{10,15}$/;
+export const PHONE_PATTERN = /^\+?[0-9][0-9 ]{9,14}$/;
 
 export const businessTypeLabel = (value: string) =>
   BUSINESS_TYPES.find((t) => t.value === value)?.label ?? 'Other';
@@ -53,7 +53,7 @@ export function validateDealerApplication(a: DealerApplicationInput): Partial<Re
   if (!len(a.businessName, 2, 80)) e.businessName = 'Enter your business name (2 to 80 characters).';
   if (!BUSINESS_TYPES.some((t) => t.value === a.businessType)) e.businessType = 'Choose a business type.';
   if (!len(a.contactName, 2, 60)) e.contactName = 'Enter your name.';
-  if (!PHONE_PATTERN.test(a.phone)) e.phone = 'Enter a 10-digit phone number.';
+  if (!PHONE_PATTERN.test(a.phone)) e.phone = 'Enter a valid phone number (10 to 15 digits).';
   if (!len(a.city, 2, 60)) e.city = 'Enter your city.';
   if (!len(a.state, 2, 40)) e.state = 'Choose your state.';
   if (a.gstin !== '' && !GSTIN_PATTERN.test(a.gstin)) e.gstin = 'Check the GSTIN: it has 15 characters, like 29ABCDE1234F1Z5.';

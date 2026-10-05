@@ -27,3 +27,17 @@ test('each field is checked', () => {
   );
   assert.deepEqual(Object.keys(e).sort(), ['businessName', 'businessType', 'city', 'contactName', 'gstin', 'message', 'phone', 'state']);
 });
+
+test('phone must start with a digit', () => {
+  // Phone starting with + followed by space is invalid (after cleaning, becomes '+ 9876543210')
+  const invalid1 = validateDealerApplication(cleanDealerApplication({ ...ok, phone: '+ 9876543210' }));
+  assert(typeof invalid1.phone === 'string', 'phone with + followed by space should be invalid');
+
+  // Valid phones: with country code and spaces
+  const valid1 = validateDealerApplication(cleanDealerApplication({ ...ok, phone: '+91 98765 43210' }));
+  assert(!('phone' in valid1), 'phone +91 98765 43210 should be valid');
+
+  // Valid phones: without country code
+  const valid2 = validateDealerApplication(cleanDealerApplication({ ...ok, phone: '9876543210' }));
+  assert(!('phone' in valid2), 'phone 9876543210 should be valid');
+});
