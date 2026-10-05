@@ -1,5 +1,5 @@
 // ============================================
-// WALLET: loyalty tier, spend, gift cards and recent orders
+// WALLET: member card and tier, points, spend, gift cards and recent orders
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -18,31 +18,15 @@ import { DUR, EASE_OUT } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import {
   ArrowLeft, Package, CheckCircle2, Clock, XCircle, 
-  TrendingUp, Award, Crown, Diamond, Sparkles, IndianRupee,
+  TrendingUp, Sparkles, IndianRupee,
   ShoppingBag, Calendar, Eye, EyeOff, Gift, CreditCard, CircleCheck, CircleX,
 } from 'lucide-react';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { SmartImage } from "@/components/ui/smart-image";
-import { BRAND } from '@/config/brand';
 import { RewardsWalletCard } from '@/components/rewards/RewardsWalletCard';
 import { ScratchCardsPanel } from '@/components/scratch/ScratchCardsPanel';
-
-// Loyalty tiers: names and thresholds from the brand config, look from here
-// (metal tones on the charcoal card, copper for the top tier).
-const TIER_STYLE = [
-  { icon: Award, accent: 'hsl(30 6% 68%)' },
-  { icon: Crown, accent: 'hsl(var(--highlight-soft))' },
-  { icon: Diamond, accent: 'hsl(36 24% 86%)' },
-  { icon: Crown, accent: 'hsl(var(--primary))' },
-];
-const LOYALTY_TIERS = BRAND.loyaltyTiers.map((tier, i, all) => ({
-  ...tier,
-  ...TIER_STYLE[Math.min(i, TIER_STYLE.length - 1)],
-  isPremium: i === all.length - 1,
-}));
-/** Spend at which the progress bar is full: the top tier's threshold. */
-const PROGRAMME_TOP = LOYALTY_TIERS[LOYALTY_TIERS.length - 1].min;
+import { LoyaltyStatusPanel } from '@/components/loyalty/MemberCard';
 
 interface OrderStats {
   totalSpent: number;
@@ -182,38 +166,6 @@ const PurchaseSummary: React.FC = () => {
     .filter(gc => !isExpired(gc.expiryDate) && gc.remainingAmount > 0)
     .reduce((sum, gc) => sum + gc.remainingAmount, 0);
 
-  // Get current loyalty tier
-  const getLoyaltyTier = () => {
-    // Check from highest tier to lowest to handle Premium (max tier)
-    for (let i = LOYALTY_TIERS.length - 1; i >= 0; i--) {
-      const tier = LOYALTY_TIERS[i];
-      if (stats.totalSpent >= tier.min) {
-        return tier;
-      }
-    }
-    return LOYALTY_TIERS[0];
-  };
-
-  // Get next tier and progress
-  const getNextTierProgress = () => {
-    const currentTier = getLoyaltyTier();
-    const currentIndex = LOYALTY_TIERS.indexOf(currentTier);
-    
-    if (currentIndex === LOYALTY_TIERS.length - 1) {
-      return { nextTier: null, progress: 100, remaining: 0 };
-    }
-    
-    const nextTier = LOYALTY_TIERS[currentIndex + 1];
-    const progress = ((stats.totalSpent - currentTier.min) / (nextTier.min - currentTier.min)) * 100;
-    const remaining = nextTier.min - stats.totalSpent;
-    
-    return { nextTier, progress: Math.min(progress, 100), remaining };
-  };
-
-  const currentTier = getLoyaltyTier();
-  const { nextTier, progress, remaining } = getNextTierProgress();
-  const TierIcon = currentTier.icon;
-
   // Page chrome around every state: desktop header + back row, phone top bar.
   const shell = (content: React.ReactNode) => (
     <div className="min-h-dvh tx-paper">
@@ -237,7 +189,7 @@ const PurchaseSummary: React.FC = () => {
           </div>
           <div className="min-w-0">
             <h1 className="sr-only lg:not-sr-only font-heading text-xl font-semibold tracking-tight text-foreground lg:text-2xl">Wallet & rewards</h1>
-            <p className="mt-0.5 hidden text-xs text-muted-foreground lg:block">Your tier, points and cashback</p>
+            <p className="mt-0.5 hidden text-xs text-muted-foreground lg:block">Your member card, tier, points and cashback</p>
           </div>
         </div>
         {content}
@@ -276,111 +228,12 @@ const PurchaseSummary: React.FC = () => {
 
   return shell(
     <>
-      {/* ─── LOYALTY TIER CARD ──────────────────────── */}
-      <motion.div
-        {...enter()}
-        className="tx-slate tx-contour relative mb-6 overflow-hidden rounded-panel p-6 text-charcoal-foreground shadow-[var(--shadow-panel)]"
-      >
-        <div aria-hidden="true" className="absolute right-0 top-0 opacity-[0.07]">
-          <TierIcon className="size-32 -translate-y-8 translate-x-8" />
-        </div>
-
-        <div className="relative z-10">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="relative">
-              {currentTier.isPremium && (
-                <div aria-hidden="true" className="absolute -top-3 left-1/2 z-20 -translate-x-1/2">
-                  <Crown className="size-5 fill-highlight-soft text-highlight" />
-                </div>
-              )}
-              <div
-                aria-hidden="true"
-                className="flex size-12 items-center justify-center rounded-full border border-charcoal-foreground/20 text-charcoal shadow-md"
-                style={{ background: currentTier.accent }}
-              >
-                <TierIcon className="size-6" />
-              </div>
-            </div>
-            <div>
-              <p className="eyebrow-no on-dark !text-[10px]"><span>Your status</span></p>
-              <h2 className="mt-1 font-heading text-xl font-semibold tracking-tight" style={{ color: currentTier.accent }}>{currentTier.name}</h2>
-            </div>
-          </div>
-
-          {/* Tier Stages Display */}
-          <div className="mt-4 space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-medium text-charcoal-foreground/70">Membership progress</span>
-              <span className="font-semibold tabular-nums">{formatINR(stats.totalSpent)} / {formatINR(PROGRAMME_TOP)}</span>
-            </div>
-
-            {/* All Stages with Progress Bar */}
-            <div className="relative py-2">
-              {/* Progress Bar connecting badges */}
-              <div aria-hidden="true" className="absolute left-[12.5%] right-[12.5%] top-[26px] h-1 overflow-hidden rounded-full bg-charcoal-foreground/10">
-                <motion.div
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: Math.min(stats.totalSpent / PROGRAMME_TOP, 1) }}
-                  transition={{ duration: DUR.reveal * 2, ease: EASE_OUT }}
-                  className="h-full origin-left rounded-full bg-gradient-to-r from-highlight-soft to-primary"
-                />
-              </div>
-
-              {/* Stage Indicators */}
-              <ol className="relative flex items-start justify-between">
-                {LOYALTY_TIERS.map((tier) => {
-                  const TierBadgeIcon = tier.icon;
-                  const isCurrentTier = currentTier.name === tier.name;
-                  const isCompleted = stats.totalSpent >= tier.min;
-
-                  return (
-                    <li key={tier.name} aria-current={isCurrentTier ? 'step' : undefined} className="z-10 flex flex-1 flex-col items-center">
-                      <div
-                        aria-hidden="true"
-                        className={cn(
-                          'relative flex size-11 items-center justify-center rounded-full',
-                          isCurrentTier
-                            ? 'scale-110 text-charcoal shadow-xl ring-2 ring-charcoal-foreground/40 ring-offset-2 ring-offset-charcoal'
-                            : isCompleted
-                              ? 'text-charcoal shadow-md'
-                              : 'border border-charcoal-foreground/15 bg-charcoal text-charcoal-foreground/45',
-                        )}
-                        style={isCompleted ? { background: tier.accent } : undefined}
-                      >
-                        {tier.isPremium && isCurrentTier && (
-                          <div className="absolute -top-2 left-1/2 -translate-x-1/2">
-                            <Crown className="size-4 fill-highlight-soft text-highlight" />
-                          </div>
-                        )}
-                        <TierBadgeIcon className="size-5" />
-                      </div>
-                      <p className={cn(
-                        'mt-2.5 text-center text-[10px] font-bold uppercase leading-tight tracking-[0.12em]',
-                        isCurrentTier ? 'text-charcoal-foreground' : 'text-charcoal-foreground/60',
-                      )}>
-                        {tier.name.replace(' Member', '')}
-                      </p>
-                      <p className="text-[10px] text-charcoal-foreground/60 tabular-nums">{formatINR(tier.min)}</p>
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
-
-            {/* Next Tier Info */}
-            {nextTier ? (
-              <p className="text-center text-xs font-medium text-charcoal-foreground/75">
-                Spend <span className="tabular-nums">{formatINR(remaining)}</span> more to unlock {nextTier.name}
-              </p>
-            ) : (
-              <div className="flex items-center justify-center gap-2 rounded-[8px] border border-highlight-soft/30 bg-charcoal-foreground/5 p-2">
-                <Sparkles aria-hidden="true" className="size-4 text-highlight-soft" />
-                <p className="text-xs font-medium">You're at the top tier.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </motion.div>
+      {/* ─── MEMBER CARD AND TIER ──────────────────── */}
+      <LoyaltyStatusPanel
+        uid={user.uid}
+        name={userProfile?.name || userProfile?.username || user.displayName || 'Member'}
+        createdAt={userProfile?.createdAt}
+      />
 
       {/* ─── SCRATCH CARDS (Scratch & Win) ──────── */}
       <ScratchCardsPanel uid={user.uid} />

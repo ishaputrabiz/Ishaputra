@@ -43,6 +43,9 @@ export interface RewardEntry extends LedgerLike {
   voidReason?: string;
   /** Where an earn entry came from: 'scratch' for a Scratch & Win prize. */
   source?: string;
+  /** An earn entry for an order: the tier the customer was in and its points multiplier. */
+  tierName?: string;
+  multiplier?: number;
   createdAtMs: number;
   createdBy: string;
 }
@@ -66,6 +69,8 @@ const toEntry = (id: string, d: Record<string, any>): RewardEntry => ({
   late: d.late === true,
   voidReason: typeof d.voidReason === 'string' ? d.voidReason : undefined,
   source: typeof d.source === 'string' ? d.source : undefined,
+  tierName: typeof d.tierName === 'string' && d.tierName.trim() ? d.tierName.trim() : undefined,
+  multiplier: Number.isFinite(d.multiplier) && d.multiplier > 0 ? d.multiplier : undefined,
   note: String(d.note || ''),
   orderId: d.orderId,
   razorpayOrderId: d.razorpayOrderId,

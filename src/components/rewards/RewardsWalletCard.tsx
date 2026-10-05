@@ -32,6 +32,12 @@ const amountLabel = (e: RewardEntry) => {
   return e.currency === 'points' ? `${sign}${n} pts` : `${sign}₹${n}`;
 };
 
+/** "Gold 1.25x" under the points of an earn entry that got a tier boost; empty otherwise. */
+const boostLabel = (e: RewardEntry): string =>
+  e.kind === 'earn' && e.status !== 'void' && e.multiplier && e.multiplier > 1
+    ? `${e.tierName ? `${e.tierName} ` : ''}${e.multiplier}x`
+    : '';
+
 /**
  * What an entry means for the balance today. Only earned points wait (until
  * they unlock, or while their order has a return open); every other entry
@@ -189,6 +195,7 @@ const RewardsWalletCardBody = ({ uid, onRetry }: { uid: string; onRetry: () => v
             {shown.map((e) => {
               const Icon = e.source === 'scratch' ? Ticket : KIND_ICON[e.kind] || SlidersHorizontal;
               const state = entryState(e, now);
+              const boost = boostLabel(e);
               return (
                 <li key={e.id} className="flex items-center gap-3 py-2.5">
                   <Icon aria-hidden="true" className={`size-4 shrink-0 text-muted-foreground ${state.voided ? 'opacity-50' : ''}`} />
@@ -203,16 +210,20 @@ const RewardsWalletCardBody = ({ uid, onRetry }: { uid: string; onRetry: () => v
                       {state.label ? ` · ${state.label}` : ''}
                     </p>
                   </div>
-                  <span
-                    className={`text-sm font-semibold tabular-nums ${
-                      state.voided
-                        ? 'text-muted-foreground line-through'
-                        : e.amount > 0
-                          ? 'text-primary'
-                          : 'text-foreground/70'
-                    }`}
-                  >
-                    {amountLabel(e)}
+                  {/* The tier boost sits under the points so the date line stays on one row at 390px. */}
+                  <span className="shrink-0 text-right">
+                    <span
+                      className={`block text-sm font-semibold tabular-nums ${
+                        state.voided
+                          ? 'text-muted-foreground line-through'
+                          : e.amount > 0
+                            ? 'text-primary'
+                            : 'text-foreground/70'
+                      }`}
+                    >
+                      {amountLabel(e)}
+                    </span>
+                    {boost && <span className="block text-[11px] tabular-nums text-muted-foreground">{boost}</span>}
                   </span>
                 </li>
               );

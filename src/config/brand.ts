@@ -65,18 +65,6 @@ export const BRAND = {
   /** Prefix of the loyalty card's member number ("IB 2005 5564 1996"). */
   memberPrefix: 'IB',
 
-  /**
-   * Loyalty tiers on /wallet, reached by total spent on delivered orders (rupees).
-   * TODO(client): names and thresholds. DUMMY values sized to this catalogue;
-   * the jewellery store's tiers started at ₹50,000.
-   */
-  loyaltyTiers: [
-    { name: 'Silver Member', min: 0 },
-    { name: 'Gold Member', min: 5000 },
-    { name: 'Platinum Member', min: 15000 },
-    { name: 'Premium Member', min: 30000 },
-  ],
-
   /** localStorage keys - prefixed per store so two stores on one device don't share state. */
   storageKeys: {
     theme: 'ishaputra-theme',
