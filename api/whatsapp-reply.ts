@@ -30,6 +30,7 @@
  * Env: WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_WABA_ID, FIREBASE_ADMIN_SDK_BASE64
  * (plus WHATSAPP_VERIFY_TOKEN and WHATSAPP_APP_SECRET, used by the webhook).
  */
+import { timingSafeEqual } from 'crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
 
@@ -143,7 +144,10 @@ export async function metaRequest(
 
 async function requireAdmin(req: VercelRequest, db: admin.firestore.Firestore) {
   const expected = process.env.ADMIN_NOTIFICATION_KEY;
-  if (expected && req.headers['x-admin-key'] === expected) return null;
+  const given = Buffer.from(String(req.headers['x-admin-key'] || ''));
+  const want = Buffer.from(expected || '');
+  // Constant-time compare, as in whatsapp-send.ts.
+  if (expected && given.length === want.length && timingSafeEqual(given, want)) return null;
 
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
