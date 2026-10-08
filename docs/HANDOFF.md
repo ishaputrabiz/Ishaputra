@@ -229,18 +229,9 @@ The full rules are in `src/lib/rewards.ts`. Its `rewards-core` block is copied i
   - Loyalty values: points per ₹100, point value, unlock days, maximum %.
   - GST settings and business details. The WhatsApp number and GSTIN are empty on purpose.
 
-## Workflows, ultracode and chats (owner's standing rules)
+## Ultracode and effort per step
 
-The full rules are in `~/.claude/CLAUDE.md`, in the section "Workflows, ultracode and sessions". In short:
-
-- **Workflows:** Claude decides, and uses them only when a single agent can't do the job well. Examples: a multi-file security review, a whole-site UI audit, or vetting many sources. Before launching one, Claude says why in one line.
-- **Ultracode:** the owner switches it on. Claude asks for it at the start of a big or risky task ("please turn on ultracode and send the task again"), and says so when it can be turned off.
-- **Ending a task:** Claude updates this file, then ends with one of:
-  - "Next: start a new chat and send: ..." (the default);
-  - "Continue in this chat: ..." (only when needed);
-  - "Nothing else is needed."
-
-Which next steps need ultracode:
+The rules for workflows, ultracode, effort and new chats live only in `~/.claude/CLAUDE.md`, which every project loads (moved there 2026-10-06). This table is this project's part:
 
 | Step | Ultracode? | Effort |
 |---|---|---|
