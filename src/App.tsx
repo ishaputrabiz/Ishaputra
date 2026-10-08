@@ -72,6 +72,7 @@ const AdminCoupons = lazy(() => import("./pages/admin/AdminCoupons"));
 const AdminReviews = lazy(() => import("./pages/admin/AdminReviews"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminImagePrompts = lazy(() => import("./pages/admin/AdminImagePrompts"));
+const AdminImageCompressor = lazy(() => import("./pages/admin/AdminImageCompressor"));
 const AdminCustomers = lazy(() => import("./pages/admin/AdminCustomers"));
 const AdminCustomerDetails = lazy(() => import("./pages/admin/AdminCustomerDetails"));
 const AdminDealers = lazy(() => import("./pages/admin/AdminDealers"));
@@ -350,6 +351,7 @@ const App = () => {
                 <Route path="video-calls" element={<AdminVideoCalls />} />
                 <Route path="reviews" element={<AdminReviews />} />
                 <Route path="image-prompts" element={<AdminImagePrompts />} />
+                <Route path="image-compressor" element={<AdminImageCompressor />} />
                 <Route path="home-banners" element={<AdminHomeBanners />} />
                 <Route path="home-collections" element={<AdminHomeCollections />} />
                 <Route path="videos" element={<AdminVideos />} />
