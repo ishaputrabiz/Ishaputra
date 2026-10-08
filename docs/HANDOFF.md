@@ -7,10 +7,17 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-05 (Step 3 started: the client checklist is ready to send, as Markdown and PDF.)
+Last updated: 2026-10-08 (Sreerasthu updates ported on branch `sreerasthu-port`: WhatsApp, image compressor, checkout step 3.)
 
 ## State
 
+- **2026-10-08 (latest): three Sreerasthu updates ported, on branch `sreerasthu-port` (NOT merged into `main` yet; local only).** Source: github.com/sreerastusilvers/sreerasthusilvers commits `e76fcdb`, `236e57b`, `4dd87d9` (Ishaputra was copied from Sreerasthu `4869296`). Commits `07b551b`, `4834124`, `0156bfd`, `4dbe149`, `cc5ad17`.
+  - **Image compressor:** Admin > Image compressor (`/admin/image-compressor`, `src/lib/imageCompressor.ts`, new dep `fflate`), plus a link under the Product form photo upload. Restyled to the Ishaputra admin look.
+  - **Mobile checkout step 3:** step 2 now ends with "Continue to payment"; step 3 shows the address (Change), payment method, every item at the price charged (dealer units when they apply) and the bill, then Slide to Pay. No pricing/order/payment logic changed. Checked as the preview shopper at 390 px light/dark (no overflow, focus/scroll reset, Back works, totals add up; cart untouched).
+  - **WhatsApp:** team inbox (filters, assign, resolve, notes, quick replies, 24 h window, media both ways, ticks, setup checklist, `?demo=1` in dev), Marketing > Templates via the Meta API (create/sync/delete, picture headers), Marketing > Announcement (`store_announcement`, STOP/START opt-out), broadcast fixes (role filter, `whatsappNumber`, dedupe, opt-out). API files = Sreerasthu HEAD plus a constant-time admin-key compare. Restyled to the Ishaputra admin look. New admin-only rule `whatsappSnippets` (NOT deployed). Guide: `docs/WHATSAPP_SETUP.md`.
+  - **Checks:** build passes; `npm test` 167/167; `node scripts/tests/announcement.test.mjs .` 21, `whatsapp-reply.test.mjs .` 14; tsc 7 old errors only; `api/` = 12. Admin screens shot at 390/1440 light/dark with a temporary admin (`ui-fixtures.mjs seed`, then `remove`: 13 orders + admin deleted), 0 console errors: `../shots/admin-port/`, checkout in `../shots/checkout-step3/`.
+  - **Not verified:** any real Meta call (templates, media upload, webhook signing); broadcast to a large list. Picture templates need `R2_PUBLIC_URL` (the server only sends pictures from R2).
+  - **Not ported (owner's choice):** add-to-cart confirmation panel, cart stock transaction fix, account sidebar/photo, image viewer, home autoplay, product-claim changes.
 - **2026-10-05 (latest): Step 3 started. Client checklist ready to send:** `docs/client-checklist-steps-3-5.md` and `docs/client-checklist-steps-3-5.pdf` (A4, logo, tick boxes). Added: new-order alert number, admin emails, licence numbers (AYUSH/FSSAI, if needed), banners, videos, policy pages, all `CLIENT.md` placeholder questions, "(first)" marks, and "add us as a team member" instead of sending keys (uses thedreamteamservicespvt@gmail.com). Not yet sent; the user sends it.
 - **2026-10-05 (end): Dealer + Loyalty card DONE and merged into `main`** (`5e083ec`, `--no-ff`, local only, never pushed). Ships **off**; values are placeholders in `CLIENT.md`.
   - **Rules deployed** with the owner's OK: `node docs/handoff/deploy-rules.mjs`, ruleset `61bbb448-4e54-4d30-b9ec-3c6e8cf1ea56` (`dealers`, `dealerPricing`, the dealer-fields orders rule).
@@ -120,6 +127,7 @@ Last updated: 2026-10-05 (Step 3 started: the client checklist is ready to send,
 
 ## Next steps (in order)
 
+0. **Merge `sreerasthu-port` (2026-10-08):** run `requesting-code-review` on `main..sreerasthu-port` (the WhatsApp API files are security-relevant), then merge `--no-ff` into `main` locally. Owner to-dos for WhatsApp, in `docs/WHATSAPP_SETUP.md`: Vercel env incl. `WHATSAPP_WABA_ID`; webhook `https://[NEED: live domain]/api/whatsapp-webhook`; Firestore rules deploy for `whatsappSnippets` (`node docs/handoff/deploy-rules.mjs`, owner's OK); then Marketing > Announcement > "Create announcement template" once.
 1. **No redesign.** The owner likes the current design. Any future visual change: keep the product-dense e-commerce layout, show a cheap mockup of ONE screen first, and get a yes before building.
 2. **Scratch & Win: DONE 2026-10-05** (rules deployed, live test passed, merged into `main`; see "State"). To switch it on: the client confirms the values in `CLIENT.md`, then an admin turns it on in Commerce settings > Scratch & Win. Decisions (owner said "just complete it", 2026-10-04):
    - Admin-configurable (`siteSettings.scratchWin`), shipped **off**, values marked as placeholders and listed in `CLIENT.md`.
