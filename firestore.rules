@@ -693,11 +693,20 @@ service cloud.firestore {
     // --- WHATSAPP INBOX (admin reply console) ---
     // Threaded conversation records populated by the /api/whatsapp-webhook
     // function (admin SDK). Admin-only client access.
+    // Team-inbox fields (status, assignedTo) live on the thread doc and
+    // internal notes are `messages` docs with direction 'note'; both are
+    // covered by the admin-only rules below. Notes are never sent to Meta.
     match /whatsappThreads/{threadId} {
       allow read, write: if isAdmin();
       match /messages/{msgId} {
         allow read, write: if isAdmin();
       }
+    }
+
+    // --- WHATSAPP QUICK-REPLY SNIPPETS (team inbox) ---
+    // Saved answers the team inserts into replies. Admin-only.
+    match /whatsappSnippets/{snippetId} {
+      allow read, write: if isAdmin();
     }
 
     // --- VIDEO CALL SIGNALLING ---
