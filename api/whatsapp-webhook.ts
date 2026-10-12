@@ -245,11 +245,29 @@ export async function applyStatus(db: WebhookDb, status: Record<string, any>, de
  * Marketing consent keywords. "STOP" opts a number out of announcements
  * (broadcast skips it); "START" opts it back in. Anything else: no change.
  */
+const CONSENT_OUT = new Set(['stop', 'unsubscribe', 'optout']);
+const CONSENT_IN = new Set(['start', 'subscribe', 'unstop']);
+// Words that may surround the keyword without changing its meaning
+// ("Stop these updates", "please stop sending messages"). Any other word
+// ("stop by the store") means it is an ordinary message, not a request.
+const CONSENT_FILLER = new Set([
+  'please', 'pls', 'plz', 'kindly', 'these', 'this', 'the', 'all', 'your', 'my',
+  'updates', 'update', 'messages', 'message', 'msgs', 'msg', 'sending', 'texts',
+  'announcements', 'offers', 'promotions', 'marketing', 'whatsapp', 'it', 'them',
+  'me', 'now', 'again', 'thanks', 'thank', 'you', 'out',
+]);
+
 export function marketingConsentChange(text: string): 'out' | 'in' | null {
-  const word = String(text || '').trim().toLowerCase().replace(/[.!]+$/, '');
-  if (['stop', 'unsubscribe', 'stop updates', 'stop messages'].includes(word)) return 'out';
-  if (['start', 'subscribe', 'unstop'].includes(word)) return 'in';
-  return null;
+  const words = String(text || '')
+    .toLowerCase()
+    .replace(/opt[\s-]+out/g, 'optout')
+    .split(/[^a-z]+/)
+    .filter(Boolean);
+  if (words.length === 0 || words.length > 6) return null;
+  const keywords = words.filter((w) => CONSENT_OUT.has(w) || CONSENT_IN.has(w));
+  if (keywords.length !== 1) return null;
+  if (!words.every((w) => w === keywords[0] || CONSENT_FILLER.has(w))) return null;
+  return CONSENT_OUT.has(keywords[0]) ? 'out' : 'in';
 }
 
 export async function storeInbound(

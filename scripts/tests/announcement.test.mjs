@@ -112,6 +112,19 @@ await t('webhook consent keywords', () => {
   assert.equal(wh.marketingConsentChange('START'), 'in');
   assert.equal(wh.marketingConsentChange('please stop by the store'), null);
   assert.equal(wh.marketingConsentChange('Hi'), null);
+  // The footer's own wording, and the ways people actually phrase it.
+  assert.equal(wh.marketingConsentChange('Stop these updates'), 'out');
+  assert.equal(wh.marketingConsentChange('STOP 🙏'), 'out');
+  assert.equal(wh.marketingConsentChange('stop please'), 'out');
+  assert.equal(wh.marketingConsentChange('Please stop sending messages!'), 'out');
+  assert.equal(wh.marketingConsentChange('stop!!'), 'out');
+  assert.equal(wh.marketingConsentChange('Unsubscribe me'), 'out');
+  assert.equal(wh.marketingConsentChange('start updates'), 'in');
+  // Not opt-outs: ordinary sentences that happen to start with the keyword.
+  assert.equal(wh.marketingConsentChange('stop by the store tomorrow?'), null);
+  assert.equal(wh.marketingConsentChange('Start my order please'), null);
+  assert.equal(wh.marketingConsentChange('when will you stop the sale'), null);
+  assert.equal(wh.marketingConsentChange(''), null);
 });
 
 // ---- announcement template
