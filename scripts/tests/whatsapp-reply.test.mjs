@@ -183,6 +183,10 @@ await t('marketing template refused for a customer who replied STOP; utility sti
   const u = await call({ action: 'send', phone: '+919222222222', template: { name: 'order_upd', language: 'en', params: ['42'] } });
   assert.equal(u.status, 200, JSON.stringify(u.payload));
   assert.equal(sent, 1);
+  // A template that was never synced could be marketing: refused too.
+  const x = await call({ action: 'send', phone: '+919222222222', template: { name: 'not_synced', language: 'en', params: [] } });
+  assert.equal(x.status, 400);
+  assert.equal(sent, 1);
 });
 
 await t('plain text send still works and records the thread', async () => {

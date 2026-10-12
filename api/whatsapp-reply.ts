@@ -752,8 +752,11 @@ async function handleSend({ res, db, body, actor }: Ctx) {
     } catch {
       /* rendering is cosmetic; the header check below just will not apply */
     }
-    // A customer who replied STOP gets no marketing, from the inbox either.
-    if (str(tplData?.category).toUpperCase() === 'MARKETING') {
+    // A customer who replied STOP gets no marketing, from the inbox either. If
+    // the template's category is unknown (not synced, lookup failed), assume
+    // it could be marketing.
+    const category = str(tplData?.category).toUpperCase();
+    if (category !== 'UTILITY' && category !== 'AUTHENTICATION') {
       const thread = await threadRef.get();
       if (thread.exists && thread.data()?.marketingOptOut === true) {
         throw new HttpError(

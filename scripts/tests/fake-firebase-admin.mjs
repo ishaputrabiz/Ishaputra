@@ -17,6 +17,9 @@ function docRef(path) {
       const prev = store.get(path);
       store.set(path, opts?.merge && prev ? { ...prev, ...data } : { ...data });
     },
+    async delete() {
+      store.delete(path);
+    },
     async update(data) {
       if (!store.has(path)) {
         const e = new Error('NOT_FOUND');
@@ -50,10 +53,27 @@ function colRef(path, filters = [], lim = Infinity) {
     },
   };
 }
+let txQueue = Promise.resolve();
 const db = {
   collection: (name) => colRef(name),
   async getAll(...refs) {
     return refs.map((r) => snap(r.path));
+  },
+  // Transactions run one at a time, like Firestore's serializable transactions.
+  runTransaction(fn) {
+    const run = txQueue.then(async () => {
+      const ops = [];
+      const tx = {
+        get: (ref) => ref.get(),
+        set: (ref, d, o) => { ops.push(() => ref.set(d, o)); return tx; },
+        delete: (ref) => { ops.push(() => ref.delete()); return tx; },
+      };
+      const out = await fn(tx);
+      for (const op of ops) await op();
+      return out;
+    });
+    txQueue = run.catch(() => undefined);
+    return run;
   },
   batch() {
     const ops = [];
@@ -66,9 +86,16 @@ const adminStub = {
   apps: [1],
   firestore,
   auth: () => ({ verifyIdToken: async (t) => ({ uid: t === 'admin-token' ? 'admin1' : 'user1' }) }),
-  messaging: () => ({ sendEachForMulticast: async ({ tokens }) => ({ successCount: tokens.length, failureCount: 0, responses: tokens.map(() => ({ success: true })) }) }),
+  messaging: () => ({
+    sendEachForMulticast: async ({ tokens }) => {
+      pushCalls.push(tokens);
+      return { successCount: tokens.length, failureCount: 0, responses: tokens.map(() => ({ success: true })) };
+    },
+  }),
   credential: { cert: () => ({}) },
   initializeApp() {},
 };
 export default adminStub;
 export { listeners };
+/** Every push multicast the code under test sent (list of token arrays). */
+export const pushCalls = [];

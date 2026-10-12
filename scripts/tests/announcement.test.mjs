@@ -120,6 +120,17 @@ await t('webhook consent keywords', () => {
   assert.equal(wh.marketingConsentChange('stop!!'), 'out');
   assert.equal(wh.marketingConsentChange('Unsubscribe me'), 'out');
   assert.equal(wh.marketingConsentChange('start updates'), 'in');
+  // Annoyed customers repeat themselves; Hinglish and plain requests too.
+  assert.equal(wh.marketingConsentChange('STOP STOP'), 'out');
+  assert.equal(wh.marketingConsentChange('Stop. Unsubscribe'), 'out');
+  assert.equal(wh.marketingConsentChange('please stop, stop sending'), 'out');
+  assert.equal(wh.marketingConsentChange('stop karo'), 'out');
+  assert.equal(wh.marketingConsentChange('band karo'), 'out');
+  assert.equal(wh.marketingConsentChange('I want to unsubscribe'), 'out');
+  assert.equal(wh.marketingConsentChange('remove me from your list'), 'out');
+  assert.equal(wh.marketingConsentChange('stop spam'), 'out');
+  assert.equal(wh.marketingConsentChange('stop start'), null, 'mixed: no change');
+  assert.equal(wh.marketingConsentChange('remove the oil from my order'), null);
   // Not opt-outs: ordinary sentences that happen to start with the keyword.
   assert.equal(wh.marketingConsentChange('stop by the store tomorrow?'), null);
   assert.equal(wh.marketingConsentChange('Start my order please'), null);
@@ -344,7 +355,8 @@ await t('handler: a run cut off mid-way (still "sending") also blocks a repeat',
     channels: { whatsapp: true },
     whatsapp: { template: 'store_announcement', language: 'en', params: ['there', 'Cut off'] },
   };
-  s.set('broadcastCampaigns/cut1', { status: 'sending', fingerprint: bc.broadcastFingerprint(body), startedAtMs: Date.now() - 60_000 });
+  const lockId = bc.broadcastLockIds(body).whatsapp;
+  s.set(`broadcastLocks/${lockId}`, { state: 'sending', campaignId: 'cut1', startedAtMs: Date.now() - 60_000, expiresAtMs: Date.now() + 3600e3 });
   const calls = [];
   globalThis.fetch = okFetch(calls);
   const r = await callHandler(body);
@@ -365,6 +377,78 @@ await t('handler: a broadcast where every send failed can be retried', async () 
   assert.equal(calls.length, 1);
 });
 
+await t('handler: two sends of the same broadcast at once: only one goes out', async () => {
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    await new Promise((r) => setTimeout(r, 20));
+    return okFetch(calls)(url, init);
+  };
+  const body = { audience: 'selected', selectedUids: ['u1'], channels: { whatsapp: true }, whatsapp: { template: 'store_announcement', language: 'en', params: ['there', 'Race'] } };
+  const [a, b] = await Promise.all([callHandler(body), callHandler(body)]);
+  assert.deepEqual([a.status, b.status].sort(), [200, 409]);
+  assert.equal(calls.length, 1);
+});
+
+await t('handler: a Meta timeout counts as maybe sent, so a retry is refused', async () => {
+  globalThis.fetch = async () => {
+    const e = new Error('The operation was aborted due to timeout');
+    e.name = 'TimeoutError';
+    throw e;
+  };
+  const body = { audience: 'selected', selectedUids: ['u2'], channels: { whatsapp: true }, whatsapp: { template: 'store_announcement', language: 'en', params: ['there', 'Slow Meta'] } };
+  const first = await callHandler(body);
+  assert.equal(first.status, 200, JSON.stringify(first.payload));
+  assert.equal(first.payload.whatsapp.uncertain, 1);
+  assert.equal(first.payload.whatsapp.successCount, 0);
+  const calls = [];
+  globalThis.fetch = okFetch(calls);
+  const second = await callHandler(body);
+  assert.equal(second.status, 409);
+  assert.match(second.payload.error, /may have been sent/i);
+  assert.equal(calls.length, 0);
+});
+
+await t('handler: WhatsApp problem found before push goes out; fixed retry sends push once', async () => {
+  const s = fake.store;
+  s.set('userTokens/t1', { uid: 'u1', token: 'tok-u1' });
+  s.set('whatsappTemplates/pic_promo', { name: 'pic_promo', language: 'en', headerFormat: 'IMAGE', headerImageUrl: null, bodyText: 'Hi {{1}}' });
+  const body = {
+    audience: 'selected', selectedUids: ['u1'], channels: { push: true, whatsapp: true },
+    push: { title: 'Sale', body: 'This week' },
+    whatsapp: { template: 'pic_promo', language: 'en', params: ['there'] },
+  };
+  fake.pushCalls.length = 0;
+  const calls = [];
+  globalThis.fetch = okFetch(calls);
+  const first = await callHandler(body);
+  assert.equal(first.status, 500);
+  assert.match(first.payload.error, /Set picture/);
+  assert.equal(fake.pushCalls.length, 0, 'no push before the WhatsApp check');
+  s.set('whatsappTemplates/pic_promo', { ...s.get('whatsappTemplates/pic_promo'), headerImageUrl: 'https://images.example.com/a.jpg' });
+  const second = await callHandler(body);
+  assert.equal(second.status, 200, JSON.stringify(second.payload));
+  assert.equal(fake.pushCalls.length, 1);
+  assert.equal(calls.length, 1);
+  s.delete('userTokens/t1');
+});
+
+await t('handler: retrying "WhatsApp only" after push+WhatsApp went out is refused', async () => {
+  const s = fake.store;
+  s.set('userTokens/t2', { uid: 'u2', token: 'tok-u2' });
+  const calls = [];
+  globalThis.fetch = okFetch(calls);
+  const both = {
+    audience: 'selected', selectedUids: ['u2'], channels: { push: true, whatsapp: true },
+    push: { title: 'Hello', body: 'News' },
+    whatsapp: { template: 'store_announcement', language: 'en', params: ['there', 'Both channels'] },
+  };
+  assert.equal((await callHandler(both)).status, 200);
+  const waOnly = await callHandler({ ...both, channels: { whatsapp: true }, push: undefined });
+  assert.equal(waOnly.status, 409);
+  assert.equal(calls.length, 1);
+  s.delete('userTokens/t2');
+});
+
 await t('dispatch: stops starting sends at the deadline and counts the rest', async () => {
   process.env.WHATSAPP_TOKEN = 'x';
   process.env.WHATSAPP_PHONE_ID = 'PID';
@@ -376,7 +460,7 @@ await t('dispatch: stops starting sends at the deadline and counts the rest', as
   const r = await bc.dispatchWhatsApp(recipients, { template: 't' }, () => [], undefined, Date.now() + 50);
   assert.ok(r.notSent > 0, `notSent ${r.notSent}`);
   assert.ok(r.successCount > 0);
-  assert.equal(r.successCount + r.failureCount + r.notSent, 60);
+  assert.equal(r.successCount + r.failureCount + r.uncertain + r.notSent, 60);
 });
 
 await t('handler: too many WhatsApp recipients refused before sending', async () => {

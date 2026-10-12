@@ -496,7 +496,13 @@ const ComposeTab = ({
             <Notice
               tone={!result.ok ? 'danger' : result.warning ? 'warning' : 'success'}
               className="mt-3"
-              title={result.ok ? `Broadcast sent to ${plural(result.recipientCount ?? 0, 'recipient')}` : result.error || 'Send failed'}
+              title={
+                !result.ok
+                  ? result.error || 'Send failed'
+                  : result.warning
+                    ? `Broadcast partly sent (${plural(result.recipientCount ?? 0, 'recipient')})`
+                    : `Broadcast sent to ${plural(result.recipientCount ?? 0, 'recipient')}`
+              }
             >
               {result.ok && (
                 <div className="space-y-0.5 text-xs tabular-nums">

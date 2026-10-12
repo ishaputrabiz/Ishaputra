@@ -245,16 +245,18 @@ export async function applyStatus(db: WebhookDb, status: Record<string, any>, de
  * Marketing consent keywords. "STOP" opts a number out of announcements
  * (broadcast skips it); "START" opts it back in. Anything else: no change.
  */
-const CONSENT_OUT = new Set(['stop', 'unsubscribe', 'optout']);
+// "band" is Hindi for "stop" ("band karo").
+const CONSENT_OUT = new Set(['stop', 'unsubscribe', 'optout', 'remove', 'band']);
 const CONSENT_IN = new Set(['start', 'subscribe', 'unstop']);
 // Words that may surround the keyword without changing its meaning
-// ("Stop these updates", "please stop sending messages"). Any other word
-// ("stop by the store") means it is an ordinary message, not a request.
+// ("Stop these updates", "please stop sending messages", "stop karo"). Any
+// other word ("stop by the store") means it is an ordinary message.
 const CONSENT_FILLER = new Set([
   'please', 'pls', 'plz', 'kindly', 'these', 'this', 'the', 'all', 'your', 'my',
   'updates', 'update', 'messages', 'message', 'msgs', 'msg', 'sending', 'texts',
   'announcements', 'offers', 'promotions', 'marketing', 'whatsapp', 'it', 'them',
-  'me', 'now', 'again', 'thanks', 'thank', 'you', 'out',
+  'me', 'now', 'again', 'thanks', 'thank', 'you', 'out', 'spam', 'i', 'want', 'to',
+  'from', 'list', 'karo', 'kar', 'do', 'kijiye', 'dijiye',
 ]);
 
 export function marketingConsentChange(text: string): 'out' | 'in' | null {
@@ -263,11 +265,14 @@ export function marketingConsentChange(text: string): 'out' | 'in' | null {
     .replace(/opt[\s-]+out/g, 'optout')
     .split(/[^a-z]+/)
     .filter(Boolean);
-  if (words.length === 0 || words.length > 6) return null;
+  if (words.length === 0 || words.length > 8) return null;
   const keywords = words.filter((w) => CONSENT_OUT.has(w) || CONSENT_IN.has(w));
-  if (keywords.length !== 1) return null;
-  if (!words.every((w) => w === keywords[0] || CONSENT_FILLER.has(w))) return null;
-  return CONSENT_OUT.has(keywords[0]) ? 'out' : 'in';
+  if (keywords.length === 0) return null;
+  if (!words.every((w) => CONSENT_OUT.has(w) || CONSENT_IN.has(w) || CONSENT_FILLER.has(w))) return null;
+  // "STOP STOP" and "Stop. Unsubscribe" are one request; "stop start" is not.
+  const out = keywords.every((w) => CONSENT_OUT.has(w));
+  const into = keywords.every((w) => CONSENT_IN.has(w));
+  return out ? 'out' : into ? 'in' : null;
 }
 
 export async function storeInbound(
