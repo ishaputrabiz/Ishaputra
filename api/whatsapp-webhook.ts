@@ -260,11 +260,14 @@ const CONSENT_FILLER = new Set([
 ]);
 
 export function marketingConsentChange(text: string): 'out' | 'in' | null {
-  const words = String(text || '')
+  let words = String(text || '')
     .toLowerCase()
     .replace(/opt[\s-]+out/g, 'optout')
     .split(/[^a-z]+/)
     .filter(Boolean);
+  // "remove" means opt out only with a list ("remove me from your list");
+  // "please remove it" is usually about an item in an order.
+  if (!words.includes('list')) words = words.map((w) => (w === 'remove' ? 'remove_item' : w));
   if (words.length === 0 || words.length > 8) return null;
   const keywords = words.filter((w) => CONSENT_OUT.has(w) || CONSENT_IN.has(w));
   if (keywords.length === 0) return null;

@@ -131,6 +131,10 @@ await t('webhook consent keywords', () => {
   assert.equal(wh.marketingConsentChange('stop spam'), 'out');
   assert.equal(wh.marketingConsentChange('stop start'), null, 'mixed: no change');
   assert.equal(wh.marketingConsentChange('remove the oil from my order'), null);
+  // "remove" alone is usually about an order item, not announcements.
+  assert.equal(wh.marketingConsentChange('please remove it'), null);
+  assert.equal(wh.marketingConsentChange('I want to remove this'), null);
+  assert.equal(wh.marketingConsentChange('remove from list'), 'out');
   // Not opt-outs: ordinary sentences that happen to start with the keyword.
   assert.equal(wh.marketingConsentChange('stop by the store tomorrow?'), null);
   assert.equal(wh.marketingConsentChange('Start my order please'), null);
