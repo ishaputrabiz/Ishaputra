@@ -22,14 +22,14 @@ export const BRAND = {
   description:
     "Premium men's Ayurveda and botanical wellness: energy, hair, skin and personal care, made with classical herbs and modern science.",
 
-  /** TODO(client): the live domain. Until then VITE_SITE_URL (or this) is used. */
-  siteUrl: 'https://ishaputra.com',
+  /** The live domain (confirmed 2026-10-12). VITE_SITE_URL overrides it, e.g. on a preview. */
+  siteUrl: 'https://ishaputra.in',
 
   /**
    * TODO(client): DUMMY contact details (only "Hyderabad" is confirmed).
    * Replace every value before launch. Empty values are hidden on the site.
    */
-  email: 'hello@ishaputra.com',
+  email: 'hello@ishaputra.in',
   phones: ['+91 98765 43210'] as string[],
   /** Empty until the real number arrives: the Enquire button would message whoever owns a dummy number. */
   whatsapp: '',

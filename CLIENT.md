@@ -20,9 +20,9 @@
 - Everything else in `src/config/brand.ts` is **dummy data**, as the user asked, and must be replaced before launch:
     - Address: Road No. 12, Banjara Hills, Hyderabad 500034
     - Phone: +91 98765 43210
-    - Email: hello@ishaputra.com
+    - Email: hello@ishaputra.in
     - Hours: Mon to Sat, 10 am to 7 pm
-    - Domain: ishaputra.com
+    - Domain: ishaputra.in
     - Map: a city-level embed of Banjara Hills
 - Deliberately left empty (hidden on the site):
     - WhatsApp: the Enquire button would message whoever owns a dummy number
@@ -121,7 +121,7 @@ Built 2026-10-05 and merged into `main` the same day after the rules deploy and 
 - Step 3 accounts (decided 2026-10-12), all under the client's `ishaputrabiz@gmail.com`:
     - GitHub: the client's account, private repo (Dream Team added as collaborator).
     - Vercel: the client's account (Dream Team as team member). Hobby for testing; Pro before launch (Hobby forbids commercial sites).
-    - Domain: `ishaputra.com`, bought on GoDaddy. DNS moves to the client's Cloudflare (nameservers), then Vercel records in Cloudflare with the proxy off; R2 images on `images.ishaputra.com`.
+    - Domain: `ishaputra.in`, bought on GoDaddy. DNS moves to the client's Cloudflare (nameservers), then Vercel records in Cloudflare with the proxy off; R2 images on `images.ishaputra.in`.
     - Razorpay: account created and approved; test keys first, live keys at launch (after the security audit).
     - WhatsApp: not started.
 
@@ -247,7 +247,7 @@ Built 2026-10-05 and merged into `main` the same day after the rules deploy and 
 
 ## Placeholders for the client
 Shown or used on the site but not confirmed. Each must be replaced or confirmed before launch.
-- **Contact details (dummy on purpose, owner's choice):** phone `+91 98765 43210`, address `Road No. 12, Banjara Hills, Hyderabad 500034`, email `hello@ishaputra.com`, hours "Mon to Sat, 10 am to 7 pm", domain `ishaputra.com`, map of Banjara Hills. All in `src/config/brand.ts`.
+- **Contact details (dummy on purpose, owner's choice):** phone `+91 98765 43210`, address `Road No. 12, Banjara Hills, Hyderabad 500034`, email `hello@ishaputra.in`, hours "Mon to Sat, 10 am to 7 pm", map of Banjara Hills (the domain `ishaputra.in` is real, confirmed 2026-10-12). All in `src/config/brand.ts`.
 - **Demo testimonials:** the 3 seeded testimonials (`demo: true`). Remove with `node scripts/seed-demo.mjs --remove`.
 - **Claims to confirm or remove:** "24 h support" / "Within 24 hours" response time, "100% secure", "Insured" delivery, "wellness experts", "video consultation with an expert".
 - **Policies:** policy dates, and the return and replacement wording (7-day window) on the policy pages and checkout.

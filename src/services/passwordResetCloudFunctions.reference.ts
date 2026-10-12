@@ -287,7 +287,7 @@ async function sendPasswordResetNotificationEmail(email: string) {
 
   const msg = {
     to: email,
-    from: 'security@ishaputra.com', // Your verified sender
+    from: 'security@ishaputra.in', // Your verified sender
     subject: '🔒 Your password has been changed - Ishaputra Botanicals',
     html: `
       <!DOCTYPE html>

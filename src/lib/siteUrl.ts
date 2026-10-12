@@ -13,5 +13,5 @@ import { BRAND } from '@/config/brand';
  */
 export const SITE_URL = (import.meta.env.VITE_SITE_URL || BRAND.siteUrl).replace(/\/+$/, '');
 
-/** Without the scheme, for reading aloud in a sentence: "ishaputra.com". */
+/** Without the scheme, for reading aloud in a sentence: "ishaputra.in". */
 export const SITE_HOST = SITE_URL.replace(/^https?:\/\//, '');
