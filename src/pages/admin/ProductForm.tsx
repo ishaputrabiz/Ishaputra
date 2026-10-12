@@ -1095,6 +1095,7 @@ const ProductForm = () => {
                     </p>
                   </div>
                 ) : imageUploadMode === 'upload' ? (
+                  <>
                   <label
                     className={
                       'flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-card border-2 border-dashed bg-muted/30 transition-colors duration-hover hover:border-primary has-[input:focus-visible]:border-primary has-[input:focus-visible]:outline has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring ' +
@@ -1119,6 +1120,14 @@ const ProductForm = () => {
                     </div>
                     <input type="file" className="sr-only" aria-labelledby="pf-images-label" accept={IMAGE_ACCEPT} multiple onChange={handleImageUpload} disabled={uploadingImages} />
                   </label>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Photos over 500 KB?{' '}
+                    {/* New tab, so the product being edited isn't lost */}
+                    <a href="/admin/image-compressor" target="_blank" rel="noopener" className="font-medium text-primary underline underline-offset-2 hover:text-primary/80">
+                      Compress them without losing quality
+                    </a>
+                  </p>
+                  </>
                 ) : (
                   <div className="flex gap-2">
                     <Input type="url" aria-label="Image URL" value={imageUrlInput} onChange={(e) => setImageUrlInput(e.target.value)} placeholder="https://example.com/image.jpg" className="flex-1" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddImageUrl())} />

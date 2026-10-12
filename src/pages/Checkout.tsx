@@ -893,6 +893,16 @@ const MobileCheckout = () => {
     isDefault: false,
   });
 
+  // Each step replaces the page content, so start it from the top, and move
+  // focus to the new content (not on first load) so screen readers follow.
+  const stepMountedRef = useRef(false);
+  useEffect(() => {
+    // 'instant': index.css sets smooth scrolling, which would animate this jump.
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    if (stepMountedRef.current) document.getElementById('main')?.focus({ preventScroll: true });
+    stepMountedRef.current = true;
+  }, [currentStep]);
+
   // Track when cart has items so we know if it was emptied during this session
   useEffect(() => {
     if (items.length > 0) cartWasPopulatedRef.current = true;
@@ -1751,8 +1761,8 @@ const MobileCheckout = () => {
           </div>
         )}
 
-        {/* ─── STEP 2+: Checkout ─── */}
-        {currentStep >= 2 && (<>
+        {/* ─── STEP 2: Checkout ─── */}
+        {currentStep === 2 && (<>
         <h1 className="sr-only">Checkout</h1>
 
         {/* Address bar - scrolls with content */}
@@ -1833,16 +1843,6 @@ const MobileCheckout = () => {
               Edit
             </button>
           </div>
-        </div>
-
-        {/* Payment Method */}
-        <div className="mx-4 mb-4">
-          <PaymentMethodCard
-            name="paymentMethod"
-            value={selectedPaymentMethod}
-            onChange={setSelectedPaymentMethod}
-            className="tx-sheet rounded-card border border-foreground/[0.08] p-4 shadow-panel"
-          />
         </div>
 
         {/* Bill Summary */}
@@ -1926,6 +1926,109 @@ const MobileCheckout = () => {
           </section>
         )}
         </>)}
+
+        {/* ─── STEP 3: Payment (same page, so the stepper above stays in place) ─── */}
+        {currentStep === 3 && (
+          <div className="pb-4">
+            <h1 className="sr-only">Payment</h1>
+
+            {/* Deliver to */}
+            <section
+              aria-labelledby="pay-deliver-to"
+              className="tx-sheet mx-4 mb-3 mt-3 flex items-start gap-3 rounded-card border border-foreground/[0.08] px-4 py-3 shadow-panel"
+            >
+              <MapPin aria-hidden="true" className="mt-0.5 size-4 flex-shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <h2 id="pay-deliver-to" className="text-xs text-muted-foreground">Delivering to</h2>
+                {selectedAddress ? (
+                  <>
+                    <p className="truncate text-sm font-semibold text-foreground">{selectedAddress.fullName}</p>
+                    <p className="line-clamp-2 text-xs text-muted-foreground">
+                      {selectedAddress.address}, {selectedAddress.city}, {selectedAddress.state} {selectedAddress.pinCode}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm font-semibold text-foreground">No delivery address yet</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenAddressSelector}
+                aria-label="Change delivery address"
+                className="min-h-10 flex-shrink-0 px-2 text-xs font-semibold text-primary underline-offset-4 hover:underline"
+              >
+                Change
+              </button>
+            </section>
+
+            {dealerUncertain && (
+              <div className="mx-4 mb-3">
+                <DealerPricingErrorNotice onRetry={retryDealer} />
+              </div>
+            )}
+
+            {/* Payment Method */}
+            <div className="mx-4 mb-3">
+              <PaymentMethodCard
+                name="paymentMethod"
+                value={selectedPaymentMethod}
+                onChange={setSelectedPaymentMethod}
+                className="tx-sheet rounded-card border border-foreground/[0.08] p-4 shadow-panel"
+              />
+            </div>
+
+            {/* Every item, at the price this order charges (dealer units when dealer prices apply) */}
+            <section
+              aria-labelledby="pay-items"
+              className="tx-sheet mx-4 mb-3 rounded-card border border-foreground/[0.08] p-4 shadow-panel"
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 id="pay-items" className="text-base font-bold tabular-nums text-foreground" style={HEADING_FONT}>
+                  {plural(totalItems, 'item')}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(1)}
+                  aria-label="Edit cart"
+                  className="min-h-10 flex-shrink-0 px-2 text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                >
+                  Edit
+                </button>
+              </div>
+              <ul className="space-y-3">
+                {lines.map((item) => {
+                  const unit = lineUnit(dealerApplies, dealerCart.quote.units, items, item);
+                  return (
+                    <li key={item.id} className="flex items-center gap-3">
+                      <div className="size-14 flex-shrink-0 overflow-hidden rounded-control bg-foreground/[0.03] ring-1 ring-foreground/[0.06]">
+                        <SmartImage src={item.image} alt="" className="h-full w-full object-cover" preset="thumb" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="line-clamp-2 text-xs font-semibold leading-snug text-foreground">{item.name}</h3>
+                        <UnavailableTag reason={unavailable[item.id]} />
+                        <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+                          Qty {item.quantity} × {formatPrice(unit)}
+                        </p>
+                      </div>
+                      <span className="flex-shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                        {formatPrice(unit * item.quantity)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+
+            {/* Bill Summary (the same rows as step 2) */}
+            <section
+              aria-labelledby="bill-summary-3"
+              className="tx-sheet mx-4 mb-4 overflow-hidden rounded-card border border-foreground/[0.08] p-4 shadow-panel"
+            >
+              <h2 id="bill-summary-3" className="mb-3 text-base font-bold text-foreground" style={HEADING_FONT}>Bill summary</h2>
+              <BillRows {...billProps} />
+            </section>
+          </div>
+        )}
       </main>
 
       {/* ─── Bottom Fixed Section ─── */}
@@ -1939,6 +2042,23 @@ const MobileCheckout = () => {
           )
         ) : payHold ? (
           <PayHeldButton label={payHold} busy={!dealer.ready} className="h-14" />
+        ) : currentStep === 2 ? (
+          // Step 2 only reviews; payment is its own step, where the slider pays.
+          <button
+            type="button"
+            disabled={addressesLoading}
+            onClick={() => {
+              if (!selectedAddress) {
+                handleOpenAddressSelector();
+                return;
+              }
+              setCurrentStep(3);
+            }}
+            className="btn-copper h-14 w-full !text-[12px] tabular-nums"
+          >
+            {selectedAddress || addressesLoading ? `Continue to payment · ${formatPrice(total)}` : 'Add delivery address'}
+            <ChevronRight aria-hidden="true" className="size-4" />
+          </button>
         ) : (
           <SlideToPayButton
             key={slideResetKey}

@@ -23,6 +23,7 @@ import {
   Settings,
   Users2,
   Sparkles,
+  ImageDown,
   Globe,
   Youtube,
   PanelTop,
@@ -44,6 +45,7 @@ import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import StorageLimitWatcher from '@/components/admin/StorageLimitWatcher';
+import { useWhatsAppUnread } from '@/components/admin/whatsapp/useWhatsAppUnread';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
@@ -58,7 +60,15 @@ import {
 const lightModeLogo = "/black_logo.png";
 const darkModeLogo = "/white_logo.png";
 
-type NavItem = { path: string; icon: LucideIcon; label: string; /** Applications waiting, shown as a badge when above 0. */ count?: number };
+type NavItem = {
+  path: string;
+  icon: LucideIcon;
+  label: string;
+  /** Items waiting, shown as a badge when above 0. */
+  count?: number;
+  /** What the count means for screen readers (default "pending"). */
+  countLabel?: string;
+};
 
 /** One look for every sidebar row: links, the Content & Media toggle and Logout. */
 const NAV_ROW =
@@ -73,6 +83,8 @@ const AdminLayout = () => {
   const [headerQuery, setHeaderQuery] = React.useState('');
   const [pendingDealers, setPendingDealers] = React.useState(0);
   const { userProfile, logout } = useAuth();
+  // Conversations with unread customer messages, for the WhatsApp badge.
+  const whatsappUnread = useWhatsAppUnread(userProfile?.role === 'admin');
   const { resolvedTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -151,8 +163,9 @@ const AdminLayout = () => {
     ...(SILVER_PRICING_ENABLED ? [{ path: '/admin/silver-rate', icon: Coins, label: 'Silver rate' }] : []),
     { path: '/admin/commerce-settings', icon: Store, label: 'Commerce' },
     { path: '/admin/image-prompts', icon: Sparkles, label: 'AI prompts' },
+    { path: '/admin/image-compressor', icon: ImageDown, label: 'Image compressor' },
     { path: '/admin/marketing', icon: Bell, label: 'Marketing' },
-    { path: '/admin/whatsapp', icon: MessagesSquare, label: 'WhatsApp' },
+    { path: '/admin/whatsapp', icon: MessagesSquare, label: 'WhatsApp', count: whatsappUnread, countLabel: 'unread' },
     { path: '/admin/storage', icon: HardDrive, label: 'Storage' },
     { path: '/admin/settings', icon: Settings, label: 'Settings' },
   ];
@@ -216,8 +229,8 @@ const AdminLayout = () => {
                 {item.count ? (
                   <span className="ml-auto rounded-chip bg-status-warning-bg px-1.5 text-xs font-semibold tabular-nums text-status-warning-fg">
                     <span className="sr-only">, </span>
-                    {item.count}
-                    <span className="sr-only"> pending</span>
+                    {item.count > 99 ? '99+' : item.count}
+                    <span className="sr-only"> {item.countLabel ?? 'pending'}</span>
                   </span>
                 ) : null}
               </NavLink>

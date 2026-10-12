@@ -41,3 +41,6 @@ client-assets/logo-original-16k.png
 client-assets/logo-mockup-16k-v2.png
 client-assets/generated/products/
 client-assets/generated/_*
+
+# test bundles
+scripts/tests/out/

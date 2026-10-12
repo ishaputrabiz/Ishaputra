@@ -7,11 +7,14 @@
  * the `broadcastCampaigns` collection.
  *
  * Tabs:
- *  - Compose   : pick audience + channels + content, fire a campaign.
- *  - History   : review past campaigns and per-channel results.
- *  - Templates : manage approved WhatsApp template metadata for the picker.
+ *  - Announcement : type a message, send it to all or chosen customers
+ *                   through one approved WhatsApp template (and/or push).
+ *  - Custom       : pick audience + channels + any template, fire a campaign.
+ *  - History      : review past campaigns and per-channel results.
+ *  - Templates    : create WhatsApp templates in Meta, sync their approval status,
+ *                   delete them, or add metadata by hand as a fallback.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   collection,
   doc,
@@ -22,12 +25,12 @@ import {
   serverTimestamp,
   setDoc,
   Timestamp,
-  where,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { IconButton } from '@/components/ui/icon-button';
 import { Notice } from '@/components/ui/notice';
 import { Spinner } from '@/components/ui/spinner';
@@ -49,8 +52,14 @@ import {
   Clock,
   History as HistoryIcon,
   FileText,
+  Megaphone,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import TemplateCreator from '@/components/admin/whatsapp/TemplateCreator';
+import TemplateLibrary, { TemplateStatusBadge } from '@/components/admin/whatsapp/TemplateLibrary';
+import { isSendableTemplate, statusStyle } from '@/components/admin/whatsapp/templateRules';
+import AnnouncementComposer from '@/components/admin/marketing/AnnouncementComposer';
+import { isCustomerRole } from '@/components/admin/marketing/announcement';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -72,6 +81,13 @@ interface WhatsAppTemplate {
   category: 'utility' | 'marketing' | 'authentication';
   paramLabels: string[];
   description?: string;
+  status?: string | null;
+  rejectedReason?: string | null;
+  source?: string | null;
+  metaId?: string | null;
+  bodyText?: string | null;
+  headerFormat?: string | null;
+  headerImageUrl?: string | null;
 }
 
 interface CampaignRow {
@@ -79,7 +95,8 @@ interface CampaignRow {
   audience: AudienceKind;
   channels: { push?: boolean; whatsapp?: boolean };
   push?: { title?: string; body?: string } | null;
-  whatsapp?: { template?: string } | null;
+  whatsapp?: { template?: string; params?: string[] } | null;
+  kind?: 'announcement' | 'custom';
   status: 'sending' | 'completed' | 'failed';
   recipientCount?: number;
   pushResult?: { successCount?: number; failureCount?: number; invalidTokens?: string[] };
@@ -97,7 +114,7 @@ const AUDIENCE_OPTIONS: { id: AudienceKind; label: string; help: string }[] = [
     label: 'All accounts',
     help: DELIVERY_PARTNERS_ENABLED ? 'Every customer and delivery partner with a profile' : 'Everyone with a profile',
   },
-  { id: 'customers', label: 'Customers only', help: 'All customers' },
+  { id: 'customers', label: 'Customers only', help: 'Every shopper account (not admins or delivery)' },
   ...(DELIVERY_PARTNERS_ENABLED
     ? [{ id: 'delivery' as AudienceKind, label: 'Delivery partners', help: 'Everyone with a delivery partner account' }]
     : []),
@@ -121,7 +138,7 @@ const getErrorMessage = (err: unknown, fallback = 'Network error') =>
 // ---------------------------------------------------------------------------
 const AdminNotifications = () => {
   const { user, userProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'compose' | 'history' | 'templates'>('compose');
+  const [activeTab, setActiveTab] = useState<'announcement' | 'compose' | 'history' | 'templates'>('announcement');
 
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   useEffect(() => {
@@ -136,6 +153,13 @@ const AdminNotifications = () => {
             category: ((d.data().category as string) || 'utility') as WhatsAppTemplate['category'],
             paramLabels: (d.data().paramLabels as string[]) || [],
             description: d.data().description as string | undefined,
+            status: (d.data().status as string | undefined) ?? null,
+            rejectedReason: (d.data().rejectedReason as string | undefined) ?? null,
+            source: (d.data().source as string | undefined) ?? null,
+            metaId: (d.data().metaId as string | undefined) ?? null,
+            bodyText: (d.data().bodyText as string | undefined) ?? null,
+            headerFormat: (d.data().headerFormat as string | undefined) ?? null,
+            headerImageUrl: (d.data().headerImageUrl as string | undefined) ?? null,
           })),
         );
       },
@@ -148,14 +172,17 @@ const AdminNotifications = () => {
     <div className="mx-auto max-w-6xl space-y-6">
       <AdminPageHeader
         title="Marketing"
-        description="Send web push and WhatsApp campaigns."
+        description="Send announcements and offers to your customers on WhatsApp and as website notifications."
         className="pb-0"
       />
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
         <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
+          <TabsTrigger value="announcement" className="gap-2">
+            <Megaphone aria-hidden="true" className="h-3.5 w-3.5" /> Announcement
+          </TabsTrigger>
           <TabsTrigger value="compose" className="gap-2">
-            <Send aria-hidden="true" className="h-3.5 w-3.5" /> Compose
+            <Send aria-hidden="true" className="h-3.5 w-3.5" /> Custom
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <HistoryIcon aria-hidden="true" className="h-3.5 w-3.5" /> History
@@ -165,6 +192,9 @@ const AdminNotifications = () => {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="announcement" className="mt-4">
+          <AnnouncementComposer templates={templates} />
+        </TabsContent>
         <TabsContent value="compose" className="mt-4">
           <ComposeTab
             templates={templates}
@@ -238,8 +268,9 @@ const ComposeTab = ({
     campaignId?: string;
     recipientCount?: number;
     push?: { successCount?: number; failureCount?: number; invalidTokens?: string[] };
-    whatsapp?: { successCount?: number; failureCount?: number };
+    whatsapp?: { successCount?: number; failureCount?: number; notSent?: number };
     error?: string;
+    warning?: string;
   } | null>(null);
 
   const handleSend = async () => {
@@ -304,7 +335,8 @@ const ComposeTab = ({
         toast.error(data?.error || 'Broadcast failed');
       } else {
         setResult({ ok: true, ...data });
-        toast.success(`Campaign sent to ${plural(data.recipientCount ?? 0, 'recipient')}`);
+        if (data.warning) toast.warning(data.warning);
+        else toast.success(`Campaign sent to ${plural(data.recipientCount ?? 0, 'recipient')}`);
       }
     } catch (err: unknown) {
       const message = getErrorMessage(err);
@@ -408,8 +440,9 @@ const ComposeTab = ({
                 >
                   <option value="">Pick a template</option>
                   {templates.map((t) => (
-                    <option key={t.id} value={t.id}>
+                    <option key={t.id} value={t.id} disabled={!isSendableTemplate(t.status)}>
                       {t.name} · {t.language} · {t.category}
+                      {t.status && !isSendableTemplate(t.status) ? ` (${statusStyle(t.status).label})` : ''}
                     </option>
                   ))}
                 </select>
@@ -461,12 +494,19 @@ const ComposeTab = ({
           </Button>
           {result && (
             <Notice
-              tone={result.ok ? 'success' : 'danger'}
+              tone={!result.ok ? 'danger' : result.warning ? 'warning' : 'success'}
               className="mt-3"
-              title={result.ok ? `Broadcast sent to ${plural(result.recipientCount ?? 0, 'recipient')}` : result.error || 'Send failed'}
+              title={
+                !result.ok
+                  ? result.error || 'Send failed'
+                  : result.warning
+                    ? `Broadcast partly sent (${plural(result.recipientCount ?? 0, 'recipient')})`
+                    : `Broadcast sent to ${plural(result.recipientCount ?? 0, 'recipient')}`
+              }
             >
               {result.ok && (
                 <div className="space-y-0.5 text-xs tabular-nums">
+                  {result.warning && <p className="font-medium">{result.warning}</p>}
                   {result.push && (
                     <p>
                       Push: {result.push.successCount} delivered · {result.push.failureCount} failed ·{' '}
@@ -546,30 +586,40 @@ const SelectedCustomersPicker = ({
   const [term, setTerm] = useState('');
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<UserRow[]>([]);
+  // Customers are read once per visit; later searches filter that list in memory.
+  const customersRef = useRef<UserRow[] | null>(null);
+
+  const loadCustomers = async () => {
+    if (customersRef.current) return customersRef.current;
+    // Shoppers are saved with role 'user' (older ones 'customer' or none).
+    const snap = await getDocs(collection(db, 'users'));
+    const rows: UserRow[] = [];
+    snap.forEach((d) => {
+      const data = d.data() || {};
+      if (!isCustomerRole(data.role)) return;
+      rows.push({
+        uid: d.id,
+        name: (data.fullName as string) || (data.name as string),
+        email: data.email as string | undefined,
+        phone: (data.whatsappNumber as string) || (data.phone as string) || (data.mobile as string),
+        role: data.role as string | undefined,
+      });
+    });
+    customersRef.current = rows;
+    return rows;
+  };
 
   const runSearch = async () => {
     const t = term.trim().toLowerCase();
     if (!t) return;
     setSearching(true);
     try {
-      const snap = await getDocs(query(collection(db, 'users'), where('role', '==', 'customer')));
-      const matches: UserRow[] = [];
-      snap.forEach((d) => {
-        const data = d.data() || {};
-        const name = String(data.fullName || data.name || '').toLowerCase();
-        const email = String(data.email || '').toLowerCase();
-        const phone = String(data.phone || data.mobile || '').toLowerCase();
-        if (name.includes(t) || email.includes(t) || phone.includes(t)) {
-          matches.push({
-            uid: d.id,
-            name: (data.fullName as string) || (data.name as string),
-            email: data.email as string | undefined,
-            phone: (data.phone as string) || (data.mobile as string),
-            role: data.role as string | undefined,
-          });
-        }
-      });
+      const matches = (await loadCustomers()).filter((u) =>
+        [u.name, u.email, u.phone].some((v) => String(v || '').toLowerCase().includes(t)),
+      );
       setResults(matches.slice(0, 25));
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not load customers'));
     } finally {
       setSearching(false);
     }
@@ -679,7 +729,7 @@ const HistoryTab = () => {
   if (rows.length === 0) {
     return (
       <div className="rounded-card border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-        No campaigns yet. Send your first broadcast from the <strong>Compose</strong> tab.
+        No campaigns yet. Send your first announcement from the <strong>Announcement</strong> tab.
       </div>
     );
   }
@@ -714,9 +764,11 @@ const HistoryTab = () => {
               </td>
               <td className="px-4 py-2 text-foreground/80 max-w-xs">
                 <div className="truncate font-medium">
-                  {r.push?.title || r.whatsapp?.template || 'None'}
+                  {r.kind === 'announcement'
+                    ? r.whatsapp?.params?.[1] || r.push?.body || 'Announcement'
+                    : r.push?.title || r.whatsapp?.template || 'None'}
                 </div>
-                <div className="truncate text-[11px] text-muted-foreground">{r.push?.body || ''}</div>
+                <div className="truncate text-[11px] text-muted-foreground">{r.kind === 'announcement' ? '' : r.push?.body || ''}</div>
               </td>
               <td className="px-4 py-2 text-right tabular-nums text-foreground/80">{r.recipientCount ?? 'n/a'}</td>
               <td className="px-4 py-2 text-right tabular-nums text-foreground/80">
@@ -754,6 +806,36 @@ const StatusPill = ({ status }: { status: CampaignRow['status'] }) => {
 // Templates tab
 // ===========================================================================
 const TemplatesTab = ({ templates }: { templates: WhatsAppTemplate[] }) => {
+  const [view, setView] = useState<'library' | 'create' | 'manual'>('library');
+  const views = [
+    { id: 'library', label: 'Library' },
+    { id: 'create', label: 'Create new' },
+    { id: 'manual', label: 'Add manually' },
+  ] as const;
+  return (
+    <div className="space-y-4">
+      <ToggleGroup
+        type="single"
+        value={view}
+        onValueChange={(v) => v && setView(v as typeof view)}
+        aria-label="Templates"
+        className="max-w-full justify-start overflow-x-auto"
+      >
+        {views.map((v) => (
+          <ToggleGroupItem key={v.id} value={v.id} className="h-9 flex-none px-3 text-sm sm:px-4">
+            {v.label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+      {view === 'library' && <TemplateLibrary templates={templates} />}
+      {view === 'create' && <TemplateCreator onCreated={() => setView('library')} />}
+      {view === 'manual' && <ManualTemplateForm templates={templates} />}
+    </div>
+  );
+};
+
+/** Fallback: type in metadata for a template that already exists in Meta. */
+const ManualTemplateForm = ({ templates }: { templates: WhatsAppTemplate[] }) => {
   const [name, setName] = useState('');
   const [language, setLanguage] = useState('en_US');
   const [category, setCategory] = useState<WhatsAppTemplate['category']>('utility');
@@ -795,10 +877,10 @@ const TemplatesTab = ({ templates }: { templates: WhatsAppTemplate[] }) => {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <section className="space-y-3 rounded-card border border-border bg-card p-4 shadow-sm sm:p-5">
-        <h2 className="text-sm font-semibold text-foreground">Add or update a template</h2>
+        <h2 className="text-sm font-semibold text-foreground">Add template details by hand</h2>
         <p className="text-xs text-foreground/80">
-          Register the metadata for an already-approved Meta WhatsApp template so admins can
-          pick it from the composer. The template itself must be approved in WhatsApp Manager.
+          Use this only for a template that is already approved in WhatsApp Manager and does not
+          show up after Sync from Meta. Type the exact name, language and variable names.
         </p>
         <Field label="Template name" required>
           <input
@@ -861,8 +943,10 @@ const TemplatesTab = ({ templates }: { templates: WhatsAppTemplate[] }) => {
           <ul className="space-y-2 max-h-[28rem] overflow-auto">
             {templates.map((t) => (
               <li key={t.id} className="space-y-1 rounded-card border border-border p-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-foreground">{t.name}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex flex-wrap items-center gap-2 break-all font-semibold text-foreground">
+                    {t.name} <TemplateStatusBadge status={t.status} />
+                  </span>
                   <span className="text-[11px] text-muted-foreground">
                     {t.language} · {t.category}
                   </span>

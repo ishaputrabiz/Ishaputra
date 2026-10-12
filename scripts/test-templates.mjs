@@ -56,45 +56,45 @@ console.log('\n=== WhatsApp Template Test — all 13 templates ===\n');
 
 // ── CUSTOMER ─────────────────────────────────────────────────────────────────
 await send('order_confirmed → customer',        customer, 'order_confirmed',
-  ['Priya', '#AB12CD', 'Silver Chain', '1299'], ORDER_ID);
+  ['Priya', '#AB12CD', 'Herbal Hair Oil', '1299'], ORDER_ID);
 
 await send('order_out_for_delivery → customer', customer, 'order_out_for_delivery',
-  ['Priya', '#AB12CD', 'Silver Chain'],          ORDER_ID);
+  ['Priya', '#AB12CD', 'Herbal Hair Oil'],          ORDER_ID);
 
 await send('order_delivered → customer',        customer, 'order_delivered',
-  ['Priya', '#AB12CD', 'Silver Chain'],          ORDER_ID);
+  ['Priya', '#AB12CD', 'Herbal Hair Oil'],          ORDER_ID);
 
 await send('order_cancelled → customer',        customer, 'order_cancelled',
-  ['Priya', '#AB12CD', 'Silver Chain'],          ORDER_ID);
+  ['Priya', '#AB12CD', 'Herbal Hair Oil'],          ORDER_ID);
 
 await send('order_refunded → customer',         customer, 'order_refunded',
-  ['Priya', '#AB12CD', 'Silver Chain'],          ORDER_ID);
+  ['Priya', '#AB12CD', 'Herbal Hair Oil'],          ORDER_ID);
 
 await send('order_return_update → customer',    customer, 'order_return_update',
-  ['Priya', '#AB12CD', 'Silver Chain', 'approved'], ORDER_ID);
+  ['Priya', '#AB12CD', 'Herbal Hair Oil', 'approved'], ORDER_ID);
 
 await send('order_timeslot → customer',         customer, 'order_timeslot',
   ['Priya', '#AB12CD', '30 Apr', '9 AM - 12 PM'], ORDER_ID);
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 await send('admin_order_alert → admin',         admin, 'admin_order_alert',
-  ['#AB12CD', 'Silver Chain', '1299', 'Priya Nair'], ORDER_ID);
+  ['#AB12CD', 'Herbal Hair Oil', '1299', 'Priya Nair'], ORDER_ID);
 
 await send('admin_order_delivered → admin',     admin, 'admin_order_delivered',
   ['#AB12CD', 'Priya Nair'],                     ORDER_ID);
 
 await send('admin_return_requested → admin',    admin, 'admin_return_requested',
-  ['#AB12CD', 'Priya Nair', 'Silver Chain'],     ORDER_ID);
+  ['#AB12CD', 'Priya Nair', 'Herbal Hair Oil'],     ORDER_ID);
 
 await send('admin_return_picked → admin',       admin, 'admin_return_picked',
-  ['#AB12CD', 'Silver Chain'],                   ORDER_ID);
+  ['#AB12CD', 'Herbal Hair Oil'],                   ORDER_ID);
 
 await send('admin_returned → admin',            admin, 'admin_returned',
-  ['#AB12CD', 'Priya Nair', 'Silver Chain'],     ORDER_ID);
+  ['#AB12CD', 'Priya Nair', 'Herbal Hair Oil'],     ORDER_ID);
 
 // ── DELIVERY PARTNER ─────────────────────────────────────────────────────────
 // delivery_new_task has a Static button URL (no urlSuffix needed)
 await send('delivery_new_task → partner',       delivery, 'delivery_new_task',
-  ['Ravi', '#AB12CD', 'Silver Chain', '12 MG Road, Vizag'], null);
+  ['Ravi', '#AB12CD', 'Herbal Hair Oil', '12 Road No. 1, Hyderabad'], null);
 
 console.log('\nDone.\n');
