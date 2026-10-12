@@ -118,7 +118,12 @@ Built 2026-10-05 and merged into `main` the same day after the rules deploy and 
     - All 12 indexes in `firestore.indexes.json` created by the user in the console (2026-09-23). The service account has no index permission, so future index changes are made in the console; `scripts/` can print create-links.
     - Admin: `admin@ishaputra.com` (created in the console; profile + admin role + verified email set by `scripts/make-admin.mjs` and the Admin SDK).
 - Images: Cloudinary `dcoimqij`, unsigned preset `levelupingup`, until Cloudflare R2 is set up (`VITE_MEDIA_PROVIDER=cloudinary`). Uploads go to the folder `ishaputrabotanicals/<category>`.
-- WhatsApp, Razorpay, Vercel, domain: not started (Step 3).
+- Step 3 accounts (decided 2026-10-12), all under the client's `ishaputrabiz@gmail.com`:
+    - GitHub: the client's account, private repo (Dream Team added as collaborator).
+    - Vercel: the client's account (Dream Team as team member). Hobby for testing; Pro before launch (Hobby forbids commercial sites).
+    - Domain: `ishaputra.com`, bought on GoDaddy. DNS moves to the client's Cloudflare (nameservers), then Vercel records in Cloudflare with the proxy off; R2 images on `images.ishaputra.com`.
+    - Razorpay: account created and approved; test keys first, live keys at launch (after the security audit).
+    - WhatsApp: not started.
 
 ## Decisions log
 - 2026-09-23: The user reverted an earlier session's Step 0 because the site showed nothing. The cause was the new Firebase having no security rules (every read denied) and no indexes; the code was fine. Step 0 was redone from scratch.
