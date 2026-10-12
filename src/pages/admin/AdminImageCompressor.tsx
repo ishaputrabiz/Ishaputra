@@ -54,16 +54,25 @@ const AdminImageCompressor = () => {
     });
   }, []);
 
-  // Free object URLs when the page closes.
-  useEffect(() => () => {
-    itemsRef.current.forEach((it) => {
-      URL.revokeObjectURL(it.previewUrl);
-      if (it.result) URL.revokeObjectURL(it.result.url);
-    });
+  // Stop the queue and free object URLs when the page closes.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      itemsRef.current.forEach((it) => {
+        URL.revokeObjectURL(it.previewUrl);
+        if (it.result) URL.revokeObjectURL(it.result.url);
+      });
+    };
   }, []);
 
-  const update = (id: string, patch: Partial<Item>) =>
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+  const update = (id: string, patch: Partial<Item>) => {
+    const apply = (list: Item[]) => list.map((it) => (it.id === id ? { ...it, ...patch } : it));
+    // The queue reads the ref, so keep it current without waiting for a render.
+    itemsRef.current = apply(itemsRef.current);
+    setItems(apply);
+  };
 
   /** Works through every waiting item, one at a time so the page stays responsive. */
   const processQueue = useCallback(async (bytes: number, fmt: OutputFormat) => {
@@ -71,6 +80,7 @@ const AdminImageCompressor = () => {
     runningRef.current = true;
     try {
       for (;;) {
+        if (!mountedRef.current) break;
         const next = itemsRef.current.find((it) => it.status === 'waiting');
         if (!next) break;
         update(next.id, { status: 'working' });
@@ -78,6 +88,7 @@ const AdminImageCompressor = () => {
           // Hero banners span the full screen width, so they keep more pixels (2x a 1440px screen).
           const maxEdge = bytes > MAX_IMAGE_BYTES ? 3200 : 2400;
           const r = await compressImage(next.file, { maxBytes: bytes, format: fmt, maxEdge });
+          if (!mountedRef.current) break; // page closed mid-image: make no URL that nothing would free
           update(next.id, { status: 'done', result: { ...r, url: URL.createObjectURL(r.blob) }, error: undefined });
         } catch (e) {
           update(next.id, { status: 'error', error: e instanceof Error ? e.message : 'Could not compress this image.' });

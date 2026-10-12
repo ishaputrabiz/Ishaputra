@@ -14,7 +14,7 @@
  *  - Templates    : create WhatsApp templates in Meta, sync their approval status,
  *                   delete them, or add metadata by hand as a fallback.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   collection,
   doc,
@@ -580,32 +580,40 @@ const SelectedCustomersPicker = ({
   const [term, setTerm] = useState('');
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<UserRow[]>([]);
+  // Customers are read once per visit; later searches filter that list in memory.
+  const customersRef = useRef<UserRow[] | null>(null);
+
+  const loadCustomers = async () => {
+    if (customersRef.current) return customersRef.current;
+    // Shoppers are saved with role 'user' (older ones 'customer' or none).
+    const snap = await getDocs(collection(db, 'users'));
+    const rows: UserRow[] = [];
+    snap.forEach((d) => {
+      const data = d.data() || {};
+      if (!isCustomerRole(data.role)) return;
+      rows.push({
+        uid: d.id,
+        name: (data.fullName as string) || (data.name as string),
+        email: data.email as string | undefined,
+        phone: (data.whatsappNumber as string) || (data.phone as string) || (data.mobile as string),
+        role: data.role as string | undefined,
+      });
+    });
+    customersRef.current = rows;
+    return rows;
+  };
 
   const runSearch = async () => {
     const t = term.trim().toLowerCase();
     if (!t) return;
     setSearching(true);
     try {
-      // Shoppers are saved with role 'user' (older ones 'customer' or none).
-      const snap = await getDocs(collection(db, 'users'));
-      const matches: UserRow[] = [];
-      snap.forEach((d) => {
-        const data = d.data() || {};
-        if (!isCustomerRole(data.role)) return;
-        const name = String(data.fullName || data.name || '').toLowerCase();
-        const email = String(data.email || '').toLowerCase();
-        const phone = String(data.whatsappNumber || data.phone || data.mobile || '').toLowerCase();
-        if (name.includes(t) || email.includes(t) || phone.includes(t)) {
-          matches.push({
-            uid: d.id,
-            name: (data.fullName as string) || (data.name as string),
-            email: data.email as string | undefined,
-            phone: (data.whatsappNumber as string) || (data.phone as string) || (data.mobile as string),
-            role: data.role as string | undefined,
-          });
-        }
-      });
+      const matches = (await loadCustomers()).filter((u) =>
+        [u.name, u.email, u.phone].some((v) => String(v || '').toLowerCase().includes(t)),
+      );
       setResults(matches.slice(0, 25));
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not load customers'));
     } finally {
       setSearching(false);
     }

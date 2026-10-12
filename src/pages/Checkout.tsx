@@ -897,7 +897,8 @@ const MobileCheckout = () => {
   // focus to the new content (not on first load) so screen readers follow.
   const stepMountedRef = useRef(false);
   useEffect(() => {
-    window.scrollTo({ top: 0 });
+    // 'instant': index.css sets smooth scrolling, which would animate this jump.
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     if (stepMountedRef.current) document.getElementById('main')?.focus({ preventScroll: true });
     stepMountedRef.current = true;
   }, [currentStep]);
