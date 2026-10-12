@@ -7,11 +7,20 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-08 (Sreerasthu updates ported on branch `sreerasthu-port`: WhatsApp, image compressor, checkout step 3.)
+Last updated: 2026-10-12 (`sreerasthu-port` reviewed, fixed and merged into `main`.)
 
 ## State
 
-- **2026-10-08 (latest): three Sreerasthu updates ported, on branch `sreerasthu-port` (NOT merged into `main` yet; local only).** Source: github.com/sreerastusilvers/sreerasthusilvers commits `e76fcdb`, `236e57b`, `4dd87d9` (Ishaputra was copied from Sreerasthu `4869296`). Commits `07b551b`, `4834124`, `0156bfd`, `4dbe149`, `cc5ad17`.
+- **2026-10-12 (latest): `sreerasthu-port` reviewed, fixed and MERGED into `main`** (`0997d4e`, `--no-ff`, local only, never pushed).
+  - **Review:** 2 reviewers (server/security, front end), then 2 re-reviews of the fixes. Final verdict "ready to merge", 0 Critical/Important left.
+  - **Fixes on the branch:** `a4dc37e`, `e2345a3`, `62627b6`, `1a5165a`, `05d26a0`, `033875e`.
+    - STOP matching: phrases and repeats ("Stop these updates", "STOP STOP", "stop karo", "band karo", "remove me from your list"); "please remove it" and "stop by the store" are not opt-outs.
+    - Broadcast double sends: before any send, one transaction takes a lock per channel, `broadcastLocks/{push_|wa_}<hash of audience+customers+content>`. Released only when nothing can have gone out; a sent channel keeps it 24 h; a Meta timeout or crash keeps it ("may have been sent" 409). WhatsApp template checks run before push. Send budget 40 s from handler entry, 10 s per Meta call, max 1000 WhatsApp numbers per broadcast, `vercel.json` gives `api/broadcast.ts` 60 s. Actor from the verified login. `broadcastLocks` has no rule, so browsers can't touch it (no rules deploy needed).
+    - Inbox: ⋮ menu "Stop announcements to this customer" / "Turn announcements back on" plus a "No announcements" badge (desktop). A marketing template (or one of unknown category) to an opted-out number is refused. Loads the newest 500 messages.
+    - Image compressor stops when the page closes (it looped forever). Customer search reads the customer list once per visit. The checkout step change jumps to the top instantly.
+  - **Checks on `main` after the merge:** `npm test` 167/167, `announcement.test.mjs` 32, `whatsapp-reply.test.mjs` 15, build passes, tsc only the 7 old errors, API files type-check clean, `api/` = 12. Inbox opt-out screenshots at 390/1440 light/dark (demo data, temporary admin seeded then removed), 0 console errors: `../shots/inbox-optout/`.
+  - **Review minors left open (not blocking):** see Next step 0.
+- **2026-10-08: three Sreerasthu updates ported, on branch `sreerasthu-port` (merged 2026-10-12, see above).** Source: github.com/sreerastusilvers/sreerasthusilvers commits `e76fcdb`, `236e57b`, `4dd87d9` (Ishaputra was copied from Sreerasthu `4869296`). Commits `07b551b`, `4834124`, `0156bfd`, `4dbe149`, `cc5ad17`.
   - **Image compressor:** Admin > Image compressor (`/admin/image-compressor`, `src/lib/imageCompressor.ts`, new dep `fflate`), plus a link under the Product form photo upload. Restyled to the Ishaputra admin look.
   - **Mobile checkout step 3:** step 2 now ends with "Continue to payment"; step 3 shows the address (Change), payment method, every item at the price charged (dealer units when they apply) and the bill, then Slide to Pay. No pricing/order/payment logic changed. Checked as the preview shopper at 390 px light/dark (no overflow, focus/scroll reset, Back works, totals add up; cart untouched).
   - **WhatsApp:** team inbox (filters, assign, resolve, notes, quick replies, 24 h window, media both ways, ticks, setup checklist, `?demo=1` in dev), Marketing > Templates via the Meta API (create/sync/delete, picture headers), Marketing > Announcement (`store_announcement`, STOP/START opt-out), broadcast fixes (role filter, `whatsappNumber`, dedupe, opt-out). API files = Sreerasthu HEAD plus a constant-time admin-key compare. Restyled to the Ishaputra admin look. New admin-only rule `whatsappSnippets` (NOT deployed). Guide: `docs/WHATSAPP_SETUP.md`.
@@ -127,7 +136,14 @@ Last updated: 2026-10-08 (Sreerasthu updates ported on branch `sreerasthu-port`:
 
 ## Next steps (in order)
 
-0. **Merge `sreerasthu-port` (2026-10-08):** run `requesting-code-review` on `main..sreerasthu-port` (the WhatsApp API files are security-relevant), then merge `--no-ff` into `main` locally. Owner to-dos for WhatsApp, in `docs/WHATSAPP_SETUP.md`: Vercel env incl. `WHATSAPP_WABA_ID`; webhook `https://[NEED: live domain]/api/whatsapp-webhook`; Firestore rules deploy for `whatsappSnippets` (`node docs/handoff/deploy-rules.mjs`, owner's OK); then Marketing > Announcement > "Create announcement template" once.
+0. **`sreerasthu-port`: DONE 2026-10-12** (reviewed, fixed, merged; see "State").
+   - **Optional small follow-ups from the review (Low):**
+     - Webhook: one failing item returns 500 for the whole payload, so Meta redelivers it and `unreadCount` counts twice. It also never checks `metadata.phone_number_id`, which matters if one Meta app ever serves two client stores.
+     - `x-admin-key` still unlocks every WhatsApp action, and the key sits in admins' `localStorage`. Consider ID tokens only.
+     - "Admin init failed" returns `err.message` before auth. The webhook GET compares the verify token with `===`.
+     - UI: the announcement composer reads all `users` per visit (fine for a small store); a failed opt-out query is silent; the attachment caption limit isn't enforced on pre-filled text; `WhatsAppPreviewBubble` italicises inside words (`ORD_2024_55`); scroll-to-bottom runs even when the admin scrolled up; deleting a quick reply has no confirmation; the `TemplatePictureField` file input has no accessible name; compressor "Compressing N of M" is off after an error; there is no file-size cap; there are 3 near-duplicate image compressors.
+     - Checkout: Change/Edit/Back stay tappable while placing (the server check keeps it safe).
+   - **Owner to-dos for WhatsApp, in `docs/WHATSAPP_SETUP.md`:** Vercel env incl. `WHATSAPP_WABA_ID`; webhook `https://[NEED: live domain]/api/whatsapp-webhook`; Firestore rules deploy for `whatsappSnippets` (`node docs/handoff/deploy-rules.mjs`, owner's OK); then Marketing > Announcement > "Create announcement template" once.
 1. **No redesign.** The owner likes the current design. Any future visual change: keep the product-dense e-commerce layout, show a cheap mockup of ONE screen first, and get a yes before building.
 2. **Scratch & Win: DONE 2026-10-05** (rules deployed, live test passed, merged into `main`; see "State"). To switch it on: the client confirms the values in `CLIENT.md`, then an admin turns it on in Commerce settings > Scratch & Win. Decisions (owner said "just complete it", 2026-10-04):
    - Admin-configurable (`siteSettings.scratchWin`), shipped **off**, values marked as placeholders and listed in `CLIENT.md`.
