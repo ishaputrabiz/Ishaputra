@@ -25,6 +25,8 @@ export interface Thread {
   updatedAt?: TimeLike;
   status?: ThreadStatus;
   assignedTo?: { uid: string; name: string } | null;
+  /** Replied STOP (or staff turned announcements off): no marketing messages. */
+  marketingOptOut?: boolean;
 }
 
 export interface ThreadMessage {

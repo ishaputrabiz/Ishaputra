@@ -656,7 +656,8 @@ async function uploadHeaderSample(bytes: Buffer, mime: string, fileName: string)
 /** Fetch a picture from the store's bucket, checking type and size. */
 async function fetchStoreImage(url: string) {
   if (!isStoreMediaUrl(url)) throw new HttpError(400, 'Upload the header picture again.');
-  const resp = await fetch(url);
+  // No redirects: the host check above must hold for the URL actually read.
+  const resp = await fetch(url, { redirect: 'error' });
   if (!resp.ok) throw new HttpError(502, `Could not read the header picture (HTTP ${resp.status}).`);
   const mime = (resp.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
   if (mime !== 'image/jpeg' && mime !== 'image/png') throw new HttpError(400, 'The header picture must be a JPEG or PNG.');
@@ -750,6 +751,16 @@ async function handleSend({ res, db, body, actor }: Ctx) {
       tplData = match?.data();
     } catch {
       /* rendering is cosmetic; the header check below just will not apply */
+    }
+    // A customer who replied STOP gets no marketing, from the inbox either.
+    if (str(tplData?.category).toUpperCase() === 'MARKETING') {
+      const thread = await threadRef.get();
+      if (thread.exists && thread.data()?.marketingOptOut === true) {
+        throw new HttpError(
+          400,
+          'This customer replied STOP to announcements, so marketing templates cannot be sent to them. Use a utility template, or, only if they ask for it, turn announcements back on from the ⋮ menu of the conversation.',
+        );
+      }
     }
     let headerImageUrl: string | null = null;
     if (str(tplData?.headerFormat) === 'IMAGE') {
@@ -883,7 +894,9 @@ async function handleMedia({ res, body }: Ctx) {
   if (!slice) throw new HttpError(416, 'Invalid media offset.');
   let host = '';
   try {
-    host = new URL(url).hostname;
+    const u = new URL(url);
+    // The access token goes with this request, so only ever over https.
+    host = u.protocol === 'https:' ? u.hostname : '';
   } catch {
     host = '';
   }

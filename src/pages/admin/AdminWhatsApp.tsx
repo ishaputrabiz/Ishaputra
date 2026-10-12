@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   AlertTriangle,
   ArrowLeft,
+  BellOff,
   Check,
   CheckCircle2,
   Clock,
@@ -27,6 +28,7 @@ import {
   LayoutTemplate,
   Lock,
   MessageCircle,
+  MoreVertical,
   Paperclip,
   RotateCcw,
   Search,
@@ -443,6 +445,15 @@ const Conversation = ({
       toast.error(err instanceof Error ? err.message : 'Could not assign');
     }
   };
+  const optedOut = thread.marketingOptOut === true;
+  const toggleAnnouncements = async () => {
+    try {
+      await actions.setMarketingOptOut(thread.id, !optedOut);
+      toast.success(optedOut ? 'Announcements turned back on for this customer' : 'This customer will get no more announcements');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update announcements');
+    }
+  };
 
   // Group messages by day for separators.
   const groups = useMemo(() => {
@@ -487,6 +498,15 @@ const Conversation = ({
           title="Meta allows free-form replies for 24 hours after the customer's last message."
           className="hidden lg:inline-flex"
         />
+        {optedOut && (
+          <StatusBadge
+            tone="danger"
+            icon={BellOff}
+            label="No announcements"
+            title="This customer replied STOP or asked for no more announcements. Broadcasts and marketing templates skip them."
+            className="hidden sm:inline-flex"
+          />
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -541,6 +561,28 @@ const Conversation = ({
           {resolved ? <RotateCcw aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
           <span className="hidden md:inline">{resolved ? 'Reopen' : 'Resolve'}</span>
         </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <IconButton label="More conversation options" className="flex-none">
+              <MoreVertical />
+            </IconButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-72">
+            <DropdownMenuLabel>Announcements</DropdownMenuLabel>
+            <DropdownMenuItem onSelect={toggleAnnouncements} className="items-start gap-2">
+              <BellOff className="mt-0.5 size-4 flex-none" aria-hidden="true" />
+              <span className="min-w-0 flex-1">
+                <span className="block">{optedOut ? 'Turn announcements back on' : 'Stop announcements to this customer'}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {optedOut
+                    ? 'Only if the customer asked for them again.'
+                    : 'Use when they ask not to get offers. Order updates still go.'}
+                </span>
+              </span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
 
       <div

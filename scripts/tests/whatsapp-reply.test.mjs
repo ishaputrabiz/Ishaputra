@@ -169,6 +169,22 @@ await t('send template with picture header but none saved: clear error, nothing 
   assert.equal(sent, 0);
 });
 
+await t('marketing template refused for a customer who replied STOP; utility still goes', async () => {
+  const s = fake.store;
+  s.set('whatsappTemplates/promo_mkt', { name: 'promo_mkt', language: 'en', category: 'MARKETING', bodyText: 'Sale {{1}}' });
+  s.set('whatsappTemplates/order_upd', { name: 'order_upd', language: 'en', category: 'UTILITY', bodyText: 'Order {{1}}' });
+  s.set('whatsappThreads/+919222222222', { phone: '+919222222222', marketingOptOut: true });
+  let sent = 0;
+  globalThis.fetch = async () => { sent += 1; return json({ messages: [{ id: `wamid.M${sent}` }] }); };
+  const r = await call({ action: 'send', phone: '+919222222222', template: { name: 'promo_mkt', language: 'en', params: ['now'] } });
+  assert.equal(r.status, 400, JSON.stringify(r.payload));
+  assert.match(r.payload.error, /STOP/);
+  assert.equal(sent, 0);
+  const u = await call({ action: 'send', phone: '+919222222222', template: { name: 'order_upd', language: 'en', params: ['42'] } });
+  assert.equal(u.status, 200, JSON.stringify(u.payload));
+  assert.equal(sent, 1);
+});
+
 await t('plain text send still works and records the thread', async () => {
   globalThis.fetch = async () => json({ messages: [{ id: 'wamid.X' }] });
   const r = await call({ action: 'send', phone: '+919876543210', text: 'Hello' });
@@ -256,10 +272,10 @@ await t('broadcast: picture template attaches picture; missing picture fails bef
     sent.push(JSON.parse(init.body));
     return json({ messages: [{ id: 'w1' }] });
   };
-  const run = async () => {
+  const run = async (param = 'there') => {
     let payload = null;
     const res = { setHeader() {}, status() { return this; }, json(p) { payload = p; return this; }, end() { return this; } };
-    await bc.default({ method: 'POST', headers: { authorization: 'Bearer admin-token' }, body: { audience: 'selected', selectedUids: ['u1'], channels: { whatsapp: true }, whatsapp: { template: 'promo_pic', language: 'en', params: ['there'] } } }, res);
+    await bc.default({ method: 'POST', headers: { authorization: 'Bearer admin-token' }, body: { audience: 'selected', selectedUids: ['u1'], channels: { whatsapp: true }, whatsapp: { template: 'promo_pic', language: 'en', params: [param] } } }, res);
     return payload;
   };
   let p = await run();
@@ -267,7 +283,8 @@ await t('broadcast: picture template attaches picture; missing picture fails bef
   assert.equal(sent[0].template.components[0].type, 'header');
   s.set('whatsappTemplates/promo_pic', { ...s.get('whatsappTemplates/promo_pic'), headerImageUrl: null });
   sent.length = 0;
-  p = await run();
+  // A different message: the same one again would be refused as a repeat.
+  p = await run('again');
   assert.equal(p.ok, false);
   assert.match(p.error, /Set picture/);
   assert.equal(sent.length, 0);

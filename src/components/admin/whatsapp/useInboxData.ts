@@ -109,14 +109,17 @@ export function useInboxData(actor: Actor, activeId: string | null) {
   useEffect(() => {
     if (demo || !activeId) return;
     setLoadingMessages(true);
-    const q = query(collection(db, 'whatsappThreads', activeId, 'messages'), orderBy('createdAt', 'asc'), limit(500));
+    // Newest 500, shown oldest first: a long conversation must still show its latest messages.
+    const q = query(collection(db, 'whatsappThreads', activeId, 'messages'), orderBy('createdAt', 'desc'), limit(500));
     return onSnapshot(
       q,
       { includeMetadataChanges: false },
       (snap) => {
         setMessagesByThread((prev) => ({
           ...prev,
-          [activeId]: snap.docs.map((d) => ({ id: d.id, ...(d.data({ serverTimestamps: 'estimate' }) as Omit<ThreadMessage, 'id'>) })),
+          [activeId]: snap.docs
+            .map((d) => ({ id: d.id, ...(d.data({ serverTimestamps: 'estimate' }) as Omit<ThreadMessage, 'id'>) }))
+            .reverse(),
         }));
         setLoadingMessages(false);
       },
@@ -199,6 +202,19 @@ export function useInboxData(actor: Actor, activeId: string | null) {
       await updateDoc(doc(db, 'whatsappThreads', threadId), {
         status,
         ...(status === 'resolved' ? { resolvedAt: serverTimestamp(), resolvedBy: actor.uid, unreadCount: 0 } : { resolvedAt: null }),
+      });
+    },
+    [demo, patchThreadLocal, actor.uid],
+  );
+
+  /** Staff record a customer's "no more announcements" request (or its reversal). */
+  const setMarketingOptOut = useCallback(
+    async (threadId: string, optOut: boolean) => {
+      if (demo) return patchThreadLocal(threadId, { marketingOptOut: optOut });
+      await updateDoc(doc(db, 'whatsappThreads', threadId), {
+        marketingOptOut: optOut,
+        marketingConsentAt: serverTimestamp(),
+        marketingConsentBy: actor.uid,
       });
     },
     [demo, patchThreadLocal, actor.uid],
@@ -307,6 +323,6 @@ export function useInboxData(actor: Actor, activeId: string | null) {
     templates,
     team,
     snippets,
-    actions: { markRead, assign, setStatus, addNote, send, sendMedia, addSnippet, deleteSnippet },
+    actions: { markRead, assign, setStatus, setMarketingOptOut, addNote, send, sendMedia, addSnippet, deleteSnippet },
   };
 }

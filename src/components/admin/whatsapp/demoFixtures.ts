@@ -71,6 +71,7 @@ export function buildDemoData(myUid: string, myName: string) {
       updatedAt: at(now - 3 * 24 * HOUR),
       status: 'resolved',
       assignedTo: { uid: myUid, name: myName },
+      marketingOptOut: true,
     },
   ];
 
