@@ -300,6 +300,122 @@ await t('handler: non-admin refused', async () => {
   assert.equal(status, 401);
 });
 
+// ---- broadcast safety: no double sends, time budget, size cap, real actor
+const callHandler = async (body) => {
+  let status = 0;
+  let payload = null;
+  const res = { setHeader() {}, status(c) { status = c; return this; }, json(p) { payload = p; return this; }, end() { return this; } };
+  await bc.default({ method: 'POST', headers: { authorization: 'Bearer admin-token' }, body }, res);
+  return { status, payload };
+};
+const okFetch = (calls) => async (url, init) => {
+  const body = JSON.parse(init.body);
+  calls.push(body.to);
+  return new Response(JSON.stringify({ messages: [{ id: `w.${body.to}.${calls.length}` }] }), { status: 200 });
+};
+
+await t('handler: the same broadcast again is refused, nothing re-sent', async () => {
+  const calls = [];
+  globalThis.fetch = okFetch(calls);
+  const body = {
+    audience: 'selected',
+    selectedUids: ['u1'],
+    channels: { whatsapp: true },
+    whatsapp: { template: 'store_announcement', language: 'en', params: ['there', 'Repeat test'] },
+  };
+  const first = await callHandler(body);
+  assert.equal(first.status, 200, JSON.stringify(first.payload));
+  assert.equal(calls.length, 1);
+  const second = await callHandler(body);
+  assert.equal(second.status, 409, JSON.stringify(second.payload));
+  assert.match(second.payload.error, /already sent/i);
+  assert.equal(calls.length, 1, 'no second paid message');
+  // A different message to the same people is fine.
+  const third = await callHandler({ ...body, whatsapp: { ...body.whatsapp, params: ['there', 'Another update'] } });
+  assert.equal(third.status, 200);
+  assert.equal(calls.length, 2);
+});
+
+await t('handler: a run cut off mid-way (still "sending") also blocks a repeat', async () => {
+  const s = fake.store;
+  const body = {
+    audience: 'selected',
+    selectedUids: ['u2'],
+    channels: { whatsapp: true },
+    whatsapp: { template: 'store_announcement', language: 'en', params: ['there', 'Cut off'] },
+  };
+  s.set('broadcastCampaigns/cut1', { status: 'sending', fingerprint: bc.broadcastFingerprint(body), startedAtMs: Date.now() - 60_000 });
+  const calls = [];
+  globalThis.fetch = okFetch(calls);
+  const r = await callHandler(body);
+  assert.equal(r.status, 409);
+  assert.match(r.payload.error, /may have been sent/i);
+  assert.equal(calls.length, 0);
+});
+
+await t('handler: a broadcast where every send failed can be retried', async () => {
+  globalThis.fetch = async () => new Response(JSON.stringify({ error: { message: 'Template paused' } }), { status: 400 });
+  const body = { audience: 'selected', selectedUids: ['u1'], channels: { whatsapp: true }, whatsapp: { template: 'store_announcement', language: 'en', params: ['there', 'Retry me'] } };
+  const first = await callHandler(body);
+  assert.equal(first.payload.whatsapp.successCount, 0);
+  const calls = [];
+  globalThis.fetch = okFetch(calls);
+  const second = await callHandler(body);
+  assert.equal(second.status, 200, JSON.stringify(second.payload));
+  assert.equal(calls.length, 1);
+});
+
+await t('dispatch: stops starting sends at the deadline and counts the rest', async () => {
+  process.env.WHATSAPP_TOKEN = 'x';
+  process.env.WHATSAPP_PHONE_ID = 'PID';
+  globalThis.fetch = async (url, init) => {
+    await new Promise((r) => setTimeout(r, 20));
+    return new Response(JSON.stringify({ messages: [{ id: 'w' }] }), { status: 200 });
+  };
+  const recipients = Array.from({ length: 60 }, (_, i) => ({ uid: `x${i}`, to: `9190000000${String(i).padStart(2, '0')}`, name: '' }));
+  const r = await bc.dispatchWhatsApp(recipients, { template: 't' }, () => [], undefined, Date.now() + 50);
+  assert.ok(r.notSent > 0, `notSent ${r.notSent}`);
+  assert.ok(r.successCount > 0);
+  assert.equal(r.successCount + r.failureCount + r.notSent, 60);
+});
+
+await t('handler: too many WhatsApp recipients refused before sending', async () => {
+  const s = fake.store;
+  const uids = [];
+  for (let i = 0; i <= bc.MAX_WA_RECIPIENTS; i += 1) {
+    const uid = `bulk${i}`;
+    uids.push(uid);
+    s.set(`users/${uid}`, { role: 'user', phone: `98${String(i).padStart(8, '0')}` });
+  }
+  const calls = [];
+  globalThis.fetch = okFetch(calls);
+  const r = await callHandler({ audience: 'selected', selectedUids: uids, channels: { whatsapp: true }, whatsapp: { template: 'store_announcement', language: 'en', params: ['there', 'Bulk'] } });
+  for (const uid of uids) s.delete(`users/${uid}`);
+  assert.equal(r.status, 400, JSON.stringify(r.payload));
+  assert.match(r.payload.error, /at most/i);
+  assert.equal(calls.length, 0);
+});
+
+await t('handler: actor comes from the login, not the request body', async () => {
+  const calls = [];
+  globalThis.fetch = okFetch(calls);
+  const r = await callHandler({
+    audience: 'selected', selectedUids: ['u2'], channels: { whatsapp: true },
+    whatsapp: { template: 'store_announcement', language: 'en', params: ['there', 'Actor test'] },
+    actorUid: 'someone-else', actorEmail: 'fake@example.com',
+  });
+  assert.equal(r.status, 200);
+  const campaign = fake.store.get(`broadcastCampaigns/${r.payload.campaignId}`);
+  assert.equal(campaign.actorUid, 'admin1');
+});
+
+await t('handler: campaign id with a slash refused', async () => {
+  const r = await callHandler({ campaignId: 'a/b', audience: 'selected', selectedUids: ['u2'], channels: { whatsapp: true }, whatsapp: { template: 'x', params: [] } });
+  assert.equal(r.status, 400);
+  const r2 = await callHandler({ audience: 'selected', selectedUids: ['../x'], channels: { whatsapp: true }, whatsapp: { template: 'x', params: [] } });
+  assert.equal(r2.status, 400);
+});
+
 // ---- webhook: STOP sets the flag on the thread
 await t('webhook: STOP message opts the number out', async () => {
   const writes = [];

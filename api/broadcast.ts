@@ -24,13 +24,26 @@
  *   FIREBASE_ADMIN_SDK_BASE64
  *   WHATSAPP_TOKEN, WHATSAPP_PHONE_ID  (only when sending WA)
  */
-import { timingSafeEqual } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
 
 const META_BASE = 'https://graph.facebook.com/v21.0';
 /** Parallel WhatsApp sends. Well under Meta's 80 msg/s, fast enough for Vercel. */
 const WA_CONCURRENCY = 8;
+/** Most WhatsApp messages one broadcast may send, so a run fits in the time limit. */
+export const MAX_WA_RECIPIENTS = 1000;
+/**
+ * Stop starting new WhatsApp sends after this long, so the run always ends
+ * and saves its counts before Vercel stops the function at 60 s. Anything
+ * left is reported as "not sent" instead of being lost track of.
+ */
+const SEND_BUDGET_MS = 45_000;
+/** One Meta call may not hold up the run. */
+const SEND_TIMEOUT_MS = 10_000;
+/** The same broadcast again inside this window is refused (no paid double sends). */
+const REPEAT_WINDOW_MS = 24 * 60 * 60 * 1000;
+const DOC_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 
 export const config = { maxDuration: 60 };
 
@@ -66,6 +79,26 @@ export function sanitizeTemplateParam(value: unknown) {
     .replace(/[\r\n\t]+/g, ' ')
     .replace(/ {2,}/g, ' ')
     .trim();
+}
+
+/**
+ * Identifies "the same broadcast": audience, chosen customers, channels and
+ * content. Pressing Send again after a timeout or a slow screen produces the
+ * same fingerprint, so the server can refuse it.
+ */
+export function broadcastFingerprint(body: Record<string, any>) {
+  const channels = body?.channels || {};
+  const audience = body?.audience || 'all';
+  const wa = body?.whatsapp || {};
+  const key = JSON.stringify({
+    audience,
+    selected: audience === 'selected' ? [...(body?.selectedUids || [])].map(String).sort() : [],
+    push: channels.push ? body?.push || null : null,
+    whatsapp: channels.whatsapp
+      ? { template: wa.template || '', language: wa.language || 'en_US', params: wa.params || [], personalizeFirst: wa.personalizeFirst !== false }
+      : null,
+  });
+  return createHash('sha256').update(key).digest('hex').slice(0, 40);
 }
 
 /** Run `fn` over items with at most `limit` in flight. */
@@ -304,6 +337,7 @@ async function sendWhatsAppTemplate(
       type: 'template',
       template: { name: template, language: { code: language }, components },
     }),
+    signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
   });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(readApiErrorMessage(data, `HTTP ${resp.status}`));
@@ -374,19 +408,39 @@ async function loadOptedOutNumbers(db: admin.firestore.Firestore) {
   return new Set(snap.docs.map((d) => d.id.replace(/\D/g, '')));
 }
 
-async function dispatchWhatsApp(
+/** Earlier run of the same broadcast that sent something (or may have). */
+async function findRecentRepeat(db: admin.firestore.Firestore, fingerprint: string) {
+  const snap = await db.collection('broadcastCampaigns').where('fingerprint', '==', fingerprint).get();
+  const cutoff = Date.now() - REPEAT_WINDOW_MS;
+  let found: 'sent' | 'sending' | null = null;
+  for (const d of snap.docs) {
+    const c = d.data() || {};
+    if (Number(c.startedAtMs || 0) < cutoff) continue;
+    if (c.sentAny) return 'sent' as const;
+    if (c.status === 'sending') found = 'sending';
+  }
+  return found;
+}
+
+export async function dispatchWhatsApp(
   recipients: WhatsAppRecipient[],
   whatsapp: { template: string; language?: string; headerImageUrl?: string | null },
   paramResolver: (recipient: WhatsAppRecipient) => string[],
   onSent?: (recipient: WhatsAppRecipient, wamid: string, params: string[]) => Promise<void>,
-): Promise<{ successCount: number; failureCount: number; failures: Array<{ uid: string; error: string }> }> {
+  deadline = Infinity,
+): Promise<{ successCount: number; failureCount: number; notSent: number; failures: Array<{ uid: string; error: string }> }> {
   const language = whatsapp.language || 'en_US';
   const result = {
     successCount: 0,
     failureCount: 0,
+    notSent: 0,
     failures: [] as Array<{ uid: string; error: string }>,
   };
   await mapWithConcurrency(recipients, WA_CONCURRENCY, async (r) => {
+    if (Date.now() >= deadline) {
+      result.notSent += 1;
+      return;
+    }
     try {
       const params = paramResolver(r);
       const wamid = await sendWhatsAppTemplate(r.to, whatsapp.template, language, params, whatsapp.headerImageUrl);
@@ -413,8 +467,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const db = admin.firestore();
+  let decoded: Awaited<ReturnType<typeof requireAdmin>>;
   try {
-    await requireAdmin(req, db);
+    decoded = await requireAdmin(req, db);
   } catch {
     return res.status(401).json({ ok: false, error: 'Unauthorized' });
   }
@@ -445,8 +500,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (audience === 'selected' && !(body.selectedUids && body.selectedUids.length)) {
     return res.status(400).json({ ok: false, error: 'selectedUids required for "selected" audience.' });
   }
+  if (body.campaignId !== undefined && !DOC_ID_RE.test(String(body.campaignId))) {
+    return res.status(400).json({ ok: false, error: 'Invalid campaign id.' });
+  }
+  if (audience === 'selected' && !(body.selectedUids || []).every((u) => typeof u === 'string' && DOC_ID_RE.test(u))) {
+    return res.status(400).json({ ok: false, error: 'Invalid customer id in the list.' });
+  }
 
   const now = admin.firestore.FieldValue.serverTimestamp();
+  const startedAtMs = Date.now();
+  const fingerprint = broadcastFingerprint(body);
+  // Who sent it comes from the verified login; the body is only trusted for
+  // the shared admin key (a server-side caller with no login).
+  const actor = decoded
+    ? { uid: decoded.uid, email: decoded.email || null }
+    : { uid: body.actorUid || null, email: body.actorEmail || null };
 
   // Create or update campaign record so it's auditable.
   const campaignRef = body.campaignId
@@ -461,16 +529,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     push: channels.push ? body.push || null : null,
     whatsapp: channels.whatsapp ? body.whatsapp || null : null,
     status: 'sending',
-    actorUid: body.actorUid || null,
-    actorEmail: body.actorEmail || null,
+    fingerprint,
+    actorUid: actor.uid,
+    actorEmail: actor.email,
     createdAt: now,
     startedAt: now,
+    startedAtMs,
   };
 
-  await campaignRef.set(baseCampaign, { merge: true });
-
+  let campaignCreated = false;
   try {
+    const repeat = await findRecentRepeat(db, fingerprint);
+    if (repeat === 'sent') {
+      return res.status(409).json({
+        ok: false,
+        error: 'This exact message was already sent to these customers in the last 24 hours, so it was not sent again. To send another, change the message.',
+      });
+    }
+    if (repeat === 'sending') {
+      return res.status(409).json({
+        ok: false,
+        error: 'This exact message may have been sent already: an earlier send of it is still running or was cut off. Check the WhatsApp inbox before trying again; to send anyway, change the message a little.',
+      });
+    }
+
     const targets = await resolveAudience(db, audience, body.selectedUids);
+    const waPlan = channels.whatsapp && body.whatsapp?.template
+      ? planWhatsAppRecipients(targets, await loadOptedOutNumbers(db))
+      : null;
+    if (waPlan && waPlan.recipients.length > MAX_WA_RECIPIENTS) {
+      return res.status(400).json({
+        ok: false,
+        error: `A WhatsApp broadcast can go to at most ${MAX_WA_RECIPIENTS} customers at a time; this one would reach ${waPlan.recipients.length}. Choose fewer customers and send in parts.`,
+      });
+    }
+
+    await campaignRef.set(baseCampaign, { merge: true });
+    campaignCreated = true;
 
     let pushResult: Awaited<ReturnType<typeof dispatchPush>> | null = null;
     let waResult:
@@ -488,7 +583,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    if (channels.whatsapp && body.whatsapp?.template) {
+    if (waPlan && body.whatsapp?.template) {
       const baseParams = (body.whatsapp.params || []).map(sanitizeTemplateParam);
       const personalize = body.whatsapp.personalizeFirst !== false;
       // {{1}} becomes the customer's first name; the admin's value is the
@@ -498,14 +593,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const firstName = sanitizeTemplateParam((r.name || '').split(' ')[0]) || baseParams[0];
         return [firstName, ...baseParams.slice(1)];
       };
-      const { recipients, skipped } = planWhatsAppRecipients(targets, await loadOptedOutNumbers(db));
+      const { recipients, skipped } = waPlan;
       const template = body.whatsapp.template;
       const language = body.whatsapp.language || 'en_US';
       const { bodyText, headerFormat, headerImageUrl } = await loadTemplateInfo(db, template, language);
       if (headerFormat === 'IMAGE' && !headerImageUrl) {
         throw new Error('This template has a picture at the top but none is saved. Add one in Marketing → Templates → Library (Set picture).');
       }
-      const actor = { uid: body.actorUid || null, email: body.actorEmail || null };
       const sent = await dispatchWhatsApp(recipients, { template, language, headerImageUrl }, paramResolver, (r, wamid, params) =>
         logToInbox(
           db,
@@ -522,14 +616,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           },
           actor,
         ),
+        startedAtMs + SEND_BUDGET_MS,
       );
       // Keep the stored failure list short; the counts tell the story.
       waResult = { ...sent, failures: sent.failures.slice(0, 50), skipped };
     }
 
+    const sentAny = (pushResult?.successCount || 0) + (waResult?.successCount || 0) > 0;
+    const partial = (waResult?.notSent || 0) > 0;
     await campaignRef.set(
       {
-        status: 'completed',
+        status: partial ? 'partial' : 'completed',
+        sentAny,
         recipientCount: targets.length,
         pushResult,
         whatsappResult: waResult,
@@ -544,16 +642,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       recipientCount: targets.length,
       push: pushResult,
       whatsapp: waResult,
+      warning: partial
+        ? `Time limit reached: ${waResult?.notSent} WhatsApp messages were not sent. Do not send this again to everyone; send the rest as a new message to the customers who did not get it.`
+        : undefined,
     });
   } catch (err: unknown) {
-    await campaignRef.set(
-      {
-        status: 'failed',
-        error: getErrorMessage(err, String(err)),
-        finishedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
+    if (campaignCreated) {
+      await campaignRef
+        .set({ status: 'failed', error: getErrorMessage(err, String(err)), finishedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true })
+        .catch(() => undefined);
+    }
     return res.status(500).json({ ok: false, error: getErrorMessage(err, 'Broadcast failed') });
   }
 }

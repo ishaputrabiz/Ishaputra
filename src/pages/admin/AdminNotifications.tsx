@@ -268,8 +268,9 @@ const ComposeTab = ({
     campaignId?: string;
     recipientCount?: number;
     push?: { successCount?: number; failureCount?: number; invalidTokens?: string[] };
-    whatsapp?: { successCount?: number; failureCount?: number };
+    whatsapp?: { successCount?: number; failureCount?: number; notSent?: number };
     error?: string;
+    warning?: string;
   } | null>(null);
 
   const handleSend = async () => {
@@ -334,7 +335,8 @@ const ComposeTab = ({
         toast.error(data?.error || 'Broadcast failed');
       } else {
         setResult({ ok: true, ...data });
-        toast.success(`Campaign sent to ${plural(data.recipientCount ?? 0, 'recipient')}`);
+        if (data.warning) toast.warning(data.warning);
+        else toast.success(`Campaign sent to ${plural(data.recipientCount ?? 0, 'recipient')}`);
       }
     } catch (err: unknown) {
       const message = getErrorMessage(err);
@@ -492,12 +494,13 @@ const ComposeTab = ({
           </Button>
           {result && (
             <Notice
-              tone={result.ok ? 'success' : 'danger'}
+              tone={!result.ok ? 'danger' : result.warning ? 'warning' : 'success'}
               className="mt-3"
               title={result.ok ? `Broadcast sent to ${plural(result.recipientCount ?? 0, 'recipient')}` : result.error || 'Send failed'}
             >
               {result.ok && (
                 <div className="space-y-0.5 text-xs tabular-nums">
+                  {result.warning && <p className="font-medium">{result.warning}</p>}
                   {result.push && (
                     <p>
                       Push: {result.push.successCount} delivered · {result.push.failureCount} failed ·{' '}

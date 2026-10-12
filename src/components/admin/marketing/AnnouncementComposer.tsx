@@ -53,14 +53,21 @@ type Audience = 'customers' | 'selected';
 interface SendResult {
   ok: boolean;
   error?: string;
+  warning?: string;
   recipientCount?: number;
   push?: { successCount?: number; failureCount?: number } | null;
   whatsapp?: {
     successCount?: number;
     failureCount?: number;
+    notSent?: number;
     failures?: Array<{ error: string }>;
     skipped?: { noPhone: number; invalidPhone: number; optedOut: number; duplicate: number };
   } | null;
+}
+
+/** Messages actually accepted, across both channels. */
+function sentCount(r: Pick<SendResult, 'push' | 'whatsapp'>) {
+  return (r.push?.successCount ?? 0) + (r.whatsapp?.successCount ?? 0);
 }
 
 const card = 'rounded-card border border-border bg-card p-4 shadow-sm sm:p-5';
@@ -161,8 +168,11 @@ export default function AnnouncementComposer({ templates }: { templates: Announc
       if (!isJson) throw new Error('Sending works on the live site only (the API runs on Vercel).');
       if (!resp.ok || !data.ok) throw new Error(data?.error || `Send failed (HTTP ${resp.status}).`);
       setResult({ ok: true, ...data });
-      toast.success('Announcement sent');
-      setMessage('');
+      if (data.warning) toast.warning(data.warning);
+      else if (sentCount(data) === 0) toast.error('Nothing was sent. See the box below for why.');
+      else toast.success('Announcement sent');
+      // Keep the text when nothing went out, so it can be fixed and sent again.
+      if (sentCount(data) > 0) setMessage('');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Send failed.';
       setResult({ ok: false, error: msg });
@@ -594,9 +604,14 @@ function ResultBox({ result }: { result: SendResult }) {
   const skipped = wa?.skipped;
   const skippedTotal = skipped ? skipped.noPhone + skipped.invalidPhone + skipped.optedOut + skipped.duplicate : 0;
   const firstError = wa?.failures?.[0]?.error;
+  const nothingSent = sentCount(result) === 0;
   return (
-    <Notice tone="success" title="Sent">
+    <Notice
+      tone={result.warning || nothingSent ? 'warning' : 'success'}
+      title={nothingSent ? 'Nothing was sent' : result.warning ? 'Partly sent' : 'Sent'}
+    >
       <div className="space-y-1 text-xs">
+        {result.warning && <p className="font-medium">{result.warning}</p>}
         {wa && (
           <p>
             WhatsApp: {wa.successCount ?? 0} accepted by Meta

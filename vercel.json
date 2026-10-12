@@ -10,6 +10,9 @@
     },
     "api/notify-order.ts": {
       "maxDuration": 20
+    },
+    "api/broadcast.ts": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
