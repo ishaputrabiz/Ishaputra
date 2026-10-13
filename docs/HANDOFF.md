@@ -7,7 +7,7 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-12 (`sreerasthu-port` reviewed, fixed and merged into `main`.)
+Last updated: 2026-10-13 (Razorpay live keys on the live site; checks and open risks under Next step 5.)
 
 ## State
 
@@ -163,6 +163,7 @@ Last updated: 2026-10-12 (`sreerasthu-port` reviewed, fixed and merged into `mai
    - Generate `public/sitemap.xml` once the domain is real; set `VITE_SITE_URL` on Vercel; PERF-14's `initializeAuth` part.
    - Client placeholders: `CLIENT.md` ("Placeholders for the client").
 4. **Dealer + Loyalty card: DONE 2026-10-05** (rules deployed, live test 265/265, merged into `main`; see "State"). To switch it on: the client confirms the values in `CLIENT.md`, then an admin turns it on in Commerce settings > Dealers.
+5. **2026-10-13: Razorpay LIVE keys are on the live site** (the user put them in the client's Vercel and in local `.env`). Checked from here: Razorpay accepts the `.env` pair (HTTP 200); live `/api/create-order` as the test shopper returned 200, an `order_` id, key `rzp_live_`, 54900 paise (unpaid, expires). The live build has this week's code (opt-out menu, partly-sent title, checkout step 3, compressor). `VITE_RAZORPAY_KEY_ID` is not in the live build (the server sends `key_id`, so checkout still works). OPEN: real money with demo products and dummy contact/GST on a public URL; the live secret was shown in chat through an editor selection, so regenerate it (new secret only in Vercel) and put the TEST keys back in local `.env`; a real small purchase + refund not yet done; security audit still owed.
 5. **Step 3 accounts: STARTED 2026-10-12** (decisions in `CLIENT.md` > Accounts). Order agreed with the user:
    1. GitHub: push `main` to the client's private repo (history checked 2026-10-12: starts at the clean copy `ca03a6d`, no real keys; only dummy Razorpay test values in `.env.example` and test scripts).
    2. Vercel: the client imports the repo, pastes the env vars from `.env` (the user pastes; never print them), deploys to `*.vercel.app`; add that domain to Firebase Auth > Authorized domains.
