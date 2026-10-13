@@ -168,7 +168,7 @@ Last updated: 2026-10-12 (`sreerasthu-port` reviewed, fixed and merged into `mai
    2. Vercel: the client imports the repo, pastes the env vars from `.env` (the user pastes; never print them), deploys to `*.vercel.app`; add that domain to Firebase Auth > Authorized domains.
    3. Cloudflare: add `ishaputra.in`, switch the nameservers at GoDaddy to Cloudflare's.
    4. Domain to Vercel: Vercel's records in Cloudflare DNS, proxy off; set `VITE_SITE_URL`; add `ishaputra.in` to Firebase authorized domains.
-   5. Razorpay test keys into Vercel env, then a test payment.
+   5. Razorpay test keys into Vercel env, then a test payment (UPI `success@razorpay`). NOTE 2026-10-13: the site is ALREADY live on the client's Vercel at www.ishaputra.in (DNS still at GoDaddy, this week's code is in it); this PC's Vercel CLI is the Dream Team account, which does not have the project. Live key ID `rzp_live_TnKepxeYTRT8BB` exists; switch at launch.
    6. Cloudflare R2 on `images.ishaputra.in` (remove the `VITE_CLOUDINARY_*` vars).
    - Security audit (global rule, ultracode on) before live Razorpay keys.
    - The client checklist is ready (`docs/client-checklist-steps-3-5.pdf`). The user sends it to the client. As answers arrive: fill `src/config/brand.ts` and `CLIENT.md`, then follow `CLAUDE.md` "Step 3: switch to the client's accounts" (Razorpay test keys, Cloudflare R2, WhatsApp, Vercel and domain, real products). To rebuild the PDF after editing the Markdown, render it with the global `playwright` package (A4, logo `client-assets/logo-transparent.png`).

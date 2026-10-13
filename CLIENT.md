@@ -122,7 +122,7 @@ Built 2026-10-05 and merged into `main` the same day after the rules deploy and 
     - GitHub: the client's account, private repo (Dream Team added as collaborator).
     - Vercel: the client's account (Dream Team as team member). Hobby for testing; Pro before launch (Hobby forbids commercial sites).
     - Domain: `ishaputra.in`, bought on GoDaddy. DNS moves to the client's Cloudflare (nameservers), then Vercel records in Cloudflare with the proxy off; R2 images on `images.ishaputra.in`.
-    - Razorpay: account created and approved; test keys first, live keys at launch (after the security audit).
+    - Razorpay: account created and approved. Test keys in local `.env` (checked 2026-10-13: API answers 200); to be added to Vercel by the user. Live key ID `rzp_live_TnKepxeYTRT8BB` generated 2026-10-13 (the client keeps the secret; never in chat or git). Live keys go into Vercel only at launch, after the security audit.
     - WhatsApp: not started.
 
 ## Decisions log
