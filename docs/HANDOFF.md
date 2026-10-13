@@ -11,6 +11,7 @@ Last updated: 2026-10-13 (Ecommerce Template spec + Part 1 plan committed; earli
 
 ## State
 
+- **2026-10-14: Ecommerce Template Part 1 done; the template lives in `Desktop\Ecommerce Template\` (its own repo and handoff, `docs/HANDOFF.md` there).** Nothing in this Ishaputra repo changed for it.
 - **2026-10-13: Ecommerce Template (separate project, not Ishaputra work): spec approved, Part 1 plan written** (`21e9c5a`). Spec `docs/superpowers/specs/2026-10-13-ecommerce-template-design.md`; plan `docs/superpowers/plans/2026-10-13-ecommerce-template-part1-clean-base.md` (10 tasks: export main into `Desktop\Ecommerce Template\`, remove client files, guard test, neutral brand/copy/images/theme, 14 feature switches, demo catalogue, free `template-demo` Firebase project owned by Dream Team (owner creates it at Task 10), screenshots). Next: run Tasks 1-5 in a new chat (effort High, no ultracode), Tasks 6-10 in another. This Ishaputra repo is read-only for that work.
 - **2026-10-12 (latest): `sreerasthu-port` reviewed, fixed and MERGED into `main`** (`0997d4e`, `--no-ff`, local only, never pushed).
   - **Review:** 2 reviewers (server/security, front end), then 2 re-reviews of the fixes. Final verdict "ready to merge", 0 Critical/Important left.
