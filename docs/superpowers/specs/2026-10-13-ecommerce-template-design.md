@@ -16,9 +16,10 @@ The flow for a new client: run one command to make a client copy, drop the clien
 
 | Question | Decision |
 |---|---|
-| Base code | Ishaputra `main` (commit `4c0270f` or later), not the original Sreerasthu code. Dealer Membership and Loyalty card join later as optional features. |
+| Base code | Ishaputra `main` (commit `4c0270f` or later), not the original Sreerasthu code. Dealer Membership and Loyalty card are already merged there, so they come along as switchable features. |
 | Requirements input | Both: drop any documents (PDF, Word, WhatsApp notes) into `client-brief\`. Claude reads them once, fills in `REQUIREMENTS.md`, marks gaps `[NEED: ...]` and asks only about those. Later sessions read only `REQUIREMENTS.md`. The owner can also fill in the form by hand. |
 | Uniqueness | Look plus built-in section versions: 2 or 3 versions each of header, homepage hero, product card, category display, product page layout and footer, combined with per-client colours, fonts, radius, shadows, spacing and motion. Each new version built for a client goes back into the template. |
+| Preview data | A free Dream Team Firebase project (`template-demo`) with neutral demo data, so the template can always be previewed and screenshotted. Never a client's project. |
 | Unused features | Turned off with a switch, never deleted. Off means hidden from customers, menus and admin, and not loaded (lazy routes). Client copies stay in step with the template. |
 
 ## Folders
@@ -95,13 +96,12 @@ Every chat ends with a three-line progress summary (done, next, waiting on), an 
 
 ## Building the template (four parts, in order)
 
-1. **Clean base.** Copy Ishaputra `main` into `Desktop\Ecommerce Template\` (code only: no keys, `.env`, `node_modules`, screenshots or client assets). Remove everything client-specific (name, colours, logo, products, photos, policy text, Firebase project IDs, domain, emails, phone numbers). Use a neutral demo brand with `[NEED: ...]` placeholders. Survey every feature and put each one behind a switch in `src/config/features.ts` (today only `DELIVERY_PARTNERS_ENABLED` and `SILVER_PRICING_ENABLED` exist); off means hidden and not loaded. Done when the build and all tests pass, a search for "Ishaputra", "Sreerasthu" and the old project IDs finds nothing in the code, and `scripts/check` screenshots look right. Needs ultracode.
+1. **Clean base.** Copy Ishaputra `main` into `Desktop\Ecommerce Template\` (code only: no keys, `.env`, `node_modules`, screenshots or client assets). Remove everything client-specific (name, colours, logo, products, photos, policy text, Firebase project IDs, domain, emails, phone numbers). Use a neutral demo brand with `[NEED: ...]` placeholders. Survey every feature and put each one behind a switch in `src/config/features.ts` (today only `DELIVERY_PARTNERS_ENABLED` and `SILVER_PRICING_ENABLED` exist); off means hidden and not loaded. Done when the build and all tests pass, a search for "Ishaputra", "Sreerasthu" and the old project IDs finds nothing in the code, and screenshots look right. One builder agent per task in order; no ultracode needed (revised while planning: the tasks depend on each other).
 2. **Instruction files and scripts.** `CLAUDE.md`, `REQUIREMENTS.md`, `PROGRESS.md`, `FEATURES.md`, `ESTIMATES.md`, `scripts/new-client`, `scripts/check`. Done when `new-client` makes a working copy that builds.
 3. **Section versions.** First, one mockup of one section's versions for the owner's yes. Then 2 or 3 versions each of header, hero, product card, category display, product page and footer, chosen through config (for example `sections.header = "centered"`). Each version is tested at 390 px and 1440 px in light and dark. Needs ultracode.
 4. **Trial run.** A made-up test client, clearly marked as a test, goes through Phases 0 to 3 in a throwaway folder. Done when the flow works without manual fixes and the first actual time and usage numbers are in `ESTIMATES.md`.
 
 ## Out of scope for now
 
-- Dealer Membership and Loyalty card (added to the template once finished on Ishaputra).
 - Automatic syncing of fixes from client copies back to the template (done by hand, with the `template` remote).
 - A web dashboard for progress (`PROGRESS.md` is enough for now).
