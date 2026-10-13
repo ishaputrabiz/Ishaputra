@@ -7,11 +7,11 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-13 (Ecommerce Template design approved, spec committed; earlier: default theme for new visitors is now Light, not System, committed locally and not yet deployed. Earlier the same day: Razorpay live keys on the live site; checks and open risks under Next step 5.)
+Last updated: 2026-10-13 (Ecommerce Template spec + Part 1 plan committed; earlier: default theme for new visitors is now Light, not System, committed locally and not yet deployed. Earlier the same day: Razorpay live keys on the live site; checks and open risks under Next step 5.)
 
 ## State
 
-- **2026-10-13: Ecommerce Template (separate project, not Ishaputra work): design approved by the owner, spec committed** at `docs/superpowers/specs/2026-10-13-ecommerce-template-design.md` (`f961f85`). Waiting for the owner to review the spec file; then write the implementation plan (`writing-plans`). The template will live in `Desktop\Ecommerce Template\` and is built from Ishaputra `main`; this Ishaputra folder stays unchanged.
+- **2026-10-13: Ecommerce Template (separate project, not Ishaputra work): spec approved, Part 1 plan written** (`21e9c5a`). Spec `docs/superpowers/specs/2026-10-13-ecommerce-template-design.md`; plan `docs/superpowers/plans/2026-10-13-ecommerce-template-part1-clean-base.md` (10 tasks: export main into `Desktop\Ecommerce Template\`, remove client files, guard test, neutral brand/copy/images/theme, 14 feature switches, demo catalogue, free `template-demo` Firebase project owned by Dream Team (owner creates it at Task 10), screenshots). Next: run Tasks 1-5 in a new chat (effort High, no ultracode), Tasks 6-10 in another. This Ishaputra repo is read-only for that work.
 - **2026-10-12 (latest): `sreerasthu-port` reviewed, fixed and MERGED into `main`** (`0997d4e`, `--no-ff`, local only, never pushed).
   - **Review:** 2 reviewers (server/security, front end), then 2 re-reviews of the fixes. Final verdict "ready to merge", 0 Critical/Important left.
   - **Fixes on the branch:** `a4dc37e`, `e2345a3`, `62627b6`, `1a5165a`, `05d26a0`, `033875e`.
