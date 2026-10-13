@@ -7,7 +7,7 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-13 (Razorpay live keys on the live site; checks and open risks under Next step 5.)
+Last updated: 2026-10-13 (default theme for new visitors is now Light, not System, committed locally and not yet deployed. Earlier the same day: Razorpay live keys on the live site; checks and open risks under Next step 5.)
 
 ## State
 

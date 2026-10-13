@@ -20,8 +20,8 @@ export const useTheme = () => {
 };
 
 const THEME_KEY = BRAND.storageKeys.theme;
-/** New visitors follow their device (owner decision, 2026-10-04). index.html's pre-paint script uses the same default. */
-const DEFAULT_THEME: Theme = 'system';
+/** New visitors start in light mode (owner decision, 2026-10-13). index.html's pre-paint script uses the same default. */
+const DEFAULT_THEME: Theme = 'light';
 
 /** Browser-bar colours: the page background of each theme. */
 const THEME_COLOR = { light: '#F6F2EB', dark: '#0E0D0C' } as const;
