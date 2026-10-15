@@ -7,7 +7,7 @@ This file holds the working state between sessions, so a new chat does not need 
 - **At the start of a session:** read this file, then do the first open item under "Next steps".
 - **At the end of a session:** update "State" and "Next steps" before the session ends.
 
-Last updated: 2026-10-13 (Ecommerce Template spec + Part 1 plan committed; earlier: default theme for new visitors is now Light, not System, committed locally and not yet deployed. Earlier the same day: Razorpay live keys on the live site; checks and open risks under Next step 5.)
+Last updated: 2026-10-15 (Sreerasthu port 2 planned: money and security fixes first, both here and in the Ecommerce Template; see Next step 0a. Earlier: 2026-10-13 (Ecommerce Template spec + Part 1 plan committed; earlier: default theme for new visitors is now Light, not System, committed locally and not yet deployed. Earlier the same day: Razorpay live keys on the live site; checks and open risks under Next step 5.))
 
 ## State
 
@@ -138,6 +138,15 @@ Last updated: 2026-10-13 (Ecommerce Template spec + Part 1 plan committed; earli
 
 ## Next steps (in order)
 
+0a. **Sreerasthu port 2 + money/security fixes (planned 2026-10-15; do next, ultracode ON, effort Extra high).** Inventory and reasons: `docs/handoff/sreerasthu-port-2.md` (Sreerasthu commits after the first port, checked one by one against this repo and the Ecommerce Template). Owner: "take the new Sreerasthu features that help both". Order (each step in BOTH repos: here first because it is live, then the template at `C:/Users/chala/OneDrive/Desktop/Ecommerce Template`, whose own handoff has the same plan):
+   1. **Stock bug (live now):** `createOrder`'s stock transaction reads after writes, so any order with 2+ different products fails it, lands as "needs review" and takes no stock off.
+   2. **Rules test harness:** Firebase emulator + `test:rules` (Java is installed: `C:/Users/chala/.jdks/jdk-21.0.12.1+1`, `JAVA_HOME` set), first cases for the current rules; the open gaps below show as known failures.
+   3. **Payment and rules hardening (live risk, real Razorpay keys):** a customer can pay for a cheap cart and store a "paid" order with other items/total (rules don't compare order to payment); an unpaid order with a prepaid-looking method counts as paid in `isPaymentSettled()`; payment records have no time limit; plus 4 of Sreerasthu's 11 rule fixes still open here (reviews can be created "approved", gift cards update, two list rules). Adapt Sreerasthu's G1 idea (its code doesn't fit our design). One adversarial review of the money path. **Deploy code first, then rules; the rules deploy to the live project needs the owner's OK.**
+   4. **Remove customer 2-step**, as the template did (commits `7f0bb1b`, `035351c` there): it is enforced only in the browser (the on/off flag and trusted devices sit in the customer's own editable user document), so anyone with the password can switch it off.
+   5. **`security-audit` skill on Ishaputra** (already owed before live keys), with steps 1-4 done.
+   6. **Install as app** (manifest has only a 192 px icon, so it is not installable): a card on the Account page.
+   7. **Team logins with page access, Activity log, Recycle bin:** template switches (default off); here built but off until the client asks.
+   - Not now (Claude's call, 2026-10-15): jewellery spend offer (later, neutral, when a client asks); WhatsApp-style inbox (keep the current inbox); dealer/manufacturer chats (Sreerasthu-only, clashes with our Dealer Membership). Never merge Sreerasthu's git history (it still holds that store's live key and a WhatsApp token).
 0. **`sreerasthu-port`: DONE 2026-10-12** (reviewed, fixed, merged; see "State").
    - **Optional small follow-ups from the review (Low):**
      - Webhook: one failing item returns 500 for the whole payload, so Meta redelivers it and `unreadCount` counts twice. It also never checks `metadata.phone_number_id`, which matters if one Meta app ever serves two client stores.
