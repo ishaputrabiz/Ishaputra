@@ -102,7 +102,7 @@ These are long numbers like `123456789012345`. They are not your phone number.
 3. **Callback URL**: your website address followed by `/api/whatsapp-webhook`, for example:
 
     ```text
-    https://[NEED: live domain]/api/whatsapp-webhook
+    https://www.ishaputra.in/api/whatsapp-webhook
     ```
 
 4. **Verify token**: type exactly the same verify token you saved in Vercel (`WHATSAPP_VERIFY_TOKEN`).

@@ -123,7 +123,7 @@ Built 2026-10-05 and merged into `main` the same day after the rules deploy and 
     - Vercel: the client's account (Dream Team as team member). Hobby for testing; Pro before launch (Hobby forbids commercial sites).
     - Domain: `ishaputra.in`, bought on GoDaddy. DNS moves to the client's Cloudflare (nameservers), then Vercel records in Cloudflare with the proxy off; R2 images on `images.ishaputra.in`.
     - Razorpay: account created and approved. Test keys in local `.env` (checked 2026-10-13: API answers 200); to be added to Vercel by the user. Live key ID `rzp_live_TnKepxeYTRT8BB` generated 2026-10-13 (the client keeps the secret; never in chat or git). Live keys go into Vercel only at launch, after the security audit.
-    - WhatsApp: not started.
+    - WhatsApp (connected 2026-10-16): number +91 89771 34195, display name "Ishaputra Botanicals" (category Shopping and Retail), Meta app `ishaputra` (ID 39061548276824267, Live), WABA "Ishaputra Botanicals" `1538264908318518` (the other WABA `1771139794095119` is Meta's test account, ignore it), phone number ID `1404257849439044`. Permanent token from system user `website-whatsapp` (never expires). Webhook `https://www.ishaputra.in/api/whatsapp-webhook` (field `messages`). Secrets live only in local `.env` and Vercel production. Templates: `node scripts/whatsapp-meta-setup.mjs .env status`.
 
 ## Decisions log
 - 2026-09-23: The user reverted an earlier session's Step 0 because the site showed nothing. The cause was the new Firebase having no security rules (every read denied) and no indexes; the code was fine. Step 0 was redone from scratch.
