@@ -56,8 +56,9 @@ const TEMPLATES = [
     body('Order {{1}} for {{2}} has been delivered successfully.', ['#A1B2C3', 'Priya Sharma'])]),
   T('admin_return_requested', 'UTILITY', [
     body('Return requested for order {{1}} by {{2}}.\n\nItems: {{3}}\n\nPlease review it in the admin panel.', ['#A1B2C3', 'Priya Sharma', 'Shilajit Resin x 1'])]),
-  T('admin_low_stock_alert', 'UTILITY', [
-    body('Low stock alert after order {{1}}: {{2}} has only {{3}} left in stock. Please restock soon.', ['#A1B2C3', 'Shilajit Resin', '2'])]),
+  // Replaces admin_low_stock_alert, which Meta moved to MARKETING: "only N left ... restock soon" reads as scarcity copy.
+  T('admin_stock_update', 'UTILITY', [
+    body('Stock update for order {{1}}: after this order, {{2}} has {{3}} units in stock.', ['#A1B2C3', 'Shilajit Resin', '2'])]),
   T('admin_return_picked', 'UTILITY', [
     body('The return for order {{1}} ({{2}}) has been picked up from the customer.', ['#A1B2C3', 'Shilajit Resin x 1'])]),
   T('admin_returned', 'UTILITY', [

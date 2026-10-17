@@ -85,7 +85,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     'order_timeslot',
     // admin
     'admin_order_alert',        // was admin_new_order (recreated with button)
-    'admin_low_stock_alert',
+    'admin_stock_update',       // was admin_low_stock_alert (Meta made it marketing)
     'admin_order_delivered',
     'admin_return_requested',
     'admin_return_picked',

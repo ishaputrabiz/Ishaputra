@@ -9,6 +9,7 @@ Run from the project root:
 ```
 node scripts/tests/announcement.test.mjs .     # broadcast + announcement + STOP opt-out
 node scripts/tests/whatsapp-reply.test.mjs .   # send-media, picture templates, big media
+node scripts/tests/whatsapp-templates.test.mjs . # code vs submitted Meta templates (name, variables, button)
 ```
 
 Or run both with Node's runner: `node --test "scripts/tests/*.test.mjs"` (quote the glob; Node 22 does not accept the folder).

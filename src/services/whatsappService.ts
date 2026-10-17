@@ -328,7 +328,6 @@ export const sendAdminOrderDeliveredTemplate = (opts: {
     template: 'admin_order_delivered',
     language: 'en',
     params: [fmt(opts.orderId), opts.customerName || 'a customer'],
-    urlSuffix: opts.orderId,
   }).catch((err) => { console.warn('[whatsapp] admin_order_delivered failed:', err); return { ok: false }; });
 };
 
@@ -347,12 +346,11 @@ export const sendAdminReturnRequestedTemplate = (opts: {
     template: 'admin_return_requested',
     language: 'en',
     params: [fmt(opts.orderId), opts.customerName || 'a customer', opts.itemsSummary || 'items'],
-    urlSuffix: opts.orderId,
   }).catch((err) => { console.warn('[whatsapp] admin_return_requested failed:', err); return { ok: false }; });
 };
 
 /** Low stock alert → admin
- *  Template: admin_low_stock_alert  {{1}}orderId {{2}}productName {{3}}stockLeft
+ *  Template: admin_stock_update  {{1}}orderId {{2}}productName {{3}}stockLeft
  */
 export const sendAdminLowStockTemplate = (opts: {
   to?: string;
@@ -363,11 +361,10 @@ export const sendAdminLowStockTemplate = (opts: {
   if (!opts.to) return Promise.resolve({ ok: false, skipped: true });
   return sendOrderTemplate({
     to: opts.to,
-    template: 'admin_low_stock_alert',
+    template: 'admin_stock_update',
     language: 'en',
     params: [fmt(opts.orderId), opts.productName, String(opts.stockLeft)],
-    urlSuffix: opts.orderId,
-  }).catch((err) => { console.warn('[whatsapp] admin_low_stock_alert failed:', err); return { ok: false }; });
+  }).catch((err) => { console.warn('[whatsapp] admin_stock_update failed:', err); return { ok: false }; });
 };
 
 /** Return picked up by partner → admin
@@ -384,7 +381,6 @@ export const sendAdminReturnPickedTemplate = (opts: {
     template: 'admin_return_picked',
     language: 'en',
     params: [fmt(opts.orderId), opts.itemsSummary || 'items'],
-    urlSuffix: opts.orderId,
   }).catch((err) => { console.warn('[whatsapp] admin_return_picked failed:', err); return { ok: false }; });
 };
 
@@ -403,7 +399,6 @@ export const sendAdminReturnedTemplate = (opts: {
     template: 'admin_returned',
     language: 'en',
     params: [fmt(opts.orderId), opts.customerName || 'a customer', opts.itemsSummary || 'items'],
-    urlSuffix: opts.orderId,
   }).catch((err) => { console.warn('[whatsapp] admin_returned failed:', err); return { ok: false }; });
 };
 

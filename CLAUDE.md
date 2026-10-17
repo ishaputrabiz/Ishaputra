@@ -323,11 +323,11 @@ Create every template with language **English (`en`)**, and set button URLs to t
 | `order_return_update` | Utility | name, order no., items, result | URL `/account/orders/{{1}}` |
 | `order_timeslot` | Utility | name, order no., date, time range | URL `/account/orders/{{1}}` |
 | `admin_order_alert` | Utility | order no., items, total, customer | URL `/admin/orders/{{1}}` |
-| `admin_order_delivered` | Utility | order no., customer | URL `/admin/orders/{{1}}` |
-| `admin_return_requested`, `admin_returned` | Utility | order no., customer, items | URL `/admin/orders/{{1}}` |
-| `admin_return_picked` | Utility | order no., items | URL `/admin/orders/{{1}}` |
-| `admin_low_stock_alert` | Utility | order no., product, stock left | URL `/admin/orders/{{1}}` |
-| `delivery_new_task` (only if the delivery app is on) | Utility | partner, order no., items, address | Static URL `/deliverypartner` |
+| `admin_order_delivered` | Utility | order no., customer | none |
+| `admin_return_requested`, `admin_returned` | Utility | order no., customer, items | none |
+| `admin_return_picked` | Utility | order no., items | none |
+| `admin_stock_update` (factual wording; "only N left, restock soon" made Meta call it marketing) | Utility | order no., product, stock left | none |
+| `delivery_new_task` (only if the delivery app is on) | Utility | partner, order no., items, address | none |
 | `video_call_inapp` (only if video calls are on) | Utility | name, product | URL `/call/{{1}}` |
 | `video_call_meet` (only if video calls are on) | Utility | name, product | URL `https://meet.google.com/{{1}}` |
 
