@@ -18,7 +18,7 @@
   "rewrites": [
     {
       "source": "/catalog/products.json",
-      "destination": "https://pub-10e1205bf35b448b8c1d7a4847ed3d0a.r2.dev/catalog/products.json"
+      "destination": "https://images.ishaputra.in/catalog/products.json"
     },
     {
       "source": "/api/(.*)",
