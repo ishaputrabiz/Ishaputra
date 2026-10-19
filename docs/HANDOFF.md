@@ -11,6 +11,8 @@ Last updated: 2026-10-17 (WhatsApp: low-stock template replaced by `admin_stock_
 
 ## State
 
+- **2026-10-19: product cards: cart button + Buy now, and a floating "View cart" pill** (local commit, NOT deployed). Grid cards (`ProductCard.tsx`) and the products/category page's own card (`CategoryPage.tsx`): a square cart button (a small − 1 + stepper once it is in the cart) beside a solid "Buy now", which adds the item once and goes to checkout (the product page's rule). `src/components/ViewCartPill.tsx` shows bottom centre on the shopping pages in `src/lib/cartPill.ts` once the cart has items and opens the cart; it replaced the "Added to cart" toast. Checked as a guest at 390/1440 light/dark (no sign-in: this copy reads the live Firebase). Not yet tried signed in. Live data: "Himalayan Shilajit Resin" shows ₹1 (100% off), probably a leftover test price.
+
 - **2026-10-16: WhatsApp Cloud API connected to the live site** (done in the ishaputrabiz Chrome; owner approved each Meta agreement and the Vercel changes).
   - Meta: WABA "Ishaputra Botanicals" `1538264908318518`, number +91 89771 34195 (phone ID `1404257849439044`): verified, registered (2-step PIN = `WHATSAPP_2FA_PIN` in local `.env`), status CONNECTED, display name in Meta review. App `ishaputra` published (Live): privacy/terms/data-deletion = site pages, domain ishaputra.in, category Shopping. Webhook `https://www.ishaputra.in/api/whatsapp-webhook` subscribed to `messages`; tested: right verify token 200, wrong 403, unsigned POST 401. App subscribed to the WABA.
   - Token: system user `website-whatsapp` (Admin, full control of app + WABA), scopes `whatsapp_business_messaging` + `whatsapp_business_management`; debug_token says never expires.

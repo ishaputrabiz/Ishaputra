@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Star, ShoppingBag, ShoppingCart, Plus, Minus } from "lucide-react";
+import { Star, ShoppingCart, Plus, Minus } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
@@ -61,7 +61,7 @@ interface ProductCardProps {
  * and stepper sit above it. Hover lift is pointer-only (.card-product).
  */
 const ProductCard = ({ product, index = 0, size = "grid", showEmptyRating = true, className }: ProductCardProps) => {
-  const { addToCart, items, updateQuantity, removeFromCart } = useCart();
+  const { addToCart, items, updateQuantity, removeFromCart, closeCart } = useCart();
   const { toast } = useToast();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const navigate = useNavigate();
@@ -84,17 +84,20 @@ const ProductCard = ({ product, index = 0, size = "grid", showEmptyRating = true
   // An approved dealer's unit price, or null (guests, non-dealers, programme off): today's price row then renders.
   const dealer = useDealerUnit(product.id, displayPrice);
 
+  const soldOut = typeof product.stock === "number" && product.stock <= 0;
   const reviews = product.reviews ?? 0;
   const showRating = !isRow && (reviews > 0 || showEmptyRating);
 
-  const handleAddToCart = () => {
+  // Adds one; true when it went in. No success toast: the View cart pill
+  // (src/components/ViewCartPill.tsx) and the card's stepper are the feedback.
+  const addOne = (): boolean => {
     if (!user) {
       navigate('/login', { state: { from: location } });
-      return;
+      return false;
     }
 
     try {
-      const added = addToCart({
+      return addToCart({
         id: product.id,
         name: product.title,
         price: product.price,
@@ -103,12 +106,6 @@ const ProductCard = ({ product, index = 0, size = "grid", showEmptyRating = true
         category: product.category,
         stock: product.stock,
       });
-      if (!added) return;
-
-      toast({
-        title: "Added to cart",
-        description: product.title,
-      });
     } catch (error) {
       console.error('Error adding to cart:', error);
       toast({
@@ -116,7 +113,24 @@ const ProductCard = ({ product, index = 0, size = "grid", showEmptyRating = true
         description: "Please try again.",
         variant: "destructive",
       });
+      return false;
     }
+  };
+
+  const handleAddToCart = () => {
+    addOne();
+  };
+
+  // Buy now = the product page's rule: put it in the cart (once; one already in
+  // the cart is not doubled) and go straight to checkout.
+  const handleBuyNow = () => {
+    if (!user) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
+    if (inCartQty === 0 && !addOne()) return;
+    closeCart();
+    navigate('/checkout', { state: { from: 'product' } });
   };
 
   const decrease = () => {
@@ -263,41 +277,53 @@ const ProductCard = ({ product, index = 0, size = "grid", showEmptyRating = true
             )}
           </div>
 
-          {/* Grid: Add to cart / quantity stepper */}
+          {/* Grid: cart button (a small stepper once it is in the cart) + Buy now */}
           {!isRow && (
-            inCartQty > 0 ? (
-              <div className="relative z-raised mt-auto flex h-10 items-center justify-between overflow-hidden rounded-control border border-primary/40">
+            <div className="mt-auto flex items-stretch gap-1.5 [container-type:inline-size] lg:gap-2">
+              {inCartQty > 0 ? (
+                <div className="relative z-raised flex h-10 flex-none items-center overflow-hidden rounded-control border border-primary bg-primary/[0.06]">
+                  <button
+                    type="button"
+                    aria-label={`Decrease quantity of ${product.title}`}
+                    onClick={decrease}
+                    className="focus-inset grid h-10 w-8 place-items-center text-primary transition-[background-color,transform] duration-press ease-out hover:bg-primary/10 active:scale-[0.94] [@container(max-width:180px)]:w-7"
+                  >
+                    <Minus aria-hidden="true" className="size-4" />
+                  </button>
+                  <span aria-live="polite" className="min-w-[1rem] text-center text-sm font-bold tabular-nums text-primary">
+                    {inCartQty}
+                    <span className="sr-only"> in cart</span>
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Increase quantity of ${product.title}`}
+                    onClick={increase}
+                    className="focus-inset grid h-10 w-8 place-items-center text-primary transition-[background-color,transform] duration-press ease-out hover:bg-primary/10 active:scale-[0.94] [@container(max-width:180px)]:w-7"
+                  >
+                    <Plus aria-hidden="true" className="size-4" />
+                  </button>
+                </div>
+              ) : (
                 <button
                   type="button"
-                  aria-label={`Decrease quantity of ${product.title}`}
-                  onClick={decrease}
-                  className="focus-inset grid size-10 place-items-center text-foreground transition-[background-color,color,transform] duration-press ease-out hover:bg-muted hover:text-primary active:scale-[0.97]"
+                  disabled={soldOut}
+                  aria-label={`Add ${product.title} to cart`}
+                  onClick={handleAddToCart}
+                  className="relative z-raised grid size-10 flex-none place-items-center rounded-control border border-primary text-primary transition-[background-color,color,transform] duration-press ease-out hover:bg-primary hover:text-primary-foreground active:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-primary disabled:active:scale-100"
                 >
-                  <Minus aria-hidden="true" className="size-4" />
+                  <ShoppingCart aria-hidden="true" className="size-[18px]" />
                 </button>
-                <span aria-live="polite" className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary tabular-nums lg:text-[11px]">
-                  {inCartQty} in cart
-                </span>
-                <button
-                  type="button"
-                  aria-label={`Increase quantity of ${product.title}`}
-                  onClick={increase}
-                  className="focus-inset grid size-10 place-items-center text-foreground transition-[background-color,color,transform] duration-press ease-out hover:bg-muted hover:text-primary active:scale-[0.97]"
-                >
-                  <Plus aria-hidden="true" className="size-4" />
-                </button>
-              </div>
-            ) : (
+              )}
               <button
                 type="button"
-                onClick={handleAddToCart}
-                className="relative z-raised mt-auto flex h-10 w-full items-center justify-center gap-1.5 rounded-control border border-foreground/15 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-foreground transition-[background-color,border-color,color,transform] duration-press ease-out hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-[0.97] lg:gap-2 lg:text-[11px]"
+                disabled={soldOut}
+                onClick={handleBuyNow}
+                className="relative z-raised flex h-10 min-w-0 flex-1 items-center justify-center rounded-control border border-primary bg-primary px-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-primary-foreground transition-[background-color,transform] duration-press ease-out hover:bg-primary/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 [@container(max-width:180px)]:tracking-[0.04em]"
               >
-                <ShoppingBag aria-hidden="true" className="size-4" />
-                Add to cart
+                <span className="truncate">{soldOut ? "Sold out" : "Buy now"}</span>
                 <span className="sr-only">: {product.title}</span>
               </button>
-            )
+            </div>
           )}
         </div>
       </article>

@@ -9,6 +9,9 @@ import {
   PanelLeft,
   Star,
   ShoppingBag,
+  ShoppingCart,
+  Minus,
+  Plus,
   ArrowLeft,
   PackageSearch,
   SearchX,
@@ -45,7 +48,6 @@ import {
 } from "@/services/categoryService";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/hooks/useWishlist";
-import { useToast } from "@/hooks/use-toast";
 import {
   Sheet,
   SheetContent,
@@ -84,13 +86,16 @@ const sortOptions = [
 // The products page keeps its own card (owner decision) but follows the shared
 // ProductCard spec: the title is a real link stretched over the card, so
 // keyboards, screen readers, open-in-new-tab and crawlers all reach the
-// product; the heart and Add to cart sit above it (z-raised).
+// product; the heart, the cart button (a small stepper once it is in the
+// cart) and Buy now sit above it (z-raised).
 type CategoryCardProduct = UIProduct & { isNew?: boolean };
 
 type CategoryProductCardProps = {
   product: CategoryCardProduct;
   wishlisted: boolean;
   onAddToCart: (product: UIProduct) => void;
+  /** Adds it if it is not in the cart yet, then goes to checkout. */
+  onBuyNow: (product: UIProduct) => void;
   onToggleWishlist: (product: UIProduct, wishlisted: boolean) => void;
   /** First cards on the page load their photo eagerly. */
   priority?: boolean;
@@ -100,10 +105,18 @@ const CategoryProductCard = memo(function CategoryProductCard({
   product,
   wishlisted,
   onAddToCart,
+  onBuyNow,
   onToggleWishlist,
   priority = false,
 }: CategoryProductCardProps) {
   const { ratePerGram } = useSilverRate();
+  const { items, updateQuantity, removeFromCart } = useCart();
+  const inCartQty = items.find((i) => i.id === product.id)?.quantity ?? 0;
+  const soldOut = typeof product.stock === "number" && product.stock <= 0;
+  const decrease = () => {
+    if (inCartQty <= 1) void removeFromCart(product.id);
+    else updateQuantity(product.id, inCartQty - 1);
+  };
   const sp = product.silverPricing;
   const displayPrice = sp?.enabled && ratePerGram > 0
     ? computeSilverOriginalPrice(sp, ratePerGram)
@@ -210,13 +223,51 @@ const CategoryProductCard = memo(function CategoryProductCard({
           )}
         </p>
         )}
-        <button
-          type="button"
-          onClick={() => onAddToCart(product)}
-          className="relative z-raised mt-auto flex h-10 w-full items-center justify-center rounded-control border border-foreground/15 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground transition-[background-color,border-color,color,transform] duration-press ease-out hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-[0.97]"
-        >
-          Add to cart<span className="sr-only">: {product.title}</span>
-        </button>
+        <div className="relative z-raised mt-auto flex items-stretch gap-1.5 [container-type:inline-size] sm:gap-2">
+          {inCartQty > 0 ? (
+            <div className="flex h-10 flex-none items-center overflow-hidden rounded-control border border-primary bg-primary/[0.06]">
+              <button
+                type="button"
+                aria-label={`Decrease quantity of ${product.title}`}
+                onClick={decrease}
+                className="focus-inset grid h-10 w-8 place-items-center text-primary transition-[background-color,transform] duration-press ease-out hover:bg-primary/10 active:scale-[0.94] [@container(max-width:180px)]:w-7"
+              >
+                <Minus aria-hidden="true" className="size-4" />
+              </button>
+              <span aria-live="polite" className="min-w-[1rem] text-center text-sm font-bold tabular-nums text-primary">
+                {inCartQty}
+                <span className="sr-only"> in cart</span>
+              </span>
+              <button
+                type="button"
+                aria-label={`Increase quantity of ${product.title}`}
+                onClick={() => updateQuantity(product.id, inCartQty + 1)}
+                className="focus-inset grid h-10 w-8 place-items-center text-primary transition-[background-color,transform] duration-press ease-out hover:bg-primary/10 active:scale-[0.94] [@container(max-width:180px)]:w-7"
+              >
+                <Plus aria-hidden="true" className="size-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={soldOut}
+              aria-label={`Add ${product.title} to cart`}
+              onClick={() => onAddToCart(product)}
+              className="grid size-10 flex-none place-items-center rounded-control border border-primary text-primary transition-[background-color,color,transform] duration-press ease-out hover:bg-primary hover:text-primary-foreground active:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-primary disabled:active:scale-100"
+            >
+              <ShoppingCart aria-hidden="true" className="size-[18px]" />
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={soldOut}
+            onClick={() => onBuyNow(product)}
+            className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-control border border-primary bg-primary px-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-primary-foreground transition-[background-color,transform] duration-press ease-out hover:bg-primary/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 [@container(max-width:180px)]:tracking-[0.04em]"
+          >
+            <span className="truncate">{soldOut ? "Sold out" : "Buy now"}</span>
+            <span className="sr-only">: {product.title}</span>
+          </button>
+        </div>
       </div>
     </article>
   );
@@ -230,9 +281,8 @@ const CategoryPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { addToCart } = useCart();
+  const { addToCart, items, closeCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
-  const { toast } = useToast();
 
   // Data
   const [allProducts, setAllProducts] = useState<CategoryCardProduct[]>([]);
@@ -718,10 +768,10 @@ const CategoryPage = () => {
   // ── Product Card handlers ──
   // The card itself is a stable, memoized component declared at module scope
   // (see `CategoryProductCard`). We only need to provide event handlers here.
-  const handleCardAddToCart = async (product: UIProduct) => {
+  const handleCardAddToCart = (product: UIProduct): boolean => {
     if (!user) {
       navigate("/login", { state: { from: location } });
-      return;
+      return false;
     }
     const added = addToCart({
       id: product.id,
@@ -730,8 +780,20 @@ const CategoryPage = () => {
       image: product.image,
       stock: product.stock,
     });
-    if (!added) return;
-    toast({ title: "Added to cart" });
+    // No success toast: the card's stepper and the View cart pill show it.
+    return added;
+  };
+
+  // Buy now = the product page's rule: in the cart once (not doubled), then checkout.
+  const handleCardBuyNow = (product: UIProduct) => {
+    if (!user) {
+      navigate("/login", { state: { from: location } });
+      return;
+    }
+    const inCart = items.some((i) => i.id === product.id);
+    if (!inCart && !handleCardAddToCart(product)) return;
+    closeCart();
+    navigate("/checkout", { state: { from: "product" } });
   };
 
   const handleCardToggleWishlist = (product: UIProduct, wishlisted: boolean) => {
@@ -1021,7 +1083,8 @@ const CategoryPage = () => {
                       product={product}
                       priority={idx < 4}
                       wishlisted={isInWishlist(product.id)}
-                      onAddToCart={(p) => { void handleCardAddToCart(p); }}
+                      onAddToCart={handleCardAddToCart}
+                      onBuyNow={handleCardBuyNow}
                       onToggleWishlist={handleCardToggleWishlist}
                     />
                   ))}

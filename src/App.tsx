@@ -11,6 +11,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { SilverRateProvider } from "@/contexts/SilverRateContext";
 import ShoppingCart from "@/components/ShoppingCart";
+import ViewCartPill from "@/components/ViewCartPill";
 
 // Route Guards
 import ProtectedRoute from "@/guards/ProtectedRoute";
@@ -430,6 +431,7 @@ const App = () => {
             </Routes>
             </RouteFade>
             </Suspense>
+            <ViewCartPill />
           </BrowserRouter>
             </TooltipProvider>
           </SilverRateProvider>
